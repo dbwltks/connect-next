@@ -289,7 +289,7 @@ function HeaderClient({ user }: { user: User | null }) {
           {user ? (
             <UserMenu user={user} onLogout={handleLogout} />
           ) : (
-            <Link href="/sign-in">
+            <Link href="/login">
               <Button variant="ghost" size="sm">
                 로그인
               </Button>
@@ -309,7 +309,7 @@ function HeaderClient({ user }: { user: User | null }) {
         {user ? (
           <UserMenu user={user} onLogout={handleLogout} />
         ) : (
-          <Link href="/sign-in">
+          <Link href="/login">
             <Button variant="ghost" size="sm">
               로그인
             </Button>
@@ -561,7 +561,7 @@ function MobileMenu({
             </div>
             {!user && (
               <Link
-                href="/sign-in"
+                href="/login"
                 onClick={onToggle}
                 className="block text-base font-medium pb-6"
               >

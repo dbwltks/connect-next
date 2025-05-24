@@ -147,7 +147,7 @@ export default async function DynamicPage(props: { params: any }) {
             views,
             is_notice,
             is_pinned,
-            comment_count:board_comments(count)
+              comment_count:board_comments(count)
           `
           )
           .eq("page_id", pageId)
@@ -194,10 +194,10 @@ export default async function DynamicPage(props: { params: any }) {
     return (
       <>
         <MainBanner menuId={null} />
-        <main className="flex-1 flex flex-col gap-12 px-0 sm:px-4 py-8">
+        <main className="flex-1 flex flex-col gap-12 px-0 sm:px-4 py-4">
           {/* 위젯 섹션 */}
           {typedWidgets.length > 0 && (
-            <div className="mb-12">
+            <div className="mb-2">
               <HomepageWidgets
                 widgets={typedWidgets}
                 pages={pages || []}

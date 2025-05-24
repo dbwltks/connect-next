@@ -353,7 +353,7 @@ export default function HomepageWidgets({
   );
 
   return (
-    <div className="container mx-auto py-4">
+    <div className="sm:container px-2 mx-auto py-2">
       <div className="grid grid-cols-12 gap-4">
         {sortedWidgets.map((widget) => {
           // 위젯 너비에 따라 그리드 컬럼 수 결정

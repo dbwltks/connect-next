@@ -304,7 +304,7 @@ export default function LoginPage() {
           <div className="text-center text-sm pt-4 border-t border-gray-200 dark:border-gray-700 mt-2">
             계정이 없으신가요?{" "}
             <Link
-              href="/auth/register"
+              href="/register"
               className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
             >
               회원가입
