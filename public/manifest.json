@@ -1,0 +1,21 @@
+{
+  "name": "JS",
+  "short_name": "JS",
+  "description": "트렌디한 JS 커뮤니티",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "/icons/js-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/js-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

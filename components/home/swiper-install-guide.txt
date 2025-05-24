@@ -1,0 +1,12 @@
+이 프로젝트에 슬라이더(배너 캐러셀) 기능을 적용하려면 Swiper.js가 필요합니다.
+
+아래 명령어를 터미널에서 실행해 주세요:
+
+npm install swiper
+
+설치 후 main-banner.tsx에서 아래와 같이 import 하게 됩니다:
+
+import { Swiper, SwiperSlide } from 'swiper/react';
+import 'swiper/css';
+
+설치가 완료되면 알려주세요!

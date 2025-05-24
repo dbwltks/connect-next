@@ -1,9 +1,9 @@
-export default async function Layout({
+import { Suspense } from "react";
+
+export default function AuthPagesLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <div className="max-w-7xl flex flex-col gap-12 items-start">{children}</div>
-  );
+  return <Suspense fallback={null}>{children}</Suspense>;
 }

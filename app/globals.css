@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+/* TipTap Editor Styles */
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -66,4 +68,23 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* TipTap 에디터 이미지 정렬 스타일 */
+.ProseMirror .image-align-left {
+  display: block;
+  margin-right: auto;
+  margin-left: 0;
+}
+
+.ProseMirror .image-align-center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.ProseMirror .image-align-right {
+  display: block;
+  margin-left: auto;
+  margin-right: 0;
 }
