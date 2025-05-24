@@ -24,24 +24,31 @@ export async function middleware(request: NextRequest) {
 
     const currentPath = request.nextUrl.pathname;
 
-    // protected 경로 체크
-    if (currentPath.startsWith("/protected")) {
+    // 보호된 페이지 체크 (admin, mypage)
+    if (
+      currentPath.startsWith("/(auth-pages)/admin") ||
+      currentPath.startsWith("/(auth-pages)/mypage")
+    ) {
       console.log("Middleware - Accessing protected route");
       if (!session) {
         console.log("Middleware - No session, redirecting to login");
-        const redirectUrl = new URL("/(auth-pages)/sign-in", request.url);
+        const redirectUrl = new URL("/(auth)/login", request.url);
         redirectUrl.searchParams.set("redirect", currentPath);
         return NextResponse.redirect(redirectUrl);
       }
       console.log("Middleware - Session exists, allowing access");
     }
 
-    // 이미 로그인된 상태에서 auth 페이지 접근 시
-    if (session && currentPath.startsWith("/(auth-pages)")) {
+    // 로그인된 사용자의 auth 페이지 접근 방지
+    if (
+      session &&
+      (currentPath.startsWith("/(auth)/login") ||
+        currentPath.startsWith("/(auth)/register"))
+    ) {
       console.log(
         "Middleware - Logged in user accessing auth route, redirecting to home"
       );
-      return NextResponse.redirect(new URL("/protected/mypage", request.url));
+      return NextResponse.redirect(new URL("/", request.url));
     }
 
     return res;
@@ -54,5 +61,10 @@ export async function middleware(request: NextRequest) {
 
 // 미들웨어가 실행될 경로 설정
 export const config = {
-  matcher: ["/protected/:path*", "/(auth-pages)/:path*"],
+  matcher: [
+    "/(auth-pages)/admin/:path*",
+    "/(auth-pages)/mypage/:path*",
+    "/(auth)/login",
+    "/(auth)/register",
+  ],
 };

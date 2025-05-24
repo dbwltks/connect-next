@@ -14,7 +14,7 @@ export default function AuthPagesLayout({
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push("/sign-in");
+      router.push("/login");
     }
   }, [user, loading, router]);
 
