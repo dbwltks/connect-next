@@ -122,7 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await supabase.auth.signOut();
       setUser(null);
       setIsAdmin(false);
-      router.push("/auth/login");
+      router.push("/sign-in");
     } catch (error) {
       console.error("로그아웃 실패:", error);
       toast({

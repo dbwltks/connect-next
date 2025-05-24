@@ -85,7 +85,7 @@ export default function RegisterPage() {
         description: "이메일 인증 후 로그인하세요",
         variant: "default",
       });
-      router.push("/auth/login");
+      router.push("/sign-in");
     } catch (error: any) {
       toast({
         title: "회원가입 실패",
@@ -272,7 +272,7 @@ export default function RegisterPage() {
           <div className="text-center text-sm pt-4 border-t border-gray-200 dark:border-gray-700 mt-2">
             이미 계정이 있으신가요?{" "}
             <Link
-              href="/auth/login"
+              href="/sign-in"
               className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
             >
               로그인

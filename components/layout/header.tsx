@@ -27,6 +27,74 @@ interface User {
   sessionExpires?: string;
 }
 
+const styles = `
+@keyframes slideDown {
+  from {
+    transform: translateY(-12rem);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-12rem);
+    opacity: 0;
+  }
+}
+
+.animate-slideDown {
+  animation: slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animate-slideUp {
+  animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.menu-content {
+  transform-origin: 0 -12rem;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.menu-content.slide-down {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.menu-content.slide-up {
+  transform: translateY(-12rem);
+  opacity: 0;
+}
+
+.hamburger-line {
+  width: 20px;
+  height: 2px;
+  background-color: hsl(var(--foreground));
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: block;
+  position: relative;
+}
+
+.hamburger-line:first-child {
+  margin-bottom: 6px;
+}
+
+.hamburger-open .hamburger-line:first-child {
+  transform: translateY(4px) rotate(45deg);
+}
+
+.hamburger-open .hamburger-line:last-child {
+  transform: translateY(-4px) rotate(-45deg);
+}
+`;
+
 export default function Header() {
   const { user, loading } = useAuth();
 
@@ -158,6 +226,15 @@ function HeaderClient({ user }: { user: User | null }) {
     }));
   }
 
+  useEffect(() => {
+    const styleSheet = document.createElement("style");
+    styleSheet.textContent = styles;
+    document.head.appendChild(styleSheet);
+    return () => {
+      document.head.removeChild(styleSheet);
+    };
+  }, []);
+
   return (
     <>
       {/* 데스크톱 헤더 - md 이상에서 표시 */}
@@ -185,12 +262,12 @@ function HeaderClient({ user }: { user: User | null }) {
           size="icon"
           aria-label="Toggle Menu"
           onClick={toggleMenu}
+          className={isMenuOpen ? "hamburger-open" : ""}
         >
-          {isMenuOpen ? (
-            <X className="h-5 w-5" />
-          ) : (
-            <Menu className="h-5 w-5" />
-          )}
+          <div className="flex flex-col items-center justify-center w-5 h-5">
+            <span className="hamburger-line" />
+            <span className="hamburger-line" />
+          </div>
         </Button>
 
         <div className="flex items-center justify-center">
@@ -212,7 +289,7 @@ function HeaderClient({ user }: { user: User | null }) {
           {user ? (
             <UserMenu user={user} onLogout={handleLogout} />
           ) : (
-            <Link href="/auth/login">
+            <Link href="/sign-in">
               <Button variant="ghost" size="sm">
                 로그인
               </Button>
@@ -232,7 +309,7 @@ function HeaderClient({ user }: { user: User | null }) {
         {user ? (
           <UserMenu user={user} onLogout={handleLogout} />
         ) : (
-          <Link href="/auth/login">
+          <Link href="/sign-in">
             <Button variant="ghost" size="sm">
               로그인
             </Button>
@@ -412,18 +489,20 @@ function MobileMenu({
         onClick={onToggle}
         aria-label="오버레이"
       />
-      <div className="fixed left-0 right-0 top-16 z-[9999] md:hidden pointer-events-none w-full">
+      <div className="fixed left-0 right-0 top-[calc(4rem)] md:hidden pointer-events-none w-full">
         <div
-          className={`bg-background overflow-hidden shadow-xl pointer-events-auto mx-auto transition-[max-height] duration-400 ease-in-out rounded-b-2xl ${
-            menuAnimOpen ? "max-h-[90vh]" : "max-h-0"
+          className={`bg-background shadow-xl pointer-events-auto mx-auto rounded-b-2xl ${
+            menuAnimOpen ? "animate-slideDown" : "animate-slideUp"
           } w-full px-8 pt-0`}
         >
-          <ul className="space-y-8 p-4">
+          <ul
+            className={`space-y-4 menu-content ${menuAnimOpen ? "slide-down" : "slide-up"}`}
+          >
             {items.map((item, idx) => (
               <li key={item.title + idx}>
                 <div className="flex items-center justify-between">
                   <button
-                    className="flex items-center w-full font-bold text-xl py-4 text-left focus:outline-none"
+                    className="flex items-center w-full font-bold text-xl pt-4 pb-2 text-left focus:outline-none"
                     onClick={(e) => {
                       if (item.submenu) {
                         e.preventDefault();
@@ -456,7 +535,7 @@ function MobileMenu({
                         : "max-h-0 opacity-0"
                     }`}
                   >
-                    <ul className="pl-4 pt-2">
+                    <ul className="pl-4">
                       {item.submenu.map((subItem: any, subIdx: number) => (
                         <li key={subItem.title + subIdx}>
                           <Link
@@ -482,9 +561,9 @@ function MobileMenu({
             </div>
             {!user && (
               <Link
-                href="/auth/login"
+                href="/sign-in"
                 onClick={onToggle}
-                className="block text-base font-medium"
+                className="block text-base font-medium pb-6"
               >
                 로그인
               </Link>

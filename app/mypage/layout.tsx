@@ -16,7 +16,7 @@ export default function MyPageLayout({
     const storedUser =
       localStorage.getItem("user") || sessionStorage.getItem("user");
     if (!storedUser) {
-      router.push("/auth/login");
+      router.push("/sign-in");
     }
     setLoading(false);
   }, [router]);

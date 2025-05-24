@@ -51,7 +51,7 @@ export default function MyPage() {
 
   const handleLogoutClick = async () => {
     await handleLogout();
-    router.push("/auth/login");
+    router.push("/sign-in");
   };
 
   if (loading) {
@@ -63,7 +63,7 @@ export default function MyPage() {
   }
 
   if (!user) {
-    router.push("/auth/login");
+    router.push("/sign-in");
     return null;
   }
 
