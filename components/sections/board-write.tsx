@@ -194,6 +194,15 @@ export default function BoardWrite({
 
   //임시등록 수동 실행 (board_posts에 status='draft'로 저장)
   const handleManualSave = async () => {
+    if (drafts.length >= 5) {
+      showToast({
+        title: "임시등록 한도 초과",
+        description:
+          "임시등록은 최대 5개까지 가능합니다. 기존 임시등록을 삭제 후 시도해 주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
     await savePost("draft");
   };
 
@@ -871,6 +880,7 @@ export default function BoardWrite({
                     type="button"
                     onClick={handleManualSave}
                     className="h-9 sm:h-10 px-3 sm:px-4 text-sm font-medium hover:bg-gray-100 focus:bg-gray-100 transition border-r border-gray-200 flex-1"
+                    disabled={drafts.length >= 5}
                   >
                     임시등록
                   </button>
@@ -882,6 +892,9 @@ export default function BoardWrite({
                   >
                     {drafts.length}
                   </button>
+                  <span className="ml-2 text-xs text-gray-400">
+                    {drafts.length}/5
+                  </span>
                 </div>
               )}
               <Button
