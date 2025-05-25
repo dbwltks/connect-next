@@ -9,6 +9,7 @@ import {
   Image,
   Smile,
 } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import { toast } from "@/components/ui/toaster";
@@ -84,6 +85,36 @@ function buildCommentTree(
   });
 
   return roots;
+}
+
+// 아바타 공통 컴포넌트
+function UserAvatar({
+  userId,
+  username,
+  size = 8, // tailwind 기준 (h-8 w-8 등)
+  avatarMap,
+  className = "",
+}: {
+  userId?: string;
+  username?: string;
+  size?: number;
+  avatarMap?: { [userId: string]: string | null };
+  className?: string;
+}) {
+  return (
+    <Avatar className={`h-${size} w-${size} ${className}`}>
+      <AvatarImage
+        src={
+          (userId && avatarMap?.[userId]) ||
+          `https://api.dicebear.com/7.x/initials/svg?seed=${username}`
+        }
+        alt={username}
+      />
+      <AvatarFallback>
+        {username?.substring(0, 2).toUpperCase() || "U"}
+      </AvatarFallback>
+    </Avatar>
+  );
 }
 
 export default function BoardComments({
@@ -184,7 +215,32 @@ export default function BoardComments({
     return () => window.removeEventListener("storage", handler);
   }, []);
 
-  // 중복 변수/함수 선언 제거 완료
+  // 댓글 아바타 맵 상태 추가
+  const [avatarMap, setAvatarMap] = useState<{
+    [userId: string]: string | null;
+  }>({});
+
+  // 댓글 목록 불러온 후 user_id별로 avatar_url 조회
+  useEffect(() => {
+    async function fetchAvatars() {
+      const userIds = Array.from(
+        new Set(comments.map((c) => c.user_id).filter(Boolean))
+      );
+      if (userIds.length === 0) return;
+      const { data, error } = await supabase
+        .from("users")
+        .select("id, avatar_url")
+        .in("id", userIds);
+      if (!error && data) {
+        const map: { [userId: string]: string | null } = {};
+        data.forEach((u: any) => {
+          map[u.id] = u.avatar_url || null;
+        });
+        setAvatarMap(map);
+      }
+    }
+    fetchAvatars();
+  }, [comments]);
 
   useEffect(() => {
     async function fetchComments() {
@@ -315,7 +371,12 @@ export default function BoardComments({
           >
             <div className="flex items-start gap-3">
               <div className="bg-gray-100 text-gray-600 rounded-full w-9 h-9 flex items-center justify-center flex-shrink-0">
-                <User className="h-5 w-5" />
+                <UserAvatar
+                  userId={c.user_id}
+                  username={c.author}
+                  size={9}
+                  avatarMap={avatarMap}
+                />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
@@ -489,18 +550,12 @@ export default function BoardComments({
                 <div className="border-2 border-gray-200 rounded-lg overflow-hidden">
                   <div className="flex items-center justify-between p-4">
                     <div className="flex items-center gap-2">
-                      <div className="bg-gray-100 text-gray-600 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">
-                        <User className="h-3 w-3" />
-                      </div>
-                      <span className="text-sm font-medium">
-                        {user.username}
-                      </span>
-                      {postAuthor?.user_id &&
-                        user.id === postAuthor.user_id && (
-                          <span className="bg-blue-100 text-blue-600 text-[10px] px-1.5 py-0.5 rounded-full">
-                            작성자
-                          </span>
-                        )}
+                      <UserAvatar
+                        userId={user.id}
+                        username={user.username}
+                        size={6}
+                        avatarMap={avatarMap}
+                      />
                     </div>
                     <span className="text-xs text-gray-400">
                       {(replyInputs[c.id] || "").length}/1000
@@ -610,15 +665,17 @@ export default function BoardComments({
           <div className="border-2 border-gray-200 rounded-lg overflow-hidden">
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-2">
-                <div className="bg-gray-100 text-gray-600 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0">
+                {/* <div className="bg-gray-100 text-gray-600 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0">
                   <User className="h-4 w-4" />
-                </div>
+                </div> */}
+                <UserAvatar
+                  userId={user.id}
+                  username={user.username}
+                  size={8}
+                  avatarMap={avatarMap}
+                />
                 <span className="font-medium text-sm">{user.username}</span>
-                {postAuthor?.user_id && user.id === postAuthor.user_id && (
-                  <span className="bg-blue-100 text-blue-600 text-[10px] px-1.5 py-0.5 rounded-full">
-                    작성자
-                  </span>
-                )}
+                {postAuthor?.user_id && user.id === postAuthor.user_id}
               </div>
               <span className="text-xs text-gray-400">
                 {comment.length}/1000

@@ -124,6 +124,8 @@ export default function BoardDetail() {
   const [user, setUser] = useState<any>(null);
   // 작성자 여부 상태 추가
   const [isAuthor, setIsAuthor] = useState(false);
+  // 작성자 아바타 상태 추가
+  const [authorAvatar, setAuthorAvatar] = useState<string | null>(null);
 
   // 토스트 표시 함수
   const showToast = (args: {
@@ -405,6 +407,22 @@ export default function BoardDetail() {
       setIsAuthor(false);
     }
   }, [user, post]);
+
+  // 게시글/작성자 정보 로드 useEffect 내부에 추가
+  useEffect(() => {
+    if (post?.user_id) {
+      supabase
+        .from("users")
+        .select("avatar_url")
+        .eq("id", post.user_id)
+        .single()
+        .then(({ data }) => {
+          setAuthorAvatar(data?.avatar_url || null);
+        });
+    } else {
+      setAuthorAvatar(null);
+    }
+  }, [post?.user_id]);
 
   if (loading) {
     return (
@@ -1054,7 +1072,10 @@ export default function BoardDetail() {
             <div className="flex items-center">
               <Avatar className="h-8 w-8 mr-2">
                 <AvatarImage
-                  src={`https://api.dicebear.com/7.x/initials/svg?seed=${post.author}`}
+                  src={
+                    authorAvatar ||
+                    `https://api.dicebear.com/7.x/initials/svg?seed=${post.author}`
+                  }
                   alt={post.author}
                 />
                 <AvatarFallback>

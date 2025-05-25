@@ -190,8 +190,18 @@ function HeaderClient({ user }: { user: User | null }) {
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [isMenuLoading, setIsMenuLoading] = useState(true);
 
-  // 메뉴 항목 불러오기
+  // 메뉴 항목 불러오기 (캐싱 + 병렬)
   useEffect(() => {
+    // 1. localStorage 캐시 먼저 적용
+    const cachedMenu =
+      typeof window !== "undefined" && localStorage.getItem("menuItems");
+    if (cachedMenu) {
+      try {
+        setMenuItems(JSON.parse(cachedMenu));
+        setIsMenuLoading(false);
+      } catch {}
+    }
+    // 2. 백그라운드에서 최신 메뉴 fetch
     async function fetchMenuItems() {
       try {
         setIsMenuLoading(true);
@@ -200,31 +210,12 @@ function HeaderClient({ user }: { user: User | null }) {
           .select("*")
           .eq("is_active", true)
           .order("order_num", { ascending: true });
-
-        if (error) {
-          console.error("헤더 메뉴 DB 불러오기 오류:", error);
-          // Fallback menu items in case of an error
-          setMenuItems([
-            {
-              title: "교회 소개",
-              href: "/about",
-              submenu: [
-                { title: "교회 비전", href: "/about/vision" },
-                { title: "담임 목사", href: "/about/pastor" },
-                { title: "교회 연혁", href: "/about/history" },
-                { title: "교회 연혁", href: "/about/history" },
-                { title: "예배 안내", href: "/about/worship" },
-                { title: "오시는 길", href: "/about/location" },
-              ],
-            },
-            { title: "예배와 말씀", href: "/sermons" },
-            { title: "교회 소식", href: "/news" },
-            { title: "소그룹", href: "/groups" },
-            { title: "기도 요청", href: "/prayer" },
-          ]);
-        } else if (data && data.length > 0) {
+        if (!error && data && data.length > 0) {
           const formattedMenu = buildMenuTree(data);
           setMenuItems(formattedMenu);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("menuItems", JSON.stringify(formattedMenu));
+          }
         }
       } catch (error) {
         console.error("메뉴 항목을 불러오는 중 오류 발생:", error);
@@ -232,7 +223,6 @@ function HeaderClient({ user }: { user: User | null }) {
         setIsMenuLoading(false);
       }
     }
-
     fetchMenuItems();
   }, []);
 
@@ -572,7 +562,7 @@ function UserMenu({ user, onLogout }: { user: any; onLogout: () => void }) {
           className="relative h-8 w-8 rounded-full"
         >
           <Avatar>
-            <AvatarImage src="" alt={user.username} />
+            <AvatarImage src={user.avatar_url || ""} alt={user.username} />
             <AvatarFallback className="bg-primary text-primary-foreground">
               {user.username?.charAt(0).toUpperCase() || "U"}
             </AvatarFallback>

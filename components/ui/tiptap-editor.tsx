@@ -832,8 +832,7 @@ const MenuBar = ({
         const timestamp = Date.now();
         const fileName = `${timestamp}-${Math.random().toString(36).substring(2, 11)}.${fileExt}`;
 
-        // 경로에 draft 상태 표시 추가
-        const filePath = `${category}/${pageId}/drafts/${yyyy}/${mm}/${fileName}`;
+        const filePath = `${category}/${pageId}/${yyyy}/${mm}/${fileName}`;
 
         try {
           const { data, error } = await supabase.storage
@@ -845,7 +844,7 @@ const MenuBar = ({
                 originalName: file.name,
                 fileSize: file.size,
                 uploadTime: timestamp,
-                status: "draft",
+                status: "",
                 category: category,
                 pageId: pageId,
               },
@@ -1525,8 +1524,36 @@ const FileManager = ({
             <button
               type="button"
               className="ml-2 text-red-500 hover:text-red-700 text-lg font-bold"
-              onClick={() => {
-                // 삭제 로직 (기존과 동일)
+              onClick={async () => {
+                // 1. Storage 경로 추출
+                const url = file.url;
+                // 예: https://<project>.supabase.co/storage/v1/object/public/images/2024/07/abc.jpg
+                const match = url.match(
+                  /\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/
+                );
+                if (!match) {
+                  showToast({
+                    title: "삭제 실패",
+                    description: "Storage 경로를 추출할 수 없습니다.",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                const bucket = match[1];
+                const filePath = match[2];
+                // 2. Storage에서 삭제
+                const { error: removeError } = await supabase.storage
+                  .from(bucket)
+                  .remove([filePath]);
+                if (removeError) {
+                  showToast({
+                    title: "삭제 실패",
+                    description: removeError.message,
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                // 3. UI에서 제거 및 토스트
                 if (editor) {
                   const content = editor.getHTML();
                   const escapedUrl = file.url.replace(
@@ -1560,7 +1587,7 @@ const FileManager = ({
                 }
                 showToast({
                   title: "파일 삭제",
-                  description: "파일이 삭제되었습니다.",
+                  description: "파일이 스토리지에서도 삭제되었습니다.",
                   variant: "default",
                 });
               }}
