@@ -138,7 +138,7 @@ export default function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-[9999] w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-[9] w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
         <HeaderClient user={user} />
       </div>
@@ -351,7 +351,7 @@ function HeaderClient({ user }: { user: User | null }) {
           {/* 메뉴 컨텐츠 */}
           {createPortal(
             <div
-              className={`fixed top-[4rem] left-0 right-0 max-h-[calc(100vh-4rem)] bg-background shadow-xl rounded-b-2xl px-8 pt-4 z-[9998] overflow-y-auto ${animationClass}`}
+              className={`fixed top-[4rem] left-0 right-0 max-h-[calc(100vh-4rem)] bg-background shadow-xl rounded-b-2xl px-8 pt-4 z-[8] overflow-y-auto ${animationClass}`}
               onAnimationEnd={() => {
                 if (animationClass === "animate-slideUp") {
                   setIsMenuOpen(false);
@@ -422,7 +422,7 @@ function HeaderClient({ user }: { user: User | null }) {
               <div className="mt-12 border-t pt-8 space-y-6 pb-8">
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground text-sm">테마</span>
-                  <div className="relative z-[10000]">
+                  <div className="relative z-[10]">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -449,7 +449,7 @@ function HeaderClient({ user }: { user: User | null }) {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent
                         align="end"
-                        className="w-[200px] bg-background shadow-xl rounded-lg z-[10001]"
+                        className="w-[200px] bg-background shadow-xl rounded-lg z-[8]"
                       >
                         <DropdownMenuRadioGroup
                           value={theme}
@@ -536,7 +536,7 @@ function HeaderClient({ user }: { user: User | null }) {
           {/* 오버레이 */}
           {createPortal(
             <div
-              className={`fixed top-[4rem] left-0 right-0 bottom-0 bg-black/50 z-[9997] ${
+              className={`fixed top-[4rem] left-0 right-0 bottom-0 bg-black/50 z-[7] ${
                 animationClass === "animate-slideUp"
                   ? "animate-fadeOut"
                   : "animate-fadeIn"
