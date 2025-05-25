@@ -220,26 +220,44 @@ export default function BoardComments({
     [userId: string]: string | null;
   }>({});
 
-  // 댓글 목록 불러온 후 user_id별로 avatar_url 조회
+  // reply_to(user_id) → {username, avatar_url} 매핑 상태 추가
+  const [replyToMap, setReplyToMap] = useState<{
+    [userId: string]: { username: string; avatar_url: string | null };
+  }>({});
+
+  // 댓글 목록 불러온 후 user_id, reply_to 모두 users 테이블에서 avatar_url, username 조회
   useEffect(() => {
-    async function fetchAvatars() {
+    async function fetchAvatarsAndReplyTo() {
       const userIds = Array.from(
-        new Set(comments.map((c) => c.user_id).filter(Boolean))
+        new Set(
+          [
+            ...comments.map((c) => c.user_id),
+            ...comments.map((c) => c.reply_to),
+          ].filter(Boolean)
+        )
       );
       if (userIds.length === 0) return;
       const { data, error } = await supabase
         .from("users")
-        .select("id, avatar_url")
+        .select("id, username, avatar_url")
         .in("id", userIds);
       if (!error && data) {
-        const map: { [userId: string]: string | null } = {};
+        const avatarMap: { [userId: string]: string | null } = {};
+        const replyToMap: {
+          [userId: string]: { username: string; avatar_url: string | null };
+        } = {};
         data.forEach((u: any) => {
-          map[u.id] = u.avatar_url || null;
+          avatarMap[u.id] = u.avatar_url || null;
+          replyToMap[u.id] = {
+            username: u.username,
+            avatar_url: u.avatar_url || null,
+          };
         });
-        setAvatarMap(map);
+        setAvatarMap(avatarMap);
+        setReplyToMap(replyToMap);
       }
     }
-    fetchAvatars();
+    fetchAvatarsAndReplyTo();
   }, [comments]);
 
   useEffect(() => {
@@ -351,6 +369,67 @@ export default function BoardComments({
     }
   }
 
+  // 대댓글 등록 시 reply_to에 c.user_id(uuid) 저장
+  const handleReplySubmit = async (c: BoardComment) => {
+    if (!replyInputs[c.id]?.trim()) {
+      toast({
+        title: "답글 내용 필요",
+        description: "답글 내용을 입력해주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const currentUser = await getHeaderUser();
+      if (!currentUser || !currentUser.id) {
+        toast({
+          title: "로그인 필요",
+          description: "답글을 작성하려면 로그인이 필요합니다.",
+          variant: "destructive",
+        });
+        return;
+      }
+      const { error } = await supabase.from("board_comments").insert([
+        {
+          post_id: postId,
+          content: replyInputs[c.id],
+          author: currentUser.username,
+          user_id: currentUser.id,
+          parent_id: c.id,
+          reply_to: c.user_id, // uuid로 저장
+        },
+      ]);
+      if (error) {
+        console.error("답글 등록 오류:", error);
+        throw error;
+      }
+      setReplyInputs((prev) => ({ ...prev, [c.id]: "" }));
+      setActiveReplyId(null);
+      // 새로고침
+      const { data: newComments, error: fetchError } = await supabase
+        .from("board_comments")
+        .select("*")
+        .eq("post_id", postId)
+        .order("created_at", { ascending: true });
+      if (fetchError) {
+        console.error("댓글 목록 새로고침 오류:", fetchError);
+        throw fetchError;
+      }
+      setComments(newComments || []);
+      toast({
+        title: "답글 등록 완료",
+        description: "답글이 성공적으로 등록되었습니다.",
+      });
+    } catch (err: any) {
+      console.error("답글 처리 중 오류:", err);
+      toast({
+        title: "답글 등록 실패",
+        description: err.message || "답글 등록 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // 대댓글 렌더링 함수
   function renderCommentTree(
     tree: Array<BoardComment & { replies: BoardComment[] }>,
@@ -395,11 +474,14 @@ export default function BoardComments({
                 </div>
                 <div className="text-gray-800 text-[15px] mb-2">
                   {/* 대댓글일 경우에만 '@유저이름' 표시, 두번째 답글부터 표시 */}
-                  {c.parent_id && c.reply_to && index > 0 && (
-                    <span className="text-blue-600 font-medium mr-1">
-                      @{c.reply_to}
-                    </span>
-                  )}
+                  {c.parent_id &&
+                    c.reply_to &&
+                    typeof c.reply_to === "string" &&
+                    replyToMap[c.reply_to] && (
+                      <span className="text-blue-600 font-medium mr-1">
+                        @{replyToMap[c.reply_to].username}
+                      </span>
+                    )}
                   {c.content}
                 </div>
                 <div className="flex items-center gap-3">
@@ -476,86 +558,25 @@ export default function BoardComments({
                 className="mt-3"
                 onSubmit={async (e) => {
                   e.preventDefault();
-                  if (!replyInputs[c.id]?.trim()) {
-                    toast({
-                      title: "답글 내용 필요",
-                      description: "답글 내용을 입력해주세요.",
-                      variant: "destructive",
-                    });
-                    return;
-                  }
-
-                  try {
-                    const currentUser = await getHeaderUser();
-                    if (!currentUser || !currentUser.id) {
-                      toast({
-                        title: "로그인 필요",
-                        description: "답글을 작성하려면 로그인이 필요합니다.",
-                        variant: "destructive",
-                      });
-                      return;
-                    }
-
-                    const { error } = await supabase
-                      .from("board_comments")
-                      .insert([
-                        {
-                          post_id: postId,
-                          content: replyInputs[c.id],
-                          author: currentUser.username,
-                          user_id: currentUser.id,
-                          parent_id: c.id,
-                          reply_to: c.author,
-                        },
-                      ]);
-
-                    if (error) {
-                      console.error("답글 등록 오류:", error);
-                      throw error;
-                    }
-
-                    setReplyInputs((prev) => ({ ...prev, [c.id]: "" }));
-                    setActiveReplyId(null); // 답글 입력창 닫기
-
-                    // 새로고침
-                    const { data: newComments, error: fetchError } =
-                      await supabase
-                        .from("board_comments")
-                        .select("*")
-                        .eq("post_id", postId)
-                        .order("created_at", { ascending: true });
-
-                    if (fetchError) {
-                      console.error("댓글 목록 새로고침 오류:", fetchError);
-                      throw fetchError;
-                    }
-
-                    setComments(newComments || []);
-
-                    toast({
-                      title: "답글 등록 완료",
-                      description: "답글이 성공적으로 등록되었습니다.",
-                    });
-                  } catch (err: any) {
-                    console.error("답글 처리 중 오류:", err);
-                    toast({
-                      title: "답글 등록 실패",
-                      description:
-                        err.message || "답글 등록 중 오류가 발생했습니다.",
-                      variant: "destructive",
-                    });
-                  }
+                  handleReplySubmit(c);
                 }}
               >
                 <div className="border-2 border-gray-200 rounded-lg overflow-hidden">
                   <div className="flex items-center justify-between p-4">
                     <div className="flex items-center gap-2">
-                      <UserAvatar
-                        userId={user.id}
-                        username={user.username}
-                        size={6}
-                        avatarMap={avatarMap}
-                      />
+                      {c.parent_id &&
+                        c.reply_to &&
+                        typeof c.reply_to === "string" &&
+                        replyToMap[c.reply_to] && (
+                          <UserAvatar
+                            userId={c.reply_to}
+                            username={replyToMap[c.reply_to].username}
+                            size={6}
+                            avatarMap={{
+                              [c.reply_to]: replyToMap[c.reply_to].avatar_url,
+                            }}
+                          />
+                        )}
                     </div>
                     <span className="text-xs text-gray-400">
                       {(replyInputs[c.id] || "").length}/1000
