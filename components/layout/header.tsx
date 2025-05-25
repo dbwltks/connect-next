@@ -300,7 +300,7 @@ function HeaderClient({ user }: { user: User | null }) {
           size="icon"
           aria-label="Toggle Menu"
           onClick={handleHamburgerClick}
-          className={!isHamburgerOpen ? "hamburger-open" : ""}
+          className={!isHamburgerOpen ? "" : "hamburger-open"}
         >
           <div className="flex flex-col items-center justify-center w-5 h-5">
             <span className="hamburger-line" />
