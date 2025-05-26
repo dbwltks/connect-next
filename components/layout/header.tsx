@@ -121,11 +121,11 @@ const styles = `
 `;
 
 export default function Header() {
-  const { user, loading } = useAuth();
+  const { user, loading: userLoading } = useAuth();
 
-  console.log("Header Auth State:", { user, loading });
+  console.log("Header Auth State:", { user, userLoading });
 
-  if (loading) {
+  if (userLoading) {
     return (
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center">
@@ -140,13 +140,19 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-[9] w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
-        <HeaderClient user={user} />
+        <HeaderClient user={user} userLoading={userLoading} />
       </div>
     </header>
   );
 }
 
-function HeaderClient({ user }: { user: User | null }) {
+function HeaderClient({
+  user,
+  userLoading,
+}: {
+  user: User | null;
+  userLoading?: boolean;
+}) {
   const { handleLogout } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -314,7 +320,9 @@ function HeaderClient({ user }: { user: User | null }) {
         </div>
 
         <div className="flex items-center justify-center">
-          {user ? (
+          {userLoading ? (
+            <div className="h-8 w-8 bg-gray-200 animate-pulse rounded-full" />
+          ) : user ? (
             <UserMenu user={user} onLogout={handleLogout} />
           ) : (
             <Link href="/login">
@@ -328,13 +336,19 @@ function HeaderClient({ user }: { user: User | null }) {
 
       {/* 데스크톱 메뉴 */}
       <nav className="hidden flex-1 items-center justify-center md:flex">
-        <MainMenu items={menuItems} />
+        {isMenuLoading ? (
+          <div className="h-8 w-32 bg-gray-200 animate-pulse rounded" />
+        ) : (
+          <MainMenu items={menuItems} />
+        )}
       </nav>
 
       {/* 데스크톱 우측 메뉴 */}
       <div className="hidden md:flex items-center gap-2">
         <ThemeSwitcher />
-        {user ? (
+        {userLoading ? (
+          <div className="h-8 w-8 bg-gray-200 animate-pulse rounded-full" />
+        ) : user ? (
           <UserMenu user={user} onLogout={handleLogout} />
         ) : (
           <Link href="/login">

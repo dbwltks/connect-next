@@ -19,7 +19,7 @@ export default function RootLayout({
   return (
     <html lang="ko" className={notoSansKr.className} suppressHydrationWarning>
       <head>
-        <link rel="manifest" href="/manifest.json" />
+        {/* <link rel="manifest" href="/manifest.json" /> 삭제 */}
         <meta name="theme-color" content="#ffffff" />
       </head>
       <body className="bg-background text-foreground">
