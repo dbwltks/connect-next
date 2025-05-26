@@ -25,39 +25,12 @@ import {
   UserPlus,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuth } from "@/contexts/auth-context";
 
 export default function AdminHeader() {
-  const [user, setUser] = useState<any>(null);
+  const { user, loading: userLoading, handleLogout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const router = useRouter();
-
-  useEffect(() => {
-    // localStorage 또는 sessionStorage에서 사용자 정보 가져오기
-    function getUser() {
-      const storedUser =
-        localStorage.getItem("user") || sessionStorage.getItem("user");
-      if (storedUser) {
-        try {
-          const userData = JSON.parse(storedUser);
-          setUser(userData);
-        } catch (error) {
-          console.error("사용자 정보 파싱 오류:", error);
-        }
-      }
-    }
-
-    getUser();
-
-    // 스토리지 변경 이벤트 리스너 추가
-    const handleStorageChange = () => {
-      getUser();
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-    };
-  }, []);
 
   const navItems = [
     { name: "교인 관리", href: "/admin/members", icon: Users },
@@ -94,7 +67,9 @@ export default function AdminHeader() {
         <div className="flex items-center space-x-4">
           <ThemeSwitcher />
 
-          {user && (
+          {userLoading ? (
+            <div className="h-8 w-8 bg-gray-200 animate-pulse rounded-full" />
+          ) : user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -102,7 +77,10 @@ export default function AdminHeader() {
                   className="relative h-8 w-8 rounded-full"
                 >
                   <Avatar>
-                    <AvatarImage src="" alt={user.username} />
+                    <AvatarImage
+                      src={user.avatar_url || ""}
+                      alt={user.username}
+                    />
                     <AvatarFallback className="bg-primary text-primary-foreground">
                       {user.username?.charAt(0).toUpperCase() || "A"}
                     </AvatarFallback>
@@ -126,10 +104,8 @@ export default function AdminHeader() {
                 <DropdownMenuItem
                   className="cursor-pointer"
                   onClick={() => {
-                    localStorage.removeItem("user");
-                    sessionStorage.removeItem("user");
+                    handleLogout();
                     router.push("/");
-                    window.location.reload();
                   }}
                 >
                   <LogOut className="mr-2 h-4 w-4" />
@@ -137,7 +113,7 @@ export default function AdminHeader() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -171,7 +147,9 @@ export default function AdminHeader() {
 
         {/* 오른쪽 - 아바타 */}
         <div className="flex items-center justify-center">
-          {user && (
+          {userLoading ? (
+            <div className="h-8 w-8 bg-gray-200 animate-pulse rounded-full" />
+          ) : user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -180,7 +158,10 @@ export default function AdminHeader() {
                   className="relative h-8 w-8 rounded-full"
                 >
                   <Avatar>
-                    <AvatarImage src="" alt={user.username} />
+                    <AvatarImage
+                      src={user.avatar_url || ""}
+                      alt={user.username}
+                    />
                     <AvatarFallback className="bg-primary text-primary-foreground">
                       {user.username?.charAt(0).toUpperCase() || "A"}
                     </AvatarFallback>
@@ -205,10 +186,8 @@ export default function AdminHeader() {
                 <DropdownMenuItem
                   className="cursor-pointer"
                   onClick={() => {
-                    localStorage.removeItem("user");
-                    sessionStorage.removeItem("user");
+                    handleLogout();
                     router.push("/");
-                    window.location.reload();
                   }}
                 >
                   <LogOut className="mr-2 h-4 w-4" />
@@ -216,15 +195,18 @@ export default function AdminHeader() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          )}
+          ) : null}
         </div>
       </div>
 
       {/* 모바일 메뉴 */}
       {mobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-50 bg-black bg-opacity-50" onClick={() => setMobileMenuOpen(false)}>
-          <div 
-            className="bg-white dark:bg-gray-800 w-64 h-full overflow-y-auto" 
+        <div
+          className="md:hidden fixed inset-0 z-50 bg-black bg-opacity-50"
+          onClick={() => setMobileMenuOpen(false)}
+        >
+          <div
+            className="bg-white dark:bg-gray-800 w-64 h-full overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-4 border-b">
@@ -236,7 +218,7 @@ export default function AdminHeader() {
                   const Icon = item.icon;
                   return (
                     <li key={item.href}>
-                      <Link 
+                      <Link
                         href={item.href}
                         className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
                         onClick={() => setMobileMenuOpen(false)}

@@ -14,16 +14,27 @@ import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import { toast } from "@/components/ui/toaster";
 import { Toaster } from "@/components/ui/toaster";
+import {
+  fetchComments,
+  fetchUsersMap,
+  addComment,
+  addReply,
+  deleteComment as serviceDeleteComment,
+  updateComment as serviceUpdateComment,
+} from "@/services/commentService";
 
 interface BoardComment {
   id: string;
   post_id: string;
   content: string;
-  author: string;
   user_id: string;
   created_at: string;
   parent_id?: string | null;
   reply_to?: string | null;
+  users?: {
+    username: string;
+    avatar_url: string | null;
+  };
 }
 
 // 대댓글 트리 구조 생성 함수 - 한 단계만 들여쓰기
@@ -160,6 +171,11 @@ export default function BoardComments({
     };
   }, []);
 
+  // 댓글 수정 상태
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editInput, setEditInput] = useState<string>("");
+  const [editLoading, setEditLoading] = useState(false);
+
   // 로그인 유저 가져오기 (단일 선언)
   async function getHeaderUser() {
     try {
@@ -168,28 +184,31 @@ export default function BoardComments({
         data: { session },
       } = await supabase.auth.getSession();
       if (session?.user) {
-        // Supabase 사용자 정보가 있으면 사용
+        // users 테이블에서 username, role 받아오기
         const { data: profile } = await supabase
-          .from("profiles")
-          .select("username, full_name")
+          .from("users")
+          .select("username, role")
           .eq("id", session.user.id)
           .single();
-
         return {
           id: session.user.id,
-          username:
-            profile?.username || session.user.email?.split("@")[0] || "익명",
+          username: profile?.username || "익명",
           email: session.user.email,
+          role: profile?.role || undefined,
         };
       }
-
       // Supabase 세션이 없으면 로컬/세션 스토리지 확인
       if (typeof window === "undefined") return null;
       const stored =
         localStorage.getItem("user") || sessionStorage.getItem("user");
       if (!stored) return null;
       try {
-        return JSON.parse(stored);
+        const parsed = JSON.parse(stored);
+        return {
+          ...parsed,
+          username: parsed.username || "익명",
+          role: parsed.role || undefined,
+        };
       } catch {
         return null;
       }
@@ -225,55 +244,46 @@ export default function BoardComments({
     [userId: string]: { username: string; avatar_url: string | null };
   }>({});
 
+  // 댓글 목록 조회 시 join 없이 user_id만 가져옴
+  useEffect(() => {
+    async function loadComments() {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await fetchComments(postId);
+        setComments(data);
+      } catch (error: any) {
+        setError("댓글을 불러오는 중 오류가 발생했습니다.");
+      }
+      setLoading(false);
+    }
+    loadComments();
+  }, [postId]);
+
   // 댓글 목록 불러온 후 user_id, reply_to 모두 users 테이블에서 avatar_url, username 조회
   useEffect(() => {
-    async function fetchAvatarsAndReplyTo() {
+    async function loadUsersMap() {
       const userIds = Array.from(
-        new Set(
-          [
-            ...comments.map((c) => c.user_id),
-            ...comments.map((c) => c.reply_to),
-          ].filter(Boolean)
-        )
-      );
-      if (userIds.length === 0) return;
-      const { data, error } = await supabase
-        .from("users")
-        .select("id, username, avatar_url")
-        .in("id", userIds);
-      if (!error && data) {
+        new Set([
+          ...comments.map((c) => c.user_id),
+          ...comments.map((c) => c.reply_to),
+        ])
+      ).filter((id): id is string => typeof id === "string");
+      try {
+        const usersMap = await fetchUsersMap(userIds);
+        setReplyToMap(usersMap);
+        // avatarMap도 usersMap에서 추출
         const avatarMap: { [userId: string]: string | null } = {};
-        const replyToMap: {
-          [userId: string]: { username: string; avatar_url: string | null };
-        } = {};
-        data.forEach((u: any) => {
-          avatarMap[u.id] = u.avatar_url || null;
-          replyToMap[u.id] = {
-            username: u.username,
-            avatar_url: u.avatar_url || null,
-          };
+        Object.entries(usersMap).forEach(([id, u]) => {
+          avatarMap[id] = u.avatar_url;
         });
         setAvatarMap(avatarMap);
-        setReplyToMap(replyToMap);
-      }
+      } catch {}
     }
-    fetchAvatarsAndReplyTo();
+    loadUsersMap();
   }, [comments]);
 
   useEffect(() => {
-    async function fetchComments() {
-      setLoading(true);
-      setError(null);
-      const { data, error } = await supabase
-        .from("board_comments")
-        .select("*")
-        .eq("post_id", postId)
-        .order("created_at", { ascending: true });
-      if (error) setError("댓글을 불러오는 중 오류가 발생했습니다.");
-      else setComments(data || []);
-      setLoading(false);
-    }
-
     async function fetchPostAuthor() {
       const { data, error } = await supabase
         .from("board_posts")
@@ -287,18 +297,15 @@ export default function BoardComments({
         });
       }
     }
-
-    fetchComments();
     fetchPostAuthor();
   }, [postId]);
 
   if (loading) return <div className="text-gray-400 py-4">댓글 로딩 중...</div>;
   if (error) return <div className="text-red-500 py-4">{error}</div>;
 
-  // 댓글 등록 핸들러 (최상단 선언만 유지)
+  // 댓글 등록 핸들러
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-
     if (!comment.trim()) {
       toast({
         title: "댓글 내용 필요",
@@ -307,10 +314,8 @@ export default function BoardComments({
       });
       return;
     }
-
     setSubmitting(true);
     setSubmitError(null);
-
     try {
       const currentUser = await getHeaderUser();
       if (!currentUser || !currentUser.id) {
@@ -321,47 +326,20 @@ export default function BoardComments({
         });
         return;
       }
-
-      const { error } = await supabase.from("board_comments").insert([
-        {
-          post_id: postId,
-          content: comment,
-          author: currentUser.username,
-          user_id: currentUser.id,
-        },
-      ]);
-
-      if (error) {
-        console.error("댓글 등록 오류:", error);
-        throw error;
-      }
-
+      await addComment({ postId, content: comment, userId: currentUser.id });
       setComment("");
       toast({
         title: "댓글 등록 완료",
         description: "댓글이 성공적으로 등록되었습니다.",
       });
-
       // 새로고침
-      const { data: newComments, error: fetchError } = await supabase
-        .from("board_comments")
-        .select("*")
-        .eq("post_id", postId)
-        .order("created_at", { ascending: true });
-
-      if (fetchError) {
-        console.error("댓글 목록 새로고침 오류:", fetchError);
-        throw fetchError;
-      }
-
-      setComments(newComments || []);
+      const data = await fetchComments(postId);
+      setComments(data);
     } catch (err: any) {
-      console.error("댓글 처리 중 오류:", err);
-      const errorMessage = err.message || "댓글 등록 중 오류가 발생했습니다.";
-      setSubmitError(errorMessage);
+      setSubmitError(err.message || "댓글 등록 중 오류가 발생했습니다.");
       toast({
         title: "댓글 등록 실패",
-        description: errorMessage,
+        description: err.message || "댓글 등록 중 오류가 발생했습니다.",
         variant: "destructive",
       });
     } finally {
@@ -369,7 +347,7 @@ export default function BoardComments({
     }
   }
 
-  // 대댓글 등록 시 reply_to에 c.user_id(uuid) 저장
+  // 대댓글 등록 핸들러
   const handleReplySubmit = async (c: BoardComment) => {
     if (!replyInputs[c.id]?.trim()) {
       toast({
@@ -389,39 +367,23 @@ export default function BoardComments({
         });
         return;
       }
-      const { error } = await supabase.from("board_comments").insert([
-        {
-          post_id: postId,
-          content: replyInputs[c.id],
-          author: currentUser.username,
-          user_id: currentUser.id,
-          parent_id: c.id,
-          reply_to: c.user_id, // uuid로 저장
-        },
-      ]);
-      if (error) {
-        console.error("답글 등록 오류:", error);
-        throw error;
-      }
+      await addReply({
+        postId,
+        content: replyInputs[c.id],
+        userId: currentUser.id,
+        parentId: c.id,
+        replyTo: c.user_id,
+      });
       setReplyInputs((prev) => ({ ...prev, [c.id]: "" }));
       setActiveReplyId(null);
       // 새로고침
-      const { data: newComments, error: fetchError } = await supabase
-        .from("board_comments")
-        .select("*")
-        .eq("post_id", postId)
-        .order("created_at", { ascending: true });
-      if (fetchError) {
-        console.error("댓글 목록 새로고침 오류:", fetchError);
-        throw fetchError;
-      }
-      setComments(newComments || []);
+      const data = await fetchComments(postId);
+      setComments(data);
       toast({
         title: "답글 등록 완료",
         description: "답글이 성공적으로 등록되었습니다.",
       });
     } catch (err: any) {
-      console.error("답글 처리 중 오류:", err);
       toast({
         title: "답글 등록 실패",
         description: err.message || "답글 등록 중 오류가 발생했습니다.",
@@ -452,14 +414,16 @@ export default function BoardComments({
               <div className="bg-gray-100 text-gray-600 rounded-full w-9 h-9 flex items-center justify-center flex-shrink-0">
                 <UserAvatar
                   userId={c.user_id}
-                  username={c.author}
+                  username={replyToMap[c.user_id]?.username}
                   size={9}
                   avatarMap={avatarMap}
                 />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="font-medium text-sm">{c.author}</span>
+                  <span className="font-medium text-sm">
+                    {replyToMap[c.user_id]?.username}
+                  </span>
                   {postAuthor?.user_id && c.user_id === postAuthor.user_id && (
                     <span className="bg-blue-100 text-blue-600 text-[10px] px-1.5 py-0.5 rounded-full">
                       작성자
@@ -473,16 +437,133 @@ export default function BoardComments({
                   </span>
                 </div>
                 <div className="text-gray-800 text-[15px] mb-2">
-                  {/* 대댓글일 경우에만 '@유저이름' 표시, 두번째 답글부터 표시 */}
-                  {c.parent_id &&
-                    c.reply_to &&
-                    typeof c.reply_to === "string" &&
-                    replyToMap[c.reply_to] && (
-                      <span className="text-blue-600 font-medium mr-1">
-                        @{replyToMap[c.reply_to].username}
-                      </span>
-                    )}
-                  {c.content}
+                  {editingCommentId === c.id ? (
+                    <form
+                      className="mt-3"
+                      onSubmit={async (e) => {
+                        e.preventDefault();
+                        if (!editInput.trim()) {
+                          toast({
+                            title: "내용 필요",
+                            description: "수정할 내용을 입력하세요.",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        setEditLoading(true);
+                        try {
+                          await serviceUpdateComment({
+                            commentId: c.id,
+                            content: editInput,
+                          });
+                          setEditingCommentId(null);
+                          setEditInput("");
+                          const data = await fetchComments(postId);
+                          setComments(data);
+                          toast({
+                            title: "수정 완료",
+                            description: "댓글이 수정되었습니다.",
+                          });
+                        } catch (err: any) {
+                          toast({
+                            title: "수정 실패",
+                            description:
+                              err.message ||
+                              "댓글 수정 중 오류가 발생했습니다.",
+                            variant: "destructive",
+                          });
+                        } finally {
+                          setEditLoading(false);
+                        }
+                      }}
+                    >
+                      <div className="border-2 border-gray-200 rounded-lg overflow-hidden">
+                        <div className="flex items-center justify-between p-4">
+                          <div className="flex items-center gap-2">
+                            <UserAvatar
+                              userId={user.id}
+                              username={user.username}
+                              size={6}
+                              avatarMap={avatarMap}
+                            />
+                            <span className="font-medium text-sm">
+                              {user.username}
+                            </span>
+                          </div>
+                          <span className="text-xs text-gray-400">
+                            {editInput.length}/1000
+                          </span>
+                        </div>
+                        <input
+                          type="text"
+                          className="w-full px-4 focus:outline-none text-sm text-gray-800 placeholder-gray-400"
+                          placeholder="댓글을 수정하세요"
+                          value={editInput}
+                          onChange={(e) => {
+                            const newValue = e.target.value;
+                            if (newValue.length <= 1000) {
+                              setEditInput(newValue);
+                            }
+                          }}
+                          maxLength={1000}
+                          required
+                          disabled={editLoading}
+                          autoFocus
+                        />
+                        <div className="flex justify-between items-center p-4">
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              className="text-gray-500 hover:text-gray-700 p-1 rounded"
+                              tabIndex={-1}
+                            >
+                              <Image className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              className="text-gray-500 hover:text-gray-700 p-1 rounded"
+                              tabIndex={-1}
+                            >
+                              <Smile className="h-4 w-4" />
+                            </button>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              className="px-3 py-2 text-gray-500 hover:bg-gray-100 rounded-md text-xs"
+                              onClick={() => {
+                                setEditingCommentId(null);
+                                setEditInput("");
+                              }}
+                              disabled={editLoading}
+                            >
+                              취소
+                            </button>
+                            <button
+                              type="submit"
+                              className={`px-3 py-2 rounded-md text-xs transition-colors duration-200 ${editInput.trim() ? "bg-blue-600 text-white hover:bg-blue-700" : " cursor-not-allowed"}`}
+                              disabled={!editInput.trim() || editLoading}
+                            >
+                              {editLoading ? "등록중" : "등록"}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </form>
+                  ) : (
+                    <>
+                      {/* 대댓글일 경우에만 '@유저이름' 표시, 두번째 답글부터 표시 */}
+                      {c.parent_id &&
+                        c.reply_to &&
+                        typeof c.reply_to === "string" &&
+                        replyToMap[c.reply_to] && (
+                          <span className="text-blue-600 font-medium mr-1">
+                            @{replyToMap[c.reply_to].username}
+                          </span>
+                        )}
+                      {c.content}
+                    </>
+                  )}
                 </div>
                 <div className="flex items-center gap-3">
                   {/* 로그인 유저만 답글 버튼 노출 */}
@@ -513,34 +594,35 @@ export default function BoardComments({
                 >
                   <MoreHorizontal className="h-4 w-4" />
                 </button>
-                {activeMenuId === c.id &&
-                  user &&
-                  user.username === c.author && (
-                    <div className="absolute right-0 top-full mt-1 bg-white shadow-md rounded-md py-1 z-10 w-24">
+                {activeMenuId === c.id && user && (
+                  <div className="absolute right-0 top-full mt-1 bg-white shadow-md rounded-md py-1 z-10 w-24">
+                    {/* 본인 댓글이면 수정/삭제, 관리자면 삭제만 */}
+                    {user.id === c.user_id && (
+                      <button
+                        className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                        onClick={() => {
+                          setEditingCommentId(c.id);
+                          setEditInput(c.content);
+                          setActiveMenuId(null);
+                        }}
+                      >
+                        <Reply className="h-3.5 w-3.5" />
+                        수정
+                      </button>
+                    )}
+                    {(user.id === c.user_id || user.role === "admin") && (
                       <button
                         className="w-full text-left px-3 py-2 text-xs text-red-600 hover:bg-gray-100 flex items-center gap-2"
                         onClick={async () => {
                           if (window.confirm("댓글을 삭제하시겠습니까?")) {
-                            const { error } = await supabase
-                              .from("board_comments")
-                              .delete()
-                              .eq("id", c.id);
-                            if (!error) {
-                              // 새로고침
-                              const { data, error: fetchError } = await supabase
-                                .from("board_comments")
-                                .select("*")
-                                .eq("post_id", postId)
-                                .order("created_at", { ascending: true });
-                              if (!fetchError) {
-                                setComments(data || []);
-                                toast({
-                                  title: "댓글 삭제 완료",
-                                  description:
-                                    "댓글이 성공적으로 삭제되었습니다.",
-                                });
-                              }
-                            }
+                            await serviceDeleteComment(c.id);
+                            // 새로고침
+                            const data = await fetchComments(postId);
+                            setComments(data);
+                            toast({
+                              title: "댓글 삭제 완료",
+                              description: "댓글이 성공적으로 삭제되었습니다.",
+                            });
                           }
                           setActiveMenuId(null);
                         }}
@@ -548,8 +630,9 @@ export default function BoardComments({
                         <Trash2 className="h-3.5 w-3.5" />
                         삭제
                       </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             {/* 답글 입력창 - 하나만 표시 */}
@@ -564,18 +647,24 @@ export default function BoardComments({
                 <div className="border-2 border-gray-200 rounded-lg overflow-hidden">
                   <div className="flex items-center justify-between p-4">
                     <div className="flex items-center gap-2">
+                      {/* 작성자(로그인 유저) 아바타/이름 */}
+                      <UserAvatar
+                        userId={user.id}
+                        username={user.username}
+                        size={6}
+                        avatarMap={avatarMap}
+                      />
+                      <span className="font-medium text-sm">
+                        {user.username}
+                      </span>
+                      {/* 답글 대상 username은 placeholder에서만 사용 */}
                       {c.parent_id &&
                         c.reply_to &&
                         typeof c.reply_to === "string" &&
                         replyToMap[c.reply_to] && (
-                          <UserAvatar
-                            userId={c.reply_to}
-                            username={replyToMap[c.reply_to].username}
-                            size={6}
-                            avatarMap={{
-                              [c.reply_to]: replyToMap[c.reply_to].avatar_url,
-                            }}
-                          />
+                          <span className="font-medium text-xs text-blue-600 ml-2">
+                            @{replyToMap[c.reply_to]?.username}님께 답글
+                          </span>
                         )}
                     </div>
                     <span className="text-xs text-gray-400">
@@ -585,7 +674,13 @@ export default function BoardComments({
                   <input
                     type="text"
                     className="w-full px-4 focus:outline-none text-sm text-gray-800 placeholder-gray-400"
-                    placeholder={`${c.author}님께 답글쓰기`}
+                    placeholder={
+                      c.parent_id &&
+                      c.reply_to &&
+                      typeof c.reply_to === "string"
+                        ? `${replyToMap[c.reply_to]?.username || replyToMap[c.user_id]?.username || ""}님께 답글쓰기`
+                        : "답글을 입력하세요"
+                    }
                     value={replyInputs[c.id] || ""}
                     onChange={(e) => {
                       const newValue = e.target.value;

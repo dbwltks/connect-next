@@ -121,38 +121,18 @@ const styles = `
 `;
 
 export default function Header() {
-  const { user, loading: userLoading } = useAuth();
-
-  console.log("Header Auth State:", { user, userLoading });
-
-  if (userLoading) {
-    return (
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center">
-          <div className="w-full flex justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-          </div>
-        </div>
-      </header>
-    );
-  }
+  const { user } = useAuth();
 
   return (
     <header className="sticky top-0 z-[9] w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
-        <HeaderClient user={user} userLoading={userLoading} />
+        <HeaderClient user={user} />
       </div>
     </header>
   );
 }
 
-function HeaderClient({
-  user,
-  userLoading,
-}: {
-  user: User | null;
-  userLoading?: boolean;
-}) {
+function HeaderClient({ user }: { user: any }) {
   const { handleLogout } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -320,9 +300,7 @@ function HeaderClient({
         </div>
 
         <div className="flex items-center justify-center">
-          {userLoading ? (
-            <div className="h-8 w-8 bg-gray-200 animate-pulse rounded-full" />
-          ) : user ? (
+          {user ? (
             <UserMenu user={user} onLogout={handleLogout} />
           ) : (
             <Link href="/login">
@@ -346,9 +324,7 @@ function HeaderClient({
       {/* 데스크톱 우측 메뉴 */}
       <div className="hidden md:flex items-center gap-2">
         <ThemeSwitcher />
-        {userLoading ? (
-          <div className="h-8 w-8 bg-gray-200 animate-pulse rounded-full" />
-        ) : user ? (
+        {user ? (
           <UserMenu user={user} onLogout={handleLogout} />
         ) : (
           <Link href="/login">

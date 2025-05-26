@@ -47,6 +47,7 @@ import { ko } from "date-fns/locale";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/db";
+import { useAuth } from "@/contexts/auth-context";
 
 interface BoardPost {
   id: string;
@@ -83,8 +84,8 @@ export default function BoardSection({
   const [showDropdown, setShowDropdown] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
-  const [user, setUser] = useState<any>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { user } = useAuth();
+  const isAdmin = user?.role?.toLowerCase() === "admin";
 
   // section에서 필요한 정보 추출
   const title = menuTitle || section.title || "게시판";
@@ -497,29 +498,6 @@ export default function BoardSection({
     fetchBoardPosts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageId, categoryId, itemCount, page]);
-
-  // 사용자 정보 및 관리자 권한 확인
-  useEffect(() => {
-    // localStorage 또는 sessionStorage에서 사용자 정보 가져오기
-    const storedUser =
-      localStorage.getItem("user") || sessionStorage.getItem("user");
-    if (storedUser) {
-      try {
-        const userData = JSON.parse(storedUser);
-        setUser(userData);
-
-        // 관리자 권한 확인
-        const isUserAdmin =
-          userData?.role === "admin" ||
-          userData?.role === "ADMIN" ||
-          String(userData?.role).toLowerCase() === "admin";
-
-        setIsAdmin(isUserAdmin);
-      } catch (error) {
-        console.error("사용자 정보 파싱 오류:", error);
-      }
-    }
-  }, []);
 
   // 공지/고정글/일반글 분리
   const now = Date.now();

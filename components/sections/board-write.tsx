@@ -16,6 +16,13 @@ import {
 } from "@/components/ui/toast";
 import dynamic from "next/dynamic";
 import { X } from "lucide-react";
+import {
+  getHeaderUser,
+  fetchDrafts,
+  deleteDraft as serviceDeleteDraft,
+  saveBoardPost as serviceSaveBoardPost,
+  getBoardPost as serviceGetBoardPost,
+} from "@/services/boardService";
 
 // TipTap 에디터 컴포넌트를 동적으로 불러옴 (SSR 방지)
 // 동적 임포트 방식을 수정하여 ChunkLoadError 해결
@@ -140,15 +147,11 @@ export default function BoardWrite({
     try {
       const user = await getHeaderUser();
       if (!user || !user.id) return setDrafts([]);
-      const { data, error } = await supabase
-        .from("board_posts")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("page_id", pageId)
-        .eq("category_id", categoryId)
-        .eq("status", "draft")
-        .order("updated_at", { ascending: false });
-      if (error) throw error;
+      const data = await fetchDrafts({
+        userId: user.id,
+        pageId,
+        categoryId,
+      });
       setDrafts(
         (data || []).map((d: any) => ({
           key: d.id,
@@ -209,12 +212,7 @@ export default function BoardWrite({
   //임시등록 삭제 (board_posts에서 status='draft' row 삭제)
   const deleteDraft = async (draftKey: string) => {
     try {
-      const { error } = await supabase
-        .from("board_posts")
-        .delete()
-        .eq("id", draftKey)
-        .eq("status", "draft");
-      if (error) throw error;
+      await serviceDeleteDraft({ draftId: draftKey });
       setDrafts(drafts.filter((d) => d.key !== draftKey));
       showToast({
         title: "삭제 완료",
@@ -324,39 +322,6 @@ export default function BoardWrite({
     }
   };
 
-  async function getHeaderUser() {
-    try {
-      // 먼저 Supabase 세션 확인
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (session?.user) {
-        // Supabase 사용자 정보가 있으면 사용
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("username, full_name")
-          .eq("id", session.user.id)
-          .single();
-
-        return {
-          id: session.user.id,
-          username:
-            profile?.username || session.user.email?.split("@")[0] || "익명",
-          email: session.user.email,
-        };
-      }
-
-      // Supabase 세션이 없으면 로컬/세션 스토리지 확인
-      if (typeof window === "undefined") return null;
-      const stored =
-        localStorage.getItem("user") || sessionStorage.getItem("user");
-      return stored ? JSON.parse(stored) : null;
-    } catch (error) {
-      console.error("사용자 정보 조회 오류:", error);
-      return null;
-    }
-  }
-
   // status를 인자로 받아 저장하는 함수
   const savePost = async (status: "draft" | "published") => {
     const html = editorRef.current?.editor?.getHTML() || "";
@@ -378,12 +343,9 @@ export default function BoardWrite({
       setLoading(false);
       return;
     }
-    const author = user.username || user.email?.split("@")[0] || "익명";
     const userId = user.id;
-    let result;
     let newId = postId;
     try {
-      const filesJson = JSON.stringify(uploadedFiles);
       // 게시글 저장(등록) 시 number 자동 할당
       let nextNumber = 1;
       if (!isEditMode && !postId) {
@@ -398,104 +360,57 @@ export default function BoardWrite({
           nextNumber = (maxData?.number || 0) + 1;
         } catch {}
       }
-      if (isEditMode && postId) {
-        // 수정모드: 기존 글 update
-        result = await supabase
-          .from("board_posts")
-          .update({
-            title,
-            content: html,
-            allow_comments: allowComments,
-            thumbnail_image: thumbnailImage,
-            files: filesJson,
-            updated_at: new Date().toISOString(),
-            author,
-            user_id: userId,
-            status,
-          })
-          .eq("id", postId);
-      } else if (postId) {
-        // 임시저장/불러오기: 기존 draft update
-        result = await supabase
-          .from("board_posts")
-          .update({
-            title,
-            content: html,
-            allow_comments: allowComments,
-            thumbnail_image: thumbnailImage,
-            files: filesJson,
-            updated_at: new Date().toISOString(),
-            author,
-            user_id: userId,
-            status,
-          })
-          .eq("id", postId);
-      } else {
-        // 새 글 작성(임시저장 or 등록)
-        const insertResult = await supabase
-          .from("board_posts")
-          .insert([
-            {
-              title,
-              content: html,
-              author,
-              user_id: userId,
-              page_id: pageId,
-              category_id: categoryId,
-              allow_comments: allowComments,
-              thumbnail_image: thumbnailImage || null,
-              files: filesJson,
-              number: nextNumber,
-              status,
-            },
-          ])
-          .select("id")
-          .single();
-        result = insertResult;
-        newId = insertResult.data?.id;
-        setPostId(newId); // 새로 insert된 경우 postId 상태 갱신
-      }
-    } catch (error) {
+      const result = await serviceSaveBoardPost({
+        postId,
+        isEditMode,
+        title,
+        content: html,
+        allowComments,
+        thumbnailImage,
+        uploadedFiles,
+        userId,
+        pageId,
+        categoryId,
+        status,
+        number: nextNumber,
+      });
+      newId = result.id;
+      setPostId(newId);
+    } catch (error: any) {
       console.error("게시글 저장 중 오류 발생:", error);
       setError("게시글 저장 중 오류가 발생했습니다.");
       setLoading(false);
       return;
     }
     setLoading(false);
-    if (result.error) {
-      setError(result.error.message || "저장 중 오류 발생");
+    if (status === "draft") {
+      setSuccess(true);
+      await loadDrafts();
+      showToast({
+        title: "임시등록 완료",
+        description: "내용이 임시등록되었습니다.",
+        variant: "default",
+      });
+      setTimeout(() => {
+        setSuccess(false);
+      }, 3000);
     } else {
-      if (status === "draft") {
-        setSuccess(true);
-        await loadDrafts();
-        showToast({
-          title: "임시등록 완료",
-          description: "내용이 임시등록되었습니다.",
-          variant: "default",
-        });
-        setTimeout(() => {
-          setSuccess(false);
-        }, 3000);
-      } else {
-        if (newId) {
-          // 상세페이지로 이동 (현재 경로에서 write 또는 edit 부분 제거)
-          const basePath = window.location.pathname.replace(
-            /\/(write|edit(\/[^/]+)?)$/,
-            ""
-          );
-          // basePath가 이미 id로 끝나면 중복 추가하지 않음
-          if (basePath.endsWith(`/${newId}`)) {
-            router.push(basePath);
-          } else {
-            router.push(`${basePath}/${newId}`);
-          }
+      if (newId) {
+        // 상세페이지로 이동 (현재 경로에서 write 또는 edit 부분 제거)
+        const basePath = window.location.pathname.replace(
+          /\/(write|edit([^/]+)?)$/,
+          ""
+        );
+        if (basePath.endsWith(`/${newId}`)) {
+          router.push(basePath);
         } else {
-          // 성공 메시지 표시
-          setTitle("");
-          setContent("");
-          setSuccess(true);
-          if (onSuccess) onSuccess();
+          router.push(`${basePath}/${newId}`);
         }
+      } else {
+        setTitle("");
+        setContent("");
+        setSuccess(true);
+        if (onSuccess) onSuccess();
       }
     }
   };
@@ -538,21 +453,12 @@ export default function BoardWrite({
     if (!postId) return;
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("board_posts")
-        .select("*")
-        .eq("id", postId)
-        .single();
-
-      if (error) throw error;
-
+      const data = await serviceGetBoardPost({ postId });
       if (data) {
         setTitle(data.title || "");
         setContent(data.content || "");
         setAllowComments(data.allow_comments !== false);
         setThumbnailImage(data.thumbnail_image || "");
-
-        // 파일 정보 로드 (보정 적용)
         let parsedFiles: any[] = [];
         if (data.files) {
           try {
@@ -567,9 +473,7 @@ export default function BoardWrite({
         }
         if (!Array.isArray(parsedFiles)) parsedFiles = [];
         const files = parsedFiles.map(normalizeFileInfo);
-        console.log("수정모드 파일 정보 loaded:", files);
         setUploadedFiles(files);
-        // 이미지가 있고 썸네일이 없으면 첫 번째 이미지를 자동 지정
         if (!thumbnailImage) {
           const firstImage = files.find((f) =>
             ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(
@@ -736,7 +640,10 @@ export default function BoardWrite({
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold">임시등록 목록</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-semibold">임시등록 목록</h3>
+              <span className="text-xs text-gray-400">{drafts.length}/5</span>
+            </div>
             <button
               onClick={() => setShowDraftList(false)}
               className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -892,9 +799,6 @@ export default function BoardWrite({
                   >
                     {drafts.length}
                   </button>
-                  <span className="ml-2 text-xs text-gray-400">
-                    {drafts.length}/5
-                  </span>
                 </div>
               )}
               <Button
