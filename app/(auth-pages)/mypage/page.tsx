@@ -290,9 +290,9 @@ export default function MyPage() {
           .select("*", { count: "exact", head: true })
           .eq("user_id", user.id);
 
-        // 댓글 수 가져오기
+        // 댓글 수 가져오기 (board_comments 테이블 사용)
         const { count: commentCount } = await supabase
-          .from("comments")
+          .from("board_comments")
           .select("*", { count: "exact", head: true })
           .eq("user_id", user.id);
 

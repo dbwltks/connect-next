@@ -15,7 +15,7 @@ import { useAuth } from "@/contexts/auth-context";
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     username: "",
@@ -24,7 +24,7 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
-    if (!loading && user) {
+    if (user) {
       const redirectTo = searchParams.get("redirect");
       if (redirectTo) {
         router.replace(redirectTo);
@@ -32,7 +32,7 @@ export default function LoginPage() {
         router.replace("/");
       }
     }
-  }, [user, loading, router, searchParams]);
+  }, [user, router, searchParams]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;

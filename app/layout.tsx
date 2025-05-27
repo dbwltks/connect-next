@@ -17,12 +17,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko" className={notoSansKr.className} suppressHydrationWarning>
+    <html lang="ko" suppressHydrationWarning>
       <head>
         {/* <link rel="manifest" href="/manifest.json" /> 삭제 */}
         <meta name="theme-color" content="#ffffff" />
       </head>
-      <body className="bg-background text-foreground">
+      <body className={`bg-background text-foreground ${notoSansKr.className}`}>
         <ClientLayout>{children}</ClientLayout>
       </body>
     </html>

@@ -120,6 +120,54 @@ const styles = `
 }
 `;
 
+// 햄버거(=)/플러스(+) 버튼 스타일
+const hamburgerPlusStyles = `
+.hamburger-eq {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hamburger-bar {
+  position: absolute;
+  width: 20px;
+  height: 2.5px;
+  background: hsl(var(--foreground));
+  border-radius: 2px;
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), width 0.3s cubic-bezier(0.4,0,0.2,1), height 0.3s, top 0.3s, left 0.3s;
+}
+.hamburger-bar.top {
+  top: 8px;
+  left: 2px;
+  width: 20px;
+  height: 2.5px;
+  transform: rotate(0deg);
+}
+.hamburger-bar.bottom {
+  top: 14px;
+  left: 2px;
+  width: 20px;
+  height: 2.5px;
+  transform: rotate(0deg);
+}
+.hamburger-eq.open .hamburger-bar.top {
+  top: -2px;
+  left: 11px;
+  width: 2.5px;
+  height: 28px;
+  transform: rotate(0deg);
+}
+.hamburger-eq.open .hamburger-bar.bottom {
+  top: 7px;
+  left: 4px;
+  width: 16px;
+  height: 2.5px;
+  transform: rotate(0deg);
+}
+`;
+
 export default function Header() {
   const { user } = useAuth();
 
@@ -147,10 +195,12 @@ function HeaderClient({ user }: { user: any }) {
       setTimeout(() => {
         setIsMenuOpen(false);
         setAnimationClass("");
+        setIsHamburgerOpen(false);
       }, 400);
     } else {
       setIsMenuOpen(true);
       setAnimationClass("animate-slideDown");
+      setIsHamburgerOpen(true);
     }
   };
 
@@ -165,6 +215,13 @@ function HeaderClient({ user }: { user: any }) {
 
   useEffect(() => {
     setMounted(true);
+    // 동적으로 스타일 추가
+    if (!document.getElementById("hamburger-eq-styles")) {
+      const styleSheet = document.createElement("style");
+      styleSheet.id = "hamburger-eq-styles";
+      styleSheet.textContent = hamburgerPlusStyles;
+      document.head.appendChild(styleSheet);
+    }
   }, []);
 
   // 모바일 서브메뉴 아코디언 상태
@@ -276,12 +333,11 @@ function HeaderClient({ user }: { user: any }) {
           size="icon"
           aria-label="Toggle Menu"
           onClick={handleHamburgerClick}
-          className={!isHamburgerOpen ? "" : "hamburger-open"}
+          className={isHamburgerOpen ? "hamburger-eq open" : "hamburger-eq"}
         >
-          <div className="flex flex-col items-center justify-center w-5 h-5">
-            <span className="hamburger-line" />
-            <span className="hamburger-line" />
-          </div>
+          {/* = (닫힘) → + (열림) */}
+          <span className="hamburger-bar top" />
+          <span className="hamburger-bar bottom" />
         </Button>
 
         <div className="flex items-center justify-center">

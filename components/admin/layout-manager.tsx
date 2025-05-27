@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,28 +20,60 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
-import { supabase } from "@/db";
-import { toast } from "@/components/ui/toaster";
-import { Plus, Trash2, MoveVertical, Settings, Eye } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  MoveVertical,
+  Settings,
+  Eye,
+  Grid3X3,
+} from "lucide-react";
+import RGL, { WidthProvider, Layout } from "react-grid-layout";
+import React from "react";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  BarChart3,
+  FileText,
+  ImageIcon,
+  Clock,
+  Users,
+  TrendingUp,
+  Calendar,
+  MessageSquare,
+  Move,
+} from "lucide-react";
+const ReactGridLayout = WidthProvider(RGL);
 
-// 위젯 타입 정의
+// 위젯 타입 상수 정의
+const WIDGET_TYPES = [
+  { id: "menu", name: "메뉴 항목", icon: "Menu" },
+  { id: "page", name: "페이지", icon: "FileText" },
+  { id: "banner", name: "배너", icon: "Image" },
+] as const;
+
+// 위젯 타입 유니온 타입 정의
+type WidgetType = (typeof WIDGET_TYPES)[number]["id"];
+
+// Widget 타입 업데이트
 export type Widget = {
   id: string;
-  type: string;
+  type: WidgetType;
   title: string;
   content?: string;
   settings?: any;
   column_position: number;
   order: number;
-  width: number; // 1-12 (12 column grid system)
-  height?: number; // 위젯 높이 (px 단위)
+  width: number;
+  height?: number;
   display_options?: {
-    item_count?: number; // 표시할 아이템 개수
-    show_thumbnail?: boolean; // 썸네일 표시 여부
-    show_date?: boolean; // 날짜 표시 여부
-    show_excerpt?: boolean; // 요약 표시 여부
-    layout_type?: "list" | "grid" | "card"; // 레이아웃 타입
+    item_count?: number;
+    show_thumbnail?: boolean;
+    show_date?: boolean;
+    show_excerpt?: boolean;
+    layout_type?: "list" | "grid" | "card";
   };
   is_active: boolean;
 };
@@ -54,1127 +85,917 @@ type LayoutArea = {
   widgets: Widget[];
 };
 
-// 사용 가능한 위젯 타입
-const WIDGET_TYPES = [
-  { id: "menu", name: "메뉴 항목" },
-  { id: "page", name: "페이지" },
-];
-
-export default function LayoutManager(): React.ReactNode {
-  // 상태 관리
-  const [isLoading, setIsLoading] = useState(false);
-  const [layoutAreas, setLayoutAreas] = useState<LayoutArea[]>([
-    { id: "main", name: "메인 영역", widgets: [] },
-  ]);
-  const [editingWidget, setEditingWidget] = useState<Widget | null>(null);
-  const [showWidgetSettings, setShowWidgetSettings] = useState(false);
-  const [previewMode, setPreviewMode] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [showWidgetMenu, setShowWidgetMenu] = useState(false);
-  const [menuItems, setMenuItems] = useState<any[]>([]);
-  const [banners, setBanners] = useState<any[]>([]);
-  const [pages, setPages] = useState<any[]>([]);
-  const [boardPosts, setBoardPosts] = useState<{ [key: string]: any[] }>({});
-
-  // 컴포넌트 마운트 시 레이아웃 데이터 및 메뉴 항목 로드
-  useEffect(() => {
-    fetchLayoutData();
-    fetchMenuItems();
-    fetchBanners();
-    fetchPages();
-  }, []);
-
-  // 메뉴 항목 가져오기
-  const fetchMenuItems = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("cms_menus")
-        .select("*")
-        .order("order_num", { ascending: true });
-
-      if (error) throw error;
-      setMenuItems(data || []);
-    } catch (error) {
-      console.error("메뉴 항목을 불러오는 중 오류가 발생했습니다:", error);
-      toast({
-        title: "오류",
-        description: "메뉴 항목을 불러오는 중 오류가 발생했습니다.",
-        variant: "destructive",
-      });
-    }
+// MainDashboard 전용 타입
+interface DashboardWidget {
+  id: string;
+  type: "chart" | "text" | "image" | "clock" | "stats" | "calendar" | "notes";
+  title: string;
+  gridX: number;
+  gridY: number;
+  gridWidth: number;
+  gridHeight: number;
+  config: {
+    padding?: number;
+    margin?: number;
+    backgroundImage?: string;
+    overlayOpacity?: number;
+    [key: string]: any;
   };
-
-  // 배너 가져오기
-  const fetchBanners = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("cms_banners")
-        .select("*")
-        .eq("is_active", true)
-        .is("menu_id", null)
-        .order("order_num", { ascending: true });
-
-      if (error) throw error;
-      setBanners(data || []);
-    } catch (error) {
-      console.error("배너를 불러오는 중 오류가 발생했습니다:", error);
-    }
-  };
-
-  // 페이지 가져오기
-  const fetchPages = async () => {
-    try {
-      const { data, error } = await supabase.from("cms_pages").select("*");
-
-      if (error) throw error;
-      setPages(data || []);
-
-      // 게시판 타입 페이지의 경우 최신글 데이터 가져오기 시도
-      const boardPages =
-        data?.filter((page) => page.page_type === "board") || [];
-      if (boardPages.length > 0) {
-        try {
-          // 각 게시판 페이지에 대한 더미 게시물 데이터 생성 (실제로는 API 호출 필요)
-          const boardPostsMap: Record<string, any[]> = {};
-
-          boardPages.forEach((page) => {
-            // 각 게시판 페이지에 대해 5-10개의 더미 게시물 생성
-            const postCount = Math.floor(Math.random() * 6) + 5; // 5-10개
-            const posts = [];
-
-            for (let i = 0; i < postCount; i++) {
-              const date = new Date();
-              date.setDate(date.getDate() - i); // 최근 날짜부터 역순으로
-
-              posts.push({
-                id: `dummy-${page.id}-${i}`,
-                title: `${page.title} 관련 게시물 ${i + 1}`,
-                excerpt: `${page.title}에 대한 간략한 내용이 표시됩니다. 이 부분은 게시물의 요약 내용입니다.`,
-                author: "관리자",
-                created_at: date.toISOString(),
-                view_count: Math.floor(Math.random() * 100),
-              });
-            }
-
-            boardPostsMap[String(page.id)] = posts;
-          });
-
-          setBoardPosts(boardPostsMap);
-        } catch (postError) {
-          console.error(
-            "게시물 데이터를 불러오는 중 오류가 발생했습니다:",
-            postError
-          );
-        }
-      }
-    } catch (error) {
-      console.error("페이지를 불러오는 중 오류가 발생했습니다:", error);
-    }
-  };
-
-  // 레이아웃 데이터 가져오기
-  const fetchLayoutData = async () => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("cms_layout")
-        .select("*")
-        .order("order", { ascending: true });
-
-      if (error) throw error;
-
-      // 위젯을 영역별로 그룹화
-      const mainAreaWidgets = data || [];
-
-      setLayoutAreas([
-        {
-          id: "main",
-          name: "메인 영역",
-          widgets: mainAreaWidgets.map((widget) => ({
-            ...widget,
-            column_position: widget.column_position || 0,
-            width: widget.width || 12,
-          })),
-        },
-      ]);
-    } catch (error) {
-      console.error(
-        "레이아웃 데이터를 불러오는 중 오류가 발생했습니다:",
-        error
-      );
-      toast({
-        title: "오류",
-        description: "레이아웃 데이터를 불러오는 중 오류가 발생했습니다.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // 드래그 앤 드롭 처리
-  const handleDragEnd = async (result: any) => {
-    const { source, destination } = result;
-
-    // 드롭 위치가 없는 경우 (드래그만 하고 원위치)
-    if (!destination) return;
-
-    // 같은 위치로 드롭한 경우
-    if (
-      source.droppableId === destination.droppableId &&
-      source.index === destination.index
-    ) {
-      return;
-    }
-
-    // 레이아웃 영역 복사
-    const newLayoutAreas = [...layoutAreas];
-
-    // 소스 영역 찾기
-    const sourceAreaIndex = newLayoutAreas.findIndex(
-      (area) => area.id === source.droppableId
-    );
-
-    // 대상 영역 찾기
-    const destAreaIndex = newLayoutAreas.findIndex(
-      (area) => area.id === destination.droppableId
-    );
-
-    // 같은 영역 내에서 순서 변경
-    if (source.droppableId === destination.droppableId) {
-      const widgets = [...newLayoutAreas[sourceAreaIndex].widgets];
-      const [movedWidget] = widgets.splice(source.index, 1);
-      widgets.splice(destination.index, 0, movedWidget);
-
-      // 순서 업데이트
-      const updatedWidgets = widgets.map((widget, index) => ({
-        ...widget,
-        order: index,
-      }));
-
-      newLayoutAreas[sourceAreaIndex].widgets = updatedWidgets;
-      setLayoutAreas(newLayoutAreas);
-
-      // DB 업데이트
-      try {
-        setIsLoading(true);
-
-        // 변경된 위젯들의 순서 업데이트
-        for (const widget of updatedWidgets) {
-          console.log(`Updating widget ${widget.id} order to ${widget.order}`);
-          await supabase
-            .from("cms_layout")
-            .update({ order: widget.order })
-            .eq("id", widget.id);
-        }
-
-        toast({
-          title: "성공",
-          description: "위젯 순서가 업데이트되었습니다.",
-        });
-      } catch (error) {
-        console.error("위젯 순서 업데이트 중 오류가 발생했습니다:", error);
-        toast({
-          title: "오류",
-          description: "위젯 순서 업데이트 중 오류가 발생했습니다.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    } else {
-      // 다른 영역으로 이동
-      const sourceWidgets = [...newLayoutAreas[sourceAreaIndex].widgets];
-      const destWidgets = [...newLayoutAreas[destAreaIndex].widgets];
-
-      // 소스에서 위젯 제거
-      const [movedWidget] = sourceWidgets.splice(source.index, 1);
-
-      // 대상 영역의 column 값으로 업데이트
-      const updatedWidget = {
-        ...movedWidget,
-        column_position: parseInt(destination.droppableId.split("-")[1] || "0"),
-      };
-
-      // 대상에 위젯 추가
-      destWidgets.splice(destination.index, 0, updatedWidget);
-
-      // 소스 영역 위젯 순서 업데이트
-      newLayoutAreas[sourceAreaIndex].widgets = sourceWidgets.map(
-        (widget, index) => ({
-          ...widget,
-          order: index,
-        })
-      );
-
-      // 대상 영역 위젯 순서 업데이트
-      newLayoutAreas[destAreaIndex].widgets = destWidgets.map(
-        (widget, index) => ({
-          ...widget,
-          order: index,
-        })
-      );
-
-      setLayoutAreas(newLayoutAreas);
-
-      // DB 업데이트
-      try {
-        setIsLoading(true);
-
-        // 이동된 위젯 업데이트
-        await supabase
-          .from("cms_layout")
-          .update({
-            column_position: updatedWidget.column_position,
-            order: destWidgets.findIndex((w) => w.id === updatedWidget.id),
-          })
-          .eq("id", updatedWidget.id);
-
-        // 소스 영역 위젯 순서 업데이트
-        for (const widget of newLayoutAreas[sourceAreaIndex].widgets) {
-          await supabase
-            .from("cms_layout")
-            .update({ order: widget.order })
-            .eq("id", widget.id);
-        }
-
-        // 대상 영역 위젯 순서 업데이트
-        for (const widget of newLayoutAreas[destAreaIndex].widgets) {
-          await supabase
-            .from("cms_layout")
-            .update({ order: widget.order })
-            .eq("id", widget.id);
-        }
-
-        toast({
-          title: "성공",
-          description: "위젯 위치가 업데이트되었습니다.",
-        });
-      } catch (error) {
-        console.error("위젯 위치 업데이트 중 오류가 발생했습니다:", error);
-        toast({
-          title: "오류",
-          description: "위젯 위치 업데이트 중 오류가 발생했습니다.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    }
-  };
-
-  // 새 위젯 추가
-  const addNewWidget = async (type: string, sourceItem?: any) => {
-    try {
-      setIsLoading(true);
-
-      // 기본 위젯 설정
-      const newWidget: Omit<Widget, "id"> = {
-        type,
-        title:
-          sourceItem?.title ||
-          WIDGET_TYPES.find((w) => w.id === type)?.name ||
-          "새 위젯",
-        content: sourceItem?.content || "",
-        column_position: 0,
-        order: layoutAreas[0].widgets.length,
-        width: 12,
-        is_active: true,
-        settings: {
-          source_id: sourceItem?.id || null,
-          source_type: type,
-          url: sourceItem?.url || null,
-        },
-      };
-
-      // DB에 위젯 추가
-      const { data, error } = await supabase
-        .from("cms_layout")
-        .insert(newWidget)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // 상태 업데이트
-      const newLayoutAreas = [...layoutAreas];
-      newLayoutAreas[0].widgets.push(data);
-      setLayoutAreas(newLayoutAreas);
-
-      toast({
-        title: "성공",
-        description: "새 위젯이 추가되었습니다.",
-      });
-    } catch (error) {
-      console.error("위젯 추가 중 오류가 발생했습니다:", error);
-      toast({
-        title: "오류",
-        description: "위젯 추가 중 오류가 발생했습니다.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // 위젯 삭제
-  const deleteWidget = async (widgetId: string) => {
-    try {
-      setIsLoading(true);
-
-      // DB에서 위젯 삭제
-      const { error } = await supabase
-        .from("cms_layout")
-        .delete()
-        .eq("id", widgetId);
-
-      if (error) throw error;
-
-      // 상태 업데이트
-      const newLayoutAreas = layoutAreas.map((area) => ({
-        ...area,
-        widgets: area.widgets.filter((widget) => widget.id !== widgetId),
-      }));
-
-      setLayoutAreas(newLayoutAreas);
-
-      toast({
-        title: "성공",
-        description: "위젯이 삭제되었습니다.",
-      });
-    } catch (error) {
-      console.error("위젯 삭제 중 오류가 발생했습니다:", error);
-      toast({
-        title: "오류",
-        description: "위젯 삭제 중 오류가 발생했습니다.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // 위젯 설정 저장
-  const saveWidgetSettings = async () => {
-    if (!editingWidget) return;
-
-    try {
-      setIsLoading(true);
-
-      console.log("Saving widget settings:", editingWidget);
-
-      // DB 업데이트
-      const { error } = await supabase
-        .from("cms_layout")
-        .update({
-          title: editingWidget.title,
-          content: editingWidget.content,
-          width: editingWidget.width,
-          height: editingWidget.height,
-          display_options: editingWidget.display_options,
-          is_active: editingWidget.is_active,
-          settings: editingWidget.settings,
-        })
-        .eq("id", editingWidget.id);
-
-      if (error) {
-        console.error("Supabase error:", error);
-        throw error;
-      }
-
-      // 상태 업데이트
-      const newLayoutAreas = layoutAreas.map((area) => ({
-        ...area,
-        widgets: area.widgets.map((widget) =>
-          widget.id === editingWidget.id ? editingWidget : widget
-        ),
-      }));
-
-      setLayoutAreas(newLayoutAreas);
-      setDialogOpen(false); // 다이얼로그 닫기 추가
-      setShowWidgetSettings(false);
-      setEditingWidget(null);
-
-      toast({
-        title: "성공",
-        description: "위젯 설정이 저장되었습니다.",
-      });
-
-      // 레이아웃 데이터 다시 불러오기
-      fetchLayoutData();
-    } catch (error) {
-      console.error("위젯 설정 저장 중 오류가 발생했습니다:", error);
-      toast({
-        title: "오류",
-        description: "위젯 설정 저장 중 오류가 발생했습니다.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // 위젯 설정 UI 렌더링
-  const renderWidgetSettingsDialog = () => {
-    if (!editingWidget) return null;
-
-    return (
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>위젯 설정: {editingWidget.title}</DialogTitle>
-            <DialogDescription>
-              위젯의 속성을 설정하고 저장 버튼을 클릭하세요.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="widget-title">제목</Label>
-              <Input
-                id="widget-title"
-                value={editingWidget.title}
-                onChange={(e) =>
-                  setEditingWidget({
-                    ...editingWidget,
-                    title: e.target.value,
-                  })
-                }
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="widget-width">너비</Label>
-                <Select
-                  value={editingWidget.width.toString()}
-                  onValueChange={(value) =>
-                    setEditingWidget({
-                      ...editingWidget,
-                      width: parseInt(value),
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="너비 선택" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="3">25% (3/12)</SelectItem>
-                    <SelectItem value="4">33% (4/12)</SelectItem>
-                    <SelectItem value="6">50% (6/12)</SelectItem>
-                    <SelectItem value="8">66% (8/12)</SelectItem>
-                    <SelectItem value="9">75% (9/12)</SelectItem>
-                    <SelectItem value="12">100% (12/12)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="widget-height">높이 (px)</Label>
-                <Input
-                  id="widget-height"
-                  type="number"
-                  placeholder="자동 조절"
-                  value={editingWidget.height || ""}
-                  onChange={(e) =>
-                    setEditingWidget({
-                      ...editingWidget,
-                      height: e.target.value
-                        ? parseInt(e.target.value)
-                        : undefined,
-                    })
-                  }
-                />
-              </div>
-            </div>
-
-            {/* 콘텐츠 표시 옵션 - 페이지 타입인 경우에만 표시 */}
-            {editingWidget.type === "page" && (
-              <div className="space-y-4 border rounded-md p-3 bg-gray-50">
-                <h4 className="font-medium text-sm">콘텐츠 표시 옵션</h4>
-
-                <div className="space-y-2">
-                  <Label htmlFor="item-count">표시할 아이템 개수</Label>
-                  <Select
-                    value={(
-                      editingWidget.display_options?.item_count || 5
-                    ).toString()}
-                    onValueChange={(value) =>
-                      setEditingWidget({
-                        ...editingWidget,
-                        display_options: {
-                          ...editingWidget.display_options,
-                          item_count: parseInt(value),
-                        },
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="개수 선택" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="3">3개</SelectItem>
-                      <SelectItem value="5">5개</SelectItem>
-                      <SelectItem value="10">10개</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="layout-type">레이아웃 타입</Label>
-                  <Select
-                    value={editingWidget.display_options?.layout_type || "list"}
-                    onValueChange={(value) =>
-                      setEditingWidget({
-                        ...editingWidget,
-                        display_options: {
-                          ...editingWidget.display_options,
-                          layout_type: value as "list" | "grid" | "card",
-                        },
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="레이아웃 선택" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="list">리스트형</SelectItem>
-                      <SelectItem value="grid">그리드형</SelectItem>
-                      <SelectItem value="card">카드형</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-3 pt-2">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="show-thumbnail"
-                      checked={
-                        editingWidget.display_options?.show_thumbnail || false
-                      }
-                      onCheckedChange={(checked) => {
-                        console.log("Thumbnail checked:", checked);
-                        setEditingWidget({
-                          ...editingWidget,
-                          display_options: {
-                            ...editingWidget.display_options,
-                            show_thumbnail: checked === true,
-                          },
-                        });
-                      }}
-                    />
-                    <Label htmlFor="show-thumbnail">썸네일 표시</Label>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="show-date"
-                      checked={
-                        editingWidget.display_options?.show_date || false
-                      }
-                      onCheckedChange={(checked) => {
-                        console.log("Date checked:", checked);
-                        setEditingWidget({
-                          ...editingWidget,
-                          display_options: {
-                            ...editingWidget.display_options,
-                            show_date: checked === true,
-                          },
-                        });
-                      }}
-                    />
-                    <Label htmlFor="show-date">날짜 표시</Label>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="show-excerpt"
-                      checked={
-                        editingWidget.display_options?.show_excerpt || false
-                      }
-                      onCheckedChange={(checked) => {
-                        console.log("Excerpt checked:", checked);
-                        setEditingWidget({
-                          ...editingWidget,
-                          display_options: {
-                            ...editingWidget.display_options,
-                            show_excerpt: checked === true,
-                          },
-                        });
-                      }}
-                    />
-                    <Label htmlFor="show-excerpt">요약 표시</Label>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="flex items-center space-x-2 pt-2">
-              <Checkbox
-                id="widget-active"
-                checked={editingWidget.is_active}
-                onCheckedChange={(checked) =>
-                  setEditingWidget({
-                    ...editingWidget,
-                    is_active: checked as boolean,
-                  })
-                }
-              />
-              <Label htmlFor="widget-active">활성화</Label>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setDialogOpen(false);
-                setEditingWidget(null);
-              }}
-            >
-              취소
-            </Button>
-            <Button
-              onClick={() => {
-                saveWidgetSettings();
-                setDialogOpen(false);
-              }}
-              disabled={isLoading}
-            >
-              {isLoading ? "저장 중..." : "저장"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    );
-  };
-
-  // 위젯 너비에 따른 클래스 반환
-  const getWidthClass = (width: number) => {
-    switch (width) {
-      case 3:
-        return "w-[calc(25%-12px)]";
-      case 4:
-        return "w-[calc(33.333%-12px)]";
-      case 6:
-        return "w-[calc(50%-12px)]";
-      case 8:
-        return "w-[calc(66.666%-12px)]";
-      case 9:
-        return "w-[calc(75%-12px)]";
-      case 12:
-        return "w-full";
-      default:
-        return "w-full";
-    }
-  };
-
-  // 위젯 타입에 따른 미리보기 렌더링
-  const renderWidgetPreview = (widget: Widget) => {
-    const sourceId = widget.settings?.source_id;
-
-    switch (widget.type) {
-      case "menu":
-        const menuItem = menuItems.find((item) => item.id === sourceId);
-        return previewMode ? (
-          <div className="bg-white shadow rounded overflow-hidden">
-            <div className="p-4 font-medium">{widget.title}</div>
-            <div className="bg-gray-50 p-3 border-t">
-              <ul className="space-y-2">
-                {menuItems
-                  .filter((item) => item.parent_id === sourceId)
-                  .slice(0, 5)
-                  .map((subItem) => (
-                    <li
-                      key={subItem.id}
-                      className="text-blue-600 hover:underline cursor-pointer"
-                    >
-                      {subItem.title}
-                    </li>
-                  ))}
-              </ul>
-            </div>
-          </div>
-        ) : (
-          <div className="bg-blue-50 p-4 rounded">
-            <div className="font-medium">{widget.title}</div>
-            {menuItem && (
-              <div className="text-sm text-gray-500 mt-1">
-                링크: {menuItem.url || "/"}
-              </div>
-            )}
-          </div>
-        );
-      case "banner":
-        return (
+}
+
+// 사용자 제공 메인 영역 대시보드 컴포넌트 정의
+function MainDashboard() {
+  const GRID_CELL_SIZE = 100;
+  const GRID_COLS = 10;
+  const GRID_ROWS = 10;
+  const MIN_GRID_WIDTH = 1;
+  const MIN_GRID_HEIGHT = 1;
+  const MAX_GRID_WIDTH = 10;
+  const MAX_GRID_HEIGHT = 4;
+
+  const widgetTypes = [
+    {
+      value: "chart",
+      label: "차트",
+      icon: BarChart3,
+      defaultWidth: 3,
+      defaultHeight: 2,
+    },
+    {
+      value: "text",
+      label: "텍스트",
+      icon: FileText,
+      defaultWidth: 2,
+      defaultHeight: 2,
+    },
+    {
+      value: "image",
+      label: "이미지",
+      icon: ImageIcon,
+      defaultWidth: 2,
+      defaultHeight: 2,
+    },
+    {
+      value: "clock",
+      label: "시계",
+      icon: Clock,
+      defaultWidth: 2,
+      defaultHeight: 1,
+    },
+    {
+      value: "stats",
+      label: "통계",
+      icon: TrendingUp,
+      defaultWidth: 2,
+      defaultHeight: 2,
+    },
+    {
+      value: "calendar",
+      label: "캘린더",
+      icon: Calendar,
+      defaultWidth: 3,
+      defaultHeight: 3,
+    },
+    {
+      value: "notes",
+      label: "메모",
+      icon: MessageSquare,
+      defaultWidth: 2,
+      defaultHeight: 2,
+    },
+  ];
+
+  // 위젯 렌더러들
+  const ChartWidget = ({ config }: { config: any }) => (
+    <div className="h-full flex items-center justify-center p-4">
+      <div className="w-full h-full bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-end justify-around p-4">
+        {[40, 70, 30, 90, 60].map((height, i) => (
           <div
-            className={
-              previewMode ? "" : "bg-white rounded overflow-hidden shadow"
-            }
-            style={
-              previewMode && banners.length > 0
-                ? { height: banners[0]?.image_height || "400px" }
-                : {}
-            }
-          >
-            {banners.length > 0 ? (
-              <div
-                className={`relative w-full ${previewMode ? "h-full" : "h-48"}`}
-              >
-                <img
-                  src={banners[0]?.image_url}
-                  alt="배너"
-                  className="w-full h-full object-cover"
-                />
-                {banners[0]?.title && (
-                  <div
-                    className="absolute inset-0 bg-black flex items-center justify-center"
-                    style={{ opacity: banners[0]?.overlay_opacity || 0.4 }}
-                  >
-                    <div className="text-white text-center p-4">
-                      <h3 className="text-xl font-bold">{banners[0]?.title}</h3>
-                      {banners[0]?.subtitle && (
-                        <p className="text-sm mt-2">{banners[0]?.subtitle}</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="w-full h-48 bg-purple-100 flex items-center justify-center">
-                <div className="text-purple-500 font-medium">배너</div>
-              </div>
-            )}
+            key={i}
+            className="bg-white/80 rounded-t"
+            style={{ height: `${height}%`, width: "12%" }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+  const TextWidget = ({ config }: { config: any }) => (
+    <div className="h-full p-4 overflow-auto">
+      <h3 className="font-semibold mb-2">{config.heading || "제목"}</h3>
+      <p className="text-sm text-muted-foreground">
+        {config.content || "여기에 텍스트 내용이 표시됩니다."}
+      </p>
+    </div>
+  );
+  const ImageWidget = ({ config }: { config: any }) => (
+    <div className="h-full flex items-center justify-center bg-muted rounded p-4">
+      {config.imageUrl ? (
+        <img
+          src={config.imageUrl || "/placeholder.svg"}
+          alt="Widget"
+          className="max-w-full max-h-full object-contain rounded"
+        />
+      ) : (
+        <div className="text-center text-muted-foreground">
+          <ImageIcon className="w-8 h-8 mx-auto mb-2" />
+          <p className="text-sm">이미지 없음</p>
+        </div>
+      )}
+    </div>
+  );
+  const ClockWidget = ({ config }: { config: any }) => {
+    const [time, setTime] = useState(new Date());
+    useEffect(() => {
+      const timer = setInterval(() => setTime(new Date()), 1000);
+      return () => clearInterval(timer);
+    }, []);
+    return (
+      <div className="h-full flex flex-col items-center justify-center">
+        <div className="text-xl font-mono font-bold">
+          {time.toLocaleTimeString()}
+        </div>
+        <div className="text-xs text-muted-foreground mt-1">
+          {time.toLocaleDateString()}
+        </div>
+      </div>
+    );
+  };
+  const StatsWidget = ({ config }: { config: any }) => (
+    <div className="h-full p-4">
+      <div className="flex items-center justify-between mb-4">
+        <Users className="w-6 h-6 text-blue-500" />
+        <Badge variant="secondary">+12%</Badge>
+      </div>
+      <div className="text-xl font-bold">{config.value || "1,234"}</div>
+      <div className="text-xs text-muted-foreground">
+        {config.label || "총 사용자"}
+      </div>
+    </div>
+  );
+  const CalendarWidget = ({ config }: { config: any }) => (
+    <div className="h-full p-4">
+      <div className="text-sm font-semibold mb-2">2024년 1월</div>
+      <div className="grid grid-cols-7 gap-1 text-xs">
+        {["일", "월", "화", "수", "목", "금", "토"].map((day) => (
+          <div key={day} className="text-center font-semibold p-1">
+            {day}
           </div>
-        );
+        ))}
+        {Array.from({ length: 35 }, (_, i) => (
+          <div key={i} className="text-center p-1 hover:bg-muted rounded">
+            {i > 6 && i < 32 ? i - 6 : ""}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+  const NotesWidget = ({ config }: { config: any }) => (
+    <div className="h-full p-4">
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 bg-yellow-500 rounded-full" />
+          <span className="text-xs">회의 준비하기</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 bg-green-500 rounded-full" />
+          <span className="text-xs">프로젝트 리뷰</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 bg-blue-500 rounded-full" />
+          <span className="text-xs">문서 작성</span>
+        </div>
+      </div>
+    </div>
+  );
+  const WidgetRenderer = ({ widget }: { widget: DashboardWidget }) => {
+    const style: React.CSSProperties = {
+      padding:
+        widget.config.padding !== undefined ? widget.config.padding : undefined,
+      margin:
+        widget.config.margin !== undefined ? widget.config.margin : undefined,
+      backgroundImage: widget.config.backgroundImage
+        ? `url(${widget.config.backgroundImage})`
+        : undefined,
+      backgroundSize: widget.config.backgroundImage ? "cover" : undefined,
+      backgroundPosition: widget.config.backgroundImage ? "center" : undefined,
+      position: "relative",
+    };
+    return (
+      <div style={style} className="w-full h-full relative">
+        {widget.config.backgroundImage &&
+          widget.config.overlayOpacity !== undefined && (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                background: "#000",
+                opacity: widget.config.overlayOpacity,
+                zIndex: 1,
+                pointerEvents: "none",
+              }}
+            />
+          )}
+        <div
+          style={
+            widget.config.backgroundImage
+              ? { position: "relative", zIndex: 2 }
+              : {}
+          }
+          className="w-full h-full"
+        >
+          {/* 기존 위젯 렌더링 */}
+          {(() => {
+            switch (widget.type) {
+              case "chart":
+                return <ChartWidget config={widget.config} />;
+              case "text":
+                return <TextWidget config={widget.config} />;
+              case "image":
+                return <ImageWidget config={widget.config} />;
+              case "clock":
+                return <ClockWidget config={widget.config} />;
+              case "stats":
+                return <StatsWidget config={widget.config} />;
+              case "calendar":
+                return <CalendarWidget config={widget.config} />;
+              case "notes":
+                return <NotesWidget config={widget.config} />;
+              default:
+                return <div>Unknown widget type</div>;
+            }
+          })()}
+        </div>
+      </div>
+    );
+  };
 
-      case "page":
-        const page = pages.find((item) => item.id === sourceId);
-        const pagePosts =
-          page && page.page_type === "board"
-            ? boardPosts[String(page.id)] || []
-            : [];
+  // 상태 및 핸들러
+  const [widgetsState, setWidgets] = React.useState<DashboardWidget[]>([
+    {
+      id: "1",
+      type: "chart",
+      title: "매출 차트",
+      gridX: 0,
+      gridY: 0,
+      gridWidth: 3,
+      gridHeight: 2,
+      config: {},
+    },
+    {
+      id: "2",
+      type: "clock",
+      title: "현재 시간",
+      gridX: 3,
+      gridY: 0,
+      gridWidth: 2,
+      gridHeight: 1,
+      config: {},
+    },
+    {
+      id: "3",
+      type: "stats",
+      title: "사용자 통계",
+      gridX: 0,
+      gridY: 2,
+      gridWidth: 2,
+      gridHeight: 2,
+      config: { value: "2,456", label: "활성 사용자" },
+    },
+    {
+      id: "4",
+      type: "calendar",
+      title: "캘린더",
+      gridX: 5,
+      gridY: 0,
+      gridWidth: 3,
+      gridHeight: 3,
+      config: {},
+    },
+  ]);
+  const [draggedWidget, setDraggedWidget] = React.useState<string | null>(null);
+  const [dragOffset, setDragOffset] = React.useState({ x: 0, y: 0 });
+  const [dragPosition, setDragPosition] = React.useState({ x: 0, y: 0 });
+  const [dragPreview, setDragPreview] = React.useState<{
+    gridX: number;
+    gridY: number;
+    valid: boolean;
+  } | null>(null);
+  const [selectedWidget, setSelectedWidget] =
+    React.useState<DashboardWidget | null>(null);
+  const [showGrid, setShowGrid] = React.useState(true);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const animationFrameRef = React.useRef<number | null>(null);
+  const lastMousePosition = React.useRef({ x: 0, y: 0 });
 
-        // 게시판 형식의 페이지인 경우
-        if (page?.page_type === "board" && previewMode) {
-          return (
-            <div className="bg-white shadow rounded overflow-hidden">
-              <div className="p-4 border-b">
-                <h3 className="text-lg font-bold">{widget.title}</h3>
-              </div>
-
-              {pagePosts.length > 0 ? (
-                <div className="divide-y">
-                  {pagePosts
-                    .slice(0, widget.width >= 6 ? 5 : 3)
-                    .map((post, index) => (
-                      <div
-                        key={post.id}
-                        className="p-3 hover:bg-gray-50 transition-colors"
-                      >
-                        <div className="flex justify-between items-center">
-                          <h4 className="font-medium text-sm truncate">
-                            {post.title}
-                          </h4>
-                          <span className="text-xs text-gray-500">
-                            {new Date(post.created_at).toLocaleDateString()}
-                          </span>
-                        </div>
-                        {widget.width >= 6 && (
-                          <p className="text-sm text-gray-600 mt-1 line-clamp-1">
-                            {post.excerpt}
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                </div>
-              ) : (
-                <div className="p-4 text-center text-gray-500">
-                  등록된 게시물이 없습니다.
-                </div>
-              )}
-
-              <div className="p-3 border-t text-center">
-                <span className="text-xs text-blue-600 hover:underline cursor-pointer">
-                  더보기
-                </span>
-              </div>
-            </div>
-          );
+  // 유틸 함수들
+  const getGridPosition = (clientX: number, clientY: number) => {
+    if (!containerRef.current) return { gridX: 0, gridY: 0 };
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    const gridX = Math.floor(x / GRID_CELL_SIZE);
+    const gridY = Math.floor(y / GRID_CELL_SIZE);
+    return {
+      gridX: Math.max(0, Math.min(gridX, GRID_COLS - 1)),
+      gridY: Math.max(0, Math.min(gridY, GRID_ROWS - 1)),
+    };
+  };
+  const isPositionOccupied = (
+    gridX: number,
+    gridY: number,
+    gridWidth: number,
+    gridHeight: number,
+    excludeId?: string
+  ) => {
+    return widgetsState.some((widget) => {
+      if (excludeId && widget.id === excludeId) return false;
+      return !(
+        gridX >= widget.gridX + widget.gridWidth ||
+        gridX + gridWidth <= widget.gridX ||
+        gridY >= widget.gridY + widget.gridHeight ||
+        gridY + gridHeight <= widget.gridY
+      );
+    });
+  };
+  const findValidPosition = (
+    gridWidth: number,
+    gridHeight: number,
+    excludeId?: string
+  ) => {
+    for (let y = 0; y <= GRID_ROWS - gridHeight; y++) {
+      for (let x = 0; x <= GRID_COLS - gridWidth; x++) {
+        if (!isPositionOccupied(x, y, gridWidth, gridHeight, excludeId)) {
+          return { gridX: x, gridY: y };
         }
+      }
+    }
+    return { gridX: 0, gridY: 0 };
+  };
 
-        // 일반 페이지인 경우
-        return previewMode ? (
-          <div className="bg-white shadow rounded overflow-hidden">
-            <div className="p-4">
-              <h3 className="text-lg font-bold mb-2">{widget.title}</h3>
-              <p className="text-gray-600 line-clamp-3">
-                {page?.description || "페이지 내용이 표시됩니다."}
-              </p>
-              <div className="mt-3">
-                <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
-                  자세히 보기
-                </span>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="bg-amber-50 p-4 rounded">
-            <div className="font-medium">{widget.title}</div>
-            {page && (
-              <div className="text-sm text-gray-500 mt-1">
-                슬러그: {page.slug || "/"}
-                {page.page_type === "board" && (
-                  <span className="ml-2 inline-block px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">
-                    게시판
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
-        );
-      default:
-        return <div className="bg-gray-100 p-4 rounded">알 수 없는 위젯</div>;
+  // 드래그 핸들러
+  const handleMouseDown = React.useCallback(
+    (e: React.MouseEvent, widgetId: string) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const widget = widgetsState.find((w) => w.id === widgetId);
+      if (!widget) return;
+      const containerRect = containerRef.current?.getBoundingClientRect();
+      if (!containerRect) return;
+      const mouseX = e.clientX - containerRect.left;
+      const mouseY = e.clientY - containerRect.top;
+      const widgetX = widget.gridX * GRID_CELL_SIZE;
+      const widgetY = widget.gridY * GRID_CELL_SIZE;
+      setDragOffset({ x: mouseX - widgetX, y: mouseY - widgetY });
+      setDragPosition({ x: widgetX, y: widgetY });
+      setDraggedWidget(widgetId);
+      setDragPreview(null);
+      lastMousePosition.current = { x: e.clientX, y: e.clientY };
+    },
+    [widgetsState]
+  );
+  const updatePreview = React.useCallback(
+    (currentX: number, currentY: number, widget: DashboardWidget) => {
+      const snappedGridX = Math.round(currentX / GRID_CELL_SIZE);
+      const snappedGridY = Math.round(currentY / GRID_CELL_SIZE);
+      const clampedGridX = Math.max(
+        0,
+        Math.min(snappedGridX, GRID_COLS - widget.gridWidth)
+      );
+      const clampedGridY = Math.max(
+        0,
+        Math.min(snappedGridY, GRID_ROWS - widget.gridHeight)
+      );
+      const isValid = !isPositionOccupied(
+        clampedGridX,
+        clampedGridY,
+        widget.gridWidth,
+        widget.gridHeight,
+        draggedWidget ?? undefined
+      );
+      setDragPreview({
+        gridX: clampedGridX,
+        gridY: clampedGridY,
+        valid: isValid,
+      });
+    },
+    [draggedWidget, widgetsState]
+  );
+  const updateDragPosition = React.useCallback(() => {
+    if (!draggedWidget || !containerRef.current) return;
+    const widget = widgetsState.find((w) => w.id === draggedWidget);
+    if (!widget) return;
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const mouseX = lastMousePosition.current.x - containerRect.left;
+    const mouseY = lastMousePosition.current.y - containerRect.top;
+    const newX = mouseX - dragOffset.x;
+    const newY = mouseY - dragOffset.y;
+    setDragPosition({ x: newX, y: newY });
+    updatePreview(newX, newY, widget);
+  }, [draggedWidget, dragOffset, widgetsState, updatePreview]);
+  const handleMouseMove = React.useCallback(
+    (e: MouseEvent) => {
+      if (!draggedWidget) return;
+      lastMousePosition.current = { x: e.clientX, y: e.clientY };
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      animationFrameRef.current = requestAnimationFrame(updateDragPosition);
+    },
+    [draggedWidget, updateDragPosition]
+  );
+  const handleMouseUp = React.useCallback(() => {
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    if (draggedWidget && dragPreview && dragPreview.valid) {
+      setWidgets((prev) =>
+        prev.map((w) =>
+          w.id === draggedWidget
+            ? { ...w, gridX: dragPreview.gridX, gridY: dragPreview.gridY }
+            : w
+        )
+      );
+    }
+    setDraggedWidget(null);
+    setDragOffset({ x: 0, y: 0 });
+    setDragPosition({ x: 0, y: 0 });
+    setDragPreview(null);
+  }, [draggedWidget, dragPreview]);
+  React.useEffect(() => {
+    document.addEventListener("mousemove", handleMouseMove, { passive: true });
+    document.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [handleMouseMove, handleMouseUp]);
+
+  // 위젯 추가/삭제/수정
+  const addWidget = (type: DashboardWidget["type"]) => {
+    const widgetType = widgetTypes.find((t) => t.value === type);
+    if (!widgetType) return;
+    const { gridX, gridY } = findValidPosition(
+      widgetType.defaultWidth,
+      widgetType.defaultHeight
+    );
+    const newWidget: DashboardWidget = {
+      id: Date.now().toString(),
+      type,
+      title: `새 ${widgetType.label}`,
+      gridX,
+      gridY,
+      gridWidth: widgetType.defaultWidth,
+      gridHeight: widgetType.defaultHeight,
+      config: {},
+    };
+    setWidgets((prev) => [...prev, newWidget]);
+  };
+  const deleteWidget = (id: string) => {
+    setWidgets((prev) => prev.filter((w) => w.id !== id));
+    setSelectedWidget(null);
+  };
+  const updateWidget = (id: string, updates: Partial<DashboardWidget>) => {
+    setWidgets((prev) =>
+      prev.map((w) => {
+        if (w.id === id) {
+          const updated = { ...w, ...updates };
+          if (
+            updates.gridWidth !== undefined ||
+            updates.gridHeight !== undefined
+          ) {
+            const maxX = GRID_COLS - updated.gridWidth;
+            const maxY = GRID_ROWS - updated.gridHeight;
+            updated.gridX = Math.min(updated.gridX, maxX);
+            updated.gridY = Math.min(updated.gridY, maxY);
+            if (
+              isPositionOccupied(
+                updated.gridX,
+                updated.gridY,
+                updated.gridWidth,
+                updated.gridHeight,
+                id
+              )
+            ) {
+              const validPos = findValidPosition(
+                updated.gridWidth,
+                updated.gridHeight,
+                id
+              );
+              updated.gridX = validPos.gridX;
+              updated.gridY = validPos.gridY;
+            }
+          }
+          return updated;
+        }
+        return w;
+      })
+    );
+    if (selectedWidget?.id === id) {
+      setSelectedWidget((prev) => (prev ? { ...prev, ...updates } : null));
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold">홈페이지 레이아웃 관리</h2>
-        <div className="flex space-x-2">
+    <div className="h-screen flex flex-col bg-background">
+      {/* 툴바 */}
+      <div className="p-4 flex items-center gap-4">
+        <h1 className="text-xl font-semibold">위젯 대시보드</h1>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button size="sm">
+              <Plus className="w-4 h-4 mr-2" />
+              위젯 추가
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>새 위젯 추가</DialogTitle>
+            </DialogHeader>
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              {widgetTypes.map((type) => {
+                const Icon = type.icon;
+                return (
+                  <Button
+                    key={type.value}
+                    variant="outline"
+                    className="h-20 flex-col gap-2"
+                    onClick={() =>
+                      addWidget(type.value as DashboardWidget["type"])
+                    }
+                  >
+                    <Icon className="w-6 h-6" />
+                    <div className="text-center">
+                      <div>{type.label}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {type.defaultWidth}×{type.defaultHeight}
+                      </div>
+                    </div>
+                  </Button>
+                );
+              })}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowGrid(!showGrid)}
+        >
+          <Grid3X3 className="w-4 h-4 mr-2" />
+          그리드 {showGrid ? "숨기기" : "보기"}
+        </Button>
+
+        {selectedWidget && (
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Settings className="w-4 h-4 mr-2" />
+                위젯 설정
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>위젯 설정</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-6">
+                <div className="border-b pb-4 mb-4">
+                  <h4 className="font-semibold text-sm mb-2">공통 설정</h4>
+                  <div>
+                    <Label htmlFor="title">제목</Label>
+                    <Input
+                      id="title"
+                      value={selectedWidget.title}
+                      onChange={(e) =>
+                        updateWidget(selectedWidget.id, {
+                          title: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="gridWidth">가로 크기 (칸)</Label>
+                      <Select
+                        value={selectedWidget.gridWidth.toString()}
+                        onValueChange={(value) =>
+                          updateWidget(selectedWidget.id, {
+                            gridWidth: Number.parseInt(value),
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from(
+                            { length: MAX_GRID_WIDTH },
+                            (_, i) => i + MIN_GRID_WIDTH
+                          ).map((size) => (
+                            <SelectItem key={size} value={size.toString()}>
+                              {size}칸
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="gridHeight">세로 크기 (칸)</Label>
+                      <Select
+                        value={selectedWidget.gridHeight.toString()}
+                        onValueChange={(value) =>
+                          updateWidget(selectedWidget.id, {
+                            gridHeight: Number.parseInt(value),
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from(
+                            { length: MAX_GRID_HEIGHT },
+                            (_, i) => i + MIN_GRID_HEIGHT
+                          ).map((size) => (
+                            <SelectItem key={size} value={size.toString()}>
+                              {size}칸
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="padding">패딩(px)</Label>
+                    <Input
+                      id="padding"
+                      type="number"
+                      value={selectedWidget.config.padding ?? ""}
+                      onChange={(e) =>
+                        updateWidget(selectedWidget.id, {
+                          config: {
+                            ...selectedWidget.config,
+                            padding: e.target.value
+                              ? parseInt(e.target.value)
+                              : undefined,
+                          },
+                        })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="margin">마진(px)</Label>
+                    <Input
+                      id="margin"
+                      type="number"
+                      value={selectedWidget.config.margin ?? ""}
+                      onChange={(e) =>
+                        updateWidget(selectedWidget.id, {
+                          config: {
+                            ...selectedWidget.config,
+                            margin: e.target.value
+                              ? parseInt(e.target.value)
+                              : undefined,
+                          },
+                        })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="backgroundImage">배경 이미지 URL</Label>
+                    <Input
+                      id="backgroundImage"
+                      value={selectedWidget.config.backgroundImage || ""}
+                      onChange={(e) =>
+                        updateWidget(selectedWidget.id, {
+                          config: {
+                            ...selectedWidget.config,
+                            backgroundImage: e.target.value,
+                          },
+                        })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="overlayOpacity">
+                      배경 이미지 투명도 (0~1)
+                    </Label>
+                    <Input
+                      id="overlayOpacity"
+                      type="number"
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      value={selectedWidget.config.overlayOpacity ?? ""}
+                      onChange={(e) =>
+                        updateWidget(selectedWidget.id, {
+                          config: {
+                            ...selectedWidget.config,
+                            overlayOpacity: e.target.value
+                              ? parseFloat(e.target.value)
+                              : undefined,
+                          },
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+
+                {selectedWidget.type === "text" && (
+                  <>
+                    <div>
+                      <Label htmlFor="heading">제목</Label>
+                      <Input
+                        id="heading"
+                        value={selectedWidget.config.heading || ""}
+                        onChange={(e) =>
+                          updateWidget(selectedWidget.id, {
+                            config: {
+                              ...selectedWidget.config,
+                              heading: e.target.value,
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="content">내용</Label>
+                      <Textarea
+                        id="content"
+                        value={selectedWidget.config.content || ""}
+                        onChange={(e) =>
+                          updateWidget(selectedWidget.id, {
+                            config: {
+                              ...selectedWidget.config,
+                              content: e.target.value,
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                  </>
+                )}
+
+                {selectedWidget.type === "image" && (
+                  <div>
+                    <Label htmlFor="imageUrl">이미지 URL</Label>
+                    <Input
+                      id="imageUrl"
+                      value={selectedWidget.config.imageUrl || ""}
+                      onChange={(e) =>
+                        updateWidget(selectedWidget.id, {
+                          config: {
+                            ...selectedWidget.config,
+                            imageUrl: e.target.value,
+                          },
+                        })
+                      }
+                    />
+                  </div>
+                )}
+
+                {selectedWidget.type === "stats" && (
+                  <>
+                    <div>
+                      <Label htmlFor="value">값</Label>
+                      <Input
+                        id="value"
+                        value={selectedWidget.config.value || ""}
+                        onChange={(e) =>
+                          updateWidget(selectedWidget.id, {
+                            config: {
+                              ...selectedWidget.config,
+                              value: e.target.value,
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="label">라벨</Label>
+                      <Input
+                        id="label"
+                        value={selectedWidget.config.label || ""}
+                        onChange={(e) =>
+                          updateWidget(selectedWidget.id, {
+                            config: {
+                              ...selectedWidget.config,
+                              label: e.target.value,
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {selectedWidget && (
           <Button
-            variant={previewMode ? "default" : "outline"}
+            variant="destructive"
             size="sm"
-            onClick={() => setPreviewMode(!previewMode)}
+            onClick={() => deleteWidget(selectedWidget.id)}
           >
-            <Eye className="h-4 w-4 mr-2" />
-            {previewMode ? "편집 모드" : "미리보기"}
+            <Trash2 className="w-4 h-4 mr-2" />
+            삭제
           </Button>
-        </div>
+        )}
       </div>
 
-      {previewMode && (
-        <div className="bg-gray-100 p-4 mb-4 rounded-lg text-center text-sm text-gray-500">
-          미리보기 모드에서는 실제 화면처럼 보여집니다. 편집하려면 편집 모드로
-          전환하세요.
-        </div>
-      )}
+      {/* 위젯 캔버스 */}
+      <div
+        ref={containerRef}
+        className="mx-auto flex-1 relative overflow-auto bg-muted/20"
+        style={{
+          backgroundImage: showGrid
+            ? `
+            linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px)
+          `
+            : "none",
+          backgroundSize: `${GRID_CELL_SIZE}px ${GRID_CELL_SIZE}px`,
+          width: GRID_COLS * GRID_CELL_SIZE,
+          height: GRID_ROWS * GRID_CELL_SIZE,
+        }}
+      >
+        {/* 드래그 미리보기 */}
+        {dragPreview && draggedWidget && (
+          <div
+            className={`absolute border-2 border-dashed rounded-lg ${
+              dragPreview.valid
+                ? "border-green-500 bg-green-500/10"
+                : "border-red-500 bg-red-500/10"
+            }`}
+            style={{
+              left: dragPreview.gridX * GRID_CELL_SIZE,
+              top: dragPreview.gridY * GRID_CELL_SIZE,
+              width:
+                widgetsState.find((w) => w.id === draggedWidget)!.gridWidth *
+                  GRID_CELL_SIZE -
+                4,
+              height:
+                widgetsState.find((w) => w.id === draggedWidget)!.gridHeight *
+                  GRID_CELL_SIZE -
+                4,
+              pointerEvents: "none",
+              zIndex: 30,
+            }}
+          />
+        )}
 
-      {renderWidgetSettingsDialog()}
-
-      <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="grid grid-cols-1 gap-4">
-          {layoutAreas.map((area) => (
-            <Card
-              key={area.id}
-              className={previewMode ? "shadow-none border-0" : ""}
-            >
-              {!previewMode && (
-                <CardHeader>
-                  <CardTitle>{area.name}</CardTitle>
-                </CardHeader>
-              )}
-              <CardContent className={previewMode ? "p-0" : ""}>
-                <Droppable droppableId={area.id}>
-                  {(provided) => (
-                    <div
-                      {...provided.droppableProps}
-                      ref={provided.innerRef}
-                      className={`min-h-[100px] ${!previewMode ? "border border-dashed border-gray-300 rounded-md p-4" : ""}`}
-                    >
-                      <div>
-                        {area.widgets.length === 0 ? (
-                          <div className="text-center text-gray-500 py-8">
-                            이 영역에 위젯을 추가하세요
-                          </div>
-                        ) : (
-                          <div className="flex flex-wrap gap-4 w-full">
-                            {area.widgets.map((widget, index) => (
-                              <Draggable
-                                key={widget.id}
-                                draggableId={widget.id}
-                                index={index}
-                              >
-                                {(provided) => (
-                                  <div
-                                    ref={provided.innerRef}
-                                    {...provided.draggableProps}
-                                    className={`${getWidthClass(widget.width)} ${
-                                      !widget.is_active ? "opacity-50" : ""
-                                    }`}
-                                  >
-                                    {previewMode ? (
-                                      <div className="w-full">
-                                        {renderWidgetPreview(widget)}
-                                      </div>
-                                    ) : (
-                                      <Card>
-                                        <CardHeader className="p-3 flex flex-row items-center justify-between space-y-0">
-                                          <CardTitle className="text-sm font-medium">
-                                            {widget.title}
-                                          </CardTitle>
-                                          <div className="flex space-x-1">
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              {...provided.dragHandleProps}
-                                            >
-                                              <MoveVertical className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              onClick={() => {
-                                                setEditingWidget(widget);
-                                                setDialogOpen(true);
-                                              }}
-                                            >
-                                              <Settings className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              onClick={() =>
-                                                deleteWidget(widget.id)
-                                              }
-                                            >
-                                              <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                          </div>
-                                        </CardHeader>
-                                        <CardContent className="p-3">
-                                          {renderWidgetPreview(widget)}
-                                        </CardContent>
-                                      </Card>
-                                    )}
-                                  </div>
-                                )}
-                              </Draggable>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      {provided.placeholder}
-                      {!previewMode && (
-                        <div className="mt-4 flex justify-center relative">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setShowWidgetMenu(!showWidgetMenu)}
-                            id={`add-widget-btn-${area.id}`}
-                          >
-                            <Plus className="h-4 w-4 mr-2" />
-                            위젯 추가
-                          </Button>
-
-                          {showWidgetMenu && (
-                            <div
-                              className="fixed bg-black/30 inset-0 z-40"
-                              onClick={() => setShowWidgetMenu(false)}
-                            >
-                              <div
-                                className="absolute bg-white rounded-md shadow-lg border p-4 w-64 z-50"
-                                style={{
-                                  top: "50%",
-                                  left: "50%",
-                                  transform: "translate(-50%, -50%)",
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <div>
-                                  <div className="flex justify-between items-center mb-3">
-                                    <h4 className="text-sm font-medium">
-                                      위젯 추가
-                                    </h4>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-7 w-7 p-0"
-                                      onClick={() => setShowWidgetMenu(false)}
-                                    >
-                                      ✕
-                                    </Button>
-                                  </div>
-
-                                  <div className="max-h-[60vh] overflow-y-auto pr-1 space-y-1">
-                                    <div className="sticky top-0 bg-white z-10 pb-1">
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="w-full justify-start"
-                                        onClick={() => {
-                                          addNewWidget("banner", {
-                                            title: "배너",
-                                          });
-                                          setShowWidgetMenu(false);
-                                        }}
-                                      >
-                                        <Plus className="h-4 w-4 mr-2" />
-                                        배너 추가
-                                      </Button>
-                                    </div>
-
-                                    <div className="border-t my-1"></div>
-
-                                    <div className="sticky top-12 bg-white z-10 py-1 text-xs font-medium text-gray-500 px-2">
-                                      메뉴 항목
-                                    </div>
-                                    {menuItems
-                                      .filter((item) => !item.parent_id)
-                                      .map((item) => (
-                                        <Button
-                                          key={item.id}
-                                          variant="ghost"
-                                          size="sm"
-                                          className="w-full justify-start text-left"
-                                          onClick={() => {
-                                            addNewWidget("menu", item);
-                                            setShowWidgetMenu(false);
-                                          }}
-                                        >
-                                          <span className="truncate">
-                                            {item.title}
-                                          </span>
-                                        </Button>
-                                      ))}
-
-                                    <div className="border-t my-1"></div>
-
-                                    <div className="sticky top-12 bg-white z-10 py-1 text-xs font-medium text-gray-500 px-2">
-                                      페이지
-                                    </div>
-                                    {pages.map((item) => (
-                                      <Button
-                                        key={item.id}
-                                        variant="ghost"
-                                        size="sm"
-                                        className="w-full justify-start text-left"
-                                        onClick={() => {
-                                          addNewWidget("page", item);
-                                          setShowWidgetMenu(false);
-                                        }}
-                                      >
-                                        <span className="truncate">
-                                          {item.title}
-                                        </span>
-                                      </Button>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </Droppable>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </DragDropContext>
+        {widgetsState.map((widget) => (
+          <Card
+            key={widget.id}
+            className={`absolute cursor-move border-2 ${
+              selectedWidget?.id === widget.id
+                ? "border-blue-500 shadow-lg"
+                : "border-border hover:border-blue-300"
+            } ${draggedWidget === widget.id ? "opacity-90 z-50 shadow-2xl" : ""}`}
+            style={{
+              left:
+                draggedWidget === widget.id
+                  ? dragPosition.x
+                  : widget.gridX * GRID_CELL_SIZE,
+              top:
+                draggedWidget === widget.id
+                  ? dragPosition.y
+                  : widget.gridY * GRID_CELL_SIZE,
+              width: widget.gridWidth * GRID_CELL_SIZE - 4,
+              height: widget.gridHeight * GRID_CELL_SIZE - 4,
+              transform: draggedWidget === widget.id ? "none" : undefined, // 드래그 중이 아닐 때만 transform 사용
+              willChange: draggedWidget === widget.id ? "transform" : "auto", // GPU 가속 최적화
+            }}
+            onClick={() => setSelectedWidget(widget)}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              handleMouseDown(e, widget.id);
+            }}
+          >
+            <CardHeader className="p-3 pb-2 select-none">
+              <CardTitle className="text-sm flex items-center justify-between">
+                <span className="truncate">{widget.title}</span>
+                <div className="flex items-center gap-1">
+                  <Badge variant="secondary" className="text-xs">
+                    {widget.gridWidth}×{widget.gridHeight}
+                  </Badge>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 pt-0 h-[calc(100%-60px)]">
+              <WidgetRenderer widget={widget} />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }
+
+export default MainDashboard;

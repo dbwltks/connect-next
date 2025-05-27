@@ -28,7 +28,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/auth-context";
 
 export default function AdminHeader() {
-  const { user, loading: userLoading, handleLogout } = useAuth();
+  const { user, handleLogout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const router = useRouter();
 
@@ -67,7 +67,7 @@ export default function AdminHeader() {
         <div className="flex items-center space-x-4">
           <ThemeSwitcher />
 
-          {userLoading ? (
+          {user === undefined ? (
             <div className="h-8 w-8 bg-gray-200 animate-pulse rounded-full" />
           ) : user ? (
             <DropdownMenu>
@@ -147,7 +147,7 @@ export default function AdminHeader() {
 
         {/* 오른쪽 - 아바타 */}
         <div className="flex items-center justify-center">
-          {userLoading ? (
+          {user === undefined ? (
             <div className="h-8 w-8 bg-gray-200 animate-pulse rounded-full" />
           ) : user ? (
             <DropdownMenu>

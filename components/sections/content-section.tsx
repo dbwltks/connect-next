@@ -16,7 +16,12 @@ import {
 } from "lucide-react"; // ImageIcon으로 변경
 import { Textarea } from "@/components/ui/textarea";
 // import { Input } from "@/components/ui/input"; // Input은 현재 사용되지 않음
-import { supabase } from "@/db";
+import {
+  fetchContent,
+  saveContent,
+  deleteContent,
+  upsertContent,
+} from "@/services/contentService";
 import { toast } from "@/components/ui/toaster";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,6 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useAuth } from "@/contexts/auth-context";
 
 // TipTap 에디터 컴포넌트
 const TipTapEditor = dynamic(() => import("@/components/ui/tiptap-editor"), {
@@ -57,16 +63,16 @@ export default function ContentSection({
   const [richTextContent, setRichTextContent] = useState(section.content || "");
   // const [editedTitle, setEditedTitle] = useState(section.title || ""); // 현재 UI에서 사용 안 함
   // const [editedDescription, setEditedDescription] = useState(section.description || ""); // 현재 UI에서 사용 안 함
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [isSaving, setIsSaving] = useState(false);
   const [previewTab, setPreviewTab] = useState<"desktop" | "mobile">("desktop");
   const [fullWidth, setFullWidth] = useState(section.full_width === true);
   const [contentType, setContentType] = useState<"html" | "text" | "image">(
     section.content_type || "html"
   );
-  const [editMode, setEditMode] = useState<"html" | "normal">(
-    section.content_type === "html" ? "html" : "normal"
-  );
+  // 에디터 모드 완전 비활성화: 항상 HTML 모드만 사용
+  const editMode: "html" = "html";
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [popupPreviewTab, setPopupPreviewTab] = useState<"desktop" | "mobile">(
     "desktop"
@@ -249,7 +255,6 @@ export default function ContentSection({
           }
           .content-container { 
             width: 100%;
-            padding: 2rem; 
             margin: 0 auto;
             box-sizing: border-box;
           }
@@ -301,8 +306,7 @@ export default function ContentSection({
   // 편집 중 미리보기 업데이트
   useEffect(() => {
     if (isEditing) {
-      const currentContent =
-        editMode === "html" ? htmlContent : richTextContent;
+      const currentContent = htmlContent;
       if (previewTab === "desktop") {
         updateIframe(desktopIframeRef, currentContent, "desktopPreview");
       } else {
@@ -324,8 +328,6 @@ export default function ContentSection({
   }, [
     isEditing,
     htmlContent,
-    richTextContent,
-    editMode,
     previewTab,
     fullWidth,
     contentType,
@@ -334,26 +336,31 @@ export default function ContentSection({
 
   // 일반 보기 모드 콘텐츠 초기화 및 업데이트
   useEffect(() => {
-    if (!isEditing) {
-      updateIframe(contentIframeRef, section.content || "", "contentDisplay");
-
-      // 콘텐츠가 로드된 후 한 번만 높이 체크
-      setTimeout(() => {
-        if (contentIframeRef.current?.contentWindow) {
-          contentIframeRef.current.contentWindow.postMessage(
-            { type: "checkHeight" },
-            "*"
-          );
-        }
-      }, 500);
-    }
+    // (불러오기) 필요시 fetchContent 사용 예시
+    // useEffect(() => {
+    //   async function loadContent() {
+    //     const data = await fetchContent(section.id);
+    //     // setHtmlContent(data.content); 등 상태 반영
+    //   }
+    //   if (!isEditing) {
+    //     loadContent();
+    //     updateIframe(contentIframeRef, section.content || "", "contentDisplay");
+    //     setTimeout(() => {
+    //       if (contentIframeRef.current?.contentWindow) {
+    //         contentIframeRef.current.contentWindow.postMessage(
+    //           { type: "checkHeight" },
+    //           "*"
+    //         );
+    //       }
+    //     }, 500);
+    //   }
+    // }, [isEditing, section.content, section.content_type, fullWidth]);
   }, [isEditing, section.content, section.content_type, fullWidth]);
 
   // 팝업 열릴 때와 팝업 탭 변경 시 업데이트
   useEffect(() => {
     if (isPreviewOpen) {
-      const currentContent =
-        editMode === "html" ? htmlContent : richTextContent;
+      const currentContent = htmlContent;
       // 약간의 딜레이를 주어 iframe이 렌더링될 시간을 확보
       setTimeout(() => {
         if (popupPreviewTab === "desktop") {
@@ -371,15 +378,7 @@ export default function ContentSection({
         }
       }, 100);
     }
-  }, [
-    isPreviewOpen,
-    popupPreviewTab,
-    editMode,
-    htmlContent,
-    richTextContent,
-    contentType,
-    fullWidth,
-  ]);
+  }, [isPreviewOpen, popupPreviewTab, htmlContent, contentType, fullWidth]);
 
   // iframe 높이 자동 조절
   useEffect(() => {
@@ -410,30 +409,10 @@ export default function ContentSection({
     return () => window.removeEventListener("message", handleIframeResize);
   }, [previewTab]);
 
-  // 관리자 여부 확인
-  useEffect(() => {
-    const checkAdminStatus = async () => {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        // 실제 관리자 확인 로직 (예: user metadata, role 등)
-        // setIsAdmin(!!session && session.user?.app_metadata?.role === 'admin');
-        setIsAdmin(true); // 개발/테스트용으로 항상 true
-      } catch (error) {
-        console.error("Admin check error:", error);
-        setIsAdmin(false);
-      }
-    };
-    checkAdminStatus();
-  }, []);
-
   const handleEditClick = () => {
     setHtmlContent(section.content || "");
-    setRichTextContent(section.content || "");
     setFullWidth(section.full_width === true);
     setContentType(section.content_type || "html");
-    setEditMode(section.content_type === "html" ? "html" : "normal");
     setIsEditing(true);
   };
 
@@ -444,41 +423,28 @@ export default function ContentSection({
 
   const handleSaveClick = async () => {
     setIsSaving(true);
-    const contentToSave = editMode === "html" ? htmlContent : richTextContent;
-
+    const contentToSave = htmlContent;
     try {
-      const { error } = await supabase
-        .from("sections")
-        .update({
-          content: contentToSave,
-          content_type: contentType,
-          full_width: fullWidth,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", section.id);
-
-      if (error) throw error;
-
-      // 부모 컴포넌트로 전파하기 위해 section 객체를 직접 수정하기보다는,
-      // 상태 업데이트 후 부모 컴포넌트에서 데이터를 다시 fetch 하거나 prop을 통해 업데이트된 section을 받는 것이 좋음
-      // 여기서는 로컬 상태만 업데이트
-      section.content = contentToSave; // 이 방식은 부모 컴포넌트의 상태와 불일치를 유발할 수 있음
+      await upsertContent({
+        pageId: section.id,
+        content: contentToSave,
+        fullWidth,
+      });
+      // 로컬 상태 동기화
+      section.content = contentToSave;
       section.content_type = contentType;
       section.full_width = fullWidth;
-
-      setHtmlContent(contentToSave); // 동기화
-      setRichTextContent(contentToSave); // 동기화
-
+      setHtmlContent(contentToSave);
       setIsEditing(false);
       toast({
         title: "저장 성공",
         description: "콘텐츠가 성공적으로 저장되었습니다.",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating section:", error);
       toast({
         title: "저장 실패",
-        description: "콘텐츠를 저장하는 중 오류가 발생했습니다.",
+        description: error?.message || JSON.stringify(error),
         variant: "destructive",
       });
     } finally {
@@ -491,25 +457,25 @@ export default function ContentSection({
       {" "}
       {/* 섹션 간 간격 추가 */}
       {isAdmin && !isEditing && (
-        <div
-          className={`${fullWidth ? "w-full" : "container mx-auto px-4 max-w-screen-lg"} mb-4 flex justify-end`}
-        >
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleEditClick}
-            className="flex items-center gap-1"
-          >
-            <Pencil className="h-4 w-4" />
-            편집
-          </Button>
+        <div className="container mx-auto px-4 mb-4">
+          <div className="flex justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleEditClick}
+              className="flex items-center gap-1"
+            >
+              <Pencil className="h-4 w-4" />
+              편집
+            </Button>
+          </div>
         </div>
       )}
       <section
-        className={`${className} relative w-full ${fullWidth ? "" : "container mx-auto px-4 max-w-screen-lg"}`}
+        className={`${className} relative w-full ${!isEditing && fullWidth ? "" : "container mx-auto px-4"}`}
       >
         {isEditing ? (
-          <div className="container space-y-4 mx-auto">
+          <div className="space-y-4">
             <Card className="mb-4">
               <div className="flex justify-between items-center p-3 border-b">
                 <div className="flex items-center gap-2">
@@ -548,50 +514,19 @@ export default function ContentSection({
                 </div>
               </div>
             </Card>
-
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="overflow-hidden">
                 <div className="flex justify-between items-center p-3 border-b">
-                  <h3 className="text-sm font-medium">입력창</h3>
-                  <Tabs
-                    value={editMode}
-                    onValueChange={(value) =>
-                      setEditMode(value as "html" | "normal")
-                    }
-                  >
-                    <TabsList className="grid grid-cols-2 text-xs">
-                      <TabsTrigger value="html">HTML 모드</TabsTrigger>
-                      <TabsTrigger value="normal">에디터 모드</TabsTrigger>
-                    </TabsList>
-                  </Tabs>
+                  <h3 className="text-sm font-medium">입력창 (HTML 전용)</h3>
                 </div>
                 <CardContent className="p-0">
-                  {editMode === "html" ? (
-                    <Textarea
-                      value={htmlContent}
-                      onChange={(e) => setHtmlContent(e.target.value)}
-                      placeholder="HTML 콘텐츠를 입력하세요."
-                      className="text-sm font-mono w-full border-0 p-3"
-                      style={{ height: "400px" }}
-                    />
-                  ) : (
-                    <div className="bg-white p-3" style={{ height: "400px" }}>
-                      {typeof window !== "undefined" && (
-                        <div
-                          className="tiptap-editor-container overflow-auto"
-                          style={{ height: "100%" }}
-                        >
-                          <TipTapEditor
-                            content={richTextContent}
-                            onChange={setRichTextContent}
-                            placeholder="내용을 입력하세요..."
-                            uploadedFiles={uploadedFiles}
-                            setUploadedFiles={setUploadedFiles}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  <Textarea
+                    value={htmlContent}
+                    onChange={(e) => setHtmlContent(e.target.value)}
+                    placeholder="HTML 콘텐츠를 입력하세요."
+                    className="text-sm font-mono w-full border-0 p-3"
+                    style={{ height: "400px" }}
+                  />
                 </CardContent>
               </Card>
 
