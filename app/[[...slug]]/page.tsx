@@ -21,58 +21,6 @@ export default async function DynamicPage(props: { params: any }) {
 
   // 홈(/) 경로일 때: 기존 Home 페이지 UI 렌더링
   if (!params.slug || params.slug.length === 0) {
-    // 교회 정보 가져오기
-    const { data: churchInfo, error: churchInfoError } = await supabase
-      .from("church_info")
-      .select("*")
-      .single();
-
-    if (churchInfoError) {
-      console.error("Error fetching church info:", churchInfoError);
-    }
-
-    // 최근 설교 가져오기
-    const { data: latestSermon, error: sermonError } = await supabase
-      .from("sermons")
-      .select("*")
-      .order("date", { ascending: false })
-      .limit(1)
-      .single();
-
-    if (sermonError && sermonError.code !== "PGRST116") {
-      // PGRST116는 결과가 없을 때 발생하는 에러
-      console.error("Error fetching latest sermon:", sermonError);
-    }
-
-    // 다가오는 행사 가져오기
-    const today = new Date().toISOString();
-    const { data: upcomingEvents = [], error: eventsError } = await supabase
-      .from("events")
-      .select("*")
-      .gte("start_date", today)
-      .order("start_date", { ascending: true })
-      .limit(3);
-
-    if (eventsError) {
-      console.error("Error fetching upcoming events:", eventsError);
-    }
-
-    // null 안전성 처리
-    const safeUpcomingEvents = upcomingEvents || [];
-
-    // 공지사항 가져오기 (최근 5개만)
-    const { data: announcements = [], error: announcementsError } =
-      await supabase
-        .from("announcements")
-        .select("id, title, publish_date, users(name)")
-        .eq("is_active", true)
-        .order("publish_date", { ascending: false })
-        .limit(5);
-
-    if (announcementsError) {
-      console.error("Error fetching announcements:", announcementsError);
-    }
-
     // 레이아웃 매니저에서 설정한 위젯 가져오기
     const { data: widgets = [], error: widgetsError } = await supabase
       .from("cms_layout")
@@ -207,13 +155,13 @@ export default async function DynamicPage(props: { params: any }) {
           )}
 
           {/* 기존 고정 섹션들 */}
-          <WelcomeMessage churchInfo={churchInfo} />
+          {/* <WelcomeMessage churchInfo={} />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <ServiceTimes churchInfo={churchInfo} />
-            <LatestSermon sermon={latestSermon} />
-          </div>
-          <UpcomingEvents events={safeUpcomingEvents} />
-          <Announcements announcements={announcements || []} />
+            <ServiceTimes churchInfo={} />
+            <LatestSermon sermon={} />
+            <UpcomingEvents  />
+          <Announcements  />
+          </div> */}
 
           {/* 섹션 관리자에서 설정한 동적 섹션들 */}
           {typedSections.map((section) => (
