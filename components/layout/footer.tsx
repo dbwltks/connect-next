@@ -1,6 +1,3 @@
-"use client";
-
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Facebook,
@@ -11,7 +8,6 @@ import {
   MapPin,
 } from "lucide-react";
 import { ThemeSwitcher } from "@/components/theme-switcher";
-import { supabase } from "@/db";
 
 interface ServiceTime {
   id: string;
@@ -56,194 +52,15 @@ interface FooterSettings {
   copyright_text: string;
 }
 
-export default function Footer() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [footerMenus, setFooterMenus] = useState<FooterMenuItem[]>([
-    {
-      id: "1",
-      title: "교회 소개",
-      url: "/about",
-      order_num: 1,
-      is_active: true,
-      open_in_new_tab: false,
-    },
-    {
-      id: "2",
-      title: "설교 말씀",
-      url: "/sermons",
-      order_num: 2,
-      is_active: true,
-      open_in_new_tab: false,
-    },
-    {
-      id: "3",
-      title: "교회 일정",
-      url: "/events",
-      order_num: 3,
-      is_active: true,
-      open_in_new_tab: false,
-    },
-    {
-      id: "4",
-      title: "소그룹 안내",
-      url: "/groups",
-      order_num: 4,
-      is_active: true,
-      open_in_new_tab: false,
-    },
-  ]);
-  const [settings, setSettings] = useState<FooterSettings>({
-    church_name: "커넥트 교회",
-    church_slogan: "하나님과 사람, 사람과 사람을 연결하는 교회",
-    address: "서울시 강남구 테헤란로 123",
-    phone: "02-123-4567",
-    addresses: [
-      { id: "1", name: "본교회", value: "서울시 강남구 테헤란로 123" },
-    ],
-    phones: [{ id: "1", name: "대표번호", value: "02-123-4567" }],
-    email: "info@connect-church.com",
-    facebook_url: "https://facebook.com",
-    instagram_url: "https://instagram.com",
-    youtube_url: "https://youtube.com",
-    service_times: [
-      { id: "1", name: "주일 1부 예배", time: "오전 9:00" },
-      { id: "2", name: "주일 2부 예배", time: "오전 11:00" },
-      { id: "3", name: "수요 예배", time: "오후 7:30" },
-      { id: "4", name: "금요 기도회", time: "오후 8:00" },
-    ],
-    copyright_text: "© {year} 커넥트 교회. All rights reserved.",
-  });
-
-  // 푸터 설정과 메뉴 불러오기 - 단순화된 버전
-  useEffect(() => {
-    // 기본 메뉴 설정 - 언제나 사용 가능하도록 설정
-    const defaultMenus = [
-      {
-        id: "1",
-        title: "교회 소개",
-        url: "/about",
-        order_num: 1,
-        is_active: true,
-        open_in_new_tab: false,
-      },
-      {
-        id: "2",
-        title: "설교 말씀",
-        url: "/sermons",
-        order_num: 2,
-        is_active: true,
-        open_in_new_tab: false,
-      },
-      {
-        id: "3",
-        title: "교회 일정",
-        url: "/events",
-        order_num: 3,
-        is_active: true,
-        open_in_new_tab: false,
-      },
-      {
-        id: "4",
-        title: "소그룹 안내",
-        url: "/groups",
-        order_num: 4,
-        is_active: true,
-        open_in_new_tab: false,
-      },
-    ];
-
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
-
-        // 1. 푸터 설정 불러오기
-        const { data: footerData, error: footerError } = await supabase
-          .from("cms_footer")
-          .select("*")
-          .limit(1)
-          .single();
-
-        if (!footerError && footerData) {
-          // service_times가 없거나 비어있는 배열인 경우 기본값 사용
-          if (
-            !footerData.service_times ||
-            footerData.service_times.length === 0
-          ) {
-            footerData.service_times = settings.service_times;
-          }
-          setSettings(footerData);
-        }
-
-        // 2. 푸터 메뉴 불러오기 시도
-        try {
-          // 직접 푸터 메뉴 조회
-          const { data: directMenus, error: directError } = await supabase
-            .from("cms_menus")
-            .select("*")
-            .eq("is_active", true)
-            .order("order_num", { ascending: true });
-
-          if (directError) {
-            console.error("메뉴 조회 오류:", directError);
-            return;
-          }
-
-          // 일단 기본 메뉴 사용 - 언제나 화면에 무언가 표시되도록
-          setFooterMenus(defaultMenus);
-
-          if (!directMenus || directMenus.length === 0) {
-            return; // 메뉴 데이터가 없으면 기본 메뉴 사용
-          }
-
-          // 메뉴 데이터 구조화 - 상위 메뉴와 하위 메뉴 모두 포함
-          // 1. 상위 메뉴 찾기 (parent_id가 없는 항목)
-          const parentMenus = directMenus.filter(
-            (menu) => !menu.parent_id && menu.is_active === true
-          );
-
-          // 2. 구조화된 메뉴 데이터 생성
-          const structuredMenus = [];
-
-          // 각 상위 메뉴에 대해 처리
-          for (const parentMenu of parentMenus) {
-            // 상위 메뉴 추가
-            structuredMenus.push(parentMenu);
-
-            // 해당 상위 메뉴의 하위 메뉴 찾기
-            const childMenus = directMenus.filter(
-              (menu) =>
-                menu.parent_id === parentMenu.id && menu.is_active === true
-            );
-
-            // 하위 메뉴가 있으면 추가
-            if (childMenus && childMenus.length > 0) {
-              structuredMenus.push(...childMenus);
-            }
-          }
-
-          // 메뉴가 있으면 설정
-          if (structuredMenus.length > 0) {
-            setFooterMenus(structuredMenus); // 모든 메뉴 표시
-            return;
-          }
-
-          // 3. 만약 구조화된 메뉴가 없는 경우, 모든 메뉴 사용
-          if (directMenus.length > 0) {
-            setFooterMenus(directMenus.slice(0, 12)); // 최대 12개만 표시
-          }
-        } catch (menuError) {
-          console.error("메뉴 불러오기 오류:", menuError);
-          // 기본 메뉴를 사용하므로 추가 조치 필요 없음
-        }
-      } catch (error) {
-        console.error("푸터 데이터 불러오기 오류:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
+export default function Footer({
+  menus,
+  settings,
+}: {
+  menus: any[];
+  settings: any;
+}) {
+  // 메뉴/설정 데이터는 props로 받음
+  // ... 이하 기존 렌더링 로직에서 menus, settings를 props로 사용하도록 수정 ...
 
   // 데이터 변환을 위한 객체
   const info = {
@@ -380,7 +197,7 @@ export default function Footer() {
             바로가기
           </h3>
 
-          {footerMenus && footerMenus.length > 0 ? (
+          {menus && menus.length > 0 ? (
             // 데이터베이스에서 가져온 메뉴 표시
             <div>
               {/* 상위 메뉴와 하위 메뉴 표시 - 유동적 레이아웃 */}
@@ -388,7 +205,7 @@ export default function Footer() {
                 {(() => {
                   // 1. 하위 메뉴가 있는 상위 메뉴 ID 목록 추출
                   const parentIdsWithChildren = new Set(
-                    footerMenus
+                    menus
                       .filter((menu) => menu.parent_id)
                       .map((menu) => menu.parent_id)
                   );
@@ -398,12 +215,12 @@ export default function Footer() {
                     parentIdsWithChildren
                   )
                     .map((parentId) => {
-                      const parentMenu = footerMenus.find(
+                      const parentMenu = menus.find(
                         (menu) => menu.id === parentId
                       );
                       if (!parentMenu) return null;
 
-                      const childMenus = footerMenus.filter(
+                      const childMenus = menus.filter(
                         (menu) => menu.parent_id === parentId
                       );
 
@@ -422,7 +239,7 @@ export default function Footer() {
                     );
 
                   // 3. 하위 메뉴가 없는 상위 메뉴들의 그룹 생성
-                  const menuGroupsWithoutChildren = footerMenus
+                  const menuGroupsWithoutChildren = menus
                     .filter(
                       (menu) =>
                         !menu.parent_id && !parentIdsWithChildren.has(menu.id)

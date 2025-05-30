@@ -1,14 +1,39 @@
-"use client";
-
-import { useRouter } from "next/navigation";
+import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import MainBanner from "@/components/home/main-banner";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Users, Calendar, MessageSquare, FileText } from "lucide-react";
 import Link from "next/link";
 
-export default function AdminDashboard() {
-  const router = useRouter();
-  
+export default async function AdminDashboard() {
+  // SSR에서 세션 확인
+  const supabase = createServerComponentClient({ cookies });
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session) {
+    redirect("/(auth)/login?redirect=/(auth-pages)/admin");
+  }
+
+  // DB에서 role 확인
+  const { data: user } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", session.user.id)
+    .single();
+
+  if (user?.role !== "admin") {
+    redirect("/");
+  }
+
   const stats = [
     {
       title: "교인 관리",
@@ -43,32 +68,34 @@ export default function AdminDashboard() {
   return (
     <>
       <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">관리자 대시보드</h1>
-        <p className="text-muted-foreground mt-2">
-          교회 관리 시스템에 오신 것을 환영합니다. 아래 메뉴에서 관리할 항목을 선택하세요.
-        </p>
-      </div>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">관리자 대시보드</h1>
+          <p className="text-muted-foreground mt-2">
+            교회 관리 시스템에 오신 것을 환영합니다. 아래 메뉴에서 관리할 항목을
+            선택하세요.
+          </p>
+        </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
-          <Link key={stat.href} href={stat.href}>
-            <Card className="cursor-pointer hover:shadow-md transition-shadow">
-              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                <CardTitle className="text-lg font-medium">{stat.title}</CardTitle>
-                <div className={`${stat.color} p-2 rounded-full text-white`}>
-                  <stat.icon className="h-5 w-5" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <CardDescription>{stat.description}</CardDescription>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {stats.map((stat) => (
+            <Link key={stat.href} href={stat.href}>
+              <Card className="cursor-pointer hover:shadow-md transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                  <CardTitle className="text-lg font-medium">
+                    {stat.title}
+                  </CardTitle>
+                  <div className={`${stat.color} p-2 rounded-full text-white`}>
+                    <stat.icon className="h-5 w-5" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription>{stat.description}</CardDescription>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
       </div>
-    </div>
     </>
   );
 }
-
