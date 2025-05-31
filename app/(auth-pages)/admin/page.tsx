@@ -1,6 +1,8 @@
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+"use client";
+
+import { useAuth } from "@/contexts/auth-context";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import MainBanner from "@/components/home/main-banner";
 import {
   Card,
@@ -12,26 +14,20 @@ import {
 import { Users, Calendar, MessageSquare, FileText } from "lucide-react";
 import Link from "next/link";
 
-export default async function AdminDashboard() {
-  // SSR에서 세션 확인
-  const supabase = createServerComponentClient({ cookies });
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+export default function AdminDashboard() {
+  const { user } = useAuth();
+  const router = useRouter();
 
-  if (!session) {
-    redirect("/(auth)/login?redirect=/(auth-pages)/admin");
-  }
+  useEffect(() => {
+    if (!user) {
+      router.replace("/(auth)/login?redirect=/(auth-pages)/admin");
+    } else if (user.role !== "admin") {
+      router.replace("/");
+    }
+  }, [user, router]);
 
-  // DB에서 role 확인
-  const { data: user } = await supabase
-    .from("users")
-    .select("role")
-    .eq("id", session.user.id)
-    .single();
-
-  if (user?.role !== "admin") {
-    redirect("/");
+  if (!user || user.role !== "admin") {
+    return null; // 또는 로딩/권한없음 UI
   }
 
   const stats = [

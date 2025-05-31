@@ -29,7 +29,7 @@ export default function ClientLayout({
         disableTransitionOnChange
       >
         <div className="min-h-screen flex flex-col">
-          <Header menuItems={menuItems} user={user} />
+          <Header menuItems={menuItems} />
           <main className="flex-1">{children}</main>
           <Footer menus={footerMenus} settings={footerSettings} />
           <Toaster />

@@ -19,6 +19,31 @@ export default async function DynamicPage(props: { params: any }) {
     typeof props.params.then === "function" ? await props.params : props.params;
   const supabase = await createClient();
 
+  // 메뉴 항목 SSR에서 패칭
+  const { data: menuItemsRaw } = await supabase
+    .from("cms_menus")
+    .select("*")
+    .eq("is_active", true)
+    .order("order_num", { ascending: true });
+  const menuItems = menuItemsRaw ?? [];
+
+  // 평면 구조를 트리 구조로 변환하는 함수
+  function buildMenuTree(items: any[]) {
+    const rootItems = items.filter((item) => item.parent_id === null);
+    return rootItems.map((item) => ({
+      ...item,
+      submenu: findChildren(item.id, items),
+    }));
+  }
+  function findChildren(parentId: string, items: any[]): any[] {
+    const children = items.filter((item) => item.parent_id === parentId);
+    return children.map((child) => ({
+      ...child,
+      submenu: findChildren(child.id, items),
+    }));
+  }
+  const menuTree = buildMenuTree(menuItems);
+
   // 홈(/) 경로일 때: 기존 Home 페이지 UI 렌더링
   if (!params.slug || params.slug.length === 0) {
     // 레이아웃 매니저에서 설정한 위젯 가져오기
@@ -30,18 +55,6 @@ export default async function DynamicPage(props: { params: any }) {
 
     if (widgetsError) {
       console.error("Error fetching widgets:", widgetsError);
-    }
-
-    // 메뉴 항목 가져오기 (홈화면에 필요한 것만)
-    const { data: menuItems = [], error: menuItemsError } = await supabase
-      .from("cms_menus")
-      .select("id, title, url")
-      .eq("is_active", true)
-      .eq("show_in_home", true)
-      .order("order_num", { ascending: true });
-
-    if (menuItemsError) {
-      console.error("Error fetching menu items:", menuItemsError);
     }
 
     // 위젯 데이터 타입 변환

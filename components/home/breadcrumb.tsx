@@ -5,10 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight, Home } from "lucide-react";
 import { supabase } from "@/db";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 
 // 브레드크럼 항목 타입 정의
 interface IBreadcrumbItem {
@@ -63,8 +60,8 @@ export default function Breadcrumb({
         // 현재 경로에 해당하는 메뉴 항목이 없는 경우
         if (!currentMenuItem && currentPath !== "/") {
           // URL 경로의 일부가 일치하는 메뉴 항목 찾기 (부분 일치)
-          currentMenuItem = menuItems?.find((item) => 
-            currentPath.startsWith(item.url) && item.url !== "/"
+          currentMenuItem = menuItems?.find(
+            (item) => currentPath.startsWith(item.url) && item.url !== "/"
           );
         }
 
@@ -112,18 +109,20 @@ export default function Breadcrumb({
         } else if (currentPath !== homeUrl) {
           // 메뉴에 없는 경로인 경우 현재 경로 기반으로 표시
           const pathSegments = currentPath.split("/").filter(Boolean);
-          
+
           // 경로 세그먼트 기반으로 브레드크럼 생성
           let currentUrl = "";
           pathSegments.forEach((segment, index) => {
             currentUrl += `/${segment}`;
             const isLast = index === pathSegments.length - 1;
-            
+
             // 마지막 세그먼트이고 currentTitle이 제공된 경우 해당 제목 사용
-            const title = isLast && currentTitle 
-              ? currentTitle 
-              : segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, " ");
-            
+            const title =
+              isLast && currentTitle
+                ? currentTitle
+                : segment.charAt(0).toUpperCase() +
+                  segment.slice(1).replace(/-/g, " ");
+
             breadcrumbItems.push({
               title,
               url: currentUrl,
@@ -153,7 +152,9 @@ export default function Breadcrumb({
 
   if (loading) {
     return (
-      <Card className={`shadow-sm border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 ${className}`}>
+      <Card
+        className={`shadow-sm border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 ${className}`}
+      >
         <CardContent className="p-3">
           <div className="text-sm text-gray-500 dark:text-gray-400">
             <span className="animate-pulse">로딩 중...</span>
@@ -168,24 +169,30 @@ export default function Breadcrumb({
   }
 
   return (
-    <Card className={`shadow-sm border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 ${className}`}>
+    <Card
+      className={`shadow-sm border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 ${className}`}
+    >
       <CardContent className="p-3">
         <nav aria-label="breadcrumb" className="text-sm">
           <ol className="flex flex-wrap items-center">
             {breadcrumbs.map((item, index) => (
               <li key={index} className="flex items-center">
                 {index === 0 ? (
-                  <Link href={item.url} title={item.title} className="text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
+                  <Link
+                    href={item.url}
+                    title={item.title}
+                    className="text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+                  >
                     <Home className="h-4 w-4" />
                   </Link>
                 ) : (
                   <ChevronRight className="mx-1 h-4 w-4 text-gray-400 dark:text-gray-500" />
                 )}
                 {item.isLast ? (
-                  <span className="font-medium text-gray-800 dark:text-gray-200">{item.title}</span>
-                ) : index === 0 ? (
-                  null // 홈 항목은 아이콘만 표시하고 텍스트는 표시하지 않음
-                ) : (
+                  <span className="font-medium text-gray-800 dark:text-gray-200">
+                    {item.title}
+                  </span>
+                ) : index === 0 ? null : ( // 홈 항목은 아이콘만 표시하고 텍스트는 표시하지 않음
                   <Link
                     href={item.url}
                     className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline"

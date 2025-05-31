@@ -168,24 +168,71 @@ const hamburgerPlusStyles = `
 }
 `;
 
-export default function Header() {
+export default function Header({ menuItems }: { menuItems: any[] }) {
   const { user } = useAuth();
 
   return (
     <header className="sticky top-0 z-[9] w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
-        <HeaderClient user={user} />
+        <HeaderClient user={user} menuItems={menuItems} />
       </div>
     </header>
   );
 }
 
-function HeaderClient({ user }: { user: any }) {
+function HeaderClient({ user, menuItems }: { user: any; menuItems: any[] }) {
   const { handleLogout } = useAuth();
-  const [mounted, setMounted] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [animationClass, setAnimationClass] = useState("");
   const { theme, setTheme } = useTheme();
+  const [isHamburgerOpen, setIsHamburgerOpen] = useState(false);
+  const [openSubmenus, setOpenSubmenus] = useState<{ [key: string]: boolean }>(
+    {}
+  );
+
+  // 트리 구조 메뉴 렌더링 함수
+  function renderMenu(items: any[]) {
+    return (
+      <ul className="flex gap-8 items-center">
+        {items.map((item: any, idx: number) => (
+          <li key={item.id} className="relative group" style={{ minWidth: 80 }}>
+            {item.url ? (
+              <Link
+                href={item.url}
+                className="px-2 py-1 text-base font-semibold text-gray-800 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-150"
+              >
+                {item.title}
+              </Link>
+            ) : (
+              <span className="px-2 py-1 text-base font-semibold text-gray-800 dark:text-gray-100">
+                {item.title}
+              </span>
+            )}
+            {item.submenu && item.submenu.length > 0 && (
+              <ul className="absolute left-0 top-full mt-0 bg-white dark:bg-gray-900 shadow-lg rounded-lg py-2 min-w-[180px] border border-gray-100 dark:border-gray-800 z-50 hidden group-hover:block group-focus-within:block pointer-events-auto transition-all">
+                {item.submenu.map((child: any, subIdx: number) => (
+                  <li key={child.id + subIdx}>
+                    {child.url ? (
+                      <Link
+                        href={child.url}
+                        className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-150"
+                      >
+                        {child.title}
+                      </Link>
+                    ) : (
+                      <span className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200">
+                        {child.title}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </li>
+        ))}
+      </ul>
+    );
+  }
 
   // 모바일 메뉴 토글
   const toggleMenu = () => {
@@ -204,18 +251,7 @@ function HeaderClient({ user }: { user: any }) {
     }
   };
 
-  // 햄버거 버튼 애니메이션 상태
-  const [isHamburgerOpen, setIsHamburgerOpen] = useState(false);
-
-  // 햄버거 버튼 클릭 핸들러
-  const handleHamburgerClick = () => {
-    setIsHamburgerOpen(!isHamburgerOpen);
-    toggleMenu();
-  };
-
   useEffect(() => {
-    setMounted(true);
-    // 동적으로 스타일 추가
     if (!document.getElementById("hamburger-eq-styles")) {
       const styleSheet = document.createElement("style");
       styleSheet.id = "hamburger-eq-styles";
@@ -223,72 +259,6 @@ function HeaderClient({ user }: { user: any }) {
       document.head.appendChild(styleSheet);
     }
   }, []);
-
-  // 모바일 서브메뉴 아코디언 상태
-  const [openSubmenus, setOpenSubmenus] = useState<{ [key: string]: boolean }>(
-    {}
-  );
-
-  // 메뉴 항목 상태 관리
-  const [menuItems, setMenuItems] = useState<any[]>([]);
-  const [isMenuLoading, setIsMenuLoading] = useState(true);
-
-  // 메뉴 항목 불러오기 (캐싱 + 병렬)
-  useEffect(() => {
-    // 1. localStorage 캐시 먼저 적용
-    const cachedMenu =
-      typeof window !== "undefined" && localStorage.getItem("menuItems");
-    if (cachedMenu) {
-      try {
-        setMenuItems(JSON.parse(cachedMenu));
-        setIsMenuLoading(false);
-      } catch {}
-    }
-    // 2. 백그라운드에서 최신 메뉴 fetch
-    async function fetchMenuItems() {
-      try {
-        setIsMenuLoading(true);
-        const { data, error } = await supabase
-          .from("cms_menus")
-          .select("*")
-          .eq("is_active", true)
-          .order("order_num", { ascending: true });
-        if (!error && data && data.length > 0) {
-          const formattedMenu = buildMenuTree(data);
-          setMenuItems(formattedMenu);
-          if (typeof window !== "undefined") {
-            localStorage.setItem("menuItems", JSON.stringify(formattedMenu));
-          }
-        }
-      } catch (error) {
-        console.error("메뉴 항목을 불러오는 중 오류 발생:", error);
-      } finally {
-        setIsMenuLoading(false);
-      }
-    }
-    fetchMenuItems();
-  }, []);
-
-  // 평면 구조의 메뉴 항목을 계층 구조로 변환하는 함수
-  function buildMenuTree(items: any[]) {
-    const rootItems = items.filter((item) => item.parent_id === null);
-    return rootItems.map((item) => ({
-      title: item.title,
-      href: item.url,
-      external: item.open_in_new_tab,
-      submenu: findChildren(item.id, items),
-    }));
-  }
-
-  function findChildren(parentId: string, items: any[]): any[] {
-    const children = items.filter((item) => item.parent_id === parentId);
-    return children.map((child) => ({
-      title: child.title,
-      href: child.url,
-      external: child.open_in_new_tab,
-      submenu: findChildren(child.id, items),
-    }));
-  }
 
   useEffect(() => {
     if (!document.getElementById("header-styles")) {
@@ -332,7 +302,7 @@ function HeaderClient({ user }: { user: any }) {
           variant="ghost"
           size="icon"
           aria-label="Toggle Menu"
-          onClick={handleHamburgerClick}
+          onClick={toggleMenu}
           className={isHamburgerOpen ? "hamburger-eq open" : "hamburger-eq"}
         >
           {/* = (닫힘) → + (열림) */}
@@ -369,12 +339,8 @@ function HeaderClient({ user }: { user: any }) {
       </div>
 
       {/* 데스크톱 메뉴 */}
-      <nav className="hidden flex-1 items-center justify-center md:flex">
-        {isMenuLoading ? (
-          <div className="h-8 w-32 bg-gray-200 animate-pulse rounded" />
-        ) : (
-          <MainMenu items={menuItems} />
-        )}
+      <nav className="hidden flex-1 items-center justify-center md:flex overflow-visible">
+        {renderMenu(menuItems)}
       </nav>
 
       {/* 데스크톱 우측 메뉴 */}
@@ -392,24 +358,18 @@ function HeaderClient({ user }: { user: any }) {
       </div>
 
       {/* 모바일 메뉴 (Portal로 렌더링하여 DOM 트리와 분리) */}
-      {mounted && isMenuOpen && (
+      {isMenuOpen && (
         <>
           {/* 메뉴 컨텐츠 */}
           {createPortal(
             <div
               className={`fixed top-[4rem] left-0 right-0 max-h-[calc(100vh-4rem)] bg-background shadow-xl rounded-b-2xl px-8 pt-4 z-[8] overflow-y-auto ${animationClass}`}
-              onAnimationEnd={() => {
-                if (animationClass === "animate-slideUp") {
-                  setIsMenuOpen(false);
-                  setAnimationClass("");
-                }
-              }}
             >
               <ul className="space-y-4">
-                {menuItems.map((item, idx) => (
-                  <li key={item.title + idx}>
+                {menuItems.map((item: any, idx: number) => (
+                  <li key={item.id + idx}>
                     <div className="flex items-center justify-between">
-                      {item.submenu ? (
+                      {item.submenu && item.submenu.length > 0 ? (
                         <button
                           className="flex items-center w-full font-bold text-xl pt-4 pb-2 text-left focus:outline-none"
                           onClick={() => {
@@ -430,7 +390,7 @@ function HeaderClient({ user }: { user: any }) {
                         </button>
                       ) : (
                         <Link
-                          href={item.href}
+                          href={item.url}
                           className="flex items-center w-full font-bold text-xl pt-4 pb-2 text-left focus:outline-none"
                           onClick={toggleMenu}
                         >
@@ -438,7 +398,7 @@ function HeaderClient({ user }: { user: any }) {
                         </Link>
                       )}
                     </div>
-                    {item.submenu && (
+                    {item.submenu && item.submenu.length > 0 && (
                       <div
                         className={`overflow-hidden transition-all duration-500 ${
                           openSubmenus[item.title]
@@ -447,14 +407,14 @@ function HeaderClient({ user }: { user: any }) {
                         }`}
                       >
                         <ul className="pl-4">
-                          {item.submenu.map((subItem: any, subIdx: number) => (
-                            <li key={subItem.title + subIdx}>
+                          {item.submenu.map((child: any, subIdx: number) => (
+                            <li key={child.id + subIdx}>
                               <Link
-                                href={subItem.href}
+                                href={child.url}
                                 className="block text-base py-2 text-gray-700 dark:text-gray-300 hover:font-semibold"
                                 onClick={toggleMenu}
                               >
-                                {subItem.title}
+                                {child.title}
                               </Link>
                             </li>
                           ))}
@@ -681,7 +641,7 @@ function MainMenu({ items }: { items: any[] }) {
           key={`${item.href}-${item.title}-${index}`}
           className="relative group"
         >
-          {item.submenu && item.submenu.length > 0 ? (
+          {item.children.length > 0 ? (
             <div className="relative group">
               <Button
                 variant="ghost"
@@ -695,7 +655,7 @@ function MainMenu({ items }: { items: any[] }) {
               </Button>
               <div className="absolute left-0 top-full z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md animate-in data-[side=bottom]:slide-in-from-top-2 hidden group-hover:block">
                 <div className="w-48 py-1">
-                  {item.submenu.map((subItem: any, subIndex: number) => (
+                  {item.children.map((subItem: any, subIndex: number) => (
                     <Link
                       key={`${subItem.href}-${subItem.title}-${subIndex}`}
                       href={subItem.href}
