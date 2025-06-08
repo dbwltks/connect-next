@@ -1,7 +1,6 @@
 import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import type { User } from "@supabase/supabase-js";
 
 export async function middleware(request: NextRequest) {
   try {
@@ -11,45 +10,34 @@ export async function middleware(request: NextRequest) {
     // Supabase 클라이언트 생성
     const supabase = createMiddlewareClient({ req: request, res });
 
+    // 세션 가져오기
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
     // 요청 URL에서 경로 추출
     const path = request.nextUrl.pathname;
     console.log("Middleware - Path:", path);
+    console.log("Middleware - Session exists:", !!session);
     
-    // 세션 가져오기
-    const { data } = await supabase.auth.getSession();
-    const user = data?.session?.user;
-    
-    // 세션 정보 로깅
-    console.log("Middleware - User exists:", !!user);
-    
-    // 쿠키 확인
-    const cookies = request.cookies;
-    const supabaseCookie = cookies.get('sb-access-token') || cookies.get('sb-refresh-token');
-    console.log("Middleware - Supabase cookie exists:", !!supabaseCookie);
-    
-    // 사용자 정보 로깅
-    if (user) {
-      console.log("Middleware - User ID:", user.id);
-      console.log("Middleware - User Email:", user.email);
-    } else {
-      console.log("Middleware - No user found in session");
+    if (session) {
+      console.log("Middleware - User ID:", session.user.id);
     }
 
     // 로그인된 사용자의 auth 페이지 접근 방지
-    if (user && (path.includes("/login") || path.includes("/register"))) {
+    if (session && (path.includes("/login") || path.includes("/register"))) {
       console.log("Middleware - Logged in user accessing auth route, redirecting to home");
       return NextResponse.redirect(new URL("/", request.url));
     }
 
-    // 마이페이지 경로 처리
-    if (path.startsWith("/mypage")) {
-      // 사용자 정보가 없을 경우에만 리디렉션
-      if (!user) {
-        console.log("Middleware - Unauthenticated user accessing mypage, redirecting to login");
-        return NextResponse.redirect(new URL("/login", request.url));
-      }
-      
-      // 사용자 정보가 있으면 접근 허용
+    // 마이페이지 보호 - 세션이 없는 경우에만 리디렉션
+    if (path.startsWith("/mypage") && !session) {
+      console.log("Middleware - Unauthenticated user accessing mypage, redirecting to login");
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+
+    // 세션이 있으면 마이페이지 접근 허용
+    if (path.startsWith("/mypage") && session) {
       console.log("Middleware - Authenticated user accessing mypage, allowing access");
       return res;
     }

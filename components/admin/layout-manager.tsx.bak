@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { supabase } from "@/db";
 import { toast } from "@/components/ui/toaster";
-import { Plus, Trash2, MoveVertical, Settings, Eye } from "lucide-react";
+import { Plus, Trash2, MoveVertical, Settings, Save, Loader2 } from "lucide-react";
 
 // 위젯 타입 정의
 export type Widget = {
@@ -63,12 +63,12 @@ const WIDGET_TYPES = [
 export default function LayoutManager(): React.ReactNode {
   // 상태 관리
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [layoutAreas, setLayoutAreas] = useState<LayoutArea[]>([
     { id: "main", name: "메인 영역", widgets: [] },
   ]);
   const [editingWidget, setEditingWidget] = useState<Widget | null>(null);
   const [showWidgetSettings, setShowWidgetSettings] = useState(false);
-  const [previewMode, setPreviewMode] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [showWidgetMenu, setShowWidgetMenu] = useState(false);
   const [menuItems, setMenuItems] = useState<any[]>([]);
@@ -776,7 +776,7 @@ export default function LayoutManager(): React.ReactNode {
     switch (widget.type) {
       case "menu":
         const menuItem = menuItems.find((item) => item.id === sourceId);
-        return previewMode ? (
+        return (
           <div className="bg-white shadow rounded overflow-hidden">
             <div className="p-4 font-medium">{widget.title}</div>
             <div className="bg-gray-50 p-3 border-t">
@@ -795,79 +795,72 @@ export default function LayoutManager(): React.ReactNode {
               </ul>
             </div>
           </div>
-        ) : (
-          <div className="bg-blue-50 p-4 rounded">
-            <div className="font-medium">{widget.title}</div>
-            {menuItem && (
-              <div className="text-sm text-gray-500 mt-1">
-                링크: {menuItem.url || "/"}
-              </div>
-            )}
-          </div>
         );
+
       case "banner":
+        const bannerImages = widget.settings?.images || [];
+        const activeIndex = widget.settings?.activeIndex || 0;
+
         return (
-          <div
-            className={
-              previewMode ? "" : "bg-white rounded overflow-hidden shadow"
-            }
-            style={
-              previewMode && banners.length > 0
-                ? { height: banners[0]?.image_height || "400px" }
-                : {}
-            }
-          >
-            {banners.length > 0 ? (
-              <div
-                className={`relative w-full ${previewMode ? "h-full" : "h-48"}`}
-              >
+          <div className="w-full rounded overflow-hidden relative">
+            <div className="aspect-[16/5] bg-gray-200 flex items-center justify-center">
+              {bannerImages.length > 0 ? (
                 <img
-                  src={banners[0]?.image_url}
-                  alt="배너"
+                  src={bannerImages[activeIndex]?.url || ""}
+                  alt={bannerImages[activeIndex]?.alt || "Banner image"}
                   className="w-full h-full object-cover"
                 />
-                {banners[0]?.title && (
-                  <div
-                    className="absolute inset-0 bg-black flex items-center justify-center"
-                    style={{ opacity: banners[0]?.overlay_opacity || 0.4 }}
-                  >
-                    <div className="text-white text-center p-4">
-                      <h3 className="text-xl font-bold">{banners[0]?.title}</h3>
-                      {banners[0]?.subtitle && (
-                        <p className="text-sm mt-2">{banners[0]?.subtitle}</p>
-                      )}
-                    </div>
+              ) : (
+                <div className="text-gray-500">배너 이미지</div>
+              )}
+            </div>
+          </div>
+        );
+
+      case "board":
+        const boardId = widget.settings?.board_id;
+        const postCount = widget.settings?.post_count || 5;
+
+        return (
+          <div className="bg-white rounded shadow overflow-hidden">
+            <div className="p-4 border-b">
+              <h3 className="font-bold">{widget.title || "게시판"}</h3>
+            </div>
+            <div className="divide-y">
+              {Array.from({ length: Math.min(postCount, 3) }).map((_, i) => (
+                <div key={i} className="p-3 hover:bg-gray-50">
+                  <div className="font-medium mb-1 truncate">
+                    게시글 제목 예시 {i + 1}
                   </div>
-                )}
-              </div>
-            ) : (
-              <div className="w-full h-48 bg-purple-100 flex items-center justify-center">
-                <div className="text-purple-500 font-medium">배너</div>
-              </div>
-            )}
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span>작성자</span>
+                    <span>2023.01.{10 + i}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="p-3 text-center text-sm text-blue-600 hover:bg-gray-50">
+              더 보기
+            </div>
           </div>
         );
 
       case "page":
-        const page = pages.find((item) => item.id === sourceId);
-        const pagePosts =
-          page && page.page_type === "board"
-            ? boardPosts[String(page.id)] || []
-            : [];
+        const pageId = widget.settings?.page_id;
+        const page = pageId ? pages.find((p) => p.id === pageId) : null;
+        const pagePosts = page?.page_type === "board" ? boardPosts[String(page.id)] || [] : [];
 
-        // 게시판 형식의 페이지인 경우
-        if (page?.page_type === "board" && previewMode) {
+        if (page?.page_type === "board") {
           return (
             <div className="bg-white shadow rounded overflow-hidden">
               <div className="p-4 border-b">
-                <h3 className="text-lg font-bold">{widget.title}</h3>
+                <h3 className="font-bold">{widget.title || page.title}</h3>
               </div>
-
-              {pagePosts.length > 0 ? (
-                <div className="divide-y">
-                  {pagePosts
+              <div className="divide-y">
+                {pagePosts.length > 0 ? (
+                  pagePosts
                     .slice(0, widget.width >= 6 ? 5 : 3)
-                    .map((post, index) => (
+                    .map((post) => (
                       <div
                         key={post.id}
                         className="p-3 hover:bg-gray-50 transition-colors"
@@ -886,25 +879,27 @@ export default function LayoutManager(): React.ReactNode {
                           </p>
                         )}
                       </div>
-                    ))}
-                </div>
-              ) : (
-                <div className="p-4 text-center text-gray-500">
-                  등록된 게시물이 없습니다.
-                </div>
-              )}
-
-              <div className="p-3 border-t text-center">
-                <span className="text-xs text-blue-600 hover:underline cursor-pointer">
-                  더보기
-                </span>
+                    ))
+                ) : (
+                  Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="p-3 hover:bg-gray-50">
+                      <div className="font-medium mb-1 truncate">
+                        게시글 제목 예시 {i + 1}
+                      </div>
+                      <div className="flex justify-between text-xs text-gray-500">
+                        <span>작성자</span>
+                        <span>2023.01.{10 + i}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           );
         }
 
         // 일반 페이지인 경우
-        return previewMode ? (
+        return (
           <div className="bg-white shadow rounded overflow-hidden">
             <div className="p-4">
               <h3 className="text-lg font-bold mb-2">{widget.title}</h3>
@@ -918,23 +913,48 @@ export default function LayoutManager(): React.ReactNode {
               </div>
             </div>
           </div>
-        ) : (
-          <div className="bg-amber-50 p-4 rounded">
-            <div className="font-medium">{widget.title}</div>
-            {page && (
-              <div className="text-sm text-gray-500 mt-1">
-                슬러그: {page.slug || "/"}
-                {page.page_type === "board" && (
-                  <span className="ml-2 inline-block px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">
-                    게시판
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
         );
+
       default:
         return <div className="bg-gray-100 p-4 rounded">알 수 없는 위젯</div>;
+    }
+  };
+
+  // 레이아웃 저장 함수
+  const saveLayout = async () => {
+    setIsSaving(true);
+    try {
+      // 각 영역별 위젯 데이터 저장
+      for (const area of layoutAreas) {
+        for (let i = 0; i < area.widgets.length; i++) {
+          const widget = area.widgets[i];
+          await supabase
+            .from('cms_widgets')
+            .update({
+              column_position: area.id,
+              order: i,
+              title: widget.title,
+              settings: widget.settings,
+              width: widget.width,
+              is_active: widget.is_active
+            })
+            .eq('id', widget.id);
+        }
+      }
+      
+      toast({
+        title: "성공",
+        description: "레이아웃이 저장되었습니다.",
+      });
+    } catch (error) {
+      console.error("레이아웃 저장 중 오류:", error);
+      toast({
+        title: "오류",
+        description: "레이아웃 저장 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -942,22 +962,30 @@ export default function LayoutManager(): React.ReactNode {
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-bold">홈페이지 레이아웃 관리</h2>
-        <div className="flex space-x-2">
+        <div className="flex items-center space-x-2">
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setPreviewMode(!previewMode)}
+            onClick={saveLayout}
+            disabled={isSaving}
           >
-            <Eye className="h-4 w-4 mr-2" />
-            {previewMode ? "기본 보기" : "미리보기"}
+            {isSaving ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                저장 중...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                변경사항 저장
+              </>
+            )}
           </Button>
         </div>
       </div>
 
       <div className="bg-gray-100 p-4 mb-4 rounded-lg text-center text-sm text-gray-500">
-        {previewMode ? 
-          "미리보기 모드: 위젯에 마우스를 올리면 편집 옵션이 표시됩니다. 드래그하여 위치를 변경할 수 있습니다." : 
-          "기본 편집 모드: 위젯을 자유롭게 편집하고 배치할 수 있습니다."}
+        위젯에 마우스를 올리면 편집 옵션이 표시됩니다. 드래그하여 위치를 변경할 수 있습니다.
       </div>
 
       {renderWidgetSettingsDialog()}
@@ -967,31 +995,95 @@ export default function LayoutManager(): React.ReactNode {
           {layoutAreas.map((area) => (
             <Card
               key={area.id}
-              className={previewMode ? "shadow-none border-0" : ""}
+              className="shadow-none border-0"
             >
-              <CardHeader className={previewMode ? "pb-2" : ""}>
+              <CardHeader className="pb-2">
                 <div className="flex justify-between items-center">
                   <CardTitle>{area.name}</CardTitle>
-                  {previewMode && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowWidgetMenu(!showWidgetMenu)}
-                      className="h-8"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      위젯 추가
-                    </Button>
-                  )}
                 </div>
               </CardHeader>
-              <CardContent className={previewMode ? "p-0" : ""}>
+              <CardContent className="p-0">
                 <Droppable droppableId={area.id}>
                   {(provided) => (
                     <div
                       {...provided.droppableProps}
                       ref={provided.innerRef}
-                      className={`min-h-[100px] ${!previewMode ? "border border-dashed border-gray-300 rounded-md p-4" : ""}`}
+                      className="min-h-[100px]"
+                  >
+                    <div>
+                      {area.widgets.length === 0 ? (
+                        <div className="text-center text-gray-500 py-8">
+                          이 영역에 위젯을 추가하세요
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap gap-4 w-full">
+                          {area.widgets.map((widget, index) => (
+                            <Draggable
+                              key={widget.id}
+                              draggableId={widget.id}
+                              index={index}
+                            >
+                              {(provided) => (
+                                <div
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  className={`${getWidthClass(widget.width)} ${
+                                    !widget.is_active ? "opacity-50" : ""
+                                  }`}
+                                >
+                                  <div className="w-full relative group">
+                                    {renderWidgetPreview(widget)}
+                                    {/* 편집 컨트롤 표시 (호버 시) */}
+                                    <div className="absolute top-2 right-2 flex space-x-1 bg-white/80 backdrop-blur-sm rounded-md p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        {...provided.dragHandleProps}
+                                      >
+                                        <MoveVertical className="h-3.5 w-3.5" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        onClick={() => {
+                                          setEditingWidget(widget);
+                                          setDialogOpen(true);
+                                        }}
+                                      >
+                                        <Settings className="h-3.5 w-3.5" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+        <h2 className="text-2xl font-bold">홈페이지 레이아웃 관리</h2>
+      </div>
+
+      <div className="bg-gray-100 p-4 mb-4 rounded-lg text-center text-sm text-gray-500">
+        위젯에 마우스를 올리면 편집 옵션이 표시됩니다. 드래그하여 위치를 변경할 수 있습니다.
+      </div>
+
+      {renderWidgetSettingsDialog()}
+
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <div className="grid grid-cols-1 gap-4">
+          {layoutAreas.map((area) => (
+            <Card
+              key={area.id}
+              className="shadow-none border-0"
+            >
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-center">
+                  <CardTitle>{area.name}</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Droppable droppableId={area.id}>
+                  {(provided) => (
+                    <div
+                      {...provided.droppableProps}
+                      ref={provided.innerRef}
+                      className="min-h-[100px]"
                     >
                       <div>
                         {area.widgets.length === 0 ? (
@@ -1014,80 +1106,39 @@ export default function LayoutManager(): React.ReactNode {
                                       !widget.is_active ? "opacity-50" : ""
                                     }`}
                                   >
-                                    {previewMode ? (
-                                      <div className="w-full relative group">
-                                        {renderWidgetPreview(widget)}
-                                        {/* 미리보기 모드에서도 편집 컨트롤 표시 (호버 시) */}
-                                        <div className="absolute top-2 right-2 flex space-x-1 bg-white/80 backdrop-blur-sm rounded-md p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-7 w-7"
-                                            {...provided.dragHandleProps}
-                                          >
-                                            <MoveVertical className="h-3.5 w-3.5" />
-                                          </Button>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-7 w-7"
-                                            onClick={() => {
-                                              setEditingWidget(widget);
-                                              setDialogOpen(true);
-                                            }}
-                                          >
-                                            <Settings className="h-3.5 w-3.5" />
-                                          </Button>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-7 w-7"
-                                            onClick={() => deleteWidget(widget.id)}
-                                          >
-                                            <Trash2 className="h-3.5 w-3.5" />
-                                          </Button>
-                                        </div>
+                                    <div className="w-full relative group">
+                                      {renderWidgetPreview(widget)}
+                                      {/* 편집 컨트롤 표시 (호버 시) */}
+                                      <div className="absolute top-2 right-2 flex space-x-1 bg-white/80 backdrop-blur-sm rounded-md p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-7 w-7"
+                                          {...provided.dragHandleProps}
+                                        >
+                                          <MoveVertical className="h-3.5 w-3.5" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-7 w-7"
+                                          onClick={() => {
+                                            setEditingWidget(widget);
+                                            setDialogOpen(true);
+                                          }}
+                                        >
+                                          <Settings className="h-3.5 w-3.5" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-7 w-7"
+                                          onClick={() => deleteWidget(widget.id)}
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                        </Button>
                                       </div>
-                                    ) : (
-                                      <Card>
-                                        <CardHeader className="p-3 flex flex-row items-center justify-between space-y-0">
-                                          <CardTitle className="text-sm font-medium">
-                                            {widget.title}
-                                          </CardTitle>
-                                          <div className="flex space-x-1">
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              {...provided.dragHandleProps}
-                                            >
-                                              <MoveVertical className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              onClick={() => {
-                                                setEditingWidget(widget);
-                                                setDialogOpen(true);
-                                              }}
-                                            >
-                                              <Settings className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              onClick={() =>
-                                                deleteWidget(widget.id)
-                                              }
-                                            >
-                                              <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                          </div>
-                                        </CardHeader>
-                                        <CardContent className="p-3">
-                                          {renderWidgetPreview(widget)}
-                                        </CardContent>
-                                      </Card>
-                                    )}
+                                    </div>
                                   </div>
                                 )}
                               </Draggable>
@@ -1096,7 +1147,7 @@ export default function LayoutManager(): React.ReactNode {
                         )}
                       </div>
                       {provided.placeholder}
-                      {!previewMode && (
+                      {
                         <div className="mt-4 flex justify-center relative">
                           <Button
                             variant="outline"
