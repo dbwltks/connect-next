@@ -89,11 +89,23 @@ export async function saveBoardPost({
   status: "draft" | "published";
   number?: number;
 }) {
+  console.log("[boardService] saveBoardPost 호출됨. userId:", userId);
+  console.log("[boardService] 저장할 데이터:", {
+    postId,
+    isEditMode,
+    title: title.substring(0, 20) + (title.length > 20 ? "..." : ""),
+    contentLength: content.length,
+    userId,
+    pageId,
+    categoryId,
+    status,
+  });
   const filesJson = JSON.stringify(uploadedFiles);
   let result;
   let newId = postId;
   if (isEditMode && postId) {
     // 수정모드: 기존 글 update
+    console.log("[boardService] 수정 모드 실행. user_id:", userId);
     result = await supabase
       .from("board_posts")
       .update({
@@ -103,12 +115,14 @@ export async function saveBoardPost({
         thumbnail_image: thumbnailImage,
         files: filesJson,
         updated_at: new Date().toISOString(),
-        user_id: userId,
+        user_id: userId, // 사용자 ID 업데이트
         status,
       })
       .eq("id", postId);
+    console.log("[boardService] 수정 결과:", result);
   } else if (postId) {
     // 임시저장/불러오기: 기존 draft update
+    console.log("[boardService] 임시저장 업데이트 모드 실행. user_id:", userId);
     result = await supabase
       .from("board_posts")
       .update({
@@ -118,30 +132,39 @@ export async function saveBoardPost({
         thumbnail_image: thumbnailImage,
         files: filesJson,
         updated_at: new Date().toISOString(),
-        user_id: userId,
+        user_id: userId, // 사용자 ID 업데이트
         status,
       })
       .eq("id", postId);
+    console.log("[boardService] 임시저장 업데이트 결과:", result);
   } else {
     // 새 글 작성(임시저장 or 등록)
+    console.log("[boardService] 새 글 작성 모드 실행. user_id:", userId);
+    const insertData = {
+      title,
+      content,
+      user_id: userId, // 사용자 ID 설정
+      page_id: pageId,
+      category_id: categoryId,
+      allow_comments: allowComments,
+      thumbnail_image: thumbnailImage || null,
+      files: filesJson,
+      number: number,
+      status,
+    };
+    console.log("[boardService] 삽입할 데이터:", {
+      ...insertData,
+      content: "(content length: " + content.length + ")",
+      files: "(files json length: " + filesJson.length + ")"
+    });
+    
     const insertResult = await supabase
       .from("board_posts")
-      .insert([
-        {
-          title,
-          content,
-          user_id: userId,
-          page_id: pageId,
-          category_id: categoryId,
-          allow_comments: allowComments,
-          thumbnail_image: thumbnailImage || null,
-          files: filesJson,
-          number: number,
-          status,
-        },
-      ])
-      .select("id")
+      .insert([insertData])
+      .select("id, user_id") // user_id도 함께 반환하도록 수정
       .single();
+    
+    console.log("[boardService] 삽입 결과:", insertResult);
     result = insertResult;
     newId = insertResult.data?.id;
   }

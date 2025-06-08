@@ -53,7 +53,7 @@ interface BoardPost {
   id: string;
   title: string;
   content: string;
-  author: string;
+  user_id: string; // author 대신 user_id 사용
   created_at: string;
   views: number;
   view_count?: number; // views와 호환성 유지
@@ -64,6 +64,12 @@ interface BoardPost {
   is_notice?: boolean;
   is_pinned?: boolean;
   thumbnail_image?: string;
+}
+
+// 사용자 정보 인터페이스
+interface UserInfo {
+  username: string;
+  avatar_url?: string;
 }
 
 import { Section } from "@/components/admin/section-manager";
@@ -130,6 +136,7 @@ export default function BoardSection({
   const [posts, setPosts] = useState<BoardPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [authorInfoMap, setAuthorInfoMap] = useState<Record<string, UserInfo>>({});
 
   // Pagination state
   const [page, setPage] = useState(1);
@@ -466,7 +473,7 @@ export default function BoardSection({
         .from("board_posts")
         .select(
           `
-          id, title, content, author, created_at, views, 
+          id, title, content, user_id, created_at, views, 
           category_id, page_id, is_notice, is_pinned,
           comment_count:board_comments(count),
           thumbnail_image
@@ -486,6 +493,31 @@ export default function BoardSection({
         view_count: post.views || 0,
       }));
       setPosts(postsWithComments);
+      
+      // 3. 작성자 정보 가져오기
+      // 중복 제거된 user_id 목록 추출
+      const userIds = [...new Set(postsWithComments.map(post => post.user_id).filter(Boolean))];
+      
+      if (userIds.length > 0) {
+        const { data: usersData, error: usersError } = await supabase
+          .from("users")
+          .select("id, username, avatar_url")
+          .in("id", userIds);
+          
+        if (usersError) {
+          console.error("작성자 정보 로드 오류:", usersError);
+        } else if (usersData) {
+          // user_id를 키로 하는 맵 생성
+          const newAuthorInfoMap: Record<string, UserInfo> = {};
+          usersData.forEach(user => {
+            newAuthorInfoMap[user.id] = {
+              username: user.username || "익명",
+              avatar_url: user.avatar_url
+            };
+          });
+          setAuthorInfoMap(newAuthorInfoMap);
+        }
+      }
     } catch (err) {
       console.error("게시판 데이터 로드 오류:", err);
       setError("게시판 데이터를 불러오는 중 오류가 발생했습니다.");
@@ -1009,7 +1041,7 @@ export default function BoardSection({
                             </div>
                           </div>
                         )}
-                        {key === "author" && post.author}
+                        {key === "author" && (authorInfoMap[post.user_id]?.username || "익명")}
                         {key === "created_at" && formatTime(post.created_at)}
                         {key === "view_count" && (post.view_count ?? 0)}
                         {key === "comment_count" && (post.comment_count ?? 0)}
@@ -1096,7 +1128,7 @@ export default function BoardSection({
                             </div>
                           </div>
                         )}
-                        {key === "author" && post.author}
+                        {key === "author" && (authorInfoMap[post.user_id]?.username || "익명")}
                         {key === "created_at" && formatTime(post.created_at)}
                         {key === "view_count" && (post.view_count ?? 0)}
                         {key === "comment_count" && (post.comment_count ?? 0)}
@@ -1168,7 +1200,7 @@ export default function BoardSection({
                 </CardHeader>
                 <CardContent className="px-4 pt-0 pb-2 flex-1 flex flex-col justify-end bg-transparent">
                   <div className="flex items-center justify-between text-xs text-gray-400">
-                    <span>{post.author}</span>
+                    <span>{authorInfoMap[post.user_id]?.username || "익명"}</span>
                     <span>{formatTime(post.created_at)}</span>
                   </div>
                   <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">

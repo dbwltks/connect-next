@@ -86,6 +86,7 @@ export default function BoardDetail() {
   const pathname = usePathname();
   const params = useParams();
   const [post, setPost] = useState<BoardPost | null>(null);
+  const [authorInfo, setAuthorInfo] = useState<{ username: string; avatar_url: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // 수정 상태 관리
@@ -126,6 +127,7 @@ export default function BoardDetail() {
   const [isAuthor, setIsAuthor] = useState(false);
   // 작성자 아바타 상태 추가
   const [authorAvatar, setAuthorAvatar] = useState<string | null>(null);
+
 
   // 토스트 표시 함수
   const showToast = (args: {
@@ -235,6 +237,19 @@ export default function BoardDetail() {
         } else {
           setPost(data);
           console.log("게시글 데이터:", data);
+
+          // 작성자 정보 별도 조회
+          if (data.user_id) {
+            const { data: user, error: userErr } = await supabase
+              .from("users")
+              .select("username, avatar_url")
+              .eq("id", data.user_id)
+              .single();
+            if (!userErr && user) setAuthorInfo(user);
+            else setAuthorInfo(null);
+          } else {
+            setAuthorInfo(null);
+          }
 
           // 현재 로그인한 사용자 정보 가져오기
           const currentUser = await getHeaderUser();
@@ -736,7 +751,7 @@ export default function BoardDetail() {
           });
           console.log("첨부파일 추가:", decodedFileName);
         } else {
-          console.log("이미지 파일이라 건너뜨:", decodedFileName);
+          console.log("이미지 파일이라 건너뜀:", decodedFileName);
         }
       }
     }
@@ -1073,17 +1088,17 @@ export default function BoardDetail() {
               <Avatar className="h-8 w-8 mr-2">
                 <AvatarImage
                   src={
-                    authorAvatar ||
-                    `https://api.dicebear.com/7.x/initials/svg?seed=${post.author}`
+                    authorInfo?.avatar_url ||
+                    `https://api.dicebear.com/7.x/initials/svg?seed=${authorInfo?.username}`
                   }
-                  alt={post.author}
+                  alt={authorInfo?.username}
                 />
                 <AvatarFallback>
-                  {post.author.substring(0, 2).toUpperCase()}
+                  {authorInfo?.username ? authorInfo.username.substring(0, 2).toUpperCase() : "UN"}
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col">
-                <span className="text-sm font-medium">{post.author}</span>
+                <span className="text-sm font-medium">{authorInfo?.username || "익명"}</span>
                 <div className="flex text-xs text-gray-500">
                   <span>{formatDate(post.created_at)}</span>
                   <span className="mx-2">·</span>

@@ -75,7 +75,7 @@ export default function AdminLayout({
         </div>
 
         <div className="flex flex-col flex-1 md:ml-64">
-          <main className="flex-1 p-4 md:p-6">{children}</main>
+          <main className="p-4 md:p-6">{children}</main>
         </div>
       </div>
     </div>

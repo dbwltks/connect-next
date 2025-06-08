@@ -24,6 +24,7 @@ import PageManager from "@/components/admin/page-manager";
 import BannerManager from "@/components/admin/banner-manager";
 import FooterManager from "@/components/admin/footer-manager";
 import LayoutManager from "@/components/admin/layout-manager";
+import BlockManager from "@/components/admin/block-manager";
 
 // 타입 정의
 type ChurchInfo = {
@@ -225,6 +226,12 @@ export default function HomepageManagementPage() {
                 레이아웃
               </TabsTrigger>
               <TabsTrigger
+                className="min-w-[72px] px-3 py-2 text-sm font-medium rounded-none border-b-2 border-transparent transition-colors data-[state=active]:border-purple-600 data-[state=active]:text-purple-700 data-[state=active]:bg-gray-50 data-[state=active]:font-bold"
+                value="blocks"
+              >
+                블록 관리
+              </TabsTrigger>
+              <TabsTrigger
                 className="min-w-[72px] px-3 py-2 text-sm font-medium rounded-none border-b-2 border-transparent transition-colors data-[state=active]:border-blue-600 data-[state=active]:text-blue-700 data-[state=active]:bg-gray-50 data-[state=active]:font-bold"
                 value="sections"
               >
@@ -270,6 +277,13 @@ export default function HomepageManagementPage() {
             >
               <LayoutManager />
             </TabsContent>
+            {/* 블록 관리 탭 */}
+            <TabsContent
+              className="bg-white dark:bg-gray-900 rounded-b-lg p-6 mt-0 border-0 space-y-4 mt-0"
+              value="blocks"
+            >
+
+            </TabsContent>
 
             {/* 메뉴 관리 탭 */}
             <TabsContent
@@ -312,6 +326,13 @@ export default function HomepageManagementPage() {
               value="footer"
             >
               <FooterManager />
+            </TabsContent>
+            {/* 블록 관리 탭 */}
+            <TabsContent
+              className="bg-white dark:bg-gray-900 rounded-b-lg p-6 mt-0 border-0 space-y-4 mt-0"
+              value="blocks"
+            >
+              <BlockManager />
             </TabsContent>
           </Tabs>
         </Card>

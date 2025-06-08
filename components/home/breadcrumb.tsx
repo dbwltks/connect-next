@@ -40,27 +40,50 @@ export default function Breadcrumb({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log("Breadcrumb: useEffect triggered. Pathname:", pathname);
     async function generateBreadcrumbs() {
+      console.log("Breadcrumb: generateBreadcrumbs started.");
       setLoading(true);
       try {
+        console.log("Breadcrumb: Attempting to fetch menu items from Supabase..."); // <--- 추가된 로그
         // 모든 메뉴 항목 가져오기
-        const { data: menuItems, error } = await supabase
+        const { data: menuItemsData, error: supabaseError } = await supabase
           .from("cms_menus")
           .select("id, title, url, parent_id")
           .eq("is_active", true);
+        
+        console.log("Breadcrumb: Supabase call finished."); // <--- 추가된 로그
+        console.log("Breadcrumb: Supabase data received:", menuItemsData); // <--- 추가된 로그
+        console.log("Breadcrumb: Supabase error received:", supabaseError); // <--- 추가된 로그
 
-        if (error) throw error;
+        if (supabaseError) {
+          console.error("Breadcrumb: Supabase error fetching menu items:", supabaseError);
+          throw supabaseError;
+        }
+        
+        if (!menuItemsData) {
+          console.warn("Breadcrumb: No menu items data returned from Supabase.");
+          setBreadcrumbs([{ title: homeTitle, url: homeUrl, isLast: true }]);
+          setLoading(false);
+          return;
+        }
+        console.log(`Breadcrumb: Fetched ${menuItemsData.length} menu items.`);
+
+        const menuItems: IMenuItem[] = menuItemsData; // 타입 명시
+
+        // Optimization: Create a map for faster lookups by ID
+        const menuItemMap = new Map<string, IMenuItem>();
+        menuItems.forEach(item => menuItemMap.set(item.id, item));
 
         // 현재 경로에 해당하는 메뉴 항목 찾기
         const currentPath = pathname === "/" ? "/" : pathname;
-        let currentMenuItem = menuItems?.find(
+        let currentMenuItem = menuItems.find(
           (item) => item.url === currentPath
         );
 
-        // 현재 경로에 해당하는 메뉴 항목이 없는 경우
+        // 현재 경로에 해당하는 메뉴 항목이 없는 경우 (부분 일치)
         if (!currentMenuItem && currentPath !== "/") {
-          // URL 경로의 일부가 일치하는 메뉴 항목 찾기 (부분 일치)
-          currentMenuItem = menuItems?.find(
+          currentMenuItem = menuItems.find(
             (item) => currentPath.startsWith(item.url) && item.url !== "/"
           );
         }
@@ -76,20 +99,28 @@ export default function Breadcrumb({
 
         // 현재 메뉴 항목이 있는 경우 계층 구조 생성
         if (currentMenuItem) {
-          // 부모 메뉴 항목들을 찾아 경로 구성
           const parentItems: IMenuItem[] = [];
           let parentId = currentMenuItem.parent_id;
+          const visitedParentIds = new Set<string>(); // Prevent infinite loops
 
-          // 부모 항목들 찾기
+          console.log("Breadcrumb: Building parent hierarchy for", currentMenuItem.title);
           while (parentId) {
-            const parentItem = menuItems?.find((item) => item.id === parentId);
+            if (visitedParentIds.has(parentId)) {
+              console.error("Breadcrumb: Circular dependency detected for parentId:", parentId);
+              break; 
+            }
+            visitedParentIds.add(parentId);
+
+            const parentItem = menuItemMap.get(parentId); // Use map for O(1) lookup
             if (parentItem) {
-              parentItems.unshift(parentItem); // 상위 항목부터 추가
+              parentItems.unshift(parentItem); 
               parentId = parentItem.parent_id;
             } else {
+              console.warn("Breadcrumb: Parent item not found in map for parentId:", parentId);
               break;
             }
           }
+          console.log("Breadcrumb: Parent items found:", parentItems.map(p => p.title));
 
           // 부모 항목들 브레드크럼에 추가
           parentItems.forEach((item) => {
@@ -107,22 +138,17 @@ export default function Breadcrumb({
             isLast: true,
           });
         } else if (currentPath !== homeUrl) {
-          // 메뉴에 없는 경로인 경우 현재 경로 기반으로 표시
+          console.log("Breadcrumb: Current menu item not found. Generating from path segments.");
           const pathSegments = currentPath.split("/").filter(Boolean);
-
-          // 경로 세그먼트 기반으로 브레드크럼 생성
           let currentUrl = "";
           pathSegments.forEach((segment, index) => {
             currentUrl += `/${segment}`;
             const isLast = index === pathSegments.length - 1;
-
-            // 마지막 세그먼트이고 currentTitle이 제공된 경우 해당 제목 사용
             const title =
               isLast && currentTitle
                 ? currentTitle
                 : segment.charAt(0).toUpperCase() +
                   segment.slice(1).replace(/-/g, " ");
-
             breadcrumbItems.push({
               title,
               url: currentUrl,
@@ -132,17 +158,14 @@ export default function Breadcrumb({
         }
 
         setBreadcrumbs(breadcrumbItems);
+        console.log("Breadcrumb: Breadcrumbs generated:", breadcrumbItems.map(b => b.title));
       } catch (error) {
         console.error("브레드크럼 생성 오류:", error);
-        // 오류 발생 시 기본 홈 경로만 표시
         setBreadcrumbs([
-          {
-            title: homeTitle,
-            url: homeUrl,
-            isLast: true,
-          },
+          { title: homeTitle, url: homeUrl, isLast: true },
         ]);
       } finally {
+        console.log("Breadcrumb: generateBreadcrumbs finished. setLoading(false).");
         setLoading(false);
       }
     }

@@ -337,13 +337,25 @@ export default function BoardWrite({
     setError(null);
     setSuccess(false);
     setLoading(true);
+    
+    // 사용자 정보 가져오기 및 디버깅
+    console.log("[BoardWrite] 사용자 정보 가져오기 시작");
     const user = await getHeaderUser();
-    if (!user) {
-      setError("로그인 후 작성 가능합니다.");
+    console.log("[BoardWrite] 가져온 사용자 정보:", JSON.stringify(user, null, 2));
+    
+    if (!user || !user.id) {
+      console.error("[BoardWrite] 사용자 정보 또는 ID가 없음");
+      setError("로그인 후 작성 가능합니다. 사용자 ID를 가져올 수 없습니다.");
       setLoading(false);
+      showToast({
+        title: "오류", 
+        description: "사용자 정보를 가져올 수 없습니다. 다시 로그인해주세요.", 
+        variant: "destructive"
+      });
       return;
     }
     const userId = user.id;
+    console.log("[BoardWrite] 사용할 userId:", userId);
     let newId = postId;
     try {
       // 게시글 저장(등록) 시 number 자동 할당
@@ -360,6 +372,21 @@ export default function BoardWrite({
           nextNumber = (maxData?.number || 0) + 1;
         } catch {}
       }
+      console.log("[BoardWrite] serviceSaveBoardPost 호출 전 데이터:", {
+        postId,
+        isEditMode,
+        title: title.substring(0, 20) + (title.length > 20 ? "..." : ""),
+        contentLength: html.length,
+        allowComments,
+        thumbnailImage: thumbnailImage ? "있음" : "없음",
+        uploadedFilesCount: uploadedFiles.length,
+        userId, // 중요: userId가 전달되는지 확인
+        pageId,
+        categoryId,
+        status,
+        number: nextNumber,
+      });
+      
       const result = await serviceSaveBoardPost({
         postId,
         isEditMode,
@@ -368,12 +395,14 @@ export default function BoardWrite({
         allowComments,
         thumbnailImage,
         uploadedFiles,
-        userId,
+        userId, // 사용자 ID 전달
         pageId,
         categoryId,
         status,
         number: nextNumber,
       });
+      
+      console.log("[BoardWrite] serviceSaveBoardPost 결과:", result);
       newId = result.id;
       setPostId(newId);
     } catch (error: any) {
