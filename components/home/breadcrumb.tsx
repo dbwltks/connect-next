@@ -1,11 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight, Home } from "lucide-react";
 import { supabase } from "@/db";
 import { Card, CardContent } from "@/components/ui/card";
+
+// 메뉴 데이터 캐싱을 위한 전역 변수
+let cachedMenuItems: IMenuItem[] | null = null;
+let lastFetchTime = 0;
+const CACHE_TTL = 60000; // 캐시 유효 시간 (1분)
 
 // 브레드크럼 항목 타입 정의
 interface IBreadcrumbItem {
@@ -38,6 +43,50 @@ export default function Breadcrumb({
   const pathname = usePathname();
   const [breadcrumbs, setBreadcrumbs] = useState<IBreadcrumbItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialRender, setInitialRender] = useState(true);
+  
+  // 초기 렌더링 시 로딩 상태 관리
+  useEffect(() => {
+    // 첫 렌더링 후 초기 렌더링 상태를 false로 설정
+    setInitialRender(false);
+    
+    // 캐시된 데이터가 있으면 로딩 상태를 즉시 false로 설정
+    if (cachedMenuItems) {
+      setLoading(false);
+    }
+  }, []);
+
+  // 메뉴 데이터를 가져오는 함수를 useCallback으로 메모이제이션
+  const fetchMenuItems = useCallback(async () => {
+    // 캐시가 유효한지 확인
+    const now = Date.now();
+    if (cachedMenuItems && now - lastFetchTime < CACHE_TTL) {
+      console.log("Breadcrumb: Using cached menu items");
+      return cachedMenuItems;
+    }
+
+    console.log("Breadcrumb: Fetching menu items from Supabase...");
+    const { data: menuItemsData, error: supabaseError } = await supabase
+      .from("cms_menus")
+      .select("id, title, url, parent_id")
+      .eq("is_active", true);
+
+    if (supabaseError) {
+      console.error("Breadcrumb: Error fetching menu items:", supabaseError);
+      throw supabaseError;
+    }
+
+    if (!menuItemsData || menuItemsData.length === 0) {
+      console.warn("Breadcrumb: No menu items returned");
+      return null;
+    }
+
+    // 캐시 업데이트
+    cachedMenuItems = menuItemsData;
+    lastFetchTime = now;
+    console.log(`Breadcrumb: Fetched and cached ${menuItemsData.length} menu items`);
+    return menuItemsData;
+  }, []);
 
   useEffect(() => {
     console.log("Breadcrumb: useEffect triggered. Pathname:", pathname);
@@ -45,29 +94,15 @@ export default function Breadcrumb({
       console.log("Breadcrumb: generateBreadcrumbs started.");
       setLoading(true);
       try {
-        console.log("Breadcrumb: Attempting to fetch menu items from Supabase..."); // <--- 추가된 로그
-        // 모든 메뉴 항목 가져오기
-        const { data: menuItemsData, error: supabaseError } = await supabase
-          .from("cms_menus")
-          .select("id, title, url, parent_id")
-          .eq("is_active", true);
-        
-        console.log("Breadcrumb: Supabase call finished."); // <--- 추가된 로그
-        console.log("Breadcrumb: Supabase data received:", menuItemsData); // <--- 추가된 로그
-        console.log("Breadcrumb: Supabase error received:", supabaseError); // <--- 추가된 로그
-
-        if (supabaseError) {
-          console.error("Breadcrumb: Supabase error fetching menu items:", supabaseError);
-          throw supabaseError;
-        }
+        // 메뉴 데이터 가져오기 (캐싱 적용)
+        const menuItemsData = await fetchMenuItems();
         
         if (!menuItemsData) {
-          console.warn("Breadcrumb: No menu items data returned from Supabase.");
+          console.warn("Breadcrumb: No menu items data available.");
           setBreadcrumbs([{ title: homeTitle, url: homeUrl, isLast: true }]);
           setLoading(false);
           return;
         }
-        console.log(`Breadcrumb: Fetched ${menuItemsData.length} menu items.`);
 
         const menuItems: IMenuItem[] = menuItemsData; // 타입 명시
 
@@ -173,7 +208,9 @@ export default function Breadcrumb({
     generateBreadcrumbs();
   }, [pathname, homeTitle, homeUrl, currentTitle]);
 
-  if (loading) {
+  // 초기 렌더링이 아니고 로딩 중일 때만 로딩 UI 표시
+  // 초기 렌더링일 때는 로딩 UI를 표시하지 않아 깨빡임 최소화
+  if (loading && !initialRender) {
     return (
       <Card
         className={`shadow-sm border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 ${className}`}
@@ -185,6 +222,11 @@ export default function Breadcrumb({
         </CardContent>
       </Card>
     );
+  }
+  
+  // 초기 렌더링 중이고 로딩 중이면 빈 요소 반환
+  if (initialRender && loading) {
+    return null;
   }
 
   if (breadcrumbs.length <= 1) {
