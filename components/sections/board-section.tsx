@@ -138,6 +138,10 @@ export default function BoardSection({
   const [error, setError] = useState<string | null>(null);
   const [authorInfoMap, setAuthorInfoMap] = useState<Record<string, UserInfo>>({});
 
+  // 검색 관련 상태
+  const [searchType, setSearchType] = useState<string>("title");
+  const [searchTerm, setSearchTerm] = useState<string>("");
+
   // Pagination state
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -392,63 +396,13 @@ export default function BoardSection({
     };
   }, []);
 
-  // 검색 상태 추가
-  const [searchTerm, setSearchTerm] = useState("");
-  const [searchType, setSearchType] = useState("title"); // title, content, author
+  // 검색 상태는 이미 위에서 선언됨
 
   // 검색 핸들러 추가
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     setPage(1); // 검색 시 첫 페이지로 이동
-    setLoading(true);
-    try {
-      let query = supabase.from("board_posts").select(
-        `
-          id, title, content, author, created_at, views, 
-          category_id, page_id, is_notice, is_pinned,
-          comment_count:board_comments(count),
-          thumbnail_image
-        `
-      );
-
-      // 검색 조건 추가
-      if (searchTerm) {
-        if (searchType === "title") {
-          query = query.ilike("title", `%${searchTerm}%`);
-        } else if (searchType === "content") {
-          query = query.ilike("content", `%${searchTerm}%`);
-        } else if (searchType === "author") {
-          query = query.ilike("author", `%${searchTerm}%`);
-        }
-      }
-
-      if (pageId) query = query.eq("page_id", pageId);
-      if (categoryId) query = query.eq("category_id", categoryId);
-
-      const { data, error } = await query
-        .order("is_pinned", { ascending: false })
-        .order("is_notice", { ascending: false })
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      const postsWithComments = (data || []).map((post) => ({
-        ...post,
-        comment_count: post.comment_count?.[0]?.count || 0,
-        view_count: post.views || 0,
-      }));
-
-      setPosts(postsWithComments);
-      setTotalCount(postsWithComments.length);
-      setTotalPages(
-        Math.max(1, Math.ceil(postsWithComments.length / itemCount))
-      );
-    } catch (err) {
-      console.error("검색 오류:", err);
-      setError("검색 중 오류가 발생했습니다.");
-    } finally {
-      setLoading(false);
-    }
+    fetchBoardPosts();
   };
 
   // 게시글 목록 및 전체 개수 fetch 함수 분리
@@ -462,6 +416,18 @@ export default function BoardSection({
         .select("*", { count: "exact", head: true });
       if (pageId) countQuery = countQuery.eq("page_id", pageId);
       if (categoryId) countQuery = countQuery.eq("category_id", categoryId);
+
+      // 검색 조건을 count 쿼리에도 적용
+      if (searchTerm) {
+        if (searchType === "title") {
+          countQuery = countQuery.ilike("title", `%${searchTerm}%`);
+        } else if (searchType === "content") {
+          countQuery = countQuery.ilike("content", `%${searchTerm}%`);
+        } else if (searchType === "author") {
+          countQuery = countQuery.ilike("user_id", `%${searchTerm}%`);
+        }
+      }
+
       const { count: totalCount, error: countError } = await countQuery;
       if (countError) throw countError;
       const pageSize = itemCount;
@@ -485,6 +451,20 @@ export default function BoardSection({
         .range((page - 1) * itemCount, page * itemCount - 1);
       if (pageId) query = query.eq("page_id", pageId);
       if (categoryId) query = query.eq("category_id", categoryId);
+
+      // 검색 조건 적용
+      if (searchTerm) {
+        if (searchType === "title") {
+          query = query.ilike("title", `%${searchTerm}%`);
+        } else if (searchType === "content") {
+          query = query.ilike("content", `%${searchTerm}%`);
+        } else if (searchType === "author") {
+          // 작성자 검색은 별도 처리 필요 (username으로 검색하려면 join이 필요)
+          // 현재는 단순화를 위해 user_id로 검색
+          query = query.ilike("user_id", `%${searchTerm}%`);
+        }
+      }
+
       const { data, error } = await query;
       if (error) throw error;
       const postsWithComments = (data || []).map((post) => ({
@@ -495,8 +475,11 @@ export default function BoardSection({
       setPosts(postsWithComments);
       
       // 3. 작성자 정보 가져오기
-      // 중복 제거된 user_id 목록 추출
-      const userIds = [...new Set(postsWithComments.map(post => post.user_id).filter(Boolean))];
+      // 중복 제거된 user_id 목록 추출 - filter와 reduce를 사용하여 Set 대신 중복 제거
+      const userIds: string[] = postsWithComments
+        .map(post => post.user_id)
+        .filter((id): id is string => Boolean(id))
+        .filter((id, index, self) => self.indexOf(id) === index);
       
       if (userIds.length > 0) {
         const { data: usersData, error: usersError } = await supabase

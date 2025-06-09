@@ -67,11 +67,11 @@ export default function LayoutManager(): React.ReactNode {
   // 상태 관리
   const [isLoading, setIsLoading] = useState(false);
   const [layoutAreas, setLayoutAreas] = useState<LayoutArea[]>([
-    { id: "main", name: "메인 영역", widgets: [] },
+    { id: "main", name: "메인 영역1", widgets: [] },
   ]);
   const [editingWidget, setEditingWidget] = useState<Widget | null>(null);
   const [showWidgetSettings, setShowWidgetSettings] = useState(false);
-  const [previewMode, setPreviewMode] = useState(false);
+  const [previewMode, setPreviewMode] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [showWidgetMenu, setShowWidgetMenu] = useState(false);
   const [menuItems, setMenuItems] = useState<any[]>([]);
@@ -200,7 +200,7 @@ export default function LayoutManager(): React.ReactNode {
       const areas: LayoutArea[] = [
         {
           id: "main",
-          name: "메인 영역",
+          name: "",
           widgets: groupedWidgets["main"] || [],
         },
       ];
@@ -208,7 +208,10 @@ export default function LayoutManager(): React.ReactNode {
       setLayoutAreas(areas);
       return true; // 성공적으로 데이터를 가져왔음을 반환
     } catch (error) {
-      console.error("레이아웃 데이터를 불러오는 중 오류가 발생했습니다:", error);
+      console.error(
+        "레이아웃 데이터를 불러오는 중 오류가 발생했습니다:",
+        error
+      );
       toast({
         title: "오류",
         description: "레이아웃 데이터를 불러오는 중 오류가 발생했습니다.",
@@ -735,7 +738,7 @@ export default function LayoutManager(): React.ReactNode {
           {editingWidget.type === "media" && (
             <div className="space-y-4 border rounded-md p-3 bg-gray-50">
               <h4 className="font-medium text-sm">미디어 설정</h4>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="media-title">미디어 섹션 제목</Label>
                 <Input
@@ -1099,10 +1102,12 @@ export default function LayoutManager(): React.ReactNode {
             <div className="p-6">
               <div className="text-center mb-6">
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                  {widget.display_options?.media_title || "지금 미디어, 다양한 미디어 콘텐츠를 만나보세요"}
+                  {widget.display_options?.media_title ||
+                    "지금 미디어, 다양한 미디어 콘텐츠를 만나보세요"}
                 </h3>
                 <p className="text-gray-600 text-sm">
-                  {widget.display_options?.media_subtitle || "최신 영상, 오디오 콘텐츠를 한 곳에서 확인하세요"}
+                  {widget.display_options?.media_subtitle ||
+                    "최신 영상, 오디오 콘텐츠를 한 곳에서 확인하세요"}
                 </p>
               </div>
 
@@ -1275,7 +1280,9 @@ export default function LayoutManager(): React.ReactNode {
             </div>
             {widget.display_options?.page_id && (
               <div className="text-xs text-blue-500 mt-1">
-                선택된 페이지: {pages.find(p => p.id === widget.display_options?.page_id)?.title || "없음"}
+                선택된 페이지:{" "}
+                {pages.find((p) => p.id === widget.display_options?.page_id)
+                  ?.title || "없음"}
               </div>
             )}
           </div>
@@ -1290,23 +1297,13 @@ export default function LayoutManager(): React.ReactNode {
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-bold">홈페이지 레이아웃 관리</h2>
-        <div className="flex space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPreviewMode(!previewMode)}
-          >
-            <Eye className="h-4 w-4 mr-2" />
-            {previewMode ? "기본 보기" : "미리보기"}
-          </Button>
-        </div>
       </div>
 
-      <div className="bg-gray-100 p-4 mb-4 rounded-lg text-center text-sm text-gray-500">
-        {previewMode
+      {/* <div className="bg-gray-100 p-4 mb-4 rounded-lg text-center text-sm text-gray-500">
+        미리보기 모드: 위젯에 마우스를 올리면 편집 옵션이 표시됩니다. 드래그하여 위치를 변경할 수 있습니다.
           ? "미리보기 모드: 위젯에 마우스를 올리면 편집 옵션이 표시됩니다. 드래그하여 위치를 변경할 수 있습니다."
-          : "기본 편집 모드: 위젯을 자유롭게 편집하고 배치할 수 있습니다."}
-      </div>
+          : "기본 편집 모드: 위젯을 자유롭게 편집하고 배치할 수 있습니다."
+      </div> */}
 
       {renderWidgetSettingsDialog()}
 
@@ -1317,20 +1314,10 @@ export default function LayoutManager(): React.ReactNode {
               key={area.id}
               className={previewMode ? "shadow-none border-0" : ""}
             >
-              <CardHeader className={previewMode ? "pb-2" : ""}>
+              <CardHeader className={previewMode ? "" : ""}>
                 <div className="flex justify-between items-center">
                   <CardTitle>{area.name}</CardTitle>
-                  {previewMode && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowWidgetMenu(!showWidgetMenu)}
-                      className="h-8"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      위젯 추가
-                    </Button>
-                  )}
+                  {previewMode}
                 </div>
               </CardHeader>
               <CardContent className={previewMode ? "p-0" : ""}>
