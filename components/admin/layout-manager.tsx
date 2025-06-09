@@ -43,6 +43,9 @@ export type Widget = {
     show_date?: boolean; // 날짜 표시 여부
     show_excerpt?: boolean; // 요약 표시 여부
     layout_type?: "list" | "grid" | "card"; // 레이아웃 타입
+    media_title?: string; // 미디어 섹션 제목
+    media_subtitle?: string; // 미디어 섹션 부제목
+    page_id?: string; // 미디어 콘텐츠를 가져올 페이지 ID
   };
   is_active: boolean;
 };
@@ -174,7 +177,6 @@ export default function LayoutManager(): React.ReactNode {
 
   // 레이아웃 데이터 가져오기
   const fetchLayoutData = async () => {
-    setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from("cms_layout")
@@ -183,32 +185,36 @@ export default function LayoutManager(): React.ReactNode {
 
       if (error) throw error;
 
-      // 위젯을 영역별로 그룹화
-      const mainAreaWidgets = data || [];
+      // 레이아웃 영역별로 위젯 그룹화
+      const groupedWidgets: { [key: string]: Widget[] } = {};
 
-      setLayoutAreas([
+      data?.forEach((widget: Widget) => {
+        const areaId = "main"; // 현재는 메인 영역만 사용
+        if (!groupedWidgets[areaId]) {
+          groupedWidgets[areaId] = [];
+        }
+        groupedWidgets[areaId].push(widget);
+      });
+
+      // 레이아웃 영역 설정
+      const areas: LayoutArea[] = [
         {
           id: "main",
           name: "메인 영역",
-          widgets: mainAreaWidgets.map((widget) => ({
-            ...widget,
-            column_position: widget.column_position || 0,
-            width: widget.width || 12,
-          })),
+          widgets: groupedWidgets["main"] || [],
         },
-      ]);
+      ];
+
+      setLayoutAreas(areas);
+      return true; // 성공적으로 데이터를 가져왔음을 반환
     } catch (error) {
-      console.error(
-        "레이아웃 데이터를 불러오는 중 오류가 발생했습니다:",
-        error
-      );
+      console.error("레이아웃 데이터를 불러오는 중 오류가 발생했습니다:", error);
       toast({
         title: "오류",
         description: "레이아웃 데이터를 불러오는 중 오류가 발생했습니다.",
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
+      return false; // 오류 발생 시 false 반환
     }
   };
 
@@ -461,8 +467,6 @@ export default function LayoutManager(): React.ReactNode {
     try {
       setIsLoading(true);
 
-      console.log("Saving widget settings:", editingWidget);
-
       // DB 업데이트
       const { error } = await supabase
         .from("cms_layout")
@@ -491,17 +495,19 @@ export default function LayoutManager(): React.ReactNode {
       }));
 
       setLayoutAreas(newLayoutAreas);
-      setDialogOpen(false); // 다이얼로그 닫기 추가
-      setShowWidgetSettings(false);
-      setEditingWidget(null);
 
       toast({
         title: "성공",
         description: "위젯 설정이 저장되었습니다.",
       });
 
-      // 레이아웃 데이터 다시 불러오기
-      fetchLayoutData();
+      // 레이아웃 데이터 다시 불러오기 - 비동기 처리 개선
+      await fetchLayoutData();
+
+      // 다이얼로그 상태 초기화는 데이터 로딩 후에 처리
+      setDialogOpen(false);
+      setShowWidgetSettings(false);
+      setEditingWidget(null);
     } catch (error) {
       console.error("위젯 설정 저장 중 오류가 발생했습니다:", error);
       toast({
@@ -510,6 +516,7 @@ export default function LayoutManager(): React.ReactNode {
         variant: "destructive",
       });
     } finally {
+      // 반드시 로딩 상태 해제
       setIsLoading(false);
     }
   };
@@ -724,6 +731,79 @@ export default function LayoutManager(): React.ReactNode {
             </div>
           </div>
 
+          {/* 미디어 위젯 전용 설정 */}
+          {editingWidget.type === "media" && (
+            <div className="space-y-4 border rounded-md p-3 bg-gray-50">
+              <h4 className="font-medium text-sm">미디어 설정</h4>
+              
+              <div className="space-y-2">
+                <Label htmlFor="media-title">미디어 섹션 제목</Label>
+                <Input
+                  id="media-title"
+                  value={editingWidget.display_options?.media_title || ""}
+                  placeholder="지금 미디어, 다양한 미디어 콘텐츠를 만나보세요"
+                  onChange={(e) =>
+                    setEditingWidget({
+                      ...editingWidget,
+                      display_options: {
+                        ...editingWidget.display_options,
+                        media_title: e.target.value,
+                      },
+                    })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="media-subtitle">미디어 섹션 부제목</Label>
+                <Input
+                  id="media-subtitle"
+                  value={editingWidget.display_options?.media_subtitle || ""}
+                  placeholder="최신 영상, 오디오 콘텐츠를 한 곳에서 확인하세요"
+                  onChange={(e) =>
+                    setEditingWidget({
+                      ...editingWidget,
+                      display_options: {
+                        ...editingWidget.display_options,
+                        media_subtitle: e.target.value,
+                      },
+                    })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="media-page">콘텐츠 페이지 선택</Label>
+                <Select
+                  value={editingWidget.display_options?.page_id || ""}
+                  onValueChange={(value) =>
+                    setEditingWidget({
+                      ...editingWidget,
+                      display_options: {
+                        ...editingWidget.display_options,
+                        page_id: value,
+                      },
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="페이지 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {pages.map((page) => (
+                      <SelectItem key={page.id} value={page.id}>
+                        {page.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-500 mt-1">
+                  선택한 페이지의 콘텐츠가 미디어 섹션에 표시됩니다.
+                </p>
+              </div>
+            </div>
+          )}
+
           <DialogFooter>
             <Button
               variant="outline"
@@ -735,9 +815,9 @@ export default function LayoutManager(): React.ReactNode {
               취소
             </Button>
             <Button
-              onClick={() => {
-                saveWidgetSettings();
-                setDialogOpen(false);
+              onClick={async () => {
+                await saveWidgetSettings();
+                // setDialogOpen(false); // saveWidgetSettings 내부에서 처리
               }}
               disabled={isLoading}
             >
@@ -933,6 +1013,274 @@ export default function LayoutManager(): React.ReactNode {
             )}
           </div>
         );
+      case "board":
+        return previewMode ? (
+          <div className="bg-white shadow rounded overflow-hidden">
+            <div className="p-4 border-b">
+              <h3 className="text-lg font-bold">{widget.title}</h3>
+            </div>
+
+            <div className="divide-y">
+              {Array(5)
+                .fill(0)
+                .map((_, index) => (
+                  <div
+                    key={index}
+                    className="p-3 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex justify-between items-center">
+                      <h4 className="font-medium text-sm truncate">
+                        게시판 샘플 게시글 {index + 1}
+                      </h4>
+                      <span className="text-xs text-gray-500">
+                        {new Date().toLocaleDateString()}
+                      </span>
+                    </div>
+                    {widget.width >= 6 && (
+                      <p className="text-sm text-gray-600 mt-1 line-clamp-1">
+                        이 게시글은 게시판 위젯의 샘플 게시글입니다.
+                      </p>
+                    )}
+                  </div>
+                ))}
+            </div>
+
+            <div className="p-3 border-t text-center">
+              <span className="text-xs text-blue-600 hover:underline cursor-pointer">
+                더보기
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-green-50 p-4 rounded">
+            <div className="font-medium">{widget.title}</div>
+            <div className="text-sm text-gray-500 mt-1">게시판 위젯</div>
+          </div>
+        );
+
+      case "gallery":
+        return previewMode ? (
+          <div className="bg-white shadow rounded overflow-hidden">
+            <div className="p-4 border-b">
+              <h3 className="text-lg font-bold">{widget.title}</h3>
+            </div>
+            <div className="p-4">
+              <div className="grid grid-cols-3 gap-2">
+                {Array(6)
+                  .fill(0)
+                  .map((_, index) => (
+                    <div
+                      key={index}
+                      className="aspect-square bg-gray-100 rounded overflow-hidden relative"
+                    >
+                      <div className="absolute inset-0 flex items-center justify-center text-gray-400">
+                        이미지 {index + 1}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+            <div className="p-3 border-t text-center">
+              <span className="text-xs text-blue-600 hover:underline cursor-pointer">
+                갤러리 더보기
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-pink-50 p-4 rounded">
+            <div className="font-medium">{widget.title}</div>
+            <div className="text-sm text-gray-500 mt-1">갤러리 위젯</div>
+          </div>
+        );
+
+      case "media":
+        return previewMode ? (
+          <div className="bg-white shadow rounded overflow-hidden">
+            <div className="p-6">
+              <div className="text-center mb-6">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                  {widget.display_options?.media_title || "지금 미디어, 다양한 미디어 콘텐츠를 만나보세요"}
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  {widget.display_options?.media_subtitle || "최신 영상, 오디오 콘텐츠를 한 곳에서 확인하세요"}
+                </p>
+              </div>
+
+              <div className="grid lg:grid-cols-3 gap-4">
+                {/* Featured Video */}
+                <div className="lg:col-span-2">
+                  <div className="overflow-hidden border border-gray-200 hover:shadow-lg transition-all duration-500 transform hover:-translate-y-1 rounded-md">
+                    <div className="relative aspect-video bg-gradient-to-br from-gray-900 to-gray-700 group cursor-pointer">
+                      <div className="w-full h-full object-cover bg-gray-200"></div>
+                      <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-colors duration-300"></div>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="text-blue-600 ml-1"
+                          >
+                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                          </svg>
+                        </div>
+                      </div>
+                      <div className="absolute bottom-3 right-3 bg-black/70 text-white px-2 py-1 rounded text-sm">
+                        45:32
+                      </div>
+                    </div>
+                    <div className="p-3 bg-white">
+                      <div className="flex items-center justify-between">
+                        <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">
+                          최신
+                        </span>
+                        <div className="flex items-center space-x-3 text-xs text-gray-500">
+                          <div className="flex items-center space-x-1">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="12"
+                              height="12"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                              <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                            <span>1,234</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="12"
+                              height="12"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
+                            </svg>
+                            <span>89</span>
+                          </div>
+                        </div>
+                      </div>
+                      <h4 className="text-lg font-medium mt-2">
+                        미디어 콘텐츠 제목
+                      </h4>
+                      <p className="text-xs text-gray-600 mt-1">
+                        작성자 · 2025.06.08 · 미디어 카테고리
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Video List */}
+                <div className="space-y-3">
+                  {Array(3)
+                    .fill(0)
+                    .map((_, index) => (
+                      <div
+                        key={index}
+                        className="overflow-hidden border border-gray-200 hover:shadow-md transition-all duration-300 transform hover:scale-105 cursor-pointer rounded-md bg-white"
+                      >
+                        <div className="flex">
+                          <div className="relative w-28 h-20 bg-gray-200 flex-shrink-0">
+                            <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="text-white"
+                              >
+                                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                              </svg>
+                            </div>
+                            <div className="absolute bottom-1 right-1 bg-black/70 text-white px-1 text-xs rounded">
+                              {["12:45", "18:32", "09:15"][index]}
+                            </div>
+                          </div>
+                          <div className="p-2 flex-1">
+                            <h4 className="font-medium text-sm mb-1 line-clamp-2">
+                              미디어 콘텐츠 {index + 1}
+                            </h4>
+                            <p className="text-xs text-gray-600 mb-1">
+                              작성자 · 2025.06.{("0" + (index + 1)).slice(-2)}
+                            </p>
+                            <div className="flex items-center space-x-2 text-xs text-gray-500">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="10"
+                                height="10"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                              </svg>
+                              <span>{[845, 632, 1024][index]}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                  <button className="w-full py-2 px-4 border border-gray-200 rounded-md hover:bg-blue-50 transition-colors text-sm flex items-center justify-center">
+                    더 많은 미디어 보기
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="ml-1"
+                    >
+                      <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-purple-50 p-4 rounded">
+            <div className="font-medium">{widget.title || "미디어 콘텐츠"}</div>
+            <div className="text-sm text-gray-500 mt-1">
+              미디어 위젯 (영상 및 오디오 콘텐츠)
+            </div>
+            {widget.display_options?.page_id && (
+              <div className="text-xs text-blue-500 mt-1">
+                선택된 페이지: {pages.find(p => p.id === widget.display_options?.page_id)?.title || "없음"}
+              </div>
+            )}
+          </div>
+        );
+
       default:
         return <div className="bg-gray-100 p-4 rounded">알 수 없는 위젯</div>;
     }
@@ -955,9 +1303,9 @@ export default function LayoutManager(): React.ReactNode {
       </div>
 
       <div className="bg-gray-100 p-4 mb-4 rounded-lg text-center text-sm text-gray-500">
-        {previewMode ? 
-          "미리보기 모드: 위젯에 마우스를 올리면 편집 옵션이 표시됩니다. 드래그하여 위치를 변경할 수 있습니다." : 
-          "기본 편집 모드: 위젯을 자유롭게 편집하고 배치할 수 있습니다."}
+        {previewMode
+          ? "미리보기 모드: 위젯에 마우스를 올리면 편집 옵션이 표시됩니다. 드래그하여 위치를 변경할 수 있습니다."
+          : "기본 편집 모드: 위젯을 자유롭게 편집하고 배치할 수 있습니다."}
       </div>
 
       {renderWidgetSettingsDialog()}
@@ -1042,7 +1390,9 @@ export default function LayoutManager(): React.ReactNode {
                                             variant="ghost"
                                             size="icon"
                                             className="h-7 w-7"
-                                            onClick={() => deleteWidget(widget.id)}
+                                            onClick={() =>
+                                              deleteWidget(widget.id)
+                                            }
                                           >
                                             <Trash2 className="h-3.5 w-3.5" />
                                           </Button>
@@ -1096,102 +1446,124 @@ export default function LayoutManager(): React.ReactNode {
                         )}
                       </div>
                       {provided.placeholder}
-                      {!previewMode && (
-                        <div className="mt-4 flex justify-center relative">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setShowWidgetMenu(!showWidgetMenu)}
-                            id={`add-widget-btn-${area.id}`}
-                          >
-                            <Plus className="h-4 w-4 mr-2" />
-                            위젯 추가
-                          </Button>
+                      <div className="mt-4 flex justify-center relative">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowWidgetMenu(!showWidgetMenu)}
+                          id={`add-widget-btn-${area.id}`}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          위젯 추가
+                        </Button>
 
-                          {showWidgetMenu && (
+                        {showWidgetMenu && (
+                          <div
+                            className="fixed bg-black/30 inset-0 z-40"
+                            onClick={() => setShowWidgetMenu(false)}
+                          >
                             <div
-                              className="fixed bg-black/30 inset-0 z-40"
-                              onClick={() => setShowWidgetMenu(false)}
+                              className="absolute bg-white rounded-md shadow-lg border p-4 w-64 z-50"
+                              style={{
+                                top: "50%",
+                                left: "50%",
+                                transform: "translate(-50%, -50%)",
+                              }}
+                              onClick={(e) => e.stopPropagation()}
                             >
-                              <div
-                                className="absolute bg-white rounded-md shadow-lg border p-4 w-64 z-50"
-                                style={{
-                                  top: "50%",
-                                  left: "50%",
-                                  transform: "translate(-50%, -50%)",
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <div>
-                                  <div className="flex justify-between items-center mb-3">
-                                    <h4 className="text-sm font-medium">
-                                      위젯 추가
-                                    </h4>
+                              <div>
+                                <div className="flex justify-between items-center mb-3">
+                                  <h4 className="text-sm font-medium">
+                                    위젯 추가
+                                  </h4>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 w-7 p-0"
+                                    onClick={() => setShowWidgetMenu(false)}
+                                  >
+                                    ✕
+                                  </Button>
+                                </div>
+
+                                <div className="max-h-[60vh] overflow-y-auto pr-1 space-y-1">
+                                  <div className="sticky top-0 bg-white z-10 pb-1 space-y-1">
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-7 w-7 p-0"
-                                      onClick={() => setShowWidgetMenu(false)}
+                                      className="w-full justify-start"
+                                      onClick={() => {
+                                        addNewWidget("banner", {
+                                          title: "배너",
+                                        });
+                                        setShowWidgetMenu(false);
+                                      }}
                                     >
-                                      ✕
+                                      <Plus className="h-4 w-4 mr-2" />
+                                      배너 추가
+                                    </Button>
+
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="w-full justify-start"
+                                      onClick={() => {
+                                        addNewWidget("board", {
+                                          title: "게시판",
+                                        });
+                                        setShowWidgetMenu(false);
+                                      }}
+                                    >
+                                      <Plus className="h-4 w-4 mr-2" />
+                                      게시판 추가
+                                    </Button>
+
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="w-full justify-start"
+                                      onClick={() => {
+                                        addNewWidget("gallery", {
+                                          title: "갤러리",
+                                        });
+                                        setShowWidgetMenu(false);
+                                      }}
+                                    >
+                                      <Plus className="h-4 w-4 mr-2" />
+                                      갤러리 추가
+                                    </Button>
+
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="w-full justify-start"
+                                      onClick={() => {
+                                        addNewWidget("media", {
+                                          title: "미디어",
+                                        });
+                                        setShowWidgetMenu(false);
+                                      }}
+                                    >
+                                      <Plus className="h-4 w-4 mr-2" />
+                                      미디어 추가
                                     </Button>
                                   </div>
 
-                                  <div className="max-h-[60vh] overflow-y-auto pr-1 space-y-1">
-                                    <div className="sticky top-0 bg-white z-10 pb-1">
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="w-full justify-start"
-                                        onClick={() => {
-                                          addNewWidget("banner", {
-                                            title: "배너",
-                                          });
-                                          setShowWidgetMenu(false);
-                                        }}
-                                      >
-                                        <Plus className="h-4 w-4 mr-2" />
-                                        배너 추가
-                                      </Button>
-                                    </div>
+                                  <div className="border-t my-1"></div>
 
-                                    <div className="border-t my-1"></div>
-
-                                    <div className="sticky top-12 bg-white z-10 py-1 text-xs font-medium text-gray-500 px-2">
-                                      메뉴 항목
-                                    </div>
-                                    {menuItems
-                                      .filter((item) => !item.parent_id)
-                                      .map((item) => (
-                                        <Button
-                                          key={item.id}
-                                          variant="ghost"
-                                          size="sm"
-                                          className="w-full justify-start text-left"
-                                          onClick={() => {
-                                            addNewWidget("menu", item);
-                                            setShowWidgetMenu(false);
-                                          }}
-                                        >
-                                          <span className="truncate">
-                                            {item.title}
-                                          </span>
-                                        </Button>
-                                      ))}
-
-                                    <div className="border-t my-1"></div>
-
-                                    <div className="sticky top-12 bg-white z-10 py-1 text-xs font-medium text-gray-500 px-2">
-                                      페이지
-                                    </div>
-                                    {pages.map((item) => (
+                                  <div className="sticky top-12 bg-white z-10 py-1 text-xs font-medium text-gray-500 px-2">
+                                    메뉴 항목
+                                  </div>
+                                  {menuItems
+                                    .filter((item) => !item.parent_id)
+                                    .map((item) => (
                                       <Button
                                         key={item.id}
                                         variant="ghost"
                                         size="sm"
                                         className="w-full justify-start text-left"
                                         onClick={() => {
-                                          addNewWidget("page", item);
+                                          addNewWidget("menu", item);
                                           setShowWidgetMenu(false);
                                         }}
                                       >
@@ -1200,13 +1572,34 @@ export default function LayoutManager(): React.ReactNode {
                                         </span>
                                       </Button>
                                     ))}
+
+                                  <div className="border-t my-1"></div>
+
+                                  <div className="sticky top-12 bg-white z-10 py-1 text-xs font-medium text-gray-500 px-2">
+                                    페이지
                                   </div>
+                                  {pages.map((item) => (
+                                    <Button
+                                      key={item.id}
+                                      variant="ghost"
+                                      size="sm"
+                                      className="w-full justify-start text-left"
+                                      onClick={() => {
+                                        addNewWidget("page", item);
+                                        setShowWidgetMenu(false);
+                                      }}
+                                    >
+                                      <span className="truncate">
+                                        {item.title}
+                                      </span>
+                                    </Button>
+                                  ))}
                                 </div>
                               </div>
                             </div>
-                          )}
-                        </div>
-                      )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </Droppable>
