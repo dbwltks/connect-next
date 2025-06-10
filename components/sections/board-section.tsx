@@ -86,7 +86,7 @@ export default function BoardSection({
   menuTitle,
 }: BoardSectionProps) {
   // 컨테이너 클래스 설정 - 브레드크럼과 동일한 여백 적용
-  const containerClass = "container mx-auto px-0 sm:px-4";
+  const containerClass = "container mx-auto px-2 sm:px-4";
   const [showDropdown, setShowDropdown] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
@@ -657,7 +657,7 @@ export default function BoardSection({
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="flex items-center gap-1 px-0 sm:px-2 py-1 rounded transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 border border-transparent bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
+                  className="flex items-center gap-1 px-2 py-1 rounded transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 border border-transparent bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
                   style={{ fontWeight: 600 }}
                 >
                   {label}

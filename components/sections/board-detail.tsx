@@ -86,7 +86,10 @@ export default function BoardDetail() {
   const pathname = usePathname();
   const params = useParams();
   const [post, setPost] = useState<BoardPost | null>(null);
-  const [authorInfo, setAuthorInfo] = useState<{ username: string; avatar_url: string | null } | null>(null);
+  const [authorInfo, setAuthorInfo] = useState<{
+    username: string;
+    avatar_url: string | null;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // 수정 상태 관리
@@ -127,7 +130,6 @@ export default function BoardDetail() {
   const [isAuthor, setIsAuthor] = useState(false);
   // 작성자 아바타 상태 추가
   const [authorAvatar, setAuthorAvatar] = useState<string | null>(null);
-
 
   // 토스트 표시 함수
   const showToast = (args: {
@@ -997,7 +999,7 @@ export default function BoardDetail() {
 
       <Card className="my-0 sm:my-8 sm:shadow-md border-0 sm:border sm:border-gray-200 mx-0 sm:mx-auto w-full max-w-full overflow-hidden shadow-none bg-transparent sm:bg-white relative pb-16 sm:pb-0">
         {/* 수정, 삭제 버튼과 이전글, 다음글, 목록 버튼 한 줄에 배치 - 모바일에서는 숨김 */}
-        <div className="hidden sm:flex justify-between items-center px-0 sm:px-6 py-4 sm:py-6 border-b border-gray-100 space-x-2">
+        <div className="hidden sm:flex justify-between items-center px-2 sm:px-6 py-4 sm:py-6 border-b border-gray-100 space-x-2">
           {/* 수정, 삭제 버튼 - 작성자인 경우에만 표시 */}
           <div className="flex gap-2">
             {isAuthor && (
@@ -1083,7 +1085,7 @@ export default function BoardDetail() {
           </div>
 
           {/* 유저/메타데이터 + 액션 버튼 한 줄 */}
-          <div className="flex items-start my-6 border-b border-gray-200 pb-6 justify-between">
+          <div className="flex items-start my-6 border-b border-gray-200 pb-4 justify-between">
             <div className="flex items-center">
               <Avatar className="h-8 w-8 mr-2">
                 <AvatarImage
@@ -1094,11 +1096,15 @@ export default function BoardDetail() {
                   alt={authorInfo?.username}
                 />
                 <AvatarFallback>
-                  {authorInfo?.username ? authorInfo.username.substring(0, 2).toUpperCase() : "UN"}
+                  {authorInfo?.username
+                    ? authorInfo.username.substring(0, 2).toUpperCase()
+                    : "UN"}
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col">
-                <span className="text-sm font-medium">{authorInfo?.username || "익명"}</span>
+                <span className="text-sm font-medium">
+                  {authorInfo?.username || "익명"}
+                </span>
                 <div className="flex text-xs text-gray-500">
                   <span>{formatDate(post.created_at)}</span>
                   <span className="mx-2">·</span>
@@ -1165,7 +1171,7 @@ export default function BoardDetail() {
           </div>
         </CardHeader>
 
-        <CardContent className="px-0 sm:px-8">
+        <CardContent className="px-2 sm:px-8">
           {/* 첨부파일 버튼/리스트: 본문 위에, 오른쪽 정렬 */}
           <div className="mb-2 flex justify-end">
             {attachments.length > 0 && (
@@ -1306,7 +1312,7 @@ export default function BoardDetail() {
           `}</style>
 
           {/* 좋아요 및 댓글 카운트 UI */}
-          <div className="flex items-center gap-4 mt-6 pt-6 border-t border-gray-100">
+          <div className="flex items-center gap-4 pt-6">
             <button
               onClick={toggleLike}
               disabled={likeLoading}
@@ -1325,11 +1331,7 @@ export default function BoardDetail() {
           </div>
         </CardContent>
 
-        <CardFooter className="px-0 sm:px-6 pt-0 pb-0 border-t-0">
-          {/* 버튼들은 CardContent로 이동했습니다 */}
-        </CardFooter>
-
-        <div className="px-2 sm:px-6 pt-3 sm:pt-4 pb-4 sm:pb-6 border-t border-gray-100">
+        <div className="px-2 sm:px-6 pb-4 sm:pb-6 pt-4 border-t">
           <div id="comments-section">
             <BoardComments
               postId={post.id}

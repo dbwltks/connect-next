@@ -753,7 +753,7 @@ export default function BoardComments({
   // 댓글 허용 여부에 따라 다른 UI 렌더링
   if (!allowComments) {
     return (
-      <div className="mt-8">
+      <div className="">
         <div className="p-4 bg-gray-100 rounded border border-gray-300 text-center">
           <p className="text-gray-600">
             작성자가 댓글을 허용하지 않은 게시글입니다.
@@ -764,7 +764,7 @@ export default function BoardComments({
   }
 
   return (
-    <div className="mt-8">
+    <div className="">
       <h3 className="font-bold text-md mb-2">댓글</h3>
       {comments.length === 0 ? (
         <div className="text-gray-500 text-sm">아직 댓글이 없습니다.</div>
@@ -777,7 +777,7 @@ export default function BoardComments({
       <Toaster />
       {/* 댓글 입력 폼 - 로그인 유저만 */}
       {user && user.username ? (
-        <form onSubmit={handleSubmit} className=" pt-6">
+        <form onSubmit={handleSubmit} className="pt-6">
           <div className="border-2 border-gray-200 rounded-lg overflow-hidden">
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-2">

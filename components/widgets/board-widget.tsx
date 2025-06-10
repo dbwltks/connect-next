@@ -377,11 +377,11 @@ export function BoardWidget({
 
   return (
     <div className="h-full">
-      <CardHeader>
-        <CardTitle>{widget.title || page?.title || "게시판"}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {renderByTemplate()}
+      <div className="p-2">
+        <div className="text-xl font-bold">{widget.title || page?.title || "게시판"}</div>
+      </div>
+      <div>
+        {renderByTemplate()}  
 
         <div className="mt-3 text-center">
           <Link
@@ -391,7 +391,7 @@ export function BoardWidget({
             더보기
           </Link>
         </div>
-      </CardContent>
+      </div>
     </div>
   );
 }

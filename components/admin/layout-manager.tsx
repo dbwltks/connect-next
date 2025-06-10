@@ -25,6 +25,7 @@ import {
 
 import { MediaWidget } from "../widgets/media-widget";
 import { BoardWidget, BOARD_TEMPLATE } from "../widgets/board-widget";
+import LocationWidget from "../widgets/location-widget";
 import { supabase } from "@/db";
 import { toast } from "@/components/ui/toaster";
 import { Plus, Trash2, MoveVertical, Settings, Eye } from "lucide-react";
@@ -46,10 +47,22 @@ export type Widget = {
     show_date?: boolean; // 날짜 표시 여부
     show_excerpt?: boolean; // 요약 표시 여부
     layout_type?: string | number; // 레이아웃 타입 (문자열 또는 숫자)
+    
+    // 미디어 위젯 관련 속성
     media_title?: string; // 미디어 섹션 제목
     media_subtitle?: string; // 미디어 섹션 부제목
     media_more_text?: string; // 더 많은 미디어 보기 텍스트
-    page_id?: string; // 미디어 콘텐츠를 가져올 페이지 ID
+    
+    // 위치 정보 위젯 관련 속성
+    location_title?: string; // 위치 정보 섹션 제목
+    location_subtitle?: string; // 위치 정보 섹션 부제목
+    address?: string; // 주소
+    phone?: string; // 전화번호
+    email?: string; // 이메일
+    map_url?: string; // 지도 링크 URL
+    embed_map_url?: string; // 임베드 지도 URL
+    
+    page_id?: string; // 콘텐츠를 가져올 페이지 ID (미디어, 위치 등 공통)
   };
   is_active: boolean;
 };
@@ -67,6 +80,7 @@ const WIDGET_TYPES = [
   { id: "board", name: "게시판" },
   { id: "gallery", name: "갤러리" },
   { id: "media", name: "미디어" },
+  { id: "location", name: "위치 정보" },
 ];
 
 export default function LayoutManager(): React.ReactNode {
@@ -1023,6 +1037,178 @@ export default function LayoutManager(): React.ReactNode {
               </div>
             </div>
           )}
+          
+          {/* 위치 정보 위젯 전용 설정 */}
+          {editingWidget.type === "location" && (
+            <div className="space-y-4 border rounded-md p-3 bg-gray-50">
+              <h4 className="font-medium text-sm">위치 정보 설정</h4>
+
+              <div className="space-y-2">
+                <Label htmlFor="location-title">위치 섹션 제목</Label>
+                <Input
+                  id="location-title"
+                  value={editingWidget.display_options?.location_title || ""}
+                  placeholder="위치 정보"
+                  onChange={(e) =>
+                    setEditingWidget({
+                      ...editingWidget,
+                      display_options: {
+                        ...editingWidget.display_options,
+                        location_title: e.target.value,
+                      },
+                    })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="location-subtitle">위치 섹션 부제목</Label>
+                <Input
+                  id="location-subtitle"
+                  value={editingWidget.display_options?.location_subtitle || ""}
+                  placeholder="저희 위치와 연락처 정보입니다"
+                  onChange={(e) =>
+                    setEditingWidget({
+                      ...editingWidget,
+                      display_options: {
+                        ...editingWidget.display_options,
+                        location_subtitle: e.target.value,
+                      },
+                    })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="location-address">주소</Label>
+                <textarea
+                  id="location-address"
+                  className="w-full min-h-[80px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  value={editingWidget.display_options?.address || ""}
+                  placeholder="상세 주소를 입력하세요"
+                  onChange={(e) =>
+                    setEditingWidget({
+                      ...editingWidget,
+                      display_options: {
+                        ...editingWidget.display_options,
+                        address: e.target.value,
+                      },
+                    })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="location-phone">전화번호</Label>
+                <Input
+                  id="location-phone"
+                  value={editingWidget.display_options?.phone || ""}
+                  placeholder="02-1234-5678"
+                  onChange={(e) =>
+                    setEditingWidget({
+                      ...editingWidget,
+                      display_options: {
+                        ...editingWidget.display_options,
+                        phone: e.target.value,
+                      },
+                    })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="location-email">이메일</Label>
+                <Input
+                  id="location-email"
+                  type="email"
+                  value={editingWidget.display_options?.email || ""}
+                  placeholder="contact@example.com"
+                  onChange={(e) =>
+                    setEditingWidget({
+                      ...editingWidget,
+                      display_options: {
+                        ...editingWidget.display_options,
+                        email: e.target.value,
+                      },
+                    })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="location-map-url">지도 링크 URL</Label>
+                <Input
+                  id="location-map-url"
+                  value={editingWidget.display_options?.map_url || ""}
+                  placeholder="https://maps.google.com/..."
+                  onChange={(e) =>
+                    setEditingWidget({
+                      ...editingWidget,
+                      display_options: {
+                        ...editingWidget.display_options,
+                        map_url: e.target.value,
+                      },
+                    })
+                  }
+                />
+                <p className="text-xs text-gray-500">
+                  지도 보기 링크로 사용됩니다 (예: 네이버 지도, 구글 지도 등 링크)
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="location-embed-map-url">임베드 지도 URL</Label>
+                <Input
+                  id="location-embed-map-url"
+                  value={editingWidget.display_options?.embed_map_url || ""}
+                  placeholder="https://www.google.com/maps/embed/..."
+                  onChange={(e) =>
+                    setEditingWidget({
+                      ...editingWidget,
+                      display_options: {
+                        ...editingWidget.display_options,
+                        embed_map_url: e.target.value,
+                      },
+                    })
+                  }
+                />
+                <p className="text-xs text-gray-500">
+                  Google 지도, Naver 지도 등에서 제공하는 임베드 URL을 입력하세요.
+                  (예: iframe src 속성에 들어가는 주소)
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="location-page">연결할 페이지 선택 (선택사항)</Label>
+                <Select
+                  value={editingWidget.display_options?.page_id || ""}
+                  onValueChange={(value) =>
+                    setEditingWidget({
+                      ...editingWidget,
+                      display_options: {
+                        ...editingWidget.display_options,
+                        page_id: value,
+                      },
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="페이지 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {pages.map((page) => (
+                      <SelectItem key={page.id} value={page.id}>
+                        {page.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-500 mt-1">
+                  문의하기 버튼을 클릭했을 때 연결될 페이지를 선택합니다. (선택하지 않으면 버튼이 표시되지 않습니다)
+                </p>
+              </div>
+            </div>
+          )}
 
           <DialogFooter>
             <Button
@@ -1281,6 +1467,27 @@ export default function LayoutManager(): React.ReactNode {
             )}
           </div>
         );
+        
+      case "location":
+        return previewMode ? (
+          <LocationWidget
+            id={`location-widget-${widget.id}`}
+            widget={widget}
+            page={pages.find((p) => p.id === widget.display_options?.page_id)}
+          />
+        ) : (
+          <div className="bg-blue-50 p-4 rounded">
+            <div className="font-medium">{widget.title || "위치 정보"}</div>
+            <div className="text-sm text-gray-500 mt-1">
+              위치 위젯 (지도 및 연락처)
+            </div>
+            {widget.display_options?.address && (
+              <div className="text-xs text-blue-500 mt-1 truncate">
+                주소: {widget.display_options.address.split('\n')[0]}
+              </div>
+            )}
+          </div>
+        );
 
       default:
         return <div className="bg-gray-100 p-4 rounded">알 수 없는 위젯</div>;
@@ -1527,6 +1734,21 @@ export default function LayoutManager(): React.ReactNode {
                                     >
                                       <Plus className="h-4 w-4 mr-2" />
                                       미디어 추가
+                                    </Button>
+                                    
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="w-full justify-start"
+                                      onClick={() => {
+                                        addNewWidget("location", {
+                                          title: "위치 정보",
+                                        });
+                                        setShowWidgetMenu(false);
+                                      }}
+                                    >
+                                      <Plus className="h-4 w-4 mr-2" />
+                                      위치 정보 추가
                                     </Button>
                                   </div>
                                 </div>

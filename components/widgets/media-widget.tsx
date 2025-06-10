@@ -317,11 +317,11 @@ export function MediaWidget({
                             {posts[0].title}
                           </h4>
                         </div>
-                        <div className="h-5 flex items-center space-x-3 truncate text-sm text-gray-600">
+                        <div className="h-5 flex items-center space-x-3 truncate text-sm text-gray-700">
                           {posts[0].description && <span>{posts[0].description}</span>}
                         </div>
-                        <div className="pt-1 flex items-center justify-between">
-                          <span className="text-xs text-gray-500 space-x-4">
+                        <div className="pt-1 flex items-center justify-end space-x-2">
+                          <span className="text-xs text-gray-500 ">
                             {posts[0].author || ""} ·{" "}
                             {new Date(posts[0].created_at).toLocaleDateString()}
                           </span>
@@ -415,7 +415,7 @@ export function MediaWidget({
                             </svg>
                           </div>
                         </div>
-                        <div className="p-2 flex-1 w-full overflow-hidden">
+                        <div className="p-1.5 sm:p-2 flex-1 w-full overflow-hidden">
                           <div className="w-full overflow-hidden">
                             <h4 className="text-md font-medium truncate block w-full">
                               {post.title}
