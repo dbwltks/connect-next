@@ -1,0 +1,347 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { IBoardPost, IPage, IWidget, IBoardWidgetOptions } from "@/types/index";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
+import { Calendar, MessageSquare, Clock, Eye, ChevronRight } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+
+// Supabase 클라이언트 초기화
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+interface BoardWidgetProps {
+  widget: IWidget & {
+    display_options?: IBoardWidgetOptions;
+  };
+  page?: IPage;
+  posts?: IBoardPost[];
+  isPreview?: boolean;
+}
+
+// 게시판 템플릿 타입 정의
+type BoardTemplate = number;
+
+// 템플릿 번호 정의
+export const BOARD_TEMPLATE = {
+  CLASSIC: 1,
+  COMPACT: 2,
+  CARD: 3,
+  NOTICE: 4
+};
+
+// 템플릿별 기능 및 스타일 설명
+const templateInfo = {
+  [BOARD_TEMPLATE.CLASSIC]: {
+    name: "클래식",
+    description: "썸네일과 제목, 요약, 날짜를 모두 표시하는 기본 스타일",
+  },
+  [BOARD_TEMPLATE.COMPACT]: {
+    name: "컴팩트",
+    description: "좁은 공간에 최적화된 간결한 목록형 스타일",
+  },
+  [BOARD_TEMPLATE.CARD]: {
+    name: "카드형",
+    description: "각 게시물을 카드 형태로 표시하는 그리드 스타일",
+  },
+  [BOARD_TEMPLATE.NOTICE]: {
+    name: "공지형",
+    description: "공지사항 형태의 실선과 NEW 표시가 강조된 스타일",
+  },
+};
+
+export function BoardWidget({ widget, page, posts: initialPosts = [], isPreview = false }: BoardWidgetProps) {
+  const [posts, setPosts] = useState<IBoardPost[]>(initialPosts);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  // 템플릿 번호 가져오기 (문자열 또는 숫자 처리)
+  const getTemplateNumber = (template: string | number | undefined): number => {
+    if (template === undefined) return BOARD_TEMPLATE.CLASSIC;
+    if (typeof template === 'number') return template;
+    
+    // 이전 문자열 값 변환
+    switch(template) {
+      case "classic": return BOARD_TEMPLATE.CLASSIC;
+      case "compact": return BOARD_TEMPLATE.COMPACT;
+      case "card": return BOARD_TEMPLATE.CARD;
+      case "notice": return BOARD_TEMPLATE.NOTICE;
+      default: return BOARD_TEMPLATE.CLASSIC;
+    }
+  };
+  
+  // 표시 옵션 정의
+  const templateNumber = getTemplateNumber(widget.display_options?.layout_type);
+  const showThumbnail = widget.display_options?.show_thumbnail ?? true;
+  const showDate = widget.display_options?.show_date ?? true;
+  const showExcerpt = widget.display_options?.show_excerpt ?? true;
+  
+  // 게시판 데이터 로드 함수
+  const loadBoardPosts = async (pageId: string) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // 게시물 조회
+      let query = supabase
+        .from("board_posts")
+        .select("*")
+        .eq("page_id", pageId)
+        .eq("status", "published")
+        .order("created_at", { ascending: false });
+
+      // 표시할 게시물 수 제한 (기본 10개)
+      let limit = 10; // 기본값
+      
+      // item_count가 문자열인 경우 숫자로 변환 (레이아웃 관리자에서 문자열로 저장하는 경우 처리)
+      if (widget.display_options?.item_count) {
+        if (typeof widget.display_options.item_count === 'string') {
+          limit = parseInt(widget.display_options.item_count, 10) || 10;
+        } else {
+          limit = widget.display_options.item_count;
+        }
+      }
+      
+      console.log("[게시판 위젯] 표시 개수:", limit);
+      query = query.limit(limit);
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error("[게시판 위젯] 데이터 조회 오류:", error);
+        setError("데이터를 가져오는 중 오류가 발생했습니다.");
+        return;
+      }
+
+      if (data && data.length > 0) {
+        // 게시물 처리
+        const processedPosts = [];
+
+        for (const post of data) {
+          let authorName = "익명";
+
+          if (post.user_id) {
+            // 사용자 정보와 프로필 정보 함께 가져오기
+            const { data: userInfo } = await supabase
+              .from("users")
+              .select("email")
+              .eq("id", post.user_id)
+              .single();
+
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("username, full_name")
+              .eq("id", post.user_id)
+              .single();
+
+            authorName =
+              profile?.username ||
+              (userInfo?.email ? userInfo.email.split("@")[0] : null) ||
+              profile?.full_name ||
+              "익명";
+          }
+
+          processedPosts.push({
+            ...post,
+            thumbnail: post.thumbnail_image, // 실제 DB에는 thumbnail_image 필드로 저장
+            author: post.author || authorName,
+          });
+        }
+
+        console.log("[게시판 위젯] 처리된 데이터:", processedPosts);
+        setPosts(processedPosts as IBoardPost[]);
+      } else {
+        setPosts([]);
+      }
+    } catch (err: any) {
+      console.error("[게시판 위젯] 오류:", err);
+      setError("데이터를 가져오는 중 오류가 발생했습니다.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // 초기 데이터가 있으면 로드하지 않음
+    if (initialPosts.length > 0) {
+      setPosts(initialPosts);
+      return;
+    }
+
+    // 페이지 ID 없으면 로드하지 않음
+    const pageId = page?.id || widget.display_options?.page_id;
+    if (!pageId) {
+      console.log("[게시판 위젯] 페이지 ID가 없어 데이터를 로드할 수 없습니다.");
+      return;
+    }
+
+    // 데이터 로드
+    loadBoardPosts(pageId);
+  }, [page?.id, widget.display_options?.page_id, initialPosts.length]);
+
+  // 템플릿별 렌더링 함수
+  const renderByTemplate = () => {
+    // 로딩 및 에러 상태 처리
+    if (isLoading) {
+      return <div className="py-4 text-center text-gray-500">게시물을 불러오는 중...</div>;
+    }
+
+    if (error) {
+      return <div className="py-4 text-center text-gray-500">{error}</div>;
+    }
+
+    if (posts.length === 0) {
+      return <div className="py-4 text-center text-gray-500">등록된 게시물이 없습니다.</div>;
+    }
+
+    switch (templateNumber) {
+      case BOARD_TEMPLATE.COMPACT:
+        return (
+          <div className="space-y-2">
+            {posts.map((post) => (
+              <div key={post.id} className="py-2 border-b last:border-b-0">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium truncate flex-1">{post.title}</h4>
+                  {showDate && (
+                    <div className="text-xs text-gray-500 flex items-center space-x-1 ml-2 flex-shrink-0">
+                      <Clock size={12} />
+                      <span className="truncate max-w-[80px]">{new Date(post.created_at).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+
+      case BOARD_TEMPLATE.CARD:
+        return (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {posts.map((post) => (
+              <div key={post.id} className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+                {showThumbnail && post.thumbnail ? (
+                  <div className="aspect-video w-full overflow-hidden">
+                    <img
+                      src={post.thumbnail}
+                      alt={post.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="aspect-video w-full bg-gray-100 flex items-center justify-center">
+                    <MessageSquare className="text-gray-300" size={32} />
+                  </div>
+                )}
+                <div className="p-3">
+                  <h4 className="font-medium truncate">{post.title}</h4>
+                  {showDate && (
+                    <div className="flex items-center space-x-1 text-xs text-gray-500 mt-2">
+                      <Calendar size={12} />
+                      <span className="truncate">{new Date(post.created_at).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+
+      case BOARD_TEMPLATE.NOTICE:
+        // 오늘 날짜 가져오기
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // 오늘 0시 0분 0초로 설정
+
+        return (
+          <div className="space-y-4">
+            {posts.map((post) => {
+              // 게시물 작성일이 오늘이면 NEW 표시
+              const postDate = new Date(post.created_at);
+              postDate.setHours(0, 0, 0, 0);
+              const isNew = postDate.getTime() === today.getTime();
+
+              return (
+                <div
+                  key={post.id}
+                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer group"
+                >
+                  <div className="flex-1 min-w-0 mr-2">
+                    <div className="flex items-center space-x-3 overflow-hidden">
+                      <h4 className="font-medium group-hover:text-blue-600 transition-colors truncate flex-1">{post.title}</h4>
+                      {isNew && (
+                        <Badge className="bg-red-100 text-red-800 text-xs animate-pulse flex-shrink-0">NEW</Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500 overflow-hidden">
+                      <span className="truncate max-w-[80px]">{post.author}</span>
+                      <span className="truncate max-w-[90px]">{new Date(post.created_at).toLocaleDateString()}</span>
+                      <div className="flex items-center space-x-1 flex-shrink-0">
+                        <Eye className="w-3 h-3 flex-shrink-0" />
+                        <span className="truncate">{post.view_count || 0}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors flex-shrink-0" />
+                </div>
+              );
+            })}
+          </div>
+        );
+
+      // 기본 클래식 템플릿
+      default:
+        return (
+          <div className="space-y-4">
+            {posts.map((post) => (
+              <div key={post.id} className="flex items-start space-x-4">
+                {showThumbnail && post.thumbnail ? (
+                  <div className="w-20 h-20 flex-shrink-0">
+                    <img
+                      src={post.thumbnail}
+                      alt={post.title}
+                      className="w-full h-full object-cover rounded"
+                    />
+                  </div>
+                ) : showThumbnail ? (
+                  <div className="w-20 h-20 flex-shrink-0 rounded bg-gray-100 flex items-center justify-center">
+                    <MessageSquare className="text-gray-300" size={24} />
+                  </div>
+                ) : null}
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-sm font-medium truncate">{post.title}</h4>
+                  {showDate && (
+                    <div className="text-xs text-gray-500 mt-1 mb-2 flex items-center space-x-1">
+                      <Calendar size={12} className="flex-shrink-0" />
+                      <span className="truncate">{new Date(post.created_at).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                  {showExcerpt && (
+                    <p className="text-sm text-gray-600 truncate">
+                      {post.content?.replace(/<[^>]*>/g, "").substring(0, 120) || ""}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+    }
+  };
+
+  return (
+    <div className="h-full">
+      <CardHeader>
+        <CardTitle>{widget.title || page?.title || "게시판"}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {renderByTemplate()}
+        
+        <div className="mt-3 text-center">
+          <Link href={page?.slug || "/"} className="text-xs text-blue-600 hover:underline">
+            더보기
+          </Link>
+        </div>
+      </CardContent>
+    </div>
+  );
+}
