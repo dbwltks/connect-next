@@ -15,7 +15,7 @@ import {
   ToastDescription,
 } from "@/components/ui/toast";
 import dynamic from "next/dynamic";
-import { X } from "lucide-react";
+import { X, FileText, FileSpreadsheet, Presentation, File } from "lucide-react";
 import {
   getHeaderUser,
   fetchDrafts,
@@ -83,6 +83,183 @@ function normalizeFileInfo(file: any): IFileInfo {
   };
 }
 
+// FileManager 컴포넌트 - TipTapEditor에서 옮겨옴
+const FileManager = ({
+  uploadedFiles,
+  setUploadedFiles,
+  selectedThumbnail,
+  setSelectedThumbnail,
+  onThumbnailChange,
+  editor,
+  showToast,
+}: {
+  uploadedFiles: IFileInfo[];
+  setUploadedFiles: (files: IFileInfo[]) => void;
+  selectedThumbnail?: string;
+  setSelectedThumbnail: (url?: string) => void;
+  onThumbnailChange?: (url: string) => void;
+  editor: any;
+  showToast: (props: {
+    title: string;
+    description?: string;
+    variant?: "default" | "destructive";
+  }) => void;
+}) => {
+  // 파일 타입에 따른 아이콘 결정
+  const getFileIcon = (fileType: string) => {
+    const type = fileType.toLowerCase();
+    if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(type)) {
+      return null;
+    }
+    if (type === "pdf") return <FileText className="w-12 h-12 text-red-500" />;
+    if (["doc", "docx"].includes(type))
+      return <FileText className="w-12 h-12 text-blue-500" />;
+    if (["xls", "xlsx"].includes(type))
+      return <FileSpreadsheet className="w-12 h-12 text-green-500" />;
+    if (["ppt", "pptx"].includes(type))
+      return <Presentation className="w-12 h-12 text-orange-500" />;
+    return <File className="w-12 h-12 text-gray-500" />;
+  };
+
+  // 썸네일 선택 핸들러
+  const handleThumbnailSelect = useCallback(
+    (url: string) => {
+      setSelectedThumbnail(url);
+      if (onThumbnailChange) {
+        onThumbnailChange(url);
+        showToast({
+          title: "썸네일 설정 완료",
+          description: "선택한 이미지가 썸네일로 지정되었습니다.",
+          variant: "default",
+        });
+      }
+    },
+    [onThumbnailChange, setSelectedThumbnail, showToast]
+  );
+
+  if (uploadedFiles.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-2">
+      {uploadedFiles.map((file, index) => {
+        const isImage = ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(
+          (file.type || "").toLowerCase()
+        );
+        const isThumbnail = selectedThumbnail === file.url;
+        return (
+          <div
+            key={index}
+            className={`flex items-center justify-between border rounded px-3 py-2 bg-gray-50 hover:bg-gray-100 ${isThumbnail ? "border-blue-500 ring-2 ring-blue-200" : ""}`}
+          >
+            <div className="flex items-center gap-2 w-full">
+              {/* 이미지는 미리보기, 파일은 아무것도 안 보임 */}
+              {isImage && (
+                <img
+                  src={file.url}
+                  alt={file.name}
+                  className="w-10 h-10 object-cover rounded"
+                />
+              )}
+              <div className="flex flex-col flex-1 min-w-0">
+                <span className="font-medium text-sm break-all truncate max-w-[160px]">
+                  {file.name}
+                </span>
+                <span className="text-xs text-gray-500">{file.size}</span>
+              </div>
+              {/* 썸네일 지정 버튼(이미지 파일만) */}
+              {isImage && (
+                <button
+                  type="button"
+                  className={`ml-2 px-2 py-1 text-xs rounded border ${isThumbnail ? "bg-blue-500 text-white border-blue-500" : "border-gray-300 text-gray-600 hover:bg-blue-50"}`}
+                  onClick={() => handleThumbnailSelect(file.url)}
+                  disabled={isThumbnail}
+                >
+                  {isThumbnail ? "대표" : "썸네일로 지정"}
+                </button>
+              )}
+            </div>
+            <button
+              type="button"
+              className="ml-2 text-red-500 hover:text-red-700 text-lg font-bold"
+              onClick={async () => {
+                // 1. Storage 경로 추출
+                const url = file.url;
+                // 예: https://<project>.supabase.co/storage/v1/object/public/images/2024/07/abc.jpg
+                const match = url.match(
+                  /\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/
+                );
+                if (!match) {
+                  showToast({
+                    title: "삭제 실패",
+                    description: "Storage 경로를 추출할 수 없습니다.",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                const bucket = match[1];
+                const filePath = match[2];
+                // 2. Storage에서 삭제
+                const { error: removeError } = await supabase.storage
+                  .from(bucket)
+                  .remove([filePath]);
+                if (removeError) {
+                  showToast({
+                    title: "삭제 실패",
+                    description: removeError.message,
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                // 3. UI에서 제거 및 토스트
+                if (editor) {
+                  const content = editor.getHTML();
+                  const escapedUrl = file.url.replace(
+                    /[.*+?^${}()|[\]\\]/g,
+                    "\\$&"
+                  );
+                  const regex = new RegExp(
+                    `<img[^>]*src=\"${escapedUrl}\"[^>]*>`,
+                    "g"
+                  );
+                  const newContent = content.replace(regex, "");
+                  editor.commands.setContent(newContent);
+                }
+                const currentFiles = [...uploadedFiles];
+                const fileIndex = currentFiles.findIndex(
+                  (item) => item.url === file.url
+                );
+                if (fileIndex !== -1) {
+                  currentFiles.splice(fileIndex, 1);
+                  if (typeof setUploadedFiles === "function")
+                    setUploadedFiles(currentFiles);
+                }
+                if (selectedThumbnail === file.url) {
+                  const remainingFiles = uploadedFiles.filter(
+                    (item) => item.url !== file.url
+                  );
+                  setSelectedThumbnail(undefined);
+                  if (onThumbnailChange) {
+                    onThumbnailChange(remainingFiles[0]?.url || "");
+                  }
+                }
+                showToast({
+                  title: "파일 삭제",
+                  description: "파일이 스토리지에서도 삭제되었습니다.",
+                  variant: "default",
+                });
+              }}
+            >
+              ×
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 export default function BoardWrite({
   pageId,
   categoryId: initialCategoryId,
@@ -112,6 +289,7 @@ export default function BoardWrite({
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const [showDraftList, setShowDraftList] = useState(false);
   const [drafts, setDrafts] = useState<Array<{ key: string; data: any }>>([]);
+  const [description, setDescription] = useState(""); // 상세 설명 상태 추가
   const isSubmitButtonClickedRef = useRef(false);
 
   // Media state
@@ -337,20 +515,23 @@ export default function BoardWrite({
     setError(null);
     setSuccess(false);
     setLoading(true);
-    
+
     // 사용자 정보 가져오기 및 디버깅
     console.log("[BoardWrite] 사용자 정보 가져오기 시작");
     const user = await getHeaderUser();
-    console.log("[BoardWrite] 가져온 사용자 정보:", JSON.stringify(user, null, 2));
-    
+    console.log(
+      "[BoardWrite] 가져온 사용자 정보:",
+      JSON.stringify(user, null, 2)
+    );
+
     if (!user || !user.id) {
       console.error("[BoardWrite] 사용자 정보 또는 ID가 없음");
       setError("로그인 후 작성 가능합니다. 사용자 ID를 가져올 수 없습니다.");
       setLoading(false);
       showToast({
-        title: "오류", 
-        description: "사용자 정보를 가져올 수 없습니다. 다시 로그인해주세요.", 
-        variant: "destructive"
+        title: "오류",
+        description: "사용자 정보를 가져올 수 없습니다. 다시 로그인해주세요.",
+        variant: "destructive",
       });
       return;
     }
@@ -386,7 +567,11 @@ export default function BoardWrite({
         status,
         number: nextNumber,
       });
+
+      // 파일 데이터 JSON화
+      const filesJson = JSON.stringify(uploadedFiles);
       
+      // saveBoardPost 함수 정확히 호출      
       const result = await serviceSaveBoardPost({
         postId,
         isEditMode,
@@ -395,13 +580,14 @@ export default function BoardWrite({
         allowComments,
         thumbnailImage,
         uploadedFiles,
-        userId, // 사용자 ID 전달
+        userId,
         pageId,
         categoryId,
         status,
         number: nextNumber,
+        description: description.trim(),  // 상세 설명 추가
       });
-      
+
       console.log("[BoardWrite] serviceSaveBoardPost 결과:", result);
       newId = result.id;
       setPostId(newId);
@@ -479,15 +665,24 @@ export default function BoardWrite({
 
   // 게시글 데이터 로드 함수 (수정 모드)
   const loadPostData = async () => {
-    if (!postId) return;
     try {
       setLoading(true);
-      const data = await serviceGetBoardPost({ postId });
-      if (data) {
+      if (postId) {
+        // DB에서 게시글 가져오기
+        const data = await serviceGetBoardPost({ postId });
+
+        if (!data) {
+          console.error("게시글 데이터 없음");
+          setError("게시글 데이터를 가져올 수 없습니다.");
+          return;
+        }
+
+        // 데이터 설정
         setTitle(data.title || "");
         setContent(data.content || "");
+        setThumbnailImage(data.thumbnail || data.thumbnail_image || "");
         setAllowComments(data.allow_comments !== false);
-        setThumbnailImage(data.thumbnail_image || "");
+        setDescription(data.description || ""); // 상세 설명 로드
         let parsedFiles: any[] = [];
         if (data.files) {
           try {
@@ -541,6 +736,11 @@ export default function BoardWrite({
       if (onThumbnailChange) {
         onThumbnailChange(url);
       }
+      // 토스트 추가
+      showToast({
+        title: "썸네일 설정 완료",
+        description: "선택한 이미지가 썸네일로 지정되었습니다.",
+      });
     },
     [onThumbnailChange]
   );
@@ -791,7 +991,7 @@ export default function BoardWrite({
       </Toast>
       <div className="container mx-auto py-4 sm:py-6 px-0 sm:px-4">
         <form
-          className="w-full mx-auto bg-white sm:rounded-lg sm:shadow-lg sm:border border-gray-200 overflow-hidden"
+          className="w-full mx-auto bg-white sm:rounded-lg sm:shadow-lg sm:border border-gray-200 "
           onSubmit={handleFormSubmit}
         >
           {/* 헤더 및 액션 버튼 영역 */}
@@ -811,7 +1011,7 @@ export default function BoardWrite({
             <div className="grid grid-cols-8 sm:flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
               {/* 임시등록 버튼(텍스트/숫자 분리 클릭) */}
               {!isEditMode && (
-                <div className="flex items-center border rounded h-9 sm:h-10 overflow-hidden col-span-4 sm:col-auto">
+                <div className="flex items-center border rounded h-9 sm:h-10  col-span-4 sm:col-auto">
                   <button
                     type="button"
                     onClick={handleManualSave}
@@ -870,44 +1070,101 @@ export default function BoardWrite({
               />
             </div>
 
-            {/* TipTap 에디터 */}
-            <div className="">
-              <div className="relative min-h-[300px] sm:min-h-[400px]">
-                <TipTapEditor
-                  ref={editorRef}
-                  content={content}
-                  placeholder="내용을 입력하세요..."
-                  thumbnailUrl={thumbnailImage}
-                  onThumbnailChange={handleThumbnailSelect}
-                  onUploadedFilesChange={handleUploadedFilesChange}
-                  category={initialCategoryId}
-                  pageId={postId}
-                  uploadedFiles={uploadedFiles.map((file) => ({
-                    ...file,
-                    size: String(file.size || "크기 알 수 없음"),
-                    type: String(file.type || ""),
-                    uploadedAt: String(file.uploadedAt || ""),
-                  }))}
-                  setUploadedFiles={setUploadedFiles}
-                />
+            {/* TipTap 에디터 + 사이드바 영역 */}
+            <div className="lg:flex lg:gap-4">
+              {/* TipTap 에디터 */}
+              <div className="flex-1 mb-4 lg:mb-0">
+                <div className="relative min-h-[300px] sm:min-h-[400px]">
+                  <TipTapEditor
+                    ref={editorRef}
+                    content={content}
+                    placeholder="내용을 입력하세요..."
+                    thumbnailUrl={thumbnailImage}
+                    onThumbnailChange={handleThumbnailSelect}
+                    onUploadedFilesChange={handleUploadedFilesChange}
+                    category={initialCategoryId}
+                    pageId={postId}
+                    uploadedFiles={uploadedFiles.map((file) => ({
+                      ...file,
+                      size: String(file.size || "크기 알 수 없음"),
+                      type: String(file.type || ""),
+                      uploadedAt: String(file.uploadedAt || ""),
+                    }))}
+                    setUploadedFiles={setUploadedFiles}
+                  />
+                </div>
+
+                {/* 에러 메시지 */}
+                {error && (
+                  <div className="p-3 text-sm text-red-500 bg-red-50 border border-red-200 rounded-md mt-4">
+                    {error}
+                  </div>
+                )}
+
+                {/* 성공 메시지 */}
+                {success && (
+                  <div className="p-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md mt-4">
+                    {lastSaved ? "임시등록되었습니다." : "글이 등록되었습니다."}
+                  </div>
+                )}
               </div>
 
-              {/* 에러 메시지 */}
-              {error && (
-                <div className="p-3 text-sm text-red-500 bg-red-50 border border-red-200 rounded-md">
-                  {error}
+              {/* 사이드바: 업로드된 파일 + 댓글 허용 */}
+              <div className="lg:w-[320px] lg:min-w-[220px] lg:max-w-[400px] mt-4 sticky lg:top-24 transition-all duration-300">
+                {/* 업로드된 파일 카드 */}
+                <div className="border border-gray-200 rounded-md p-3 lg:p-4 mb-3 bg-white">
+                  <h3 className="text-sm font-semibold mb-2">업로드된 파일</h3>
+                  {uploadedFiles.length > 0 ? (
+                    <FileManager
+                      uploadedFiles={uploadedFiles}
+                      setUploadedFiles={setUploadedFiles}
+                      selectedThumbnail={thumbnailImage}
+                      setSelectedThumbnail={(url) =>
+                        setThumbnailImage(url || "")
+                      }
+                      onThumbnailChange={handleThumbnailSelect}
+                      editor={editorRef.current?.editor}
+                      showToast={showToast}
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-[80px] lg:h-[100px] text-gray-500 text-center text-sm">
+                      업로드된 파일이 없습니다.
+                    </div>
+                  )}
                 </div>
-              )}
 
-              {/* 성공 메시지 */}
-              {success && (
-                <div className="p-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md">
-                  {lastSaved ? "임시등록되었습니다." : "글이 등록되었습니다."}
+                {/* 상세 설명 카드 */}
+                <div className="border border-gray-200 rounded-md p-3 lg:p-4 mb-3 bg-white">
+                  <h3 className="text-sm font-semibold mb-2">상세 설명</h3>
+                  <textarea
+                    placeholder="게시글에 대한 추가 설명을 입력해주세요."
+                    className="w-full h-24 p-2 text-sm border border-gray-200 rounded-md resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    disabled={loading}
+                  />
                 </div>
-              )}
-
-              {/* 구분선 */}
-              <div className="border-t border-gray-100"></div>
+                
+                {/* 댓글 허용 카드 */}
+                <div className="border border-gray-200 rounded-md p-3 lg:p-4 bg-white">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="allow-comments"
+                      checked={allowComments}
+                      onChange={(e) => setAllowComments(e.target.checked)}
+                      disabled={loading}
+                      className="accent-blue-500"
+                    />
+                    <label
+                      htmlFor="allow-comments"
+                      className="text-sm font-medium"
+                    >
+                      댓글 허용
+                    </label>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </form>

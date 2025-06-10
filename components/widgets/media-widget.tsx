@@ -306,25 +306,27 @@ export function MediaWidget({
                             <polygon points="10 8 16 12 10 16 10 8"></polygon>
                           </svg>
                         </div>
-                        <div className="absolute bottom-2 right-2 text-xs bg-black/50 text-white py-1 px-2 rounded">
+                        <div className="absolute bottom-2 right-2 text-xs bg-black/50 bg-red-100 text-red-800 py-1 px-2 rounded">
                           {/* 동영상 시간은 실제 데이터에 있다면 사용할 수 있습니다 */}
-                          미디어
+                          NEW
                         </div>
                       </div>
                       <div className="p-3 bg-white">
-                        <div className="flex items-center justify-between">
-                          <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">
-                            NEW
+                        <div className="w-full overflow-hidden">
+                          <h4 className="text-lg font-medium truncate block w-full">
+                            {posts[0].title}
+                          </h4>
+                        </div>
+                        <div className="h-5 flex items-center space-x-3 truncate text-sm text-gray-600">
+                          {posts[0].description && <span>{posts[0].description}</span>}
+                        </div>
+                        <div className="pt-1 flex items-center justify-between">
+                          <span className="text-xs text-gray-500 space-x-4">
+                            {posts[0].author || ""} ·{" "}
+                            {new Date(posts[0].created_at).toLocaleDateString()}
                           </span>
                           <div className="flex items-center space-x-2 text-xs text-gray-500">
                             <div className="flex items-center space-x-1">
-                              <span>
-                                {posts[0].author || "익명"} ·{"  "}
-                                {new Date(
-                                  posts[0].created_at
-                                ).toLocaleDateString()}
-                                {"   "}
-                              </span>
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 width="12"
@@ -362,19 +364,6 @@ export function MediaWidget({
                             </div>
                           </div>
                         </div>
-                        <div className="w-full overflow-hidden">
-                          <h4 className="text-lg font-medium truncate block w-full">
-                            {posts[0].title}
-                          </h4>
-                        </div>
-                        <div className="flex items-center space-x-3 text-xs text-gray-500">
-                          <span>{posts[0].author || "익명"}</span>
-                          <span>·</span>
-
-                          <span>
-                            {new Date(posts[0].created_at).toLocaleDateString()}
-                          </span>
-                        </div>
                       </div>
                     </Link>
                   </div>
@@ -397,9 +386,9 @@ export function MediaWidget({
                     >
                       <Link
                         href={`${page?.slug}/${post.id}`}
-                        className="flex flex-row w-full"
+                        className="flex flex-row w-full group"
                       >
-                        <div className="relative w-20 sm:w-28 h-16 sm:h-20 flex-shrink-0">
+                        <div className="relative w-20 sm:w-28 h-20 flex-shrink-0">
                           {post.thumbnail ? (
                             <img
                               src={post.thumbnail}
@@ -409,16 +398,16 @@ export function MediaWidget({
                           ) : (
                             <div className="w-full h-full bg-gray-200"></div>
                           )}
-                          <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                          <div className="absolute inset-0 bg-black/15 group-hover:bg-black/10 flex items-center justify-center">
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
                               width="14"
                               height="14"
-                              className="sm:w-4 sm:h-4 text-white"
+                              className="text-white opacity-80 group-hover:opacity-100"
                               viewBox="0 0 24 24"
                               fill="none"
                               stroke="currentColor"
-                              strokeWidth="2"
+                              strokeWidth="1.5"
                               strokeLinecap="round"
                               strokeLinejoin="round"
                             >
@@ -426,44 +415,56 @@ export function MediaWidget({
                             </svg>
                           </div>
                         </div>
-                        <div className="p-1.5 sm:p-2 flex-1 w-full overflow-hidden">
+                        <div className="p-2 flex-1 w-full overflow-hidden">
                           <div className="w-full overflow-hidden">
-                            <h4 className="font-medium text-xs sm:text-sm mb-0.5 sm:mb-1 truncate block w-full">
+                            <h4 className="text-md font-medium truncate block w-full">
                               {post.title}
                             </h4>
                           </div>
-                          <div className="flex flex-col sm:space-y-1 text-[10px] sm:text-xs text-gray-500">
-                            <div className="flex items-center space-x-1 sm:space-x-2">
-                              <span
-                                className="truncate inline-block"
-                                style={{ maxWidth: "70px" }}
-                              >
-                                {post.author || "익명"}
-                              </span>
-                              <span className="text-[8px] sm:text-xs">·</span>
-                              <span className="text-[10px] sm:text-xs whitespace-nowrap">
-                                {new Date(post.created_at).toLocaleDateString()}
-                              </span>
-                            </div>
-                            <div className="flex items-center">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="8"
-                                height="8"
-                                className="sm:w-[10px] sm:h-[10px]"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              >
-                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                <circle cx="12" cy="12" r="3"></circle>
-                              </svg>
-                              <span className="ml-1 text-[10px] sm:text-xs">
-                                {post.views || post.view_count || 0}
-                              </span>
+                          <div className="h-5 flex items-center space-x-3 truncate text-xs text-gray-600">
+                            {post.description && <span>{post.description}</span>}
+                          </div>
+                          <div className="pt-1 flex items-center justify-between">
+                            <span className="text-[10px] text-gray-500">
+                              {post.author || "익명"} ·{" "}
+                              {new Date(post.created_at).toLocaleDateString()}
+                            </span>
+                            <div className="flex items-center space-x-2 text-[10px] text-gray-500">
+                              <div className="flex items-center space-x-1">
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="10"
+                                  height="10"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                  <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                                <span>
+                                  {post.views || post.view_count || 0}
+                                </span>
+                              </div>
+                              <div className="flex items-center space-x-1">
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="10"
+                                  height="10"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                </svg>
+                                <span>{post.likes_count || 0}</span>
+                              </div>
                             </div>
                           </div>
                         </div>

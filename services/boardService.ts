@@ -75,6 +75,7 @@ export async function saveBoardPost({
   categoryId,
   status,
   number,
+  description,
 }: {
   postId?: string;
   isEditMode?: boolean;
@@ -88,6 +89,7 @@ export async function saveBoardPost({
   categoryId?: string;
   status: "draft" | "published";
   number?: number;
+  description?: string;
 }) {
   console.log("[boardService] saveBoardPost 호출됨. userId:", userId);
   console.log("[boardService] 저장할 데이터:", {
@@ -117,6 +119,7 @@ export async function saveBoardPost({
         updated_at: new Date().toISOString(),
         user_id: userId, // 사용자 ID 업데이트
         status,
+        description, // 상세 설명 필드 추가
       })
       .eq("id", postId);
     console.log("[boardService] 수정 결과:", result);
@@ -134,6 +137,7 @@ export async function saveBoardPost({
         updated_at: new Date().toISOString(),
         user_id: userId, // 사용자 ID 업데이트
         status,
+        description, // 상세 설명 필드 추가
       })
       .eq("id", postId);
     console.log("[boardService] 임시저장 업데이트 결과:", result);
@@ -151,6 +155,7 @@ export async function saveBoardPost({
       files: filesJson,
       number: number,
       status,
+      description, // 상세 설명 필드 추가
     };
     console.log("[boardService] 삽입할 데이터:", {
       ...insertData,

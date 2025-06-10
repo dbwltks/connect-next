@@ -27,7 +27,18 @@ import LayoutManager from "@/components/admin/layout-manager";
 
 export default function HomepageManagementPage() {
   // 상태 관리
-  const [activeTab, setActiveTab] = useState("layout");
+  const [activeTab, setActiveTab] = useState("sections");
+  
+  // 초기에 모든 컴포넌트를 로드하도록 설정
+  const [componentsLoaded, setComponentsLoaded] = useState({
+    layout: true, // 처음부터 모든 탭의 컴포넌트를 로드하도록 true로 초기화
+    menus: true,
+    banners: true,
+    sections: true,
+    categories: true,
+    pages: true,
+    footer: true,
+  });
 
   return (
     <div className="container py-6">
@@ -93,56 +104,77 @@ export default function HomepageManagementPage() {
               </TabsTrigger>
             </TabsList>
             <div className="border-b border-gray-200 dark:border-gray-800" />
-            {/* 메뉴 관리 탭 */}
+            {/* 모든 컴포넌트를 항상 렌더링하고 CSS로 표시 여부를 제어 */}
+            {/* 탭의 활성화 여부에 따라 display 속성으로 표시/숨김만 전환 */}
+            
             {/* 레이아웃 관리 탭 */}
             <TabsContent
-              className="bg-white dark:bg-gray-900 rounded-b-lg p-6 mt-0 border-0 space-y-4 mt-0"
+              className="bg-white dark:bg-gray-900 rounded-b-lg pt-4 px-6 pb-6 border-0"
               value="layout"
             >
-              <LayoutManager />
+              <div>
+                <LayoutManager />
+              </div>
             </TabsContent>
 
             {/* 메뉴 관리 탭 */}
             <TabsContent
-              className="bg-white dark:bg-gray-900 rounded-b-lg p-6 mt-0 border-0 space-y-4 mt-0"
+              className="bg-white dark:bg-gray-900 rounded-b-lg pt-4 px-6 pb-6 border-0"
               value="menus"
             >
-              <MenuManager />
+              <div>
+                <MenuManager />
+              </div>
             </TabsContent>
+            
             {/* 배너 관리 탭 */}
             <TabsContent
-              className="bg-white dark:bg-gray-900 rounded-b-lg p-6 mt-0 border-0 space-y-4 mt-0"
+              className="bg-white dark:bg-gray-900 rounded-b-lg pt-4 px-6 pb-6 border-0"
               value="banners"
             >
-              <BannerManager />
+              <div>
+                <BannerManager />
+              </div>
             </TabsContent>
+            
             {/* 섹션 관리 탭 */}
             <TabsContent
-              className="bg-white dark:bg-gray-900 rounded-b-lg p-6 mt-0 border-0 space-y-4 mt-0"
+              className="bg-white dark:bg-gray-900 rounded-b-lg pt-4 px-6 pb-6 border-0"
               value="sections"
             >
-              <SectionManager />
+              <div>
+                <SectionManager />
+              </div>
             </TabsContent>
+            
             {/* 카테고리 관리 탭 */}
             <TabsContent
-              className="bg-white dark:bg-gray-900 rounded-b-lg p-6 mt-0 border-0 space-y-4 mt-0"
+              className="bg-white dark:bg-gray-900 rounded-b-lg pt-4 px-6 pb-6 border-0"
               value="categories"
             >
-              <CategoryManager />
+              <div>
+                <CategoryManager />
+              </div>
             </TabsContent>
+            
             {/* 페이지 관리 탭 */}
             <TabsContent
-              className="bg-white dark:bg-gray-900 rounded-b-lg p-6 mt-0 border-0 space-y-4 mt-0"
+              className="bg-white dark:bg-gray-900 rounded-b-lg pt-4 px-6 pb-6 border-0"
               value="pages"
             >
-              <PageManager />
+              <div>
+                <PageManager />
+              </div>
             </TabsContent>
+            
             {/* 푸터 관리 탭 */}
             <TabsContent
-              className="bg-white dark:bg-gray-900 rounded-b-lg p-6 mt-0 border-0 space-y-4 mt-0"
+              className="bg-white dark:bg-gray-900 rounded-b-lg pt-4 px-6 pb-6 border-0"
               value="footer"
             >
-              <FooterManager />
+              <div>
+                <FooterManager />
+              </div>
             </TabsContent>
           </Tabs>
         </Card>

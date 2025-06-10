@@ -2030,48 +2030,7 @@ const TipTapEditor = forwardRef(function TipTapEditor(
             )}
           </div>
         </div>
-        {/* 사이드바: 업로드된 파일 + 댓글 허용 */}
-        <div className="w-full lg:w-[320px] lg:min-w-[220px] lg:max-w-[400px]">
-          {/* 업로드된 파일 카드 */}
-          <div className="border border-gray-200 rounded-md p-3 lg:p-4 mb-3 lg:mb-4 bg-white">
-            <h3 className="text-sm font-semibold mb-2">업로드된 파일</h3>
-            {uploadedFiles.length > 0 ? (
-              <FileManager
-                uploadedFiles={uploadedFiles}
-                setUploadedFiles={setUploadedFiles}
-                selectedThumbnail={selectedThumbnail}
-                setSelectedThumbnail={setSelectedThumbnail}
-                onThumbnailChange={onThumbnailChange}
-                editor={editor}
-              />
-            ) : (
-              <div className="flex items-center justify-center h-[80px] lg:h-[100px] text-gray-500 text-center text-sm">
-                업로드된 파일이 없습니다.
-              </div>
-            )}
-          </div>
-          {/* 댓글 허용 카드 */}
-          <div className="border border-gray-200 rounded-md p-3 lg:p-4 bg-white">
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="allow-comments"
-                checked={allowComments}
-                onChange={(e) =>
-                  setAllowComments && setAllowComments(e.target.checked)
-                }
-                disabled={loading}
-                className="accent-blue-500"
-              />
-              <label
-                htmlFor="allow-comments"
-                className="text-sm font-medium cursor-pointer"
-              >
-                댓글 허용
-              </label>
-            </div>
-          </div>
-        </div>
+        {/* 사이드바는 board-write.tsx로 이동됨 */}
       </div>
     </div>
   );

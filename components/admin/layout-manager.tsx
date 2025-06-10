@@ -639,7 +639,9 @@ export default function LayoutManager(): React.ReactNode {
                 <div className="space-y-2">
                   <Label htmlFor="layout-type">레이아웃 타입</Label>
                   <Select
-                    value={String(editingWidget.display_options?.layout_type || "list")}
+                    value={String(
+                      editingWidget.display_options?.layout_type || "list"
+                    )}
                     onValueChange={(value) =>
                       setEditingWidget({
                         ...editingWidget,
@@ -744,11 +746,13 @@ export default function LayoutManager(): React.ReactNode {
           {editingWidget.type === "board" && (
             <div className="space-y-4 border rounded-md p-3 bg-gray-50">
               <h4 className="font-medium text-sm">게시판 설정</h4>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="board-item-count">표시할 게시물 개수</Label>
                 <Select
-                  value={String(editingWidget.display_options?.item_count || 10)}
+                  value={String(
+                    editingWidget.display_options?.item_count || 10
+                  )}
                   onValueChange={(value) =>
                     setEditingWidget({
                       ...editingWidget,
@@ -769,7 +773,7 @@ export default function LayoutManager(): React.ReactNode {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="board-page">콘텐츠 페이지 선택</Label>
                 <Select
@@ -799,15 +803,18 @@ export default function LayoutManager(): React.ReactNode {
                   선택한 페이지의 게시물이 게시판 위젯에 표시됩니다.
                 </p>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="board-layout">게시판 레이아웃 템플릿</Label>
                 <Select
-                  value={String(editingWidget.display_options?.layout_type || BOARD_TEMPLATE.CLASSIC)}
+                  value={String(
+                    editingWidget.display_options?.layout_type ||
+                      BOARD_TEMPLATE.CLASSIC
+                  )}
                   onValueChange={(value) => {
                     // 문자열을 숫자로 변환
                     const numericValue = parseInt(value, 10);
-                    
+
                     setEditingWidget({
                       ...editingWidget,
                       display_options: {
@@ -821,14 +828,23 @@ export default function LayoutManager(): React.ReactNode {
                     <SelectValue placeholder="템플릿 선택" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={String(BOARD_TEMPLATE.CLASSIC)}>클래식 - 기본 스타일</SelectItem>
-                    <SelectItem value={String(BOARD_TEMPLATE.COMPACT)}>컴팩트 - 간결한 목록형</SelectItem>
-                    <SelectItem value={String(BOARD_TEMPLATE.CARD)}>카드형 - 그리드 형태</SelectItem>
-                    <SelectItem value={String(BOARD_TEMPLATE.NOTICE)}>공지형</SelectItem>
+                    <SelectItem value={String(BOARD_TEMPLATE.CLASSIC)}>
+                      클래식 - 기본 스타일
+                    </SelectItem>
+                    <SelectItem value={String(BOARD_TEMPLATE.COMPACT)}>
+                      컴팩트 - 간결한 목록형
+                    </SelectItem>
+                    <SelectItem value={String(BOARD_TEMPLATE.CARD)}>
+                      카드형 - 그리드 형태
+                    </SelectItem>
+                    <SelectItem value={String(BOARD_TEMPLATE.NOTICE)}>
+                      공지형
+                    </SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-gray-500 mt-1">
-                  게시판의 표시 레이아웃을 선택합니다. 레이아웃에 따라 썸네일 및 내용 표시가 달라집니다.
+                  게시판의 표시 레이아웃을 선택합니다. 레이아웃에 따라 썸네일 및
+                  내용 표시가 달라집니다.
                 </p>
               </div>
 
@@ -855,9 +871,7 @@ export default function LayoutManager(): React.ReactNode {
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="show-date-board"
-                    checked={
-                      editingWidget.display_options?.show_date ?? true
-                    }
+                    checked={editingWidget.display_options?.show_date ?? true}
                     onCheckedChange={(checked) => {
                       setEditingWidget({
                         ...editingWidget,
@@ -1193,9 +1207,9 @@ export default function LayoutManager(): React.ReactNode {
         );
       case "board":
         return previewMode ? (
-          <BoardWidget 
-            widget={widget} 
-            page={pages.find((p) => p.id === widget.display_options?.page_id)} 
+          <BoardWidget
+            widget={widget}
+            page={pages.find((p) => p.id === widget.display_options?.page_id)}
           />
         ) : (
           <div className="bg-green-50 p-4 rounded">
@@ -1275,7 +1289,7 @@ export default function LayoutManager(): React.ReactNode {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">홈페이지 레이아웃 관리</h2>
       </div>
 

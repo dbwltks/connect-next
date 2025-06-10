@@ -30,6 +30,7 @@ export interface IBoardPost {
   author_id?: string;
   category_id?: string;
   view_count?: number;
+  description?: string;
   views?: number;
   likes_count?: number;
   page_id?: string;

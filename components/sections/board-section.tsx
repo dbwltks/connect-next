@@ -413,7 +413,8 @@ export default function BoardSection({
       // 1. 전체 게시글 수(count) 쿼리
       let countQuery = supabase
         .from("board_posts")
-        .select("*", { count: "exact", head: true });
+        .select("*", { count: "exact", head: true })
+        .eq("status", "published"); // 게시된 게시물만 카운트
       if (pageId) countQuery = countQuery.eq("page_id", pageId);
       if (categoryId) countQuery = countQuery.eq("category_id", categoryId);
 
@@ -442,9 +443,10 @@ export default function BoardSection({
           id, title, content, user_id, created_at, views, 
           category_id, page_id, is_notice, is_pinned,
           comment_count:board_comments(count),
-          thumbnail_image
+          thumbnail_image, status
         `
         )
+        .eq("status", "published") // 게시된 게시물만 표시
         .order("is_pinned", { ascending: false })
         .order("is_notice", { ascending: false })
         .order("created_at", { ascending: false })
