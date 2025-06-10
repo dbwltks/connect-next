@@ -32,10 +32,10 @@ export default function LocationWidget({
     <section
       id={id}
       className="w-full py-8 md:py-12 px-4"
-      style={{
-        backgroundColor:
-          widget?.display_options?.background_color || "transparent",
-      }}
+      // style={{
+      //   backgroundColor:
+      //     widget?.display_options?.background_color || "transparent",
+      // }}
     >
       <div className="container mx-auto">
         <div className="mb-6 md:mb-8">
@@ -81,18 +81,22 @@ export default function LocationWidget({
               <div className="p-6 bg-white h-full flex flex-col justify-between">
                 <div>
                   <h3 className="text-xl font-bold mb-4">연락처 정보</h3>
-                  
+
                   {/* 주소 정보 */}
                   <div className="mb-6">
                     <div className="flex items-start space-x-3">
-                      <MapPin className="text-gray-500 mt-1 flex-shrink-0" size={18} />
+                      <MapPin
+                        className="text-gray-500 mt-1 flex-shrink-0"
+                        size={18}
+                      />
                       <div>
                         <h4 className="font-medium text-gray-900 mb-1">주소</h4>
                         <p className="text-gray-600 whitespace-pre-line">
-                          {widget.display_options?.address || "주소 정보가 없습니다"}
+                          {widget.display_options?.address ||
+                            "주소 정보가 없습니다"}
                         </p>
                         {widget.display_options?.map_url && (
-                          <a 
+                          <a
                             href={widget.display_options.map_url}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -104,48 +108,62 @@ export default function LocationWidget({
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* 전화번호 정보 */}
                   <div className="mb-6">
                     <div className="flex items-start space-x-3">
-                      <Phone className="text-gray-500 mt-1 flex-shrink-0" size={18} />
+                      <Phone
+                        className="text-gray-500 mt-1 flex-shrink-0"
+                        size={18}
+                      />
                       <div>
-                        <h4 className="font-medium text-gray-900 mb-1">전화번호</h4>
+                        <h4 className="font-medium text-gray-900 mb-1">
+                          전화번호
+                        </h4>
                         {widget.display_options?.phone ? (
-                          <a 
+                          <a
                             href={`tel:${widget.display_options.phone}`}
                             className="text-gray-600 hover:text-blue-600"
                           >
                             {widget.display_options.phone}
                           </a>
                         ) : (
-                          <p className="text-gray-600">전화번호 정보가 없습니다</p>
+                          <p className="text-gray-600">
+                            전화번호 정보가 없습니다
+                          </p>
                         )}
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* 이메일 정보 */}
                   <div className="mb-6">
                     <div className="flex items-start space-x-3">
-                      <Mail className="text-gray-500 mt-1 flex-shrink-0" size={18} />
+                      <Mail
+                        className="text-gray-500 mt-1 flex-shrink-0"
+                        size={18}
+                      />
                       <div>
-                        <h4 className="font-medium text-gray-900 mb-1">이메일</h4>
+                        <h4 className="font-medium text-gray-900 mb-1">
+                          이메일
+                        </h4>
                         {widget.display_options?.email ? (
-                          <a 
+                          <a
                             href={`mailto:${widget.display_options.email}`}
                             className="text-gray-600 hover:text-blue-600"
                           >
                             {widget.display_options.email}
                           </a>
                         ) : (
-                          <p className="text-gray-600">이메일 정보가 없습니다</p>
+                          <p className="text-gray-600">
+                            이메일 정보가 없습니다
+                          </p>
                         )}
                       </div>
                     </div>
                   </div>
                 </div>
-                
+
                 {/* 추가 링크나 CTA 버튼 */}
                 {page?.slug && (
                   <div className="mt-4 pt-4 border-t border-gray-200">
