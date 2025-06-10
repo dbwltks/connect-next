@@ -272,7 +272,7 @@ export function MediaWidget({
               </p>
             </div>
 
-            <div className="grid lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
               {/* Featured Video */}
               <div className="lg:col-span-2">
                 {posts.length > 0 ? (
@@ -393,10 +393,13 @@ export function MediaWidget({
                   posts.slice(1).map((post, index) => (
                     <div
                       key={post.id}
-                      className="overflow-hidden border border-gray-200 hover:shadow-lg transition-all duration-500 transform hover:-translate-y-1 rounded-md"
+                      className="overflow-hidden border border-gray-200 hover:shadow-lg transition-all duration-500 transform hover:-translate-y-1 rounded-md w-full"
                     >
-                      <Link href={`${page?.slug}/${post.id}`} className="flex">
-                        <div className="relative w-28 h-20 flex-shrink-0">
+                      <Link
+                        href={`${page?.slug}/${post.id}`}
+                        className="flex flex-row w-full"
+                      >
+                        <div className="relative w-20 sm:w-28 h-16 sm:h-20 flex-shrink-0">
                           {post.thumbnail ? (
                             <img
                               src={post.thumbnail}
@@ -409,44 +412,45 @@ export function MediaWidget({
                           <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
-                              width="16"
-                              height="16"
+                              width="14"
+                              height="14"
+                              className="sm:w-4 sm:h-4 text-white"
                               viewBox="0 0 24 24"
                               fill="none"
                               stroke="currentColor"
                               strokeWidth="2"
                               strokeLinecap="round"
                               strokeLinejoin="round"
-                              className="text-white"
                             >
                               <polygon points="5 3 19 12 5 21 5 3"></polygon>
                             </svg>
                           </div>
                         </div>
-                        <div className="p-2 flex-1 w-full overflow-hidden">
+                        <div className="p-1.5 sm:p-2 flex-1 w-full overflow-hidden">
                           <div className="w-full overflow-hidden">
-                            <h4 className="font-medium text-sm mb-1 truncate block w-full">
+                            <h4 className="font-medium text-xs sm:text-sm mb-0.5 sm:mb-1 truncate block w-full">
                               {post.title}
                             </h4>
                           </div>
-                          <div className="flex flex-col space-y-1 text-xs text-gray-500">
-                            <div className="flex items-center space-x-2">
+                          <div className="flex flex-col sm:space-y-1 text-[10px] sm:text-xs text-gray-500">
+                            <div className="flex items-center space-x-1 sm:space-x-2">
                               <span
                                 className="truncate inline-block"
                                 style={{ maxWidth: "70px" }}
                               >
                                 {post.author || "익명"}
                               </span>
-                              <span>·</span>
-                              <span>
+                              <span className="text-[8px] sm:text-xs">·</span>
+                              <span className="text-[10px] sm:text-xs whitespace-nowrap">
                                 {new Date(post.created_at).toLocaleDateString()}
                               </span>
                             </div>
                             <div className="flex items-center">
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
-                                width="10"
-                                height="10"
+                                width="8"
+                                height="8"
+                                className="sm:w-[10px] sm:h-[10px]"
                                 viewBox="0 0 24 24"
                                 fill="none"
                                 stroke="currentColor"
@@ -457,8 +461,7 @@ export function MediaWidget({
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                                 <circle cx="12" cy="12" r="3"></circle>
                               </svg>
-                              <span className="ml-1">
-                                {" "}
+                              <span className="ml-1 text-[10px] sm:text-xs">
                                 {post.views || post.view_count || 0}
                               </span>
                             </div>

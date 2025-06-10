@@ -377,27 +377,27 @@ export default function HomepageWidgets({
     <div className="sm:container px-2 mx-auto py-2">
       <div className="grid grid-cols-12 gap-4">
         {sortedWidgets.map((widget) => {
-          // 위젯 너비에 따라 그리드 컬럼 수 결정
+          // 위젯 너비에 따라 그리드 컬럼 수 결정 (모바일에서는 한 줄에 하나씩)
           let colSpan;
           switch (widget.width) {
             case 3:
-              colSpan = "col-span-3";
-              break; // 25%
+              colSpan = "col-span-12 sm:col-span-6 md:col-span-3";
+              break; // 25% (모바일: 100%, 태블릿: 50%, 일반: 25%)
             case 4:
-              colSpan = "col-span-4";
-              break; // 33%
+              colSpan = "col-span-12 sm:col-span-6 md:col-span-4";
+              break; // 33% (모바일: 100%, 태블릿: 50%, 일반: 33%)
             case 6:
-              colSpan = "col-span-6";
-              break; // 50%
+              colSpan = "col-span-12 md:col-span-6";
+              break; // 50% (모바일: 100%, 일반: 50%)
             case 8:
-              colSpan = "col-span-8";
-              break; // 66%
+              colSpan = "col-span-12 md:col-span-8";
+              break; // 66% (모바일: 100%, 일반: 66%)
             case 9:
-              colSpan = "col-span-9";
-              break; // 75%
+              colSpan = "col-span-12 md:col-span-9";
+              break; // 75% (모바일: 100%, 일반: 75%)
             case 12:
               colSpan = "col-span-12";
-              break; // 100%
+              break; // 100% (모든 화면에서 100%)
             default:
               colSpan = "col-span-12"; // 기본값
           }

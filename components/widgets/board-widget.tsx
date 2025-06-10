@@ -3,7 +3,13 @@ import { IBoardPost, IPage, IWidget, IBoardWidgetOptions } from "@/types/index";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
-import { Calendar, MessageSquare, Clock, Eye, ChevronRight } from "lucide-react";
+import {
+  Calendar,
+  MessageSquare,
+  Clock,
+  Eye,
+  ChevronRight,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 // Supabase 클라이언트 초기화
@@ -28,7 +34,7 @@ export const BOARD_TEMPLATE = {
   CLASSIC: 1,
   COMPACT: 2,
   CARD: 3,
-  NOTICE: 4
+  NOTICE: 4,
 };
 
 // 템플릿별 기능 및 스타일 설명
@@ -51,38 +57,48 @@ const templateInfo = {
   },
 };
 
-export function BoardWidget({ widget, page, posts: initialPosts = [], isPreview = false }: BoardWidgetProps) {
+export function BoardWidget({
+  widget,
+  page,
+  posts: initialPosts = [],
+  isPreview = false,
+}: BoardWidgetProps) {
   const [posts, setPosts] = useState<IBoardPost[]>(initialPosts);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // 템플릿 번호 가져오기 (문자열 또는 숫자 처리)
   const getTemplateNumber = (template: string | number | undefined): number => {
     if (template === undefined) return BOARD_TEMPLATE.CLASSIC;
-    if (typeof template === 'number') return template;
-    
+    if (typeof template === "number") return template;
+
     // 이전 문자열 값 변환
-    switch(template) {
-      case "classic": return BOARD_TEMPLATE.CLASSIC;
-      case "compact": return BOARD_TEMPLATE.COMPACT;
-      case "card": return BOARD_TEMPLATE.CARD;
-      case "notice": return BOARD_TEMPLATE.NOTICE;
-      default: return BOARD_TEMPLATE.CLASSIC;
+    switch (template) {
+      case "classic":
+        return BOARD_TEMPLATE.CLASSIC;
+      case "compact":
+        return BOARD_TEMPLATE.COMPACT;
+      case "card":
+        return BOARD_TEMPLATE.CARD;
+      case "notice":
+        return BOARD_TEMPLATE.NOTICE;
+      default:
+        return BOARD_TEMPLATE.CLASSIC;
     }
   };
-  
+
   // 표시 옵션 정의
   const templateNumber = getTemplateNumber(widget.display_options?.layout_type);
   const showThumbnail = widget.display_options?.show_thumbnail ?? true;
   const showDate = widget.display_options?.show_date ?? true;
   const showExcerpt = widget.display_options?.show_excerpt ?? true;
-  
+
   // 게시판 데이터 로드 함수
   const loadBoardPosts = async (pageId: string) => {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       // 게시물 조회
       let query = supabase
         .from("board_posts")
@@ -93,16 +109,16 @@ export function BoardWidget({ widget, page, posts: initialPosts = [], isPreview 
 
       // 표시할 게시물 수 제한 (기본 10개)
       let limit = 10; // 기본값
-      
+
       // item_count가 문자열인 경우 숫자로 변환 (레이아웃 관리자에서 문자열로 저장하는 경우 처리)
       if (widget.display_options?.item_count) {
-        if (typeof widget.display_options.item_count === 'string') {
+        if (typeof widget.display_options.item_count === "string") {
           limit = parseInt(widget.display_options.item_count, 10) || 10;
         } else {
           limit = widget.display_options.item_count;
         }
       }
-      
+
       console.log("[게시판 위젯] 표시 개수:", limit);
       query = query.limit(limit);
 
@@ -172,7 +188,9 @@ export function BoardWidget({ widget, page, posts: initialPosts = [], isPreview 
     // 페이지 ID 없으면 로드하지 않음
     const pageId = page?.id || widget.display_options?.page_id;
     if (!pageId) {
-      console.log("[게시판 위젯] 페이지 ID가 없어 데이터를 로드할 수 없습니다.");
+      console.log(
+        "[게시판 위젯] 페이지 ID가 없어 데이터를 로드할 수 없습니다."
+      );
       return;
     }
 
@@ -184,7 +202,11 @@ export function BoardWidget({ widget, page, posts: initialPosts = [], isPreview 
   const renderByTemplate = () => {
     // 로딩 및 에러 상태 처리
     if (isLoading) {
-      return <div className="py-4 text-center text-gray-500">게시물을 불러오는 중...</div>;
+      return (
+        <div className="py-4 text-center text-gray-500">
+          게시물을 불러오는 중...
+        </div>
+      );
     }
 
     if (error) {
@@ -192,7 +214,11 @@ export function BoardWidget({ widget, page, posts: initialPosts = [], isPreview 
     }
 
     if (posts.length === 0) {
-      return <div className="py-4 text-center text-gray-500">등록된 게시물이 없습니다.</div>;
+      return (
+        <div className="py-4 text-center text-gray-500">
+          등록된 게시물이 없습니다.
+        </div>
+      );
     }
 
     switch (templateNumber) {
@@ -202,11 +228,15 @@ export function BoardWidget({ widget, page, posts: initialPosts = [], isPreview 
             {posts.map((post) => (
               <div key={post.id} className="py-2 border-b last:border-b-0">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-medium truncate flex-1">{post.title}</h4>
+                  <h4 className="text-sm font-medium truncate flex-1">
+                    {post.title}
+                  </h4>
                   {showDate && (
                     <div className="text-xs text-gray-500 flex items-center space-x-1 ml-2 flex-shrink-0">
                       <Clock size={12} />
-                      <span className="truncate max-w-[80px]">{new Date(post.created_at).toLocaleDateString()}</span>
+                      <span className="truncate max-w-[80px]">
+                        {new Date(post.created_at).toLocaleDateString()}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -219,7 +249,10 @@ export function BoardWidget({ widget, page, posts: initialPosts = [], isPreview 
         return (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {posts.map((post) => (
-              <div key={post.id} className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+              <div
+                key={post.id}
+                className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow"
+              >
                 {showThumbnail && post.thumbnail ? (
                   <div className="aspect-video w-full overflow-hidden">
                     <img
@@ -238,7 +271,9 @@ export function BoardWidget({ widget, page, posts: initialPosts = [], isPreview 
                   {showDate && (
                     <div className="flex items-center space-x-1 text-xs text-gray-500 mt-2">
                       <Calendar size={12} />
-                      <span className="truncate">{new Date(post.created_at).toLocaleDateString()}</span>
+                      <span className="truncate">
+                        {new Date(post.created_at).toLocaleDateString()}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -267,14 +302,22 @@ export function BoardWidget({ widget, page, posts: initialPosts = [], isPreview 
                 >
                   <div className="flex-1 min-w-0 mr-2">
                     <div className="flex items-center space-x-3 overflow-hidden">
-                      <h4 className="font-medium group-hover:text-blue-600 transition-colors truncate flex-1">{post.title}</h4>
+                      <h4 className="font-medium group-hover:text-blue-600 transition-colors truncate flex-1">
+                        {post.title}
+                      </h4>
                       {isNew && (
-                        <Badge className="bg-red-100 text-red-800 text-xs animate-pulse flex-shrink-0">NEW</Badge>
+                        <Badge className="bg-red-100 text-red-800 text-xs animate-pulse flex-shrink-0">
+                          NEW
+                        </Badge>
                       )}
                     </div>
                     <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500 overflow-hidden">
-                      <span className="truncate max-w-[80px]">{post.author}</span>
-                      <span className="truncate max-w-[90px]">{new Date(post.created_at).toLocaleDateString()}</span>
+                      <span className="truncate max-w-[80px]">
+                        {post.author}
+                      </span>
+                      <span className="truncate max-w-[90px]">
+                        {new Date(post.created_at).toLocaleDateString()}
+                      </span>
                       <div className="flex items-center space-x-1 flex-shrink-0">
                         <Eye className="w-3 h-3 flex-shrink-0" />
                         <span className="truncate">{post.view_count || 0}</span>
@@ -312,12 +355,16 @@ export function BoardWidget({ widget, page, posts: initialPosts = [], isPreview 
                   {showDate && (
                     <div className="text-xs text-gray-500 mt-1 mb-2 flex items-center space-x-1">
                       <Calendar size={12} className="flex-shrink-0" />
-                      <span className="truncate">{new Date(post.created_at).toLocaleDateString()}</span>
+                      <span className="truncate">
+                        {new Date(post.created_at).toLocaleDateString()}
+                      </span>
                     </div>
                   )}
                   {showExcerpt && (
                     <p className="text-sm text-gray-600 truncate">
-                      {post.content?.replace(/<[^>]*>/g, "").substring(0, 120) || ""}
+                      {post.content
+                        ?.replace(/<[^>]*>/g, "")
+                        .substring(0, 120) || ""}
                     </p>
                   )}
                 </div>
@@ -335,9 +382,12 @@ export function BoardWidget({ widget, page, posts: initialPosts = [], isPreview 
       </CardHeader>
       <CardContent>
         {renderByTemplate()}
-        
+
         <div className="mt-3 text-center">
-          <Link href={page?.slug || "/"} className="text-xs text-blue-600 hover:underline">
+          <Link
+            href={page?.slug || "/"}
+            className="w-full py-2 px-4 border border-gray-200 rounded-md hover:bg-blue-50 transition-colors text-sm flex items-center justify-center"
+          >
             더보기
           </Link>
         </div>
