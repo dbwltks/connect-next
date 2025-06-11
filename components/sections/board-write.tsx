@@ -570,8 +570,8 @@ export default function BoardWrite({
 
       // 파일 데이터 JSON화
       const filesJson = JSON.stringify(uploadedFiles);
-      
-      // saveBoardPost 함수 정확히 호출      
+
+      // saveBoardPost 함수 정확히 호출
       const result = await serviceSaveBoardPost({
         postId,
         isEditMode,
@@ -585,7 +585,7 @@ export default function BoardWrite({
         categoryId,
         status,
         number: nextNumber,
-        description: description.trim(),  // 상세 설명 추가
+        description: description.trim(), // 상세 설명 추가
       });
 
       console.log("[BoardWrite] serviceSaveBoardPost 결과:", result);
@@ -995,7 +995,7 @@ export default function BoardWrite({
           onSubmit={handleFormSubmit}
         >
           {/* 헤더 및 액션 버튼 영역 */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center px-4 py-4 sm:p-6 border-b border-gray-200 gap-4 sm:gap-0">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center px-2 py-4 sm:p-6 border-b border-gray-200 gap-4 sm:gap-0">
             <div>
               <h2 className="text-xl sm:text-2xl font-semibold text-gray-800">
                 {isEditMode ? "게시글 수정" : "새 게시글 작성"}
@@ -1144,7 +1144,7 @@ export default function BoardWrite({
                     disabled={loading}
                   />
                 </div>
-                
+
                 {/* 댓글 허용 카드 */}
                 <div className="border border-gray-200 rounded-md p-3 lg:p-4 bg-white">
                   <div className="flex items-center space-x-2">

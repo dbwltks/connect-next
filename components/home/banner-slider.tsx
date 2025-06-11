@@ -6,6 +6,7 @@ import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
 import type { Banner } from "./main-banner";
+import { useEffect } from "react";
 
 interface BannerSliderProps {
   banners: Banner[];
@@ -13,6 +14,64 @@ interface BannerSliderProps {
 
 export default function BannerSlider({ banners }: BannerSliderProps) {
   const HEADER_HEIGHT = 64; // px, 헤더 높이와 맞춰야 함
+  
+  // 커스텀 네비게이션 화살표 및 페이지네이션 스타일 적용
+  useEffect(() => {
+    // 스와이퍼 네비게이션 화살표와 페이지네이션 스타일 커스터마이징
+    const style = document.createElement('style');
+    style.innerHTML = `
+      /* 화살표 스타일 */
+      .swiper-button-next,
+      .swiper-button-prev {
+        background-color: rgba(255, 255, 255, 0.5);
+        color: rgba(0, 0, 0, 0.7);
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        transition: all 0.3s ease;
+      }
+      
+      .swiper-button-next:hover,
+      .swiper-button-prev:hover {
+        background-color: rgba(255, 255, 255, 0.8);
+        color: rgba(0, 0, 0, 0.9);
+      }
+      
+      .swiper-button-next:after,
+      .swiper-button-prev:after {
+        font-size: 18px;
+        font-weight: bold;
+      }
+      
+      /* 페이지네이션 점 스타일 */
+      .swiper-pagination-bullet {
+        width: 10px;
+        height: 10px;
+        background-color: rgba(255, 255, 255, 0.5);
+        opacity: 1;
+        margin: 0 6px;
+        transition: all 0.3s ease;
+      }
+      
+      .swiper-pagination-bullet-active {
+        background-color: rgba(255, 255, 255, 0.9);
+        width: 12px;
+        height: 12px;
+      }
+      
+      .swiper-pagination {
+        bottom: 20px !important;
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
 
   // 화면 전체 높이 계산 (헤더 높이 고려)
   const getFullscreenHeight = () => {

@@ -82,11 +82,173 @@ interface User {
 }
 
 export default function BoardDetail() {
+  // 글꼴 설정 메뉴 렌더링 함수
+  const renderFontSettingsMenu = (position: string = 'bottom-full', additionalClasses: string = '') => {
+    return (
+      <div
+        ref={moreMenuRef}
+        className={`absolute ${position} right-0 mb-2 w-60 bg-white rounded-lg shadow-lg border border-gray-200 z-50 ${additionalClasses}`}
+      >
+        <div className="py-1">
+          <div className="px-3 py-2 text-xs font-semibold text-gray-800 border-b">
+            글꼴 크기 조절
+          </div>
+          <div className="flex items-center justify-between p-3">
+            <button
+              onClick={decreaseFontSize}
+              className="p-1 text-gray-700 hover:bg-gray-100 rounded-full"
+              disabled={fontSizeLevel <= -2}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="8" y1="12" x2="16" y2="12"></line>
+              </svg>
+            </button>
+
+            <button
+              onClick={resetFontSize}
+              className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded mx-1"
+            >
+              기본
+            </button>
+
+            <button
+              onClick={increaseFontSize}
+              className="p-1 text-gray-700 hover:bg-gray-100 rounded-full"
+              disabled={fontSizeLevel >= 2}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="16"></line>
+                <line x1="8" y1="12" x2="16" y2="12"></line>
+              </svg>
+            </button>
+          </div>
+
+          <div className="px-3 py-2 text-xs font-semibold text-gray-800 border-b border-t">
+            글꼴 굵기 조절
+          </div>
+          <div className="flex items-center justify-between p-3">
+            <button
+              onClick={decreaseFontBold}
+              className="p-1 text-gray-700 hover:bg-gray-100 rounded-full"
+              disabled={fontBoldLevel <= -1}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="8" y1="12" x2="16" y2="12"></line>
+              </svg>
+            </button>
+
+            <button
+              onClick={resetFontBold}
+              className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded mx-1"
+            >
+              기본
+            </button>
+
+            <button
+              onClick={increaseFontBold}
+              className="p-1 text-gray-700 hover:bg-gray-100 rounded-full"
+              disabled={fontBoldLevel >= 3}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="16"></line>
+                <line x1="8" y1="12" x2="16" y2="12"></line>
+              </svg>
+            </button>
+          </div>
+
+          <div className="px-3 py-2 text-xs font-semibold text-gray-800 border-b border-t">
+            글꼴 변경
+          </div>
+          <div className="p-3 space-y-2">
+            <div className="flex flex-col space-y-1">
+              <button
+                onClick={(e) => changeFontFamily("default", e)}
+                className={`text-left px-2 py-1 text-sm rounded ${fontFamily === "default" ? "bg-blue-100 text-blue-700" : "hover:bg-gray-100"}`}
+              >
+                기본 글꼴
+              </button>
+              <button
+                onClick={(e) => changeFontFamily("notoSans", e)}
+                className={`text-left px-2 py-1 text-sm rounded font-noto-sans ${fontFamily === "notoSans" ? "bg-blue-100 text-blue-700" : "hover:bg-gray-100"}`}
+              >
+                노토 산스
+              </button>
+              <button
+                onClick={(e) => changeFontFamily("nanumGothic", e)}
+                className={`text-left px-2 py-1 text-sm rounded font-nanum-gothic ${fontFamily === "nanumGothic" ? "bg-blue-100 text-blue-700" : "hover:bg-gray-100"}`}
+              >
+                나눔고딕
+              </button>
+              <button
+                onClick={(e) => changeFontFamily("nanumMyeongjo", e)}
+                className={`text-left px-2 py-1 text-sm rounded font-nanum-myeongjo ${fontFamily === "nanumMyeongjo" ? "bg-blue-100 text-blue-700" : "hover:bg-gray-100"}`}
+              >
+                나눔명조
+              </button>
+              <button
+                onClick={(e) => changeFontFamily("spoqa", e)}
+                className={`text-left px-2 py-1 text-sm rounded font-spoqa ${fontFamily === "spoqa" ? "bg-blue-100 text-blue-700" : "hover:bg-gray-100"}`}
+              >
+                스포카한산스
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
   const router = useRouter();
   const pathname = usePathname();
   const params = useParams();
   const [post, setPost] = useState<BoardPost | null>(null);
-  const [authorInfo, setAuthorInfo] = useState<{ username: string; avatar_url: string | null } | null>(null);
+  const [authorInfo, setAuthorInfo] = useState<{
+    username: string;
+    avatar_url: string | null;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // 수정 상태 관리
@@ -122,6 +284,8 @@ export default function BoardDetail() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showFontMenu, setShowFontMenu] = useState(false);
+  // 모바일 글꼴 설정 메뉴 표시 상태
+  const [showMobileFontMenu, setShowMobileFontMenu] = useState(false);
   // user 상태 추가
   const [user, setUser] = useState<any>(null);
   // 작성자 여부 상태 추가
@@ -176,26 +340,39 @@ export default function BoardDetail() {
     setFontFamily(settings.family);
   }, []);
 
-  // 더보기 메뉴 외부 클릭 감지
+  // 더보기 메뉴 및 모바일 글꼴 메뉴 외부 클릭 감지
   useEffect(() => {
     // 클릭 이벤트 핸들러 함수
     const handleClickOutside = (e: MouseEvent) => {
-      if (
-        moreMenuRef.current &&
-        !moreMenuRef.current.contains(e.target as Node)
-      ) {
+      const target = e.target as HTMLElement;
+      
+      // 메뉴 내부 클릭은 무시 (메뉴 내부 버튼 클릭을 허용하기 위함)
+      if (moreMenuRef.current && moreMenuRef.current.contains(target)) {
+        return;
+      }
+      
+      // 글꼴 버튼 클릭은 무시 (토글 기능을 위해)
+      const isFontButton = target.closest('.relative button[class*="flex flex-col items-center"]');
+      
+      // 더보기 메뉴 닫기 (버튼 클릭이 아닌 경우만)
+      if (showMoreMenu && !isFontButton) {
         setShowMoreMenu(false);
+      }
+      
+      // 모바일 글꼴 설정 메뉴 닫기 (버튼 클릭이 아닌 경우만)
+      if (showMobileFontMenu && !isFontButton) {
+        setShowMobileFontMenu(false);
       }
     };
 
-    // 이벤트 리스너 등록
+    // 클릭 이벤트 리스너 추가
     document.addEventListener("mousedown", handleClickOutside);
 
     // 컴포넌트 언마운트 시 이벤트 리스너 제거
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [moreMenuRef]);
+  }, [showMoreMenu, showMobileFontMenu]);
 
   // 토스트 표시 함수
   const showToast = (args: {
@@ -867,10 +1044,15 @@ export default function BoardDetail() {
   // 더보기 메뉴와 모바일 메뉴는 버튼 클릭으로만 토글
 
   // 글꼴 크기 증가 함수
-  const increaseFontSize = () => {
-    const newSize = Math.min(fontSizeLevel + 1, 2);
-    setFontSizeLevel(newSize);
-    saveFontSettings(newSize, fontBoldLevel, fontFamily);
+  const increaseFontSize = (e?: React.MouseEvent) => {
+    // 클릭 이벤트의 기본 동작 방지
+    if (e) e.preventDefault();
+    
+    if (fontSizeLevel < 2) {
+      const newSize = fontSizeLevel + 1;
+      setFontSizeLevel(newSize);
+      saveFontSettings(newSize, fontBoldLevel, fontFamily);
+    }
   };
 
   // 글꼴 크기 감소 함수
@@ -881,10 +1063,15 @@ export default function BoardDetail() {
   };
 
   // 글꼴 굵기 증가 함수
-  const increaseFontBold = () => {
-    const newBold = Math.min(fontBoldLevel + 1, 3);
-    setFontBoldLevel(newBold);
-    saveFontSettings(fontSizeLevel, newBold, fontFamily);
+  const increaseFontBold = (e?: React.MouseEvent) => {
+    // 클릭 이벤트의 기본 동작 방지
+    if (e) e.preventDefault();
+    
+    if (fontBoldLevel < 3) {
+      const newBold = fontBoldLevel + 1;
+      setFontBoldLevel(newBold);
+      saveFontSettings(fontSizeLevel, newBold, fontFamily);
+    }
   };
 
   // 글꼴 굵기 감소 함수
@@ -894,22 +1081,31 @@ export default function BoardDetail() {
     saveFontSettings(fontSizeLevel, newBold, fontFamily);
   };
 
-  // 글꼴 굵기 초기화
-  const resetFontBold = () => {
+  // 글꼴 굵기 초기화 함수
+  const resetFontBold = (e?: React.MouseEvent) => {
+    // 클릭 이벤트의 기본 동작 방지
+    if (e) e.preventDefault();
+    
     setFontBoldLevel(0);
     saveFontSettings(fontSizeLevel, 0, fontFamily);
   };
 
   // 글꼴 크기 초기화 함수
-  const resetFontSize = () => {
+  const resetFontSize = (e?: React.MouseEvent) => {
+    // 클릭 이벤트의 기본 동작 방지
+    if (e) e.preventDefault();
+    
     setFontSizeLevel(0);
     saveFontSettings(0, fontBoldLevel, fontFamily);
   };
 
   // 글꼴 변경 함수
-  const changeFontFamily = (font: string) => {
-    setFontFamily(font);
-    saveFontSettings(fontSizeLevel, fontBoldLevel, font);
+  const changeFontFamily = (family: string, e?: React.MouseEvent) => {
+    // 클릭 이벤트의 기본 동작 방지
+    if (e) e.preventDefault();
+    
+    setFontFamily(family);
+    saveFontSettings(fontSizeLevel, fontBoldLevel, family);
   };
 
   // 글꼴 초기화 함수
@@ -1216,11 +1412,15 @@ export default function BoardDetail() {
                   alt={authorInfo?.username}
                 />
                 <AvatarFallback>
-                  {authorInfo?.username ? authorInfo.username.substring(0, 2).toUpperCase() : "UN"}
+                  {authorInfo?.username
+                    ? authorInfo.username.substring(0, 2).toUpperCase()
+                    : "UN"}
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col">
-                <span className="text-sm font-medium">{authorInfo?.username || "익명"}</span>
+                <span className="text-sm font-medium">
+                  {authorInfo?.username || "익명"}
+                </span>
                 <div className="flex text-xs text-gray-500">
                   <span>{formatDate(post.created_at)}</span>
                   <span className="mx-2">·</span>
@@ -1277,170 +1477,18 @@ export default function BoardDetail() {
               </button>
               {/* 더보기 버튼 */}
               <div className="relative">
-              <button
-                type="button"
-                className="flex items-center gap-1 px-2 py-1 text-gray-600 hover:bg-gray-100 rounded text-sm"
-                title="더보기"
-                  onClick={() => setShowMoreMenu(!showMoreMenu)}
-              >
-                <span className="text-xl">…</span>
-              </button>
-                {showMoreMenu && (
-                  <div
-                    ref={moreMenuRef}
-                    className="absolute right-0 mt-2 w-40 bg-white border rounded-lg shadow-lg z-50"
-                  >
-                    <div className="py-1">
-                      <div className="px-3 py-2 text-xs font-semibold text-gray-800 border-b">
-                        글꼴 크기 조절
-                      </div>
-                      <div className="flex items-center justify-between p-3">
-                        <button
-                          onClick={decreaseFontSize}
-                          className="p-1 text-gray-700 hover:bg-gray-100 rounded-full"
-                          disabled={fontSizeLevel <= -2}
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="8" y1="12" x2="16" y2="12"></line>
-                          </svg>
-                        </button>
-
-                        <button
-                          onClick={resetFontSize}
-                          className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded mx-1"
-                        >
-                          기본
-                        </button>
-
-                        <button
-                          onClick={increaseFontSize}
-                          className="p-1 text-gray-700 hover:bg-gray-100 rounded-full"
-                          disabled={fontSizeLevel >= 2}
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="12" y1="8" x2="12" y2="16"></line>
-                            <line x1="8" y1="12" x2="16" y2="12"></line>
-                          </svg>
-                        </button>
-                      </div>
-
-                      <div className="px-3 py-2 text-xs font-semibold text-gray-800 border-b border-t">
-                        글꼴 굵기 조절
-                      </div>
-                      <div className="flex items-center justify-between p-3">
-                        <button
-                          onClick={decreaseFontBold}
-                          className="p-1 text-gray-700 hover:bg-gray-100 rounded-full"
-                          disabled={fontBoldLevel <= -1}
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="8" y1="12" x2="16" y2="12"></line>
-                          </svg>
-                        </button>
-
-                        <button
-                          onClick={resetFontBold}
-                          className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded mx-1"
-                        >
-                          기본
-                        </button>
-
-                        <button
-                          onClick={increaseFontBold}
-                          className="p-1 text-gray-700 hover:bg-gray-100 rounded-full"
-                          disabled={fontBoldLevel >= 3}
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="12" y1="8" x2="12" y2="16"></line>
-                            <line x1="8" y1="12" x2="16" y2="12"></line>
-                          </svg>
-                        </button>
-                      </div>
-
-                      <div className="px-3 py-2 text-xs font-semibold text-gray-800 border-b border-t">
-                        글꼴 변경
-                      </div>
-                      <div className="p-3 space-y-2">
-                        <div className="flex flex-col space-y-1">
-                          <button
-                            onClick={() => changeFontFamily("default")}
-                            className={`text-left px-2 py-1 text-sm rounded ${fontFamily === "default" ? "bg-blue-100 text-blue-700" : "hover:bg-gray-100"}`}
-                          >
-                            기본 글꼴
-                          </button>
-                          <button
-                            onClick={() => changeFontFamily("notoSans")}
-                            className={`text-left px-2 py-1 text-sm rounded font-noto-sans ${fontFamily === "notoSans" ? "bg-blue-100 text-blue-700" : "hover:bg-gray-100"}`}
-                          >
-                            노토 산스
-                          </button>
-                          <button
-                            onClick={() => changeFontFamily("nanumGothic")}
-                            className={`text-left px-2 py-1 text-sm rounded font-nanum-gothic ${fontFamily === "nanumGothic" ? "bg-blue-100 text-blue-700" : "hover:bg-gray-100"}`}
-                          >
-                            나눔고딕
-                          </button>
-                          <button
-                            onClick={() => changeFontFamily("nanumMyeongjo")}
-                            className={`text-left px-2 py-1 text-sm rounded font-nanum-myeongjo ${fontFamily === "nanumMyeongjo" ? "bg-blue-100 text-blue-700" : "hover:bg-gray-100"}`}
-                          >
-                            나눔명조
-                          </button>
-                          <button
-                            onClick={() => changeFontFamily("spoqa")}
-                            className={`text-left px-2 py-1 text-sm rounded font-spoqa ${fontFamily === "spoqa" ? "bg-blue-100 text-blue-700" : "hover:bg-gray-100"}`}
-                          >
-                            스포카한산스
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                <button
+                  type="button"
+                  className="flex items-center gap-1 px-2 py-1 text-gray-600 hover:bg-gray-100 rounded text-sm"
+                  title="더보기"
+                  onClick={() => {
+                    setShowMoreMenu(!showMoreMenu);
+                    setMenuSource("more");
+                  }}
+                >
+                  <span className="text-xl">…</span>
+                </button>
+                {showMoreMenu && menuSource === "more" && renderFontSettingsMenu("bottom-full sm:bottom-auto", "sm:w-40 sm:right-0 sm:mt-2")}
               </div>
             </div>
           </div>
@@ -1504,10 +1552,67 @@ export default function BoardDetail() {
             .board-content img {
               max-width: 100%;
               height: auto;
-              margin: 1rem auto;
-              border-radius: 0.375rem;
-              display: block;
+              margin: 1rem 0;
             }
+            .board-content iframe {
+              max-width: 100%;
+              margin: 1rem 0;
+            }
+
+            /* 글꼴 크기 설정 */
+            .font-size--2 {
+              font-size: 0.75rem !important;
+            }
+            .font-size--1 {
+              font-size: 0.875rem !important;
+            }
+            .font-size-0 {
+              font-size: 1rem !important;
+            }
+            .font-size-1 {
+              font-size: 1.125rem !important;
+            }
+            .font-size-2 {
+              font-size: 1.25rem !important;
+            }
+
+            /* 글꼴 굵기 설정 */
+            .font-bold--1 {
+              font-weight: 300 !important;
+            }
+            .font-bold-0 {
+              font-weight: 400 !important;
+            }
+            .font-bold-1 {
+              font-weight: 500 !important;
+            }
+            .font-bold-2 {
+              font-weight: 600 !important;
+            }
+            .font-bold-3 {
+              font-weight: 700 !important;
+            }
+
+            /* 글꼴 패밀리 설정 */
+            .font-family-default {
+              font-family:
+                system-ui,
+                -apple-system,
+                sans-serif !important;
+            }
+            .font-family-notoSans {
+              font-family: "Noto Sans KR", sans-serif !important;
+            }
+            .font-family-nanumGothic {
+              font-family: "Nanum Gothic", sans-serif !important;
+            }
+            .font-family-nanumMyeongjo {
+              font-family: "Nanum Myeongjo", serif !important;
+            }
+            .font-family-spoqa {
+              font-family: "Spoqa Han Sans", sans-serif !important;
+            }
+
             .board-content p {
               margin-bottom: 1rem;
               line-height: 1.6;
@@ -1610,7 +1715,7 @@ export default function BoardDetail() {
           {/* 버튼들은 CardContent로 이동했습니다 */}
         </CardFooter>
 
-        <div className="px-2 sm:px-6 pt-3 sm:pt-4 pb-4 sm:pb-6 border-t border-gray-100">
+        <div className="px-4 sm:px-6 pt-3 sm:pt-4 pb-4 sm:pb-6 border-t border-gray-100">
           <div id="comments-section">
             <BoardComments
               postId={post.id}
@@ -1632,8 +1737,39 @@ export default function BoardDetail() {
             <span>목록으로</span>
           </Button>
 
-          {/* 오른쪽: 좋아요, 댓글, 더보기 버튼 */}
+          {/* 오른쪽: 글꼴 설정, 좋아요, 댓글, 더보기 버튼 */}
           <div className="flex items-center gap-4">
+            {/* 글꼴 설정 버튼 */}
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setShowMobileFontMenu(!showMobileFontMenu);
+                }}
+                className="flex flex-col items-center"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-5 w-5 text-gray-600"
+                >
+                  <polyline points="4 7 4 4 20 4 20 7"></polyline>
+                  <line x1="9" y1="20" x2="15" y2="20"></line>
+                  <line x1="12" y1="4" x2="12" y2="20"></line>
+                </svg>
+                <span className="text-xs mt-0.5">글꼴</span>
+              </button>
+
+              {/* 모바일 글꼴 설정 메뉴 */}
+              {showMobileFontMenu && renderFontSettingsMenu("bottom-full", "border border-gray-200")}
+            </div>
+
             {/* 좋아요 버튼 */}
             <button
               onClick={toggleLike}

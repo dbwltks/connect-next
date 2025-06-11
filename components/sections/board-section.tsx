@@ -1268,7 +1268,7 @@ export default function BoardSection({
       </div>
 
       {/* 검색 폼 */}
-      <div className="mt-6 mb-8 px-2">
+      <div className="flex mt-6 mb-8 px-2">
         <form onSubmit={handleSearch} className="flex gap-2 max-w-2xl mx-auto">
           <select
             value={searchType}
