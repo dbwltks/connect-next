@@ -66,6 +66,15 @@ export default function RegisterPage() {
         .eq("username", formData.username)
         .single();
       if (existUser) throw new Error("이미 사용 중인 아이디입니다");
+      
+      // 이메일 중복 체크
+      const { data: existEmail, error: existEmailError } = await supabase
+        .from("users")
+        .select("id")
+        .eq("email", formData.email)
+        .single();
+      if (existEmail) throw new Error("이미 사용 중인 이메일입니다");
+      
       // Supabase Auth 회원가입
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
@@ -98,7 +107,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen w-full py-12 md:py-24 lg:py-32 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900/30 px-4 sm:px-6">
+    <div className="w-full py-8 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900/30 px-4 sm:px-6 relative ">
       <div className="mx-auto w-full max-w-[450px] bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 sm:p-8 md:p-10">
         <div className="mb-2">
           <Link

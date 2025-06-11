@@ -35,7 +35,7 @@ export default async function RootLayout({
   const supabase = await createClient();
 
   // 헤더/푸터 데이터 동시 패칭
-  const [menuRes, userRes, footerMenusRes, footerSettingsRes] =
+  const [menuRes, userRes, footerSettingsRes] =
     await Promise.all([
       supabase
         .from("cms_menus")
@@ -43,18 +43,12 @@ export default async function RootLayout({
         .eq("is_active", true)
         .order("order_num", { ascending: true }),
       supabase.auth.getUser(),
-      supabase
-        .from("cms_menus")
-        .select("*")
-        .eq("is_active", true)
-        .order("order_num", { ascending: true }),
       supabase.from("cms_footer").select("*").limit(1).single(),
     ]);
 
   const menuItemsRaw = menuRes.data || [];
   const menuItems = buildMenuTree(menuItemsRaw);
   const user = userRes.data?.user || null;
-  const footerMenus = footerMenusRes.data || [];
   const footerSettings = footerSettingsRes.data || null;
 
   return (
@@ -67,7 +61,7 @@ export default async function RootLayout({
         <ClientLayout
           menuItems={menuItems}
           user={user}
-          footerMenus={footerMenus}
+          footerMenus={menuItemsRaw}
           footerSettings={footerSettings}
         >
           {children}

@@ -30,17 +30,8 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL("/", request.url));
     }
 
-    // 마이페이지 보호 - 세션이 없는 경우에만 리디렉션
-    if (path.startsWith("/mypage") && !session) {
-      console.log("Middleware - Unauthenticated user accessing mypage, redirecting to login");
-      return NextResponse.redirect(new URL("/login", request.url));
-    }
-
-    // 세션이 있으면 마이페이지 접근 허용
-    if (path.startsWith("/mypage") && session) {
-      console.log("Middleware - Authenticated user accessing mypage, allowing access");
-      return res;
-    }
+    // 마이페이지 보호 로직은 페이지 레이아웃으로 이동
+    // 사용자 경험 개선을 위해 클라이언트 사이드에서 처리
 
     // 관리자 페이지는 임시로 보호 제외
     console.log("Middleware - Allowing access to path:", path);
@@ -56,7 +47,7 @@ export const config = {
   matcher: [
     // 관리자 페이지는 임시로 제외
     // '/admin/:path*',
-    '/mypage/:path*',
+    // '/mypage/:path*',
     '/login',
     '/register'
   ],

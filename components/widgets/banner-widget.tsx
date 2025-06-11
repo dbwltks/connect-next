@@ -6,10 +6,9 @@ interface BannerWidgetProps {
     display_options?: IBannerWidgetOptions;
   };
   page?: IPage;
-  isPreview?: boolean;
 }
 
-export function BannerWidget({ widget, page, isPreview = false }: BannerWidgetProps) {
+export function BannerWidget({ widget, page }: BannerWidgetProps) {
   return (
     <Card className="h-full overflow-hidden">
       <CardContent className="p-0">

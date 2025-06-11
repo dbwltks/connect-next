@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +25,7 @@ import {
   Moon,
   Laptop,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+
 import { createPortal } from "react-dom";
 import { supabase } from "@/db";
 import Image from "next/image";
@@ -169,19 +170,18 @@ const hamburgerPlusStyles = `
 `;
 
 export default function Header({ menuItems }: { menuItems: any[] }) {
-  const { user } = useAuth();
-
+  // React.memo로 감싸진 HeaderClient 컴포넌트를 사용하여 불필요한 리렌더링 방지
   return (
     <header className="sticky top-0 z-[9] w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
-        <HeaderClient user={user} menuItems={menuItems} />
+        <HeaderClientMemo menuItems={menuItems} />
       </div>
     </header>
   );
 }
 
-function HeaderClient({ user, menuItems }: { user: any; menuItems: any[] }) {
-  const { handleLogout } = useAuth();
+function HeaderClient({ menuItems }: { menuItems: any[] }) {
+  const { user, handleLogout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [animationClass, setAnimationClass] = useState("");
   const { theme, setTheme } = useTheme();
@@ -575,6 +575,12 @@ function HeaderClient({ user, menuItems }: { user: any; menuItems: any[] }) {
 }
 
 // 사용자 메뉴 컴포넌트
+// React.memo로 감싸서 불필요한 리렌더링 방지
+const HeaderClientMemo = React.memo(HeaderClient, (prevProps, nextProps) => {
+  // menuItems가 동일한 참조일 경우에만 리렌더링 방지
+  return prevProps.menuItems === nextProps.menuItems;
+});
+
 function UserMenu({ user, onLogout }: { user: any; onLogout: () => void }) {
   return (
     <DropdownMenu>

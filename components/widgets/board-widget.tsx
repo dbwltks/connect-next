@@ -23,7 +23,7 @@ interface BoardWidgetProps {
   };
   page?: IPage;
   posts?: IBoardPost[];
-  isPreview?: boolean;
+
 }
 
 // 게시판 템플릿 타입 정의
@@ -61,11 +61,58 @@ export function BoardWidget({
   widget,
   page,
   posts: initialPosts = [],
-  isPreview = false,
+
 }: BoardWidgetProps) {
   const [posts, setPosts] = useState<IBoardPost[]>(initialPosts);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // 캐시 키 생성 - 위젯 ID와 페이지 ID 기반
+  const getCacheKey = (widgetId: string, pageId: string) => {
+    return `board_widget_${widgetId}_${pageId}`;
+  };
+
+  // 로컬 스토리지에서 게시판 데이터 가져오기
+  const getLocalBoardPosts = (widgetId: string, pageId: string) => {
+    if (typeof window === 'undefined') return null;
+    
+    try {
+      const cacheKey = getCacheKey(widgetId, pageId);
+      const cachedData = localStorage.getItem(cacheKey);
+      if (!cachedData) return null;
+      
+      const { posts: cachedPosts, timestamp } = JSON.parse(cachedData);
+      
+      // 캐시 유효시간 확인 (10분)
+      const isExpired = Date.now() - timestamp > 10 * 60 * 1000;
+      
+      if (isExpired) {
+        return null; // 캐시 만료되었으면 null 반환
+      }
+      
+      return cachedPosts;
+    } catch (err) {
+      console.error('캐시된 게시판 데이터 불러오기 오류:', err);
+      return null;
+    }
+  };
+  
+  // 로컬 스토리지에 게시판 데이터 저장
+  const saveLocalBoardPosts = (widgetId: string, pageId: string, postsData: IBoardPost[]) => {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      const cacheKey = getCacheKey(widgetId, pageId);
+      const dataToCache = {
+        posts: postsData,
+        timestamp: Date.now()
+      };
+      
+      localStorage.setItem(cacheKey, JSON.stringify(dataToCache));
+    } catch (err) {
+      console.error('게시판 데이터 캐싱 오류:', err);
+    }
+  };
 
   // 템플릿 번호 가져오기 (문자열 또는 숫자 처리)
   const getTemplateNumber = (template: string | number | undefined): number => {
@@ -93,10 +140,28 @@ export function BoardWidget({
   const showDate = widget.display_options?.show_date ?? true;
   const showExcerpt = widget.display_options?.show_excerpt ?? true;
 
-  // 게시판 데이터 로드 함수
-  const loadBoardPosts = async (pageId: string) => {
+  // 게시판 데이터 로드 함수 (캐시 사용 여부 지정 가능)
+  const loadBoardPosts = async (pageId: string, skipCache = false) => {
+    if (!pageId || !widget.id) {
+      setError("페이지 ID가 없어 데이터를 로드할 수 없습니다.");
+      return;
+    }
+    
     try {
-      setIsLoading(true);
+      // 캐시 사용 여부 확인
+      if (!skipCache) {
+        const cachedPosts = getLocalBoardPosts(widget.id, pageId);
+        if (cachedPosts) {
+          setPosts(cachedPosts);
+          // 백그라운드에서 데이터 갱신 (사용자에게 로딩 표시 없이)
+          setTimeout(() => loadBoardPosts(pageId, true), 100);
+          return;
+        }
+      }
+      
+      if (!skipCache) {
+        setIsLoading(true);
+      }
       setError(null);
 
       // 게시물 조회
@@ -126,77 +191,53 @@ export function BoardWidget({
 
       if (error) {
         console.error("[게시판 위젯] 데이터 조회 오류:", error);
-        setError("데이터를 가져오는 중 오류가 발생했습니다.");
+        if (!skipCache) {
+          setError("데이터를 가져오는 중 오류가 발생했습니다.");
+        }
         return;
       }
 
       if (data && data.length > 0) {
-        // 게시물 처리
-        const processedPosts = [];
-
-        for (const post of data) {
-          let authorName = "익명";
-
-          if (post.user_id) {
-            // 사용자 정보와 프로필 정보 함께 가져오기
-            const { data: userInfo } = await supabase
-              .from("users")
-              .select("email")
-              .eq("id", post.user_id)
-              .single();
-
-            const { data: profile } = await supabase
-              .from("profiles")
-              .select("username, full_name")
-              .eq("id", post.user_id)
-              .single();
-
-            authorName =
-              profile?.username ||
-              (userInfo?.email ? userInfo.email.split("@")[0] : null) ||
-              profile?.full_name ||
-              "익명";
-          }
-
-          processedPosts.push({
-            ...post,
-            thumbnail: post.thumbnail_image, // 실제 DB에는 thumbnail_image 필드로 저장
-            author: post.author || authorName,
-          });
-        }
-
-        console.log("[게시판 위젯] 처리된 데이터:", processedPosts);
-        setPosts(processedPosts as IBoardPost[]);
+        setPosts(data as IBoardPost[]);
+        // 캐시에 데이터 저장
+        saveLocalBoardPosts(widget.id, pageId, data as IBoardPost[]);
       } else {
         setPosts([]);
+        // 빈 배열도 캐싱 (서버에 데이터가 없다는 사실도 캐싱 가치가 있음)
+        saveLocalBoardPosts(widget.id, pageId, []);
       }
-    } catch (err: any) {
-      console.error("[게시판 위젯] 오류:", err);
-      setError("데이터를 가져오는 중 오류가 발생했습니다.");
+    } catch (err) {
+      console.error("[게시판 위젯] 데이터 로드 오류:", err);
+      if (!skipCache) {
+        setError("데이터를 가져오는 중 오류가 발생했습니다.");
+      }
     } finally {
-      setIsLoading(false);
+      if (!skipCache) {
+        setIsLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    // 초기 데이터가 있으면 로드하지 않음
-    if (initialPosts.length > 0) {
+    // 초기 데이터가 있으면 사용
+    if (initialPosts && initialPosts.length > 0) {
       setPosts(initialPosts);
+      
+      // 초기 데이터도 캐싱
+      const pageId = page?.id || widget.display_options?.page_id;
+      if (pageId && widget.id) {
+        saveLocalBoardPosts(widget.id, pageId, initialPosts);
+      }
       return;
     }
 
-    // 페이지 ID 없으면 로드하지 않음
+    // 페이지 ID가 있으면 데이터 로드
     const pageId = page?.id || widget.display_options?.page_id;
-    if (!pageId) {
-      console.log(
-        "[게시판 위젯] 페이지 ID가 없어 데이터를 로드할 수 없습니다."
-      );
-      return;
+    if (pageId) {
+      loadBoardPosts(pageId);
     }
+  }, [page?.id, widget.id, widget.display_options?.page_id, initialPosts]);
 
-    // 데이터 로드
-    loadBoardPosts(pageId);
-  }, [page?.id, widget.display_options?.page_id, initialPosts.length]);
 
   // 템플릿별 렌더링 함수
   const renderByTemplate = () => {
@@ -253,10 +294,10 @@ export function BoardWidget({
                 key={post.id}
                 className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow"
               >
-                {showThumbnail && post.thumbnail ? (
+                {showThumbnail && post.thumbnail_image ? (
                   <div className="aspect-video w-full overflow-hidden">
                     <img
-                      src={post.thumbnail}
+                      src={post.thumbnail_image}
                       alt={post.title}
                       className="w-full h-full object-cover"
                     />
@@ -320,7 +361,7 @@ export function BoardWidget({
                       </span>
                       <div className="flex items-center space-x-1 flex-shrink-0">
                         <Eye className="w-3 h-3 flex-shrink-0" />
-                        <span className="truncate">{post.view_count || 0}</span>
+                        <span className="truncate">{post.views || 0}</span>
                       </div>
                     </div>
                   </div>
@@ -337,10 +378,10 @@ export function BoardWidget({
           <div className="space-y-4">
             {posts.map((post) => (
               <div key={post.id} className="flex items-start space-x-4">
-                {showThumbnail && post.thumbnail ? (
+                {showThumbnail && post.thumbnail_image ? (
                   <div className="w-20 h-20 flex-shrink-0">
                     <img
-                      src={post.thumbnail}
+                      src={post.thumbnail_image}
                       alt={post.title}
                       className="w-full h-full object-cover rounded"
                     />

@@ -12,242 +12,155 @@ interface MediaWidgetProps {
   };
   page?: IPage;
   posts?: IBoardPost[];
-  isPreview?: boolean;
+
 }
 
 export function MediaWidget({
   widget,
   page,
   posts: initialPosts = [],
-  isPreview = false,
-}: MediaWidgetProps) {
-  // 미리보기 모드일 경우 생성할 샘플 데이터
-  const samplePosts: IBoardPost[] = [
-    {
-      id: "1",
-      title: "샘플 미디어 콘텐츠 1",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      author: "샘플 작성자",
-      view_count: 123,
-      content: "샘플 내용입니다.",
-      thumbnail: undefined,
-      page_id: "sample",
-      status: "published",
-      user_id: "sample",
-    },
-    {
-      id: "2",
-      title: "샘플 미디어 콘텐츠 2",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      author: "샘플 작성자",
-      view_count: 76,
-      content: "샘플 내용입니다.",
-      thumbnail: undefined,
-      page_id: "sample",
-      status: "published",
-      user_id: "sample",
-    },
-    {
-      id: "3",
-      title: "샘플 미디어 콘텐츠 3",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      author: "샘플 작성자",
-      view_count: 42,
-      content: "샘플 내용입니다.",
-      thumbnail: undefined,
-      page_id: "sample",
-      status: "published",
-      user_id: "sample",
-    },
-    {
-      id: "4",
-      title: "샘플 미디어 콘텐츠 4",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      author: "샘플 작성자",
-      view_count: 89,
-      content: "샘플 내용입니다.",
-      thumbnail: undefined,
-      page_id: "sample",
-      status: "published",
-      user_id: "sample",
-    },
-  ];
 
-  // 초기화 시 미리보기 모드면 바로 샘플 데이터 사용
-  const [posts, setPosts] = useState<IBoardPost[]>(
-    isPreview ? samplePosts : initialPosts
-  );
+}: MediaWidgetProps) {
+
+
+  // 초기 데이터로 상태 초기화
+  const [posts, setPosts] = useState<IBoardPost[]>(initialPosts);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 디버깅용 로그 추가
-  console.log("[미디어 위젯] 초기화:", {
-    isPreview,
-    widget,
-    page,
-    initialPostsLength: initialPosts.length,
-  });
+  // 캐시 키 생성 - 위젯 ID와 페이지 ID 기반
+  const getCacheKey = (widgetId: string, pageId: string) => {
+    return `media_widget_${widgetId}_${pageId}`;
+  };
 
-  useEffect(() => {
-    // 미리보기 모드일 때는 샘플 데이터 사용
-    if (isPreview) {
-      console.log("[미디어 위젯] 미리보기 모드 사용 중");
-      // 이미 useState에서 초기화 했으므로 여기서는 추가 작업 없음
-      return;
+  // 로컬 스토리지에서 미디어 데이터 가져오기
+  const getLocalMediaPosts = (widgetId: string, pageId: string) => {
+    if (typeof window === 'undefined') return null;
+    
+    try {
+      const cacheKey = getCacheKey(widgetId, pageId);
+      const cachedData = localStorage.getItem(cacheKey);
+      if (!cachedData) return null;
+      
+      const { posts: cachedPosts, timestamp } = JSON.parse(cachedData);
+      
+      // 캐시 유효시간 확인 (10분)
+      const isExpired = Date.now() - timestamp > 10 * 60 * 1000;
+      
+      if (isExpired) {
+        return null; // 캐시 만료되었으면 null 반환
+      }
+      
+      return cachedPosts;
+    } catch (err) {
+      console.error('캐시된 미디어 데이터 불러오기 오류:', err);
+      return null;
     }
-
-    // 초기 데이터가 있으면 로드하지 않음
-    if (initialPosts.length > 0) {
-      setPosts(initialPosts);
-      console.log("[미디어 위젯] 초기 데이터 사용:", initialPosts);
-      return;
+  };
+  
+  // 로컬 스토리지에 미디어 데이터 저장
+  const saveLocalMediaPosts = (widgetId: string, pageId: string, postsData: IBoardPost[]) => {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      const cacheKey = getCacheKey(widgetId, pageId);
+      const dataToCache = {
+        posts: postsData,
+        timestamp: Date.now()
+      };
+      
+      localStorage.setItem(cacheKey, JSON.stringify(dataToCache));
+    } catch (err) {
+      console.error('미디어 데이터 캐싱 오류:', err);
     }
+  };
 
-    // 페이지 ID 또는 display_options에 페이지 ID가 없으면 로드하지 않음
+  // 미디어 데이터 가져오기 (캐시 사용 여부 지정 가능)
+  const loadMediaPosts = async (skipCache = false) => {
+    // 페이지 ID 확인
     const pageId = page?.id || widget.display_options?.page_id;
-    console.log("[미디어 위젯] 페이지 ID:", pageId);
-    if (!pageId) {
-      console.log(
-        "[미디어 위젯] 페이지 ID가 없어 데이터를 로드할 수 없습니다."
-      );
+    if (!pageId || !widget.id) {
       setError("페이지 ID가 없어 데이터를 로드할 수 없습니다.");
       return;
     }
 
-    const loadMediaPosts = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        // 미리보기 모드일 경우 샘플 데이터 사용
-        if (isPreview) {
-          setPosts([
-            {
-              id: "1",
-              title: "샘플 미디어 콘텐츠 1",
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              author: "샘플 작성자",
-              view_count: 123,
-              content: "샘플 내용입니다.",
-              thumbnail: undefined,
-              page_id: "sample",
-            },
-            {
-              id: "2",
-              title: "샘플 미디어 콘텐츠 2",
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              author: "샘플 작성자",
-              view_count: 76,
-              content: "샘플 내용입니다.",
-              thumbnail: undefined,
-              page_id: "sample",
-            },
-            {
-              id: "3",
-              title: "샘플 미디어 콘텐츠 3",
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              author: "샘플 작성자",
-              view_count: 42,
-              content: "샘플 내용입니다.",
-              thumbnail: undefined,
-              page_id: "sample",
-            },
-          ]);
+    try {
+      // 캐시 사용 여부 확인
+      if (!skipCache) {
+        const cachedPosts = getLocalMediaPosts(widget.id, pageId);
+        if (cachedPosts) {
+          setPosts(cachedPosts);
+          // 백그라운드에서 데이터 갱신 (사용자에게 로딩 표시 없이)
+          setTimeout(() => loadMediaPosts(true), 100);
           return;
         }
+      }
+      
+      if (!skipCache) {
+        setIsLoading(true);
+      }
+      setError(null);
 
-        // 실제 데이터 로드 - join 제거하고 기본 쿼리로 돌리기
-        let query = supabase
-          .from("board_posts")
-          .select("*")
-          .eq("page_id", pageId)
-          .eq("status", "published")
-          .order("created_at", { ascending: false });
+      // 최적화: JOIN을 사용해 한 번의 쿼리로 게시물과 작성자 정보 가져오기
+      const limit = widget.display_options?.item_count || 6; // 기본값 6개 (메인 1개 + 사이드바 5개)
+      
+      const { data, error } = await supabase
+        .from("board_posts")
+        .select("*")
+        .eq("page_id", pageId)
+        .eq("status", "published")
+        .order("created_at", { ascending: false })
+        .limit(limit);
 
-        // 표시할 항목 수 제한
-        const limit = widget.display_options?.item_count || 6; // 기본값 6개로 변경 (메인 1개 + 사이드바 5개)
-        query = query.limit(limit);
+      if (error) throw error;
 
-        console.log("[미디어 위젯] 데이터 조회 시도:", { pageId, limit });
-        const { data, error } = await query;
-        console.log("[미디어 위젯] 데이터 결과:", { data, error });
-
-        if (error) throw error;
-
-        if (data && data.length > 0) {
-          // 게시물 데이터 처리 및 작성자 정보 가져오기
-          const processedPosts = [];
-
-          for (const post of data) {
-            // 작성자 정보 가져오기 (boardService.ts의 getHeaderUser 함수와 동일한 방식)
-            let authorName = "익명";
-
-            if (post.user_id) {
-              // 사용자 정보와 프로필 정보 함께 가져오기
-              const { data: userInfo } = await supabase
-                .from("users")
-                .select("email")
-                .eq("id", post.user_id)
-                .single();
-
-              const { data: profile } = await supabase
-                .from("profiles")
-                .select("username, full_name")
-                .eq("id", post.user_id)
-                .single();
-
-              // boardService.ts의 getHeaderUser와 동일한 처리 방식 적용
-              authorName =
-                profile?.username ||
-                (userInfo?.email ? userInfo.email.split("@")[0] : null) ||
-                profile?.full_name ||
-                "익명";
-            }
-
-            processedPosts.push({
-              ...post,
-              thumbnail: post.thumbnail_image, // 실제 DB에는 thumbnail_image 필드로 저장되어 있음
-              author: authorName, // 프로필에서 가져온 사용자 이름 설정
-            });
-          }
-
-          console.log("[미디어 위젯] 처리된 데이터:", processedPosts);
-          setPosts(processedPosts as IBoardPost[]);
-        } else {
-          setPosts([]);
-        }
-      } catch (err: any) {
-        console.error("미디어 데이터를 불러오는 중 오류가 발생했습니다:", err);
+      if (data && data.length > 0) {
+        setPosts(data as IBoardPost[]);
+        // 캐시에 데이터 저장
+        saveLocalMediaPosts(widget.id, pageId, data as IBoardPost[]);
+      } else {
+        setPosts([]);
+        // 빈 배열도 캐싱 (서버에 데이터가 없다는 사실도 캐싱 가치가 있음)
+        saveLocalMediaPosts(widget.id, pageId, []);
+      }
+    } catch (err: any) {
+      console.error("미디어 데이터를 불러오는 중 오류가 발생했습니다:", err);
+      if (!skipCache) {
         setError("데이터를 불러오는 중 오류가 발생했습니다.");
-      } finally {
+      }
+    } finally {
+      if (!skipCache) {
         setIsLoading(false);
       }
-    };
+    }
+  };
 
+  useEffect(() => {
+    // 초기 데이터가 있으면 로드하지 않음
+    if (initialPosts.length > 0) {
+      setPosts(initialPosts);
+      
+      // 초기 데이터도 캐싱
+      const pageId = page?.id || widget.display_options?.page_id;
+      if (pageId && widget.id) {
+        saveLocalMediaPosts(widget.id, pageId, initialPosts);
+      }
+      return;
+    }
+
+    // 초기 데이터가 없으면 로드
     loadMediaPosts();
   }, [
     page?.id,
+    widget.id,
     widget.display_options?.page_id,
-    isPreview,
     initialPosts.length,
   ]);
 
   return (
     <div className="h-full">
       <div className="py-6">
-        {isLoading && (
-          <div className="flex items-center justify-center h-40">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-            <span className="ml-2 text-gray-500">데이터 불러오는 중...</span>
-          </div>
-        )}
+        {/* 로딩 중일 때는 아무것도 표시하지 않음 */}
 
         {error && (
           <div
@@ -279,9 +192,9 @@ export function MediaWidget({
                   <div className="overflow-hidden border border-gray-200 hover:shadow-lg transition-all duration-500 transform hover:-translate-y-1 rounded-md">
                     <Link href={`${page?.slug}/${posts[0].id}`}>
                       <div className="relative aspect-video bg-gradient-to-br from-gray-900 to-gray-700 group cursor-pointer">
-                        {posts[0].thumbnail ? (
+                        {posts[0].thumbnail_image ? (
                           <img
-                            src={posts[0].thumbnail}
+                            src={posts[0].thumbnail_image}
                             alt={posts[0].title}
                             className="w-full h-full object-cover"
                           />
@@ -367,19 +280,13 @@ export function MediaWidget({
                       </div>
                     </Link>
                   </div>
-                ) : (
-                  <div className="overflow-hidden border border-gray-200 rounded-md h-full">
-                    <div className="p-4 flex items-center justify-center h-full bg-gray-50 text-gray-500">
-                      등록된 미디어 콘텐츠가 없습니다.
-                    </div>
-                  </div>
-                )}
+                ) : null}
               </div>
 
               {/* Video List */}
               <div className="space-y-3">
                 {posts.length > 1 ? (
-                  posts.slice(1).map((post, index) => (
+                  posts.slice(1).map((post) => (
                     <div
                       key={post.id}
                       className="overflow-hidden border border-gray-200 hover:shadow-lg transition-all duration-500 transform hover:-translate-y-1 rounded-md w-full"
@@ -389,9 +296,9 @@ export function MediaWidget({
                         className="flex flex-row w-full group"
                       >
                         <div className="relative w-20 sm:w-28 h-20 flex-shrink-0">
-                          {post.thumbnail ? (
+                          {post.thumbnail_image ? (
                             <img
-                              src={post.thumbnail}
+                              src={post.thumbnail_image}
                               alt={post.title}
                               className="w-full h-full object-cover"
                             />
@@ -446,7 +353,7 @@ export function MediaWidget({
                                   <circle cx="12" cy="12" r="3"></circle>
                                 </svg>
                                 <span>
-                                  {post.views || post.view_count || 0}
+                                  {post.views || 0}
                                 </span>
                               </div>
                               <div className="flex items-center space-x-1">
@@ -472,9 +379,7 @@ export function MediaWidget({
                     </div>
                   ))
                 ) : posts.length === 0 ? (
-                  <div className="py-4 text-center text-gray-500">
-                    등록된 미디어 콘텐츠가 없습니다.
-                  </div>
+                  null
                 ) : null}
 
                 <Link

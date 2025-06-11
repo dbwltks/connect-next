@@ -19,171 +19,18 @@ export default async function DynamicPage(props: { params: any }) {
     typeof props.params.then === "function" ? await props.params : props.params;
   const supabase = await createClient();
 
-  // 메뉴 항목 SSR에서 패칭
-  const { data: menuItemsRaw } = await supabase
-    .from("cms_menus")
-    .select("*")
-    .eq("is_active", true)
-    .order("order_num", { ascending: true });
-  const menuItems = menuItemsRaw ?? [];
-
-  // 평면 구조를 트리 구조로 변환하는 함수
-  function buildMenuTree(items: any[]) {
-    const rootItems = items.filter((item) => item.parent_id === null);
-    return rootItems.map((item) => ({
-      ...item,
-      submenu: findChildren(item.id, items),
-    }));
-  }
-  function findChildren(parentId: string, items: any[]): any[] {
-    const children = items.filter((item) => item.parent_id === parentId);
-    return children.map((child) => ({
-      ...child,
-      submenu: findChildren(child.id, items),
-    }));
-  }
-  const menuTree = buildMenuTree(menuItems);
+  // 메뉴 항목은 이미 app/layout.tsx에서 가져오므로 여기서는 제거
 
   // 홈(/) 경로일 때: 기존 Home 페이지 UI 렌더링
   if (!params.slug || params.slug.length === 0) {
-    // 레이아웃 매니저에서 설정한 위젯 가져오기
-    const { data: widgets = [], error: widgetsError } = await supabase
-      .from("cms_layout")
-      .select("*")
-      .eq("is_active", true)
-      .order("order", { ascending: true });
-
-    if (widgetsError) {
-      console.error("Error fetching widgets:", widgetsError);
-    }
-
-    // 위젯 데이터 타입 변환
-    const typedWidgets: Widget[] = (widgets || [])
-      .filter((widget: any) => widget.is_active)
-      .map((widget: any) => ({
-        id: widget.id,
-        type: widget.type,
-        title: widget.title,
-        content: widget.content,
-        settings: widget.settings,
-        column_position: widget.column_position || 0,
-        order: widget.order || 0,
-        width: widget.width || 12,
-        height: widget.height,
-        display_options: widget.display_options,
-        is_active: widget.is_active,
-      }));
-
-    // 게시판 위젯만 필터링 (board 타입만)
-    const boardWidgets = typedWidgets.filter(
-      (widget) => widget.type === "board" && widget.settings?.board_id
-    );
-
-    // 게시판 페이지 정보 가져오기
-    const pageIds = boardWidgets
-      .map((widget) => widget.settings.board_id)
-      .filter(Boolean);
-
-    const { data: pages = [] } = await supabase
-      .from("cms_pages")
-      .select("id, title, page_type, category_id")
-      .in("id", pageIds);
-
-    // 게시판 데이터 가져오기
-    const boardPostsMap: { [key: string]: any[] } = {};
-
-    for (const widget of boardWidgets) {
-      const pageId = widget.settings.board_id;
-      if (!pageId) continue;
-
-      const limit = widget.settings?.post_limit || 5;
-      try {
-        const { data: posts = [] } = await supabase
-          .from("board_posts")
-          .select(
-            `
-            id,
-            title,
-            created_at,
-            views,
-            is_notice,
-            is_pinned,
-              comment_count:board_comments(count)
-          `
-          )
-          .eq("page_id", pageId)
-          .eq("is_active", true)
-          .order("is_pinned", { ascending: false })
-          .order("created_at", { ascending: false })
-          .limit(limit);
-
-        boardPostsMap[pageId] = posts || [];
-      } catch (error) {
-        boardPostsMap[pageId] = [];
-      }
-    }
-
-    // 섹션 관리자에서 설정한 섹션 불러오기 (홈화면에 필요한 것만)
-    const { data: sections = [], error: sectionsError } = await supabase
-      .from("cms_sections")
-      .select("id, title, name, type, content, order, settings")
-      .eq("is_active", true)
-      .eq("show_in_home", true)
-      .order("order", { ascending: true });
-
-    if (sectionsError) {
-      console.error("Error fetching sections:", sectionsError);
-    }
-
-    // 섹션 데이터 타입 변환
-    const typedSections: Section[] = (sections || []).map((section: any) => ({
-      id: section.id,
-      title: section.title,
-      name: section.name,
-      description: section.description,
-      type: section.type || "custom",
-      isActive: section.is_active,
-      content: section.content,
-      order: section.order,
-      settings: section.settings,
-      dbTable: section.db_table,
-      pageType: section.page_type,
-    }));
-
-    console.log("Typed widgets:", typedWidgets);
-
     return (
       <>
         <MainBanner menuId={null} />
         <main className="flex-1 flex flex-col gap-12 px-0 sm:px-4 py-4">
-          {/* 위젯 섹션 */}
-          {typedWidgets.length > 0 && (
-            <div className="mb-2">
-              <HomepageWidgets
-                widgets={typedWidgets}
-                pages={pages || []}
-                boardPosts={boardPostsMap}
-              />
-            </div>
-          )}
-
-          {/* 기존 고정 섹션들 */}
-          {/* <WelcomeMessage churchInfo={} />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <ServiceTimes churchInfo={} />
-            <LatestSermon sermon={} />
-            <UpcomingEvents  />
-          <Announcements  />
-          </div> */}
-
-          {/* 섹션 관리자에서 설정한 동적 섹션들 */}
-          {typedSections.map((section) => (
-            <SectionRenderer
-              key={section.id}
-              section={section}
-              className="mb-8"
-            />
-          ))}
+          {/* 위젯 섹션 - 컴포넌트 내부에서 데이터 로딩 */}
+          <div className="mb-2">
+            <HomepageWidgets />
+          </div>
         </main>
       </>
     );

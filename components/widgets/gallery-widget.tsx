@@ -8,14 +8,12 @@ interface GalleryWidgetProps {
   };
   page?: IPage;
   posts?: IBoardPost[];
-  isPreview?: boolean;
 }
 
 export function GalleryWidget({
   widget,
   page,
   posts = [],
-  isPreview = false,
 }: GalleryWidgetProps) {
   const columns = widget.display_options?.columns || 4;
   const showTitle = widget.display_options?.show_title ?? true;
