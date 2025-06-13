@@ -823,7 +823,7 @@ export default function BoardSection({
         </div>
         <div className="flex flex-wrap gap-2 items-center">
           <select
-            className="border rounded-md px-2 py-2 text-sm"
+            className="px-3 py-2 border rounded-md text-sm min-w-[75px] max-w-[120px] bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={itemCount}
             onChange={(e) => setItemCount(Number(e.target.value))}
           >
@@ -859,7 +859,6 @@ export default function BoardSection({
             >
               <LayoutGrid className="w-4 h-4" />
             </button>
-            
           </div>
           {/* 컬럼 설정 드롭다운 */}
           {layout === "table" && !isMobile && (
@@ -975,7 +974,6 @@ export default function BoardSection({
                   <span>{formatTime(post.created_at)}</span>
                   <span className="mx-1.5">·</span>
                   <span>조회 {post.view_count ?? 0}</span>
-                
                 </div>
               </div>
 
@@ -1045,7 +1043,6 @@ export default function BoardSection({
                     <span>{formatTime(post.created_at)}</span>
                     <span className="mx-1.5">·</span>
                     <span>조회 {post.view_count ?? 0}</span>
-                    
                   </div>
                 </div>
 
@@ -1461,12 +1458,15 @@ export default function BoardSection({
       </div>
 
       {/* 검색 폼 */}
-      <div className="flex mt-6 mb-8 px-2">
-        <form onSubmit={handleSearch} className="flex gap-2 max-w-2xl mx-auto">
+      <div className="flex justify-center mt-6 mb-8 px-4 sm:px-6">
+        <form
+          onSubmit={handleSearch}
+          className="flex flex-row items-center gap-2 w-full max-w-sm sm:max-w-2xl"
+        >
           <select
             value={searchType}
             onChange={(e) => setSearchType(e.target.value)}
-            className="px-3 py-2 border rounded-md text-sm min-w-[100px] bg-white"
+            className="px-3 py-2 border rounded-md text-sm min-w-[75px] max-w-[120px] bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 flex-shrink-0" // min-width 조절, max-width 추가, flex-shrink-0
           >
             <option value="title">제목</option>
             <option value="content">내용</option>
@@ -1477,9 +1477,9 @@ export default function BoardSection({
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="검색어를 입력하세요"
-            className="flex-1 px-3 py-2 border rounded-md text-sm"
+            className="flex-1 px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" // flex-1 유지
           />
-          <Button type="submit" className="px-4">
+          <Button type="submit" className="px-4 py-2 flex-shrink-0">
             검색
           </Button>
         </form>
