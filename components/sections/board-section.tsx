@@ -933,7 +933,7 @@ export default function BoardSection({
           {sortedNotices.map((post) => (
             <div
               key={post.id}
-              className="flex items-start border-l-4 border-yellow-400 bg-yellow-50 dark:bg-yellow-900/30 p-3 rounded-md shadow-sm min-h-[88px]"
+              className="flex cursor-pointer items-start border-l-4 border-yellow-400 bg-yellow-50 dark:bg-yellow-900/30 p-3 rounded-md shadow-sm min-h-[88px]"
               onClick={() => handlePostClick(post.id)}
             >
               <div className="flex-1 min-w-0 pr-3">
@@ -1000,7 +1000,7 @@ export default function BoardSection({
             sortedNormals.map((post) => (
               <div
                 key={post.id}
-                className="flex items-start border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 rounded-md shadow-sm hover:shadow-md transition-shadow min-h-[88px]"
+                className="flex cursor-pointer items-start border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 rounded-md shadow-sm hover:shadow-md transition-shadow min-h-[88px]"
                 onClick={() => handlePostClick(post.id)}
               >
                 <div className="flex-1 min-w-0 pr-3">
@@ -1461,7 +1461,7 @@ export default function BoardSection({
       <div className="flex justify-center mt-6 mb-8 px-4 sm:px-6">
         <form
           onSubmit={handleSearch}
-          className="flex flex-row items-center gap-2 w-full max-w-sm sm:max-w-2xl"
+          className="flex flex-row items-center gap-2 w-full"
         >
           <select
             value={searchType}
