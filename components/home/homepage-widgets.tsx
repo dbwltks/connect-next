@@ -10,6 +10,7 @@ import { MediaWidget } from "@/components/widgets/media-widget";
 import { BoardWidget } from "@/components/widgets/board-widget";
 import { GalleryWidget } from "@/components/widgets/gallery-widget";
 import { BannerWidget } from "@/components/widgets/banner-widget";
+import LocationWidget from "@/components/widgets/location-widget";
 
 // 위젯 타입 정의
 import { IWidget } from "@/types/index";
@@ -191,6 +192,15 @@ export default function HomepageWidgets({
             widget={widget as any}
             page={initialPage}
             posts={initialPagePosts}
+          />
+        );
+        
+      case "location":
+        return (
+          <LocationWidget
+            id={`location-widget-${widget.id}`}
+            widget={widget as any}
+            page={initialPage}
           />
         );
 

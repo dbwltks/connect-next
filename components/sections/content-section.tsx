@@ -23,7 +23,7 @@ import {
   upsertContent,
 } from "@/services/contentService";
 import { toast } from "@/components/ui/toaster";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsTrigger, TabsList } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 // import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"; // RadioGroup은 현재 사용되지 않음
 import { Label } from "@/components/ui/label";
@@ -49,6 +49,118 @@ const TipTapEditor = dynamic(() => import("@/components/ui/tiptap-editor"), {
   loading: () => <p>에디터 로드중...</p>,
 });
 
+import DOMPurify from "dompurify";
+
+// 콘텐츠 내 스크립트를 실행하기 위한 iframe 컴포넌트
+interface ContentRendererProps {
+  content: string;
+}
+
+const ContentRenderer: React.FC<ContentRendererProps> = ({ content }) => {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  useEffect(() => {
+    if (!iframeRef.current) return;
+
+    const sanitizedContent = DOMPurify.sanitize(content, {
+      ADD_TAGS: ["script"],
+      ADD_ATTR: ["onerror", "onload", "src", "type"],
+      FORCE_BODY: true,
+    });
+    
+    const doc = iframeRef.current.contentDocument;
+    if (doc) {
+      doc.open();
+      doc.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>콘텐츠</title>
+          <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+          <style>
+            body {
+              margin: 0;
+              padding: 0;
+              font-family: system-ui, sans-serif;
+              background-color: white;
+              color: #333;
+            }
+            p {
+              margin-bottom: 1rem;
+            }
+          </style>
+        </head>
+        <body class="p-4">
+          ${sanitizedContent}
+        </body>
+        </html>
+      `);
+      doc.close();
+      
+      // iframe 높이 자동 조절 (더 정확한 버전)
+      const setIframeHeight = () => {
+        if (!iframeRef.current || !iframeRef.current.contentWindow) return;
+        
+        try {
+          // 다양한 높이 값을 수집
+          const doc = iframeRef.current.contentWindow.document;
+          const body = doc.body;
+          const html = doc.documentElement;
+          
+          // 가장 정확한 높이를 구하기 위한 여러 방법
+          const bodyHeight = Math.max(
+            body.scrollHeight, 
+            body.offsetHeight, 
+            html.clientHeight, 
+            html.scrollHeight, 
+            html.offsetHeight
+          );
+          
+          // 콘텐츠의 공간을 확보하기 위해 여백 추가 (20px)
+          const heightWithMargin = bodyHeight + 20;
+          
+          // iframe 높이 설정 + 최소 높이 보장
+          iframeRef.current.style.height = `${Math.max(heightWithMargin, 100)}px`;
+        } catch (e) {
+          console.error('iframe 높이 조절 오류:', e);
+        }
+      };
+      
+      // 콘텐츠 로드 완료 시 높이 조절
+      iframeRef.current.onload = setIframeHeight;
+      
+      // 더 자주 및 더 긴 시간동안 높이 체크 (동적 콘텐츠 대응)
+      // 여러 시점에서 체크하여 가장 정확한 값 확보
+      setTimeout(setIframeHeight, 50);
+      setTimeout(setIframeHeight, 100);
+      setTimeout(setIframeHeight, 300);
+      setTimeout(setIframeHeight, 500);
+      setTimeout(setIframeHeight, 1000);
+      
+      // 이미지 로드에 따른 동적 높이 조절
+      const images = doc.querySelectorAll('img');
+      if (images.length > 0) {
+        images.forEach(img => {
+          img.onload = setIframeHeight;
+        });
+      }
+    }
+  }, [content]);
+
+  return (
+    <iframe
+      ref={iframeRef}
+      className="w-full border-0 overflow-hidden bg-white"
+      style={{ minHeight: "100px" }}
+      title="콘텐츠"
+      sandbox="allow-same-origin allow-scripts allow-popups"
+      scrolling="no"
+    />
+  );
+};
+
 interface ContentSectionProps {
   section: Section;
   className?: string;
@@ -64,6 +176,7 @@ export default function ContentSection({
   // const [editedTitle, setEditedTitle] = useState(section.title || ""); // 현재 UI에서 사용 안 함
   // const [editedDescription, setEditedDescription] = useState(section.description || ""); // 현재 UI에서 사용 안 함
   const { user } = useAuth();
+  const [isClient, setIsClient] = useState(false);
   const isAdmin = user?.role === "admin";
   const [isSaving, setIsSaving] = useState(false);
   const [previewTab, setPreviewTab] = useState<"desktop" | "mobile">("desktop");
@@ -132,7 +245,7 @@ export default function ContentSection({
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>미리보기</title>
-        <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+        <!-- 로컬 스타일시트 사용 -->
         <script>
           // 정확한 높이 계산을 위한 함수
           function getFullHeight() {
@@ -380,34 +493,10 @@ export default function ContentSection({
     }
   }, [isPreviewOpen, popupPreviewTab, htmlContent, contentType, fullWidth]);
 
-  // iframe 높이 자동 조절
+  // 클라이언트 상태 설정을 위한 간단한 useEffect
   useEffect(() => {
-    const handleIframeResize = (event: MessageEvent) => {
-      if (event.data && event.data.type === "resize") {
-        // 어떤 iframe이 메시지를 보냈는지 확인
-        if (contentIframeRef.current && contentIframeRef.current.style) {
-          contentIframeRef.current.style.height = `${event.data.height}px`;
-        }
-        if (
-          desktopIframeRef.current &&
-          desktopIframeRef.current.style &&
-          previewTab === "desktop"
-        ) {
-          desktopIframeRef.current.style.height = `${event.data.height}px`;
-        }
-        if (
-          mobileIframeRef.current &&
-          mobileIframeRef.current.style &&
-          previewTab === "mobile"
-        ) {
-          mobileIframeRef.current.style.height = `${event.data.height}px`;
-        }
-      }
-    };
-
-    window.addEventListener("message", handleIframeResize);
-    return () => window.removeEventListener("message", handleIframeResize);
-  }, [previewTab]);
+    setIsClient(true);
+  }, []);
 
   const handleEditClick = () => {
     setHtmlContent(section.content || "");
@@ -454,10 +543,10 @@ export default function ContentSection({
 
   return (
     <div className="content-section-wrapper w-full my-8">
-      {" "}
       {/* 섹션 간 간격 추가 */}
-      {isAdmin && !isEditing && (
-        <div className="container mx-auto px-4 mb-4">
+      <div className="container mx-auto px-4 mb-4">
+        {/* 서버와 클라이언트 간 일관된 렌더링을 위해 항상 div는 유지하고 내용만 조건부 렌더링 */}
+        {isClient && isAdmin && !isEditing ? (
           <div className="flex justify-end">
             <Button
               variant="outline"
@@ -469,8 +558,10 @@ export default function ContentSection({
               편집
             </Button>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="hidden"></div> /* 빈 div로 구조 유지 */
+        )}
+      </div>
       <section
         className={`${className} relative w-full ${!isEditing && fullWidth ? "" : "container mx-auto px-4"}`}
       >
@@ -503,6 +594,14 @@ export default function ContentSection({
                     <X className="h-4 w-4" /> 취소
                   </Button>
                   <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-1"
+                    onClick={() => setIsPreviewOpen(true)}
+                  >
+                    <Maximize2 className="h-4 w-4" /> 미리보기
+                  </Button>
+                  <Button
                     size="sm"
                     onClick={handleSaveClick}
                     disabled={isSaving}
@@ -514,7 +613,7 @@ export default function ContentSection({
                 </div>
               </div>
             </Card>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
               <Card className="overflow-hidden">
                 <div className="flex justify-between items-center p-3 border-b">
                   <h3 className="text-sm font-medium">입력창 (HTML 전용)</h3>
@@ -529,152 +628,88 @@ export default function ContentSection({
                   />
                 </CardContent>
               </Card>
-
-              <Card className="overflow-hidden">
-                <div className="flex justify-between items-center p-3 border-b">
-                  <h3 className="text-sm font-medium">미리보기</h3>
-                  <div className="flex items-center gap-2">
-                    <Dialog
-                      open={isPreviewOpen}
-                      onOpenChange={setIsPreviewOpen}
-                    >
-                      <DialogTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-8 w-8"
-                        >
-                          <Maximize2 className="h-4 w-4" />
-                          <span className="sr-only">팝업으로 미리보기</span>
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-none w-[95vw] h-[90vh] p-0 flex flex-col">
-                        <DialogHeader className="p-4 border-b flex-row justify-between items-center">
-                          <DialogTitle>전체 화면 미리보기</DialogTitle>
-                          <div className="flex items-center gap-2">
-                            <Select
-                              value={mobileWidth}
-                              onValueChange={setMobileWidth}
-                            >
-                              <SelectTrigger className="w-[100px] h-8 text-xs">
-                                <SelectValue placeholder="모바일 크기" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="375">iPhone SE</SelectItem>
-                                <SelectItem value="390">
-                                  iPhone 12/13
-                                </SelectItem>
-                                <SelectItem value="414">
-                                  iPhone XR/11
-                                </SelectItem>
-                                <SelectItem value="360">Galaxy S21</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <Tabs
-                              value={popupPreviewTab}
-                              onValueChange={(v) =>
-                                setPopupPreviewTab(v as "desktop" | "mobile")
-                              }
-                              className="w-auto"
-                            >
-                              <TabsList className="inline-flex text-xs">
-                                <TabsTrigger value="desktop">
-                                  데스크톱
-                                </TabsTrigger>
-                                <TabsTrigger value="mobile">모바일</TabsTrigger>
-                              </TabsList>
-                            </Tabs>
-                          </div>
-                        </DialogHeader>
-                        <div
-                          className="flex-1 overflow-auto bg-gray-100"
-                          style={{ minHeight: "800px" }}
-                        >
-                          <div
-                            className={`w-full h-[800px] transition-opacity ${popupPreviewTab === "desktop" ? "opacity-100" : "opacity-0 absolute inset-0 pointer-events-none"}`}
-                          >
-                            <iframe
-                              ref={popupDesktopIframeRef}
-                              className="w-full h-full border-0 bg-white"
-                              title="팝업 데스크톱 미리보기"
-                              sandbox="allow-same-origin allow-scripts"
-                            />
-                          </div>
-                          <div
-                            className={`w-full h-full flex justify-center items-center transition-opacity ${popupPreviewTab === "mobile" ? "opacity-100" : "opacity-0 absolute inset-0 pointer-events-none"}`}
-                          >
-                            <div
-                              className="overflow-hidden shadow-lg rounded-lg border-4 border-gray-800 bg-white"
-                              style={{
-                                width: `${parseInt(mobileWidth) + 8}px`,
-                                height: `${parseInt(mobileWidth) * 1.8 + 8}px`,
-                              }}
-                            >
-                              <iframe
-                                ref={popupMobileIframeRef}
-                                className="border-0"
-                                title="팝업 모바일 미리보기"
-                                sandbox="allow-same-origin allow-scripts"
-                                style={{
-                                  width: `${mobileWidth}px`,
-                                  height: `${parseInt(mobileWidth) * 1.8}px`,
-                                }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                    <Tabs
-                      value={previewTab}
-                      onValueChange={(v) =>
-                        setPreviewTab(v as "desktop" | "mobile")
-                      }
-                      className="w-auto"
-                    >
-                      <TabsList className="grid grid-cols-2 text-xs">
-                        <TabsTrigger value="desktop">데스크톱</TabsTrigger>
-                        <TabsTrigger value="mobile">모바일</TabsTrigger>
-                      </TabsList>
-                    </Tabs>
-                  </div>
-                </div>
-                <CardContent
-                  className="p-0 relative bg-gray-50"
-                  style={{ height: "400px", overflow: "auto" }}
-                >
+              
+              <Dialog
+                open={isPreviewOpen}
+                onOpenChange={setIsPreviewOpen}
+              >
+                <DialogContent className="max-w-none w-[95vw] h-[90vh] p-0 flex flex-col">
+                  <DialogHeader className="p-4 border-b flex-row justify-between items-center">
+                    <DialogTitle>전체 화면 미리보기</DialogTitle>
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={mobileWidth}
+                        onValueChange={setMobileWidth}
+                      >
+                        <SelectTrigger className="w-[100px] h-8 text-xs">
+                          <SelectValue placeholder="모바일 크기" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="375">iPhone SE</SelectItem>
+                          <SelectItem value="390">
+                            iPhone 12/13
+                          </SelectItem>
+                          <SelectItem value="414">
+                            iPhone XR/11
+                          </SelectItem>
+                          <SelectItem value="360">Galaxy S21</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Tabs
+                        value={popupPreviewTab}
+                        onValueChange={(v) =>
+                          setPopupPreviewTab(v as "desktop" | "mobile")
+                        }
+                        className="w-auto"
+                      >
+                        <TabsList className="inline-flex text-xs">
+                          <TabsTrigger value="desktop">
+                            데스크톱
+                          </TabsTrigger>
+                          <TabsTrigger value="mobile">모바일</TabsTrigger>
+                        </TabsList>
+                      </Tabs>
+                    </div>
+                  </DialogHeader>
                   <div
-                    className={`w-full h-full transition-opacity ${previewTab === "desktop" ? "opacity-100" : "opacity-0 absolute inset-0 pointer-events-none"}`}
-                  >
-                    <iframe
-                      ref={desktopIframeRef}
-                      className="w-full h-full border-0 bg-white"
-                      title="데스크톱 미리보기"
-                      sandbox="allow-same-origin allow-scripts"
-                      scrolling="auto"
-                    />
-                  </div>
-                  <div
-                    className={`w-full h-full flex justify-center items-center transition-opacity ${previewTab === "mobile" ? "opacity-100" : "opacity-0 absolute inset-0 pointer-events-none"}`}
+                    className="flex-1 overflow-auto bg-gray-100"
+                    style={{ minHeight: "800px" }}
                   >
                     <div
-                      className="overflow-hidden shadow-lg rounded-lg border-2 border-gray-300 bg-white"
-                      style={{
-                        width: `${mobileWidth}px`,
-                        height: `${parseInt(mobileWidth) * 1.8}px`,
-                      }}
+                      className={`w-full h-[800px] transition-opacity ${popupPreviewTab === "desktop" ? "opacity-100" : "opacity-0 absolute inset-0 pointer-events-none"}`}
                     >
                       <iframe
-                        ref={mobileIframeRef}
-                        className="w-full h-full border-0"
-                        title="모바일 미리보기"
+                        ref={popupDesktopIframeRef}
+                        className="w-full h-full border-0 bg-white"
+                        title="팝업 데스크톱 미리보기"
                         sandbox="allow-same-origin allow-scripts"
-                        scrolling="auto"
                       />
                     </div>
+                    <div
+                      className={`w-full h-full flex justify-center items-center transition-opacity ${popupPreviewTab === "mobile" ? "opacity-100" : "opacity-0 absolute inset-0 pointer-events-none"}`}
+                    >
+                      <div
+                        className="overflow-hidden shadow-lg rounded-lg border-4 border-gray-800 bg-white"
+                        style={{
+                          width: `${parseInt(mobileWidth) + 8}px`,
+                          height: `${parseInt(mobileWidth) * 1.8 + 8}px`,
+                        }}
+                      >
+                        <iframe
+                          ref={popupMobileIframeRef}
+                          className="border-0"
+                          title="팝업 모바일 미리보기"
+                          sandbox="allow-same-origin allow-scripts"
+                          style={{
+                            width: `${mobileWidth}px`,
+                            height: `${parseInt(mobileWidth) * 1.8}px`,
+                          }}
+                        />
+                      </div>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         ) : (
@@ -683,85 +718,14 @@ export default function ContentSection({
             style={{ minHeight: "auto" }}
           >
             <div
-              className="w-full bg-white"
-              style={{ overflow: "visible", minHeight: "auto" }}
+              className="w-full bg-white content-container prose max-w-none"
+              style={{ overflow: "visible", minHeight: "auto", padding: "16px" }}
             >
-              <iframe
-                ref={contentIframeRef}
-                className="w-full border-0 bg-white"
-                title="콘텐츠 표시"
-                sandbox="allow-same-origin allow-scripts"
-                scrolling="no"
-                style={{ border: "none", width: "100%", height: "auto" }}
-                srcDoc={`
-                  <!DOCTYPE html>
-                  <html>
-                  <head>
-                    <meta charset="utf-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1">
-                    <style>
-                      html, body {
-                        margin: 0;
-                        padding: 0;
-                        font-family: system-ui, sans-serif;
-                        overflow: visible;
-                      }
-                      body {
-                        padding: 0;
-                        margin: 0;
-                        min-height: 0;
-                      }
-                      img {
-                        max-width: 100%;
-                        height: auto;
-                        display: block;
-                      }
-                      #content {
-                        width: 100%;
-                        display: block;
-                        padding: 0;
-                        margin: 0;
-                        min-height: 0;
-                      }
-                    </style>
-                  </head>
-                  <body>
-                    <div id="content">${section.content || ""}</div>
-                    <script>
-                      // iframe 높이 자동 조정 스크립트 - 중복 방지
-                      let resizeTimeout;
-                      
-                      function updateHeight() {
-                        // 이미 예약된 타이머가 있다면 취소
-                        if (resizeTimeout) clearTimeout(resizeTimeout);
-                        
-                        // 50ms 뒤에 높이 계산 실행 (여러 이미지가 로드될 때 중복 방지)
-                        resizeTimeout = setTimeout(function() {
-                          // 콘텐츠 요소의 정확한 높이 계산
-                          const contentEl = document.getElementById('content');
-                          
-                          // 콘텐츠 요소 자체 높이
-                          const contentHeight = contentEl ? contentEl.offsetHeight : 0;
-                          
-                          // 정확한 높이를 전송 (최소 높이 1px)
-                          window.parent.postMessage({ type: 'resize', height: Math.max(contentHeight, 1) }, '*');
-                        }, 50);
-                      }
-                      
-                      // 페이지 로드 시 실행
-                      window.addEventListener('load', updateHeight);
-                      
-                      // 이미지 로드 시 높이 재계산
-                      document.querySelectorAll('img').forEach(function(img) {
-                        if (!img.complete) {
-                          img.addEventListener('load', updateHeight);
-                        }
-                      });  
-                    </script>
-                  </body>
-                  </html>
-                `}
-              />
+              {isClient && (
+                <>
+                  <ContentRenderer content={section.content || ""} />
+                </>
+              )}
             </div>
           </div>
         )}

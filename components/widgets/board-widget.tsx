@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { IBoardPost, IPage, IWidget, IBoardWidgetOptions } from "@/types/index";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
 import {
   Calendar,
@@ -154,8 +154,9 @@ export function BoardWidget({
         if (cachedPosts) {
           setPosts(cachedPosts);
           // 백그라운드에서 데이터 갱신 (사용자에게 로딩 표시 없이)
-          setTimeout(() => loadBoardPosts(pageId, true), 100);
-          return;
+          // 추가 요청은 렌더링 완료 후 한 번만 하도록 설정 (무한 루프 방지)
+          const timer = setTimeout(() => loadBoardPosts(pageId, true), 500);
+          return () => clearTimeout(timer); // 클린업 함수로 타이머 제거
         }
       }
       
@@ -218,6 +219,90 @@ export function BoardWidget({
     }
   };
 
+  // 초기 데이터 로드 상태를 추적하는 ref
+  const dataLoadedRef = useRef(false);
+  
+  // loadBoardPosts 함수를 useCallback으로 메모이제이션
+  const memorizedLoadBoardPosts = useCallback(
+    async (pageId: string, skipCache = false) => {
+      // loadBoardPosts 내부 로직 
+      if (!pageId || !widget.id) {
+        setError("페이지 ID가 없어 데이터를 로드할 수 없습니다.");
+        return;
+      }
+      
+      try {
+        // 캐시 사용 여부 확인
+        if (!skipCache) {
+          const cachedPosts = getLocalBoardPosts(widget.id, pageId);
+          if (cachedPosts) {
+            setPosts(cachedPosts);
+            return;
+          }
+        }
+        
+        if (!skipCache) {
+          setIsLoading(true);
+        }
+        setError(null);
+
+        // 게시물 조회
+        let query = supabase
+          .from("board_posts")
+          .select("*")
+          .eq("page_id", pageId)
+          .eq("status", "published")
+          .order("created_at", { ascending: false });
+
+        // 표시할 게시물 수 제한 (기본 10개)
+        let limit = 10; // 기본값
+
+        // item_count가 문자열인 경우 숫자로 변환
+        if (widget.display_options?.item_count) {
+          if (typeof widget.display_options.item_count === "string") {
+            limit = parseInt(widget.display_options.item_count, 10) || 10;
+          } else {
+            limit = widget.display_options.item_count;
+          }
+        }
+
+        console.log("[게시판 위젯] 표시 개수:", limit);
+        query = query.limit(limit);
+
+        const { data, error } = await query;
+
+        if (error) {
+          console.error("[게시판 위젯] 데이터 조회 오류:", error);
+          if (!skipCache) {
+            setError("데이터를 가져오는 중 오류가 발생했습니다.");
+          }
+          return;
+        }
+
+        if (data && data.length > 0) {
+          setPosts(data as IBoardPost[]);
+          // 캐시에 데이터 저장
+          saveLocalBoardPosts(widget.id, pageId, data as IBoardPost[]);
+        } else {
+          setPosts([]);
+          // 빈 배열도 캐싱
+          saveLocalBoardPosts(widget.id, pageId, []);
+        }
+      } catch (err) {
+        console.error("[게시판 위젯] 데이터 로드 오류:", err);
+        if (!skipCache) {
+          setError("데이터를 가져오는 중 오류가 발생했습니다.");
+        }
+      } finally {
+        if (!skipCache) {
+          setIsLoading(false);
+        }
+      }
+    },
+    [widget.id, widget.display_options?.item_count]
+  );
+
+  // 초기화 및 데이터 로드
   useEffect(() => {
     // 초기 데이터가 있으면 사용
     if (initialPosts && initialPosts.length > 0) {
@@ -233,10 +318,28 @@ export function BoardWidget({
 
     // 페이지 ID가 있으면 데이터 로드
     const pageId = page?.id || widget.display_options?.page_id;
-    if (pageId) {
-      loadBoardPosts(pageId);
+    if (pageId && !dataLoadedRef.current) {
+      memorizedLoadBoardPosts(pageId);
+      dataLoadedRef.current = true;
     }
+    
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page?.id, widget.id, widget.display_options?.page_id, initialPosts]);
+  
+  // 캐시된 데이터 갱신을 위한 별도 useEffect
+  useEffect(() => {
+    const pageId = page?.id || widget.display_options?.page_id;
+    
+    if (pageId) {
+      // 컴포넌트 마운트 후 한 번만 백그라운드 갱신 수행
+      const timer = setTimeout(() => {
+        memorizedLoadBoardPosts(pageId, true);
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
 
   // 템플릿별 렌더링 함수

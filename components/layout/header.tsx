@@ -1,6 +1,5 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,7 +24,7 @@ import {
   Moon,
   Laptop,
 } from "lucide-react";
-
+import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "@/db";
 import Image from "next/image";
@@ -170,18 +169,19 @@ const hamburgerPlusStyles = `
 `;
 
 export default function Header({ menuItems }: { menuItems: any[] }) {
-  // React.memo로 감싸진 HeaderClient 컴포넌트를 사용하여 불필요한 리렌더링 방지
+  const { user } = useAuth();
+
   return (
     <header className="sticky top-0 z-[9] w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
-        <HeaderClientMemo menuItems={menuItems} />
+        <HeaderClient user={user} menuItems={menuItems} />
       </div>
     </header>
   );
 }
 
-function HeaderClient({ menuItems }: { menuItems: any[] }) {
-  const { user, handleLogout } = useAuth();
+function HeaderClient({ user, menuItems }: { user: any; menuItems: any[] }) {
+  const { handleLogout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [animationClass, setAnimationClass] = useState("");
   const { theme, setTheme } = useTheme();
@@ -208,12 +208,12 @@ function HeaderClient({ menuItems }: { menuItems: any[] }) {
               <Link
                 href={item.url}
                 onClick={() => setOpenedDropdownId(null)}
-                className="px-2 py-1 text-base font-semibold text-gray-800 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-150"
+                className="px-2 py-1 text-base  text-gray-800 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-150"
               >
                 {item.title}
               </Link>
             ) : (
-              <span className="px-2 py-1 text-base font-semibold text-gray-800 dark:text-gray-100">
+              <span className="px-2 py-1 text-base  text-gray-800 dark:text-gray-100">
                 {item.title}
               </span>
             )}
@@ -292,6 +292,14 @@ function HeaderClient({ menuItems }: { menuItems: any[] }) {
       }
     };
   }, []);
+  
+  // 하이드레이션 오류를 피하기 위한 클라이언트 사이드 코드 실행 상태 관리
+  const [isClient, setIsClient] = useState(false);
+  
+  // 콤포넌트가 마운트된 후 클라이언트 상태로 설정
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   return (
     <>
@@ -314,20 +322,24 @@ function HeaderClient({ menuItems }: { menuItems: any[] }) {
       </div>
 
       {/* 모바일 헤더 - md 미만에서 표시 */}
-      <div className="flex justify-between items-center w-full md:hidden">
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Toggle Menu"
-          onClick={toggleMenu}
-          className={isHamburgerOpen ? "hamburger-eq open" : "hamburger-eq"}
-        >
-          {/* = (닫힘) → + (열림) */}
-          <span className="hamburger-bar top" />
-          <span className="hamburger-bar bottom" />
-        </Button>
+      <div className="flex items-center w-full md:hidden">
+        {/* 좌측 햄버거 메뉴 - 고정 너비 적용 */}
+        <div className="w-[70px] flex justify-start">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Toggle Menu"
+            onClick={toggleMenu}
+            className={isHamburgerOpen ? "hamburger-eq open" : "hamburger-eq"}
+          >
+            {/* = (닫힘) → + (열림) */}
+            <span className="hamburger-bar top" />
+            <span className="hamburger-bar bottom" />
+          </Button>
+        </div>
 
-        <div className="flex items-center justify-center">
+        {/* 중앙 로고 - flex-1로 남은 공간 차지 */}
+        <div className="flex-1 flex items-center justify-center">
           <Link href="/" className="flex items-center">
             <div className="relative h-12 overflow-hidden flex items-center justify-center">
               <Image
@@ -342,10 +354,18 @@ function HeaderClient({ menuItems }: { menuItems: any[] }) {
           </Link>
         </div>
 
-        <div className="flex items-center justify-center">
-          {user ? (
+        {/* 우측 로그인/사용자 메뉴 - 고정 너비 적용 */}
+        <div className="w-[70px] flex justify-end">
+          {!isClient ? (
+            // 서버에서는 일관된 불투명 버튼을 렌더링
+            <Button variant="ghost" size="icon" className="opacity-0">
+              <span className="sr-only">로그인</span>
+            </Button>
+          ) : user ? (
+            // 클라이언트에서 사용자 정보가 있으면 UserMenu 렌더링
             <UserMenu user={user} onLogout={handleLogout} />
           ) : (
+            // 클라이언트에서 사용자 정보가 없으면 로그인 버튼 렌더링
             <Link href="/login">
               <Button variant="ghost" size="sm">
                 로그인
@@ -363,9 +383,17 @@ function HeaderClient({ menuItems }: { menuItems: any[] }) {
       {/* 데스크톱 우측 메뉴 */}
       <div className="hidden md:flex items-center gap-2">
         <ThemeSwitcher />
-        {user ? (
+        {/* SSR과 CSR 불일치 문제를 해결하기 위해 클라이언트 상태 확인 후 렌더링 */}
+        {!isClient ? (
+          // 서버에서는 일관된 불투명 버튼을 렌더링
+          <Button variant="ghost" size="icon" className="opacity-0">
+            <span className="sr-only">로그인</span>
+          </Button>
+        ) : user ? (
+          // 클라이언트에서 사용자 정보가 있으면 UserMenu 렌더링
           <UserMenu user={user} onLogout={handleLogout} />
         ) : (
+          // 클라이언트에서 사용자 정보가 없으면 로그인 버튼 렌더링
           <Link href="/login">
             <Button variant="ghost" size="sm">
               로그인
@@ -388,7 +416,7 @@ function HeaderClient({ menuItems }: { menuItems: any[] }) {
                     <div className="flex items-center justify-between">
                       {item.submenu && item.submenu.length > 0 ? (
                         <button
-                          className="flex items-center w-full font-bold text-xl pt-4 pb-2 text-left focus:outline-none"
+                          className="flex items-center w-full text-xl pt-4 pb-2 text-left focus:outline-none"
                           onClick={() => {
                             setOpenSubmenus((prev) => ({
                               ...prev,
@@ -408,7 +436,7 @@ function HeaderClient({ menuItems }: { menuItems: any[] }) {
                       ) : (
                         <Link
                           href={item.url}
-                          className="flex items-center w-full font-bold text-xl pt-4 pb-2 text-left focus:outline-none"
+                          className="flex items-center w-full text-xl pt-4 pb-2 text-left focus:outline-none"
                           onClick={toggleMenu}
                         >
                           <span className="flex-1 text-left">{item.title}</span>
@@ -575,12 +603,6 @@ function HeaderClient({ menuItems }: { menuItems: any[] }) {
 }
 
 // 사용자 메뉴 컴포넌트
-// React.memo로 감싸서 불필요한 리렌더링 방지
-const HeaderClientMemo = React.memo(HeaderClient, (prevProps, nextProps) => {
-  // menuItems가 동일한 참조일 경우에만 리렌더링 방지
-  return prevProps.menuItems === nextProps.menuItems;
-});
-
 function UserMenu({ user, onLogout }: { user: any; onLogout: () => void }) {
   return (
     <DropdownMenu>

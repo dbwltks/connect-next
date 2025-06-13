@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import BoardWrite from "./board-write";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,7 @@ import {
   ArrowUpDown,
   Settings2,
   EyeOff,
+  List,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
@@ -136,7 +137,9 @@ export default function BoardSection({
   const [posts, setPosts] = useState<BoardPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [authorInfoMap, setAuthorInfoMap] = useState<Record<string, UserInfo>>({});
+  const [authorInfoMap, setAuthorInfoMap] = useState<Record<string, UserInfo>>(
+    {}
+  );
 
   // 검색 관련 상태
   const [searchType, setSearchType] = useState<string>("title");
@@ -147,8 +150,48 @@ export default function BoardSection({
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
 
-  // 레이아웃 상태: "table" | "card"
-  const [layout, setLayout] = useState<"table" | "card">("table");
+  // 레이아웃 타입 정의
+  type LayoutType = "table" | "card" | "list";
+
+  // 모바일 상태 초기값 설정
+  const [isMobile, setIsMobile] = useState(false);
+
+  // 모바일 상태 감지
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // 레이아웃 상태 (테이블형/카드형/목록형)
+  const [layout, setLayout] = useState<LayoutType>(() => {
+    // localStorage에서 저장된 값을 불러옴
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("board_layout");
+      if (saved === "table" || saved === "card" || saved === "list") {
+        return saved as LayoutType;
+      }
+    }
+    // 기본값 설정 - 기본은 테이블형
+    return "table";
+  });
+
+  // 레이아웃 변경 시 localStorage에 저장
+  useEffect(() => {
+    localStorage.setItem("board_layout", layout);
+  }, [layout]);
+
+  // 모바일 상태 변경 시 레이아웃 자동 전환
+  useEffect(() => {
+    // 모바일에서는 목록형을 기본으로 사용
+    if (isMobile && layout !== "list") {
+      setLayout("list");
+    }
+  }, [isMobile]);
 
   // 컬럼 정렬 및 표시 상태 관리
   const [columnStates, setColumnStates] = useState<{
@@ -272,17 +315,7 @@ export default function BoardSection({
     comment_count: 80,
   };
 
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 640);
-    };
-
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
+  // 이미 위에서 선언했으므로 제거
 
   // 초기 컬럼 폭 비율 - 데스크탑/모바일 분리
   const initialPercents: { [key: string]: number } = {
@@ -475,29 +508,29 @@ export default function BoardSection({
         view_count: post.views || 0,
       }));
       setPosts(postsWithComments);
-      
+
       // 3. 작성자 정보 가져오기
       // 중복 제거된 user_id 목록 추출 - filter와 reduce를 사용하여 Set 대신 중복 제거
       const userIds: string[] = postsWithComments
-        .map(post => post.user_id)
+        .map((post) => post.user_id)
         .filter((id): id is string => Boolean(id))
         .filter((id, index, self) => self.indexOf(id) === index);
-      
+
       if (userIds.length > 0) {
         const { data: usersData, error: usersError } = await supabase
           .from("users")
           .select("id, username, avatar_url")
           .in("id", userIds);
-          
+
         if (usersError) {
           console.error("작성자 정보 로드 오류:", usersError);
         } else if (usersData) {
           // user_id를 키로 하는 맵 생성
           const newAuthorInfoMap: Record<string, UserInfo> = {};
-          usersData.forEach(user => {
+          usersData.forEach((user) => {
             newAuthorInfoMap[user.id] = {
               username: user.username || "익명",
-              avatar_url: user.avatar_url
+              avatar_url: user.avatar_url,
             };
           });
           setAuthorInfoMap(newAuthorInfoMap);
@@ -634,6 +667,7 @@ export default function BoardSection({
 
     return (
       <TableHead
+        key={`col-header-${key}`}
         className={`relative text-center font-semibold text-gray-700 dark:text-gray-300 select-none ${className}`}
         style={{
           width: isMobile
@@ -803,11 +837,19 @@ export default function BoardSection({
           <div className="flex gap-1 ml-2">
             <button
               type="button"
-              className={`p-2 rounded border ${layout === "table" ? "bg-blue-100 border-blue-400 text-blue-700" : "bg-white border-gray-300 text-gray-400"}`}
+              className={`p-2 rounded border ${layout === "table" ? "bg-blue-100 border-blue-400 text-blue-700" : "bg-white border-gray-300 text-gray-400"} ${isMobile ? "hidden" : ""}`}
               onClick={() => setLayout("table")}
               title="테이블형 보기"
             >
               <TableIcon className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              className={`p-2 rounded border ${layout === "list" ? "bg-blue-100 border-blue-400 text-blue-700" : "bg-white border-gray-300 text-gray-400"}`}
+              onClick={() => setLayout("list")}
+              title="목록형 보기"
+            >
+              <List className="w-4 h-4" />
             </button>
             <button
               type="button"
@@ -817,6 +859,7 @@ export default function BoardSection({
             >
               <LayoutGrid className="w-4 h-4" />
             </button>
+            
           </div>
           {/* 컬럼 설정 드롭다운 */}
           {layout === "table" && !isMobile && (
@@ -884,7 +927,144 @@ export default function BoardSection({
       </div>
 
       {/* 게시글 목록 - 레이아웃 분기 */}
-      {layout === "table" ? (
+      {layout === "list" ? (
+        // 목록형 - 모바일에 최적화된 레이아웃
+        <div className="space-y-3">
+          {/* 공지사항 */}
+          {sortedNotices.map((post) => (
+            <div
+              key={post.id}
+              className="flex items-start border-l-4 border-yellow-400 bg-yellow-50 dark:bg-yellow-900/30 p-3 rounded-md shadow-sm min-h-[88px]"
+              onClick={() => handlePostClick(post.id)}
+            >
+              <div className="flex-1 min-w-0 pr-3">
+                {/* 제목 영역 - 최대 2줄, 넘치면 ... 처리 */}
+                <div className="flex items-start gap-1 mb-1">
+                  <Badge className="bg-yellow-400 dark:bg-yellow-600 text-black dark:text-white font-bold px-1.5 py-0.5 text-xs rounded mt-0.5 shrink-0">
+                    공지
+                  </Badge>
+                  <div
+                    className="text-md font-medium line-clamp-2"
+                    style={{ wordBreak: "break-word" }}
+                  >
+                    {post.title}
+                  </div>
+                  {isNew(post.created_at) && (
+                    <Badge
+                      className="bg-blue-100 text-blue-700 font-bold text-[11px] rounded-full border border-blue-200 px-2 py-0.5 min-w-[22px] h-5 flex items-center justify-center shadow-sm tracking-wide ml-0.5 shrink-0 mt-0.5"
+                      style={{
+                        lineHeight: "1.1",
+                        fontWeight: 700,
+                        letterSpacing: "0.04em",
+                      }}
+                    >
+                      N
+                    </Badge>
+                  )}
+                </div>
+
+                {/* 작성자, 날짜, 조회수 영역 */}
+                <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  <span
+                    className="truncate max-w-[80px]"
+                    title={authorInfoMap[post.user_id]?.username || "익명"}
+                  >
+                    {authorInfoMap[post.user_id]?.username || "익명"}
+                  </span>
+                  <span className="mx-1.5">·</span>
+                  <span>{formatTime(post.created_at)}</span>
+                  <span className="mx-1.5">·</span>
+                  <span>조회 {post.view_count ?? 0}</span>
+                
+                </div>
+              </div>
+
+              {/* 썸네일 이미지 영역 - 있는 경우에만 표시 */}
+              {post.thumbnail_image && (
+                <div className="w-16 h-16 rounded-md overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-800">
+                  <img
+                    src={post.thumbnail_image}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                </div>
+              )}
+            </div>
+          ))}
+
+          {/* 일반 게시글 */}
+          {sortedNormals.length === 0 && sortedNotices.length === 0 ? (
+            <div className="text-center text-gray-400 dark:text-gray-500 py-12 bg-gray-50 dark:bg-gray-800 rounded-md">
+              게시글이 없습니다.
+            </div>
+          ) : (
+            sortedNormals.map((post) => (
+              <div
+                key={post.id}
+                className="flex items-start border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 rounded-md shadow-sm hover:shadow-md transition-shadow min-h-[88px]"
+                onClick={() => handlePostClick(post.id)}
+              >
+                <div className="flex-1 min-w-0 pr-3">
+                  {/* 제목 영역 - 최대 2줄, 넘치면 ... 처리 */}
+                  <div className="flex items-start gap-1 mb-1">
+                    {post.is_pinned && (
+                      <Badge className="bg-green-500 dark:bg-green-600 text-white rounded-full px-1.5 py-0.5 text-xs mt-0.5 shrink-0">
+                        고정
+                      </Badge>
+                    )}
+                    <div
+                      className="text-md font-medium line-clamp-2"
+                      style={{ wordBreak: "break-word" }}
+                    >
+                      {post.title}
+                    </div>
+                    {isNew(post.created_at) && (
+                      <Badge
+                        className="bg-blue-100 text-blue-700 font-bold text-[11px] rounded-full border border-blue-200 px-2 py-0.5 min-w-[22px] h-5 flex items-center justify-center shadow-sm tracking-wide ml-0.5 shrink-0 mt-0.5"
+                        style={{
+                          lineHeight: "1.1",
+                          fontWeight: 700,
+                          letterSpacing: "0.04em",
+                        }}
+                      >
+                        N
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* 작성자, 날짜, 조회수 영역 */}
+                  <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    <span
+                      className="truncate max-w-[80px]"
+                      title={authorInfoMap[post.user_id]?.username || "익명"}
+                    >
+                      {authorInfoMap[post.user_id]?.username || "익명"}
+                    </span>
+                    <span className="mx-1.5">·</span>
+                    <span>{formatTime(post.created_at)}</span>
+                    <span className="mx-1.5">·</span>
+                    <span>조회 {post.view_count ?? 0}</span>
+                    
+                  </div>
+                </div>
+
+                {/* 썸네일 이미지 영역 - 있는 경우에만 표시 */}
+                {post.thumbnail_image && (
+                  <div className="w-16 h-16 rounded-md overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-800">
+                    <img
+                      src={post.thumbnail_image}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      ) : layout === "table" ? (
         // 테이블형
         <div
           className={`overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-sm`}
@@ -922,13 +1102,12 @@ export default function BoardSection({
             </colgroup>
             <TableHeader>
               <TableRow>
-                {(() => {
-                  const visibleKeys = Object.keys(columnLabels).filter(
+                {Object.keys(columnLabels)
+                  .filter(
                     (k) => visibleColumns[k as keyof typeof visibleColumns]
-                  );
-                  return visibleKeys.map((key, idx) =>
-                    renderColumnHeader(
-                      key,
+                  )
+                  .map((key, idx, visibleKeys) => {
+                    const label =
                       key === "number"
                         ? "번호"
                         : key === "title"
@@ -941,7 +1120,9 @@ export default function BoardSection({
                                 ? "조회"
                                 : key === "comment_count"
                                   ? "댓글"
-                                  : columnLabels[key],
+                                  : columnLabels[key];
+
+                    const className =
                       key === "number"
                         ? "w-14 px-1 sm:px-2 text-xs sm:text-sm hidden sm:table-cell"
                         : key === "title"
@@ -952,14 +1133,22 @@ export default function BoardSection({
                               ? "w-[15%] sm:w-auto px-1 sm:px-2 text-xs sm:text-sm"
                               : key === "view_count"
                                 ? "w-[15%] sm:w-auto px-1 sm:px-2 text-xs sm:text-sm"
-                                : "w-20 hidden sm:table-cell px-1 sm:px-2 text-xs sm:text-sm",
-                      key !== "author",
-                      idx === visibleKeys.length - 1,
+                                : "w-20 hidden sm:table-cell px-1 sm:px-2 text-xs sm:text-sm";
+
+                    const canSort = key !== "author";
+                    const isLast = idx === visibleKeys.length - 1;
+
+                    // key prop을 TableHead 컴포넌트에 직접 전달하도록 renderColumnHeader 함수 호출
+                    return renderColumnHeader(
+                      key,
+                      label,
+                      className,
+                      canSort,
+                      isLast,
                       visibleKeys,
                       idx
-                    )
-                  );
-                })()}
+                    );
+                  })}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1026,7 +1215,8 @@ export default function BoardSection({
                             </div>
                           </div>
                         )}
-                        {key === "author" && (authorInfoMap[post.user_id]?.username || "익명")}
+                        {key === "author" &&
+                          (authorInfoMap[post.user_id]?.username || "익명")}
                         {key === "created_at" && formatTime(post.created_at)}
                         {key === "view_count" && (post.view_count ?? 0)}
                         {key === "comment_count" && (post.comment_count ?? 0)}
@@ -1113,7 +1303,8 @@ export default function BoardSection({
                             </div>
                           </div>
                         )}
-                        {key === "author" && (authorInfoMap[post.user_id]?.username || "익명")}
+                        {key === "author" &&
+                          (authorInfoMap[post.user_id]?.username || "익명")}
                         {key === "created_at" && formatTime(post.created_at)}
                         {key === "view_count" && (post.view_count ?? 0)}
                         {key === "comment_count" && (post.comment_count ?? 0)}
@@ -1185,7 +1376,9 @@ export default function BoardSection({
                 </CardHeader>
                 <CardContent className="px-4 pt-0 pb-2 flex-1 flex flex-col justify-end bg-transparent">
                   <div className="flex items-center justify-between text-xs text-gray-400">
-                    <span>{authorInfoMap[post.user_id]?.username || "익명"}</span>
+                    <span>
+                      {authorInfoMap[post.user_id]?.username || "익명"}
+                    </span>
                     <span>{formatTime(post.created_at)}</span>
                   </div>
                   <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">

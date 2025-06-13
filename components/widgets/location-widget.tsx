@@ -2,6 +2,10 @@ import React from "react";
 import Link from "next/link";
 import { MapPin, Phone, Mail } from "lucide-react";
 
+// Google Maps API 키
+// 임베드 URL에는 API 키가 필요 없으므로 주석 처리
+// const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+
 interface ILocationWidgetProps {
   id: string;
   widget: {
@@ -31,13 +35,13 @@ export default function LocationWidget({
   return (
     <section
       id={id}
-      className="w-full py-8 md:py-12 px-4"
+      className="w-full py-8 md:py-12"
       // style={{
       //   backgroundColor:
       //     widget?.display_options?.background_color || "transparent",
       // }}
     >
-      <div className="container mx-auto">
+      <div className="mx-auto">
         <div className="mb-6 md:mb-8">
           <h2 className="text-2xl md:text-3xl font-bold mb-2">
             {widget.display_options?.location_title || "위치 정보"}
@@ -53,17 +57,24 @@ export default function LocationWidget({
           <div className="lg:col-span-2">
             <div className="overflow-hidden border border-gray-200 hover:shadow-lg transition-all duration-500 rounded-md w-full h-full">
               {widget.display_options?.embed_map_url ? (
-                <iframe
-                  src={widget.display_options.embed_map_url}
-                  width="100%"
-                  height="450"
-                  style={{ border: 0 }}
-                  allowFullScreen={false}
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  title="위치 지도"
-                  className="w-full h-full min-h-[300px]"
-                />
+                <div className="w-full h-full min-h-[300px] relative">
+                  {/* 사용자가 제공한 iframe 코드를 직접 사용 */}
+                  <iframe
+                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d743446.8183610048!2d-79.9229419011009!3d43.29145502084081!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x882b34af3bfc37ab%3A0x57b2b1a3b29500c2!2z7Yag66Gg7YagIOy7pOuEpe2KuCDqtZDtmowgVG9yb250byBDb25uZWN0IENodXJjaA!5e0!3m2!1sko!2sca!4v1749792785735!5m2!1sko!2sca"
+                    style={{
+                      border: 0,
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      height: "100%",
+                    }}
+                    allowFullScreen
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    title="Toronto Connect Church 위치 지도"
+                  />
+                </div>
               ) : (
                 <div className="flex items-center justify-center h-full min-h-[300px] bg-gray-100 text-gray-500">
                   <div className="text-center p-6">
