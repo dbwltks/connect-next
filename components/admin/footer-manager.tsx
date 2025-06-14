@@ -366,13 +366,13 @@ export default function FooterManager() {
 
       <Card>
         <CardHeader>
-          <CardTitle>교회 기본 정보</CardTitle>
-          <CardDescription>교회 이름과 슬로건을 설정합니다.</CardDescription>
+          <CardTitle>기본 정보</CardTitle>
+          <CardDescription>사이트명과 슬로건을 설정합니다.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="church_name">교회 이름</Label>
+              <Label htmlFor="church_name">사이트명</Label>
               <Input
                 id="church_name"
                 name="church_name"
@@ -382,7 +382,7 @@ export default function FooterManager() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="church_slogan">교회 슬로건</Label>
+              <Label htmlFor="church_slogan">슬로건</Label>
               <Textarea
                 id="church_slogan"
                 name="church_slogan"
@@ -402,7 +402,7 @@ export default function FooterManager() {
             <div>
               <CardTitle>연락처 정보</CardTitle>
               <CardDescription>
-                교회 주소와 연락처 정보를 설정합니다.
+                주소와 연락처 정보를 설정합니다.
               </CardDescription>
             </div>
           </div>
@@ -560,7 +560,7 @@ export default function FooterManager() {
       <Card>
         <CardHeader>
           <CardTitle>소셜 미디어</CardTitle>
-          <CardDescription>교회 소셜 미디어 링크를 설정합니다.</CardDescription>
+          <CardDescription>소셜 미디어 링크를 설정합니다.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-3">

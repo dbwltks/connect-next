@@ -1011,7 +1011,7 @@ export default function BoardWrite({
             <div className="grid grid-cols-8 sm:flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
               {/* 임시등록 버튼(텍스트/숫자 분리 클릭) */}
               {!isEditMode && (
-                <div className="flex items-center border rounded h-9 sm:h-10  col-span-4 sm:col-auto">
+                <div className="flex items-center border rounded h-9 sm:h-10 col-span-4 sm:col-auto">
                   <button
                     type="button"
                     onClick={handleManualSave}

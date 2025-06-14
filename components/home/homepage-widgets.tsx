@@ -35,41 +35,41 @@ export default function HomepageWidgets({
 
   // 로컬 스토리지에서 위젯 데이터 가져오기
   const getLocalWidgets = () => {
-    if (typeof window === 'undefined') return null;
-    
+    if (typeof window === "undefined") return null;
+
     try {
-      const cachedData = localStorage.getItem('homepage_widgets');
+      const cachedData = localStorage.getItem("homepage_widgets");
       if (!cachedData) return null;
-      
+
       const { widgets: cachedWidgets, timestamp } = JSON.parse(cachedData);
-      
+
       // 캐시 유효시간 확인 (5분)
       const isExpired = Date.now() - timestamp > 5 * 60 * 1000;
-      
+
       if (isExpired) {
         return null; // 캐시 만료되었으면 null 반환
       }
-      
+
       return cachedWidgets;
     } catch (err) {
-      console.error('캐시된 위젯 데이터 불러오기 오류:', err);
+      console.error("캐시된 위젯 데이터 불러오기 오류:", err);
       return null;
     }
   };
-  
+
   // 로컬 스토리지에 위젯 데이터 저장
   const saveLocalWidgets = (widgetsData: Widget[]) => {
-    if (typeof window === 'undefined') return;
-    
+    if (typeof window === "undefined") return;
+
     try {
       const dataToCache = {
         widgets: widgetsData,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
-      
-      localStorage.setItem('homepage_widgets', JSON.stringify(dataToCache));
+
+      localStorage.setItem("homepage_widgets", JSON.stringify(dataToCache));
     } catch (err) {
-      console.error('위젯 데이터 캐싱 오류:', err);
+      console.error("위젯 데이터 캐싱 오류:", err);
     }
   };
 
@@ -82,20 +82,20 @@ export default function HomepageWidgets({
         saveLocalWidgets(initialWidgets);
         return;
       }
-      
+
       // 캐시를 사용하지 않거나 캐시가 없는 경우에만 로딩 상태 표시
       if (!skipCache) {
         const cachedWidgets = getLocalWidgets();
         if (cachedWidgets) {
           setWidgets(cachedWidgets);
           setIsLoading(false);
-          
+
           // 백그라운드에서 데이터 갱신 (사용자에게 로딩 표시 없이)
           fetchWidgets(true);
           return;
         }
       }
-      
+
       if (!skipCache) {
         setIsLoading(true);
       }
@@ -194,7 +194,7 @@ export default function HomepageWidgets({
             posts={initialPagePosts}
           />
         );
-        
+
       case "location":
         return (
           <LocationWidget
@@ -266,7 +266,7 @@ export default function HomepageWidgets({
 
   return (
     <div className="sm:container px-4 mx-auto py-2">
-      <div className="grid grid-cols-12 gap-4">
+      <div className="grid grid-cols-12 gap-4 space-y-6">
         {sortedWidgets.map((widget) => {
           // 위젯 너비에 따라 그리드 컬럼 수 결정 (모바일에서는 한 줄에 하나씩)
           let colSpan;

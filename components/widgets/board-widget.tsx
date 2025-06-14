@@ -23,7 +23,6 @@ interface BoardWidgetProps {
   };
   page?: IPage;
   posts?: IBoardPost[];
-
 }
 
 // 게시판 템플릿 타입 정의
@@ -61,12 +60,11 @@ export function BoardWidget({
   widget,
   page,
   posts: initialPosts = [],
-
 }: BoardWidgetProps) {
   const [posts, setPosts] = useState<IBoardPost[]>(initialPosts);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // 캐시 키 생성 - 위젯 ID와 페이지 ID 기반
   const getCacheKey = (widgetId: string, pageId: string) => {
     return `board_widget_${widgetId}_${pageId}`;
@@ -74,43 +72,47 @@ export function BoardWidget({
 
   // 로컬 스토리지에서 게시판 데이터 가져오기
   const getLocalBoardPosts = (widgetId: string, pageId: string) => {
-    if (typeof window === 'undefined') return null;
-    
+    if (typeof window === "undefined") return null;
+
     try {
       const cacheKey = getCacheKey(widgetId, pageId);
       const cachedData = localStorage.getItem(cacheKey);
       if (!cachedData) return null;
-      
+
       const { posts: cachedPosts, timestamp } = JSON.parse(cachedData);
-      
+
       // 캐시 유효시간 확인 (10분)
       const isExpired = Date.now() - timestamp > 10 * 60 * 1000;
-      
+
       if (isExpired) {
         return null; // 캐시 만료되었으면 null 반환
       }
-      
+
       return cachedPosts;
     } catch (err) {
-      console.error('캐시된 게시판 데이터 불러오기 오류:', err);
+      console.error("캐시된 게시판 데이터 불러오기 오류:", err);
       return null;
     }
   };
-  
+
   // 로컬 스토리지에 게시판 데이터 저장
-  const saveLocalBoardPosts = (widgetId: string, pageId: string, postsData: IBoardPost[]) => {
-    if (typeof window === 'undefined') return;
-    
+  const saveLocalBoardPosts = (
+    widgetId: string,
+    pageId: string,
+    postsData: IBoardPost[]
+  ) => {
+    if (typeof window === "undefined") return;
+
     try {
       const cacheKey = getCacheKey(widgetId, pageId);
       const dataToCache = {
         posts: postsData,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
-      
+
       localStorage.setItem(cacheKey, JSON.stringify(dataToCache));
     } catch (err) {
-      console.error('게시판 데이터 캐싱 오류:', err);
+      console.error("게시판 데이터 캐싱 오류:", err);
     }
   };
 
@@ -146,7 +148,7 @@ export function BoardWidget({
       setError("페이지 ID가 없어 데이터를 로드할 수 없습니다.");
       return;
     }
-    
+
     try {
       // 캐시 사용 여부 확인
       if (!skipCache) {
@@ -159,7 +161,7 @@ export function BoardWidget({
           return () => clearTimeout(timer); // 클린업 함수로 타이머 제거
         }
       }
-      
+
       if (!skipCache) {
         setIsLoading(true);
       }
@@ -221,16 +223,16 @@ export function BoardWidget({
 
   // 초기 데이터 로드 상태를 추적하는 ref
   const dataLoadedRef = useRef(false);
-  
+
   // loadBoardPosts 함수를 useCallback으로 메모이제이션
   const memorizedLoadBoardPosts = useCallback(
     async (pageId: string, skipCache = false) => {
-      // loadBoardPosts 내부 로직 
+      // loadBoardPosts 내부 로직
       if (!pageId || !widget.id) {
         setError("페이지 ID가 없어 데이터를 로드할 수 없습니다.");
         return;
       }
-      
+
       try {
         // 캐시 사용 여부 확인
         if (!skipCache) {
@@ -240,7 +242,7 @@ export function BoardWidget({
             return;
           }
         }
-        
+
         if (!skipCache) {
           setIsLoading(true);
         }
@@ -307,7 +309,7 @@ export function BoardWidget({
     // 초기 데이터가 있으면 사용
     if (initialPosts && initialPosts.length > 0) {
       setPosts(initialPosts);
-      
+
       // 초기 데이터도 캐싱
       const pageId = page?.id || widget.display_options?.page_id;
       if (pageId && widget.id) {
@@ -322,25 +324,24 @@ export function BoardWidget({
       memorizedLoadBoardPosts(pageId);
       dataLoadedRef.current = true;
     }
-    
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page?.id, widget.id, widget.display_options?.page_id, initialPosts]);
-  
+
   // 캐시된 데이터 갱신을 위한 별도 useEffect
   useEffect(() => {
     const pageId = page?.id || widget.display_options?.page_id;
-    
+
     if (pageId) {
       // 컴포넌트 마운트 후 한 번만 백그라운드 갱신 수행
       const timer = setTimeout(() => {
         memorizedLoadBoardPosts(pageId, true);
       }, 1000);
-      
+
       return () => clearTimeout(timer);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
 
   // 템플릿별 렌더링 함수
   const renderByTemplate = () => {
@@ -480,7 +481,10 @@ export function BoardWidget({
         return (
           <div className="space-y-4">
             {posts.map((post) => (
-              <div key={post.id} className="flex items-start space-x-4">
+              <div
+                key={post.id}
+                className="flex items-start space-x-4 border-b"
+              >
                 {showThumbnail && post.thumbnail_image ? (
                   <div className="w-20 h-20 flex-shrink-0">
                     <img
@@ -520,13 +524,14 @@ export function BoardWidget({
   };
 
   return (
-    <div className="h-full">
+    <div className="h-full py-6">
       <div className="p-2">
-        <div className="text-xl font-bold">{widget.title || page?.title || "게시판"}</div>
+        <div className="text-xl font-bold">
+          {widget.title || page?.title || "게시판"}
+        </div>
       </div>
       <div>
-        {renderByTemplate()}  
-
+        {renderByTemplate()}
         <div className="mt-3 text-center">
           <Link
             href={page?.slug || "/"}

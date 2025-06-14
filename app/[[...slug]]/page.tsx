@@ -120,7 +120,7 @@ export default async function DynamicPage(props: { params: any }) {
     return (
       <>
         <MainBanner menuId={menu.id} />
-        <div className="container mx-auto mt-4 mb-2 px-0 sm:px-4">
+        <div className="container mx-auto mt-4 mb-2 px-4">
           <Breadcrumb currentTitle={menu.title} />
         </div>
         <main>

@@ -591,6 +591,8 @@ export default function BannerManager() {
       overlay_opacity: "0.4", // 기본값 설정
     };
 
+    // 다이얼로그를 열고 새 배너를 편집 상태로 설정
+    // 실제로는 다이얼로그에서 '저장'을 눌러야만 목록에 추가됨
     setEditingBanner(newBanner);
     setEditingBannerId(null);
     setShowEditDialog(true);
@@ -657,7 +659,7 @@ export default function BannerManager() {
                 value={selectedMenuId || ""}
                 onChange={(e) => handleMenuChange(e.target.value || null)}
               >
-                <option value="">전체 사이트 (공통 배너)</option>
+                <option value="">메인 홈 (홈 배너)</option>
                 {menus.map((menu) => (
                   <option key={menu.id} value={menu.id}>
                     {menu.name} ({menu.url})
@@ -1114,66 +1116,104 @@ export default function BannerManager() {
               type="button"
               variant="secondary"
               onClick={() => setShowEditDialog(false)}
+              disabled={isLoading}
             >
               취소
             </Button>
             <Button
               type="button"
-              onClick={() => {
+              onClick={async () => {
                 if (!editingBanner) return;
 
-                // id가 없거나 잘못된 경우 uuid 생성
-                let validId =
-                  editingBanner.id && editingBanner.id.length === 36
-                    ? editingBanner.id
-                    : crypto.randomUUID();
-                if (!validId || validId === "") validId = crypto.randomUUID();
+                try {
+                  setIsLoading(true);
 
-                const newBanner = {
-                  ...editingBanner,
-                  id: validId,
-                  // 직접입력 모드에서는 title/subtitle 대신 html_content만 저장
-                  ...(editingBanner.use_html
-                    ? {
-                        title: "",
-                        subtitle: "",
-                        html_content: editingBanner.html_content || "",
-                      }
-                    : {
-                        html_content: "",
-                      }),
-                };
+                  // id가 없거나 잘못된 경우 uuid 생성
+                  let validId =
+                    editingBanner.id && editingBanner.id.length === 36
+                      ? editingBanner.id
+                      : crypto.randomUUID();
+                  if (!validId || validId === "") validId = crypto.randomUUID();
 
-                // 현재 표시 중인 배너 목록 업데이트
-                setBanners((prev) => {
-                  const exists = prev.some((b) => b.id === newBanner.id);
-                  if (exists) {
-                    return prev.map((b) =>
-                      b.id === newBanner.id ? newBanner : b
+
+                  const newBanner = {
+                    ...editingBanner,
+                    id: validId,
+                    // 직접입력 모드에서는 title/subtitle 대신 html_content만 저장
+                    ...(editingBanner.use_html
+                      ? {
+                          title: "",
+                          subtitle: "",
+                          html_content: editingBanner.html_content || "",
+                        }
+                      : {
+                          html_content: "",
+                        }),
+                  };
+                  
+                  // 1. 새 배너를 데이터베이스에 저장
+                  const { error: upsertError } = await supabase
+                    .from("cms_banners")
+                    .upsert(
+                      {
+                        id: newBanner.id,
+                        title: newBanner.title,
+                        subtitle: newBanner.subtitle,
+                        image_url: newBanner.imageUrl,
+                        is_active: newBanner.isActive,
+                        order_num: newBanner.order_num,
+                        button_text: newBanner.button_text,
+                        button_url: newBanner.button_url,
+                        has_button: newBanner.has_button,
+                        full_width: newBanner.full_width,
+                        menu_id: newBanner.menu_id,
+                        html_content: newBanner.html_content,
+                        use_html: newBanner.use_html,
+                        image_height: newBanner.image_height || "original",
+                        overlay_opacity: newBanner.overlay_opacity || "0.4",
+                      },
+                      { onConflict: "id" }
                     );
-                  } else {
-                    return [...prev, newBanner];
-                  }
-                });
 
-                // 전체 배너 목록도 업데이트
-                setAllBanners((prev) => {
-                  const exists = prev.some((b) => b.id === newBanner.id);
-                  if (exists) {
-                    return prev.map((b) =>
-                      b.id === newBanner.id ? newBanner : b
-                    );
-                  } else {
-                    return [...prev, newBanner];
-                  }
-                });
+                  if (upsertError) throw upsertError;
 
-                setShowEditDialog(false);
-                setEditingBanner(null);
-                setEditingBannerId(null);
+                  // 2. 로컬 상태 업데이트
+                  const updatedAllBanners = allBanners.some(b => b.id === newBanner.id)
+                    ? allBanners.map(b => b.id === newBanner.id ? newBanner : b)
+                    : [...allBanners, newBanner];
+                  
+                  setAllBanners(updatedAllBanners);
+                  
+                  // 3. 필터링된 배너 목록 업데이트
+                  const filteredBanners = selectedMenuId
+                    ? updatedAllBanners.filter(banner => banner.menu_id === selectedMenuId)
+                    : updatedAllBanners.filter(banner => banner.menu_id === null);
+                  
+                  // 4. 배너 목록 새로고침
+                  await loadBanners();
+                  
+                  toast({
+                    title: "성공",
+                    description: "배너가 저장되었습니다.",
+                  });
+                  
+                } catch (error) {
+                  console.error("배너 저장 오류:", error);
+                  toast({
+                    title: "오류",
+                    description: "배너 저장 중 오류가 발생했습니다.",
+                    variant: "destructive",
+                  });
+                } finally {
+                  setIsLoading(false);
+                  setShowEditDialog(false);
+                  setEditingBanner(null);
+                  setEditingBannerId(null);
+                }
               }}
+              disabled={isLoading}
             >
-              저장
+              {isLoading ? "저장 중..." : "저장"}
             </Button>
           </DialogFooter>
         </DialogContent>

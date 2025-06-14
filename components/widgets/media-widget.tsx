@@ -12,17 +12,13 @@ interface MediaWidgetProps {
   };
   page?: IPage;
   posts?: IBoardPost[];
-
 }
 
 export function MediaWidget({
   widget,
   page,
   posts: initialPosts = [],
-
 }: MediaWidgetProps) {
-
-
   // 초기 데이터로 상태 초기화
   const [posts, setPosts] = useState<IBoardPost[]>(initialPosts);
   const [isLoading, setIsLoading] = useState(false);
@@ -35,43 +31,47 @@ export function MediaWidget({
 
   // 로컬 스토리지에서 미디어 데이터 가져오기
   const getLocalMediaPosts = (widgetId: string, pageId: string) => {
-    if (typeof window === 'undefined') return null;
-    
+    if (typeof window === "undefined") return null;
+
     try {
       const cacheKey = getCacheKey(widgetId, pageId);
       const cachedData = localStorage.getItem(cacheKey);
       if (!cachedData) return null;
-      
+
       const { posts: cachedPosts, timestamp } = JSON.parse(cachedData);
-      
+
       // 캐시 유효시간 확인 (10분)
       const isExpired = Date.now() - timestamp > 10 * 60 * 1000;
-      
+
       if (isExpired) {
         return null; // 캐시 만료되었으면 null 반환
       }
-      
+
       return cachedPosts;
     } catch (err) {
-      console.error('캐시된 미디어 데이터 불러오기 오류:', err);
+      console.error("캐시된 미디어 데이터 불러오기 오류:", err);
       return null;
     }
   };
-  
+
   // 로컬 스토리지에 미디어 데이터 저장
-  const saveLocalMediaPosts = (widgetId: string, pageId: string, postsData: IBoardPost[]) => {
-    if (typeof window === 'undefined') return;
-    
+  const saveLocalMediaPosts = (
+    widgetId: string,
+    pageId: string,
+    postsData: IBoardPost[]
+  ) => {
+    if (typeof window === "undefined") return;
+
     try {
       const cacheKey = getCacheKey(widgetId, pageId);
       const dataToCache = {
         posts: postsData,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
-      
+
       localStorage.setItem(cacheKey, JSON.stringify(dataToCache));
     } catch (err) {
-      console.error('미디어 데이터 캐싱 오류:', err);
+      console.error("미디어 데이터 캐싱 오류:", err);
     }
   };
 
@@ -95,7 +95,7 @@ export function MediaWidget({
           return;
         }
       }
-      
+
       if (!skipCache) {
         setIsLoading(true);
       }
@@ -103,7 +103,7 @@ export function MediaWidget({
 
       // 최적화: JOIN을 사용해 한 번의 쿼리로 게시물과 작성자 정보 가져오기
       const limit = widget.display_options?.item_count || 6; // 기본값 6개 (메인 1개 + 사이드바 5개)
-      
+
       const { data, error } = await supabase
         .from("board_posts")
         .select("*")
@@ -139,7 +139,7 @@ export function MediaWidget({
     // 초기 데이터가 있으면 로드하지 않음
     if (initialPosts.length > 0) {
       setPosts(initialPosts);
-      
+
       // 초기 데이터도 캐싱
       const pageId = page?.id || widget.display_options?.page_id;
       if (pageId && widget.id) {
@@ -161,7 +161,6 @@ export function MediaWidget({
     <div className="h-full">
       <div className="py-6">
         {/* 로딩 중일 때는 아무것도 표시하지 않음 */}
-
         {error && (
           <div
             className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative"
@@ -231,7 +230,9 @@ export function MediaWidget({
                           </h4>
                         </div>
                         <div className="h-5 flex items-center space-x-3 truncate text-sm text-gray-700">
-                          {posts[0].description && <span>{posts[0].description}</span>}
+                          {posts[0].description && (
+                            <span>{posts[0].description}</span>
+                          )}
                         </div>
                         <div className="pt-1 flex items-center justify-end space-x-2">
                           <span className="text-xs text-gray-500 ">
@@ -285,102 +286,102 @@ export function MediaWidget({
 
               {/* Video List */}
               <div className="space-y-3">
-                {posts.length > 1 ? (
-                  posts.slice(1).map((post) => (
-                    <div
-                      key={post.id}
-                      className="overflow-hidden border border-gray-200 hover:shadow-lg transition-all duration-500 transform hover:-translate-y-1 rounded-md w-full"
-                    >
-                      <Link
-                        href={`${page?.slug}/${post.id}`}
-                        className="flex flex-row w-full group"
+                {posts.length > 1
+                  ? posts.slice(1).map((post) => (
+                      <div
+                        key={post.id}
+                        className="overflow-hidden border border-gray-200 hover:shadow-lg transition-all duration-500 transform hover:-translate-y-1 rounded-md w-full"
                       >
-                        <div className="relative w-20 sm:w-28 h-20 flex-shrink-0">
-                          {post.thumbnail_image ? (
-                            <img
-                              src={post.thumbnail_image}
-                              alt={post.title}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gray-200"></div>
-                          )}
-                          <div className="absolute inset-0 bg-black/15 group-hover:bg-black/10 flex items-center justify-center">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="14"
-                              height="14"
-                              className="text-white opacity-80 group-hover:opacity-100"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="1.5"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                            </svg>
+                        <Link
+                          href={`${page?.slug}/${post.id}`}
+                          className="flex flex-row w-full group"
+                        >
+                          <div className="relative w-20 sm:w-28 h-20 flex-shrink-0">
+                            {post.thumbnail_image ? (
+                              <img
+                                src={post.thumbnail_image}
+                                alt={post.title}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gray-200"></div>
+                            )}
+                            <div className="absolute inset-0 bg-black/15 group-hover:bg-black/10 flex items-center justify-center">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="14"
+                                height="14"
+                                className="text-white opacity-80 group-hover:opacity-100"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                              </svg>
+                            </div>
                           </div>
-                        </div>
-                        <div className="p-1.5 sm:p-2 flex-1 w-full overflow-hidden">
-                          <div className="w-full overflow-hidden">
-                            <h4 className="text-md font-medium truncate block w-full">
-                              {post.title}
-                            </h4>
-                          </div>
-                          <div className="h-5 flex items-center space-x-3 truncate text-xs text-gray-600">
-                            {post.description && <span>{post.description}</span>}
-                          </div>
-                          <div className="pt-1 flex items-center justify-between">
-                            <span className="text-[10px] text-gray-500">
-                              {post.author || "익명"} ·{" "}
-                              {new Date(post.created_at).toLocaleDateString()}
-                            </span>
-                            <div className="flex items-center space-x-2 text-[10px] text-gray-500">
-                              <div className="flex items-center space-x-1">
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  width="10"
-                                  height="10"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                >
-                                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                  <circle cx="12" cy="12" r="3"></circle>
-                                </svg>
-                                <span>
-                                  {post.views || 0}
-                                </span>
-                              </div>
-                              <div className="flex items-center space-x-1">
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  width="10"
-                                  height="10"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                >
-                                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                                </svg>
-                                <span>{post.likes_count || 0}</span>
+                          <div className="p-1.5 sm:p-2 flex-1 w-full overflow-hidden">
+                            <div className="w-full overflow-hidden">
+                              <h4 className="text-md font-medium truncate block w-full">
+                                {post.title}
+                              </h4>
+                            </div>
+                            <div className="h-5 flex items-center space-x-3 truncate text-xs text-gray-600">
+                              {post.description && (
+                                <span>{post.description}</span>
+                              )}
+                            </div>
+                            <div className="pt-1 flex items-center justify-between">
+                              <span className="text-[10px] text-gray-500">
+                                {post.author || "익명"} ·{" "}
+                                {new Date(post.created_at).toLocaleDateString()}
+                              </span>
+                              <div className="flex items-center space-x-2 text-[10px] text-gray-500">
+                                <div className="flex items-center space-x-1">
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="10"
+                                    height="10"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  >
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                  </svg>
+                                  <span>{post.views || 0}</span>
+                                </div>
+                                <div className="flex items-center space-x-1">
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="10"
+                                    height="10"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  >
+                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                  </svg>
+                                  <span>{post.likes_count || 0}</span>
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      </Link>
-                    </div>
-                  ))
-                ) : posts.length === 0 ? (
-                  null
-                ) : null}
+                        </Link>
+                      </div>
+                    ))
+                  : posts.length === 0
+                    ? null
+                    : null}
 
                 <Link
                   href={page?.slug || "/"}

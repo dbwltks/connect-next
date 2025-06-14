@@ -87,7 +87,7 @@ export default function BoardSection({
   menuTitle,
 }: BoardSectionProps) {
   // 컨테이너 클래스 설정 - 브레드크럼과 동일한 여백 적용
-  const containerClass = "container mx-auto px-2 sm:px-4";
+  const containerClass = "container mx-auto px-4";
   const [showDropdown, setShowDropdown] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
@@ -1458,15 +1458,15 @@ export default function BoardSection({
       </div>
 
       {/* 검색 폼 */}
-      <div className="flex justify-center mt-6 mb-8 px-4 sm:px-6">
+      <div className="flex justify-center mt-6 mb-8 sm:px-6">
         <form
           onSubmit={handleSearch}
-          className="flex flex-row items-center gap-2 w-full"
+          className="flex flex-row items-center gap-1 w-full max-w-lg sm:max-w-2xl" // max-w-lg 추가
         >
           <select
             value={searchType}
             onChange={(e) => setSearchType(e.target.value)}
-            className="px-3 py-2 border rounded-md text-sm min-w-[75px] max-w-[120px] bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 flex-shrink-0" // min-width 조절, max-width 추가, flex-shrink-0
+            className="px-3 py-2 border rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 flex-shrink-0"
           >
             <option value="title">제목</option>
             <option value="content">내용</option>
@@ -1475,9 +1475,9 @@ export default function BoardSection({
           <input
             type="text"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => setSearchType(e.target.value)}
             placeholder="검색어를 입력하세요"
-            className="flex-1 px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" // flex-1 유지
+            className="flex-1 min-w-0 px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" // min-w-0 추가
           />
           <Button type="submit" className="px-4 py-2 flex-shrink-0">
             검색

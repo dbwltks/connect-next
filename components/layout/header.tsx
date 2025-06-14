@@ -292,10 +292,10 @@ function HeaderClient({ user, menuItems }: { user: any; menuItems: any[] }) {
       }
     };
   }, []);
-  
+
   // 하이드레이션 오류를 피하기 위한 클라이언트 사이드 코드 실행 상태 관리
   const [isClient, setIsClient] = useState(false);
-  
+
   // 콤포넌트가 마운트된 후 클라이언트 상태로 설정
   useEffect(() => {
     setIsClient(true);
@@ -408,7 +408,7 @@ function HeaderClient({ user, menuItems }: { user: any; menuItems: any[] }) {
           {/* 메뉴 컨텐츠 */}
           {createPortal(
             <div
-              className={`fixed top-[4rem] left-0 right-0 max-h-[calc(100vh-4rem)] bg-background shadow-xl rounded-b-2xl px-8 pt-4 z-[8] overflow-y-auto ${animationClass}`}
+              className={`fixed top-[4rem] left-0 right-0 max-h-[calc(100vh)] bg-background shadow-xl rounded-b-2xl px-8 pt-4 z-[8] overflow-y-auto ${animationClass}`}
             >
               <ul className="space-y-4">
                 {menuItems.map((item: any, idx: number) => (

@@ -6,7 +6,8 @@ import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
 import type { Banner } from "./main-banner";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react"; // useRef 추가
+import { ChevronLeft, ChevronRight } from "lucide-react"; // lucide-react 아이콘 임포트
 
 interface BannerSliderProps {
   banners: Banner[];
@@ -14,38 +15,16 @@ interface BannerSliderProps {
 
 export default function BannerSlider({ banners }: BannerSliderProps) {
   const HEADER_HEIGHT = 64; // px, 헤더 높이와 맞춰야 함
-  
+
+  // Swiper 네비게이션 버튼을 위한 ref 생성
+  const navigationPrevRef = useRef<HTMLButtonElement>(null);
+  const navigationNextRef = useRef<HTMLButtonElement>(null);
+
   // 커스텀 네비게이션 화살표 및 페이지네이션 스타일 적용
   useEffect(() => {
     // 스와이퍼 네비게이션 화살표와 페이지네이션 스타일 커스터마이징
-    const style = document.createElement('style');
+    const style = document.createElement("style");
     style.innerHTML = `
-      /* 화살표 스타일 */
-      .swiper-button-next,
-      .swiper-button-prev {
-        background-color: rgba(255, 255, 255, 0.5);
-        color: rgba(0, 0, 0, 0.7);
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        transition: all 0.3s ease;
-      }
-      
-      .swiper-button-next:hover,
-      .swiper-button-prev:hover {
-        background-color: rgba(255, 255, 255, 0.8);
-        color: rgba(0, 0, 0, 0.9);
-      }
-      
-      .swiper-button-next:after,
-      .swiper-button-prev:after {
-        font-size: 18px;
-        font-weight: bold;
-      }
-      
       /* 페이지네이션 점 스타일 */
       .swiper-pagination-bullet {
         width: 10px;
@@ -67,7 +46,7 @@ export default function BannerSlider({ banners }: BannerSliderProps) {
       }
     `;
     document.head.appendChild(style);
-    
+
     return () => {
       document.head.removeChild(style);
     };
@@ -75,7 +54,7 @@ export default function BannerSlider({ banners }: BannerSliderProps) {
 
   // 화면 전체 높이 계산 (헤더 높이 고려)
   const getFullscreenHeight = () => {
-    return `calc(100vh - ${HEADER_HEIGHT}px)`;
+    return `calc(100vh)`;
   };
 
   const renderBanner = (banner: Banner) => {
@@ -94,7 +73,7 @@ export default function BannerSlider({ banners }: BannerSliderProps) {
         >
           <div className="absolute inset-0">
             <div
-              className="absolute inset-0 bg-black"
+              className="absolute inset-0 bg-black "
               style={{
                 opacity: banner.overlay_opacity
                   ? Number(banner.overlay_opacity)
@@ -102,7 +81,7 @@ export default function BannerSlider({ banners }: BannerSliderProps) {
                 pointerEvents: "none",
               }}
             ></div>
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-4">
+            <div>
               {banner.use_html ? (
                 banner.html_content && banner.html_content.trim() !== "" ? (
                   <div
@@ -275,13 +254,45 @@ export default function BannerSlider({ banners }: BannerSliderProps) {
           loop
           autoplay={{ delay: 5000, disableOnInteraction: false }}
           pagination={{ clickable: true }}
-          navigation
+          // navigation prop에 ref 객체를 전달
+          navigation={{
+            prevEl: navigationPrevRef.current,
+            nextEl: navigationNextRef.current,
+          }}
+          // onBeforeInit을 사용하여 Swiper 인스턴스가 생성되기 전에 ref가 설정되었는지 확인
+          onBeforeInit={(swiper) => {
+            if (
+              swiper.params.navigation &&
+              typeof swiper.params.navigation !== "boolean"
+            ) {
+              // @ts-ignore
+              swiper.params.navigation.prevEl = navigationPrevRef.current;
+              // @ts-ignore
+              swiper.params.navigation.nextEl = navigationNextRef.current;
+            }
+          }}
           modules={[Autoplay, Navigation, Pagination]}
           style={{ width: "100%", height: "100%" }}
         >
           {banners.map((banner) => (
             <SwiperSlide key={banner.id}>{renderBanner(banner)}</SwiperSlide>
           ))}
+
+          {/* 커스텀 네비게이션 버튼 추가 */}
+          <button
+            ref={navigationPrevRef}
+            className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10 w-10 h-10 md:w-12 md:h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 focus:outline-none"
+            aria-label="Previous slide"
+          >
+            <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
+          </button>
+          <button
+            ref={navigationNextRef}
+            className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 w-10 h-10 md:w-12 md:h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 focus:outline-none"
+            aria-label="Next slide"
+          >
+            <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
+          </button>
         </Swiper>
       ) : null}
     </div>
