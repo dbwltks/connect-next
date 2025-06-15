@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/db";
 import { toast } from "@/components/ui/toaster";
 import { Button } from "@/components/ui/button";
 import {
@@ -61,11 +61,6 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-
-// Supabase 클라이언트 초기화
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 // 메뉴 항목 타입 정의
 export type MenuItem = {

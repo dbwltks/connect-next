@@ -54,7 +54,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Trash2 as Trash, Edit, Plus } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/db";
 
 // 메뉴 타입
 export type Menu = {
@@ -91,6 +91,17 @@ export type CmsImage = {
   created_at: string;
 };
 
+// 유튜브 링크 판별 및 ID 추출 함수 추가
+function isYoutubeUrl(url: string) {
+  return /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\//.test(url);
+}
+
+function extractYoutubeId(url: string): string | null {
+  const regExp = /(?:youtube\.com.*(?:\?|&)v=|youtu\.be\/)([a-zA-Z0-9_-]+)/;
+  const match = url.match(regExp);
+  return match ? match[1] : null;
+}
+
 // 정렬 가능한 배너 아이템
 function SortableBannerItem({
   banner,
@@ -123,7 +134,7 @@ function SortableBannerItem({
                 {...listeners}
               />
               <div
-                className="w-20 bg-gray-100 rounded overflow-hidden flex items-center justify-center mr-3"
+                className="w-20 bg-gray-100 rounded overflow-hidden flex items-center justify-center mr-3 relative"
                 style={{
                   height:
                     banner.image_height && banner.image_height !== "original"
@@ -132,19 +143,75 @@ function SortableBannerItem({
                 }}
               >
                 {banner.imageUrl ? (
-                  <img
-                    src={banner.imageUrl}
-                    alt={banner.title}
-                    className="object-cover w-full"
-                    style={{
-                      height:
-                        banner.image_height &&
-                        banner.image_height !== "original"
-                          ? banner.image_height
-                          : "100%",
-                      width: "100%",
-                    }}
-                  />
+                  isYoutubeUrl(banner.imageUrl) &&
+                  extractYoutubeId(banner.imageUrl) ? (
+                    <>
+                      {/* 유튜브 영상 배경 */}
+                      <iframe
+                        src={`https://www.youtube.com/embed/${extractYoutubeId(banner.imageUrl)}?autoplay=1&mute=1&controls=0&showinfo=0&rel=0&loop=1&playlist=${extractYoutubeId(banner.imageUrl)}&modestbranding=1&iv_load_policy=3&fs=0`}
+                        title={banner.title}
+                        width="100%"
+                        height="100%"
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          width: "100%",
+                          height: "100%",
+                          zIndex: 1,
+                          border: 0,
+                          pointerEvents: "none",
+                        }}
+                        frameBorder={0}
+                        allow="autoplay; encrypted-media"
+                        allowFullScreen={false}
+                      />
+                      {/* 오버레이 및 텍스트/HTML */}
+                      <div
+                        className="absolute top-0 left-0 w-full h-full flex flex-col justify-center items-center"
+                        style={{
+                          zIndex: 2,
+                          background: `rgba(0,0,0,${banner.overlay_opacity || 0.4})`,
+                          color: "white",
+                          textAlign: "center",
+                          padding: 4,
+                        }}
+                      >
+                        {banner.use_html && banner.html_content ? (
+                          <div
+                            dangerouslySetInnerHTML={{
+                              __html: banner.html_content,
+                            }}
+                          />
+                        ) : (
+                          <>
+                            <div className="font-medium text-sm truncate w-full">
+                              {banner.title}
+                            </div>
+                            {banner.subtitle && (
+                              <div className="text-xs text-gray-200 truncate w-full">
+                                {banner.subtitle}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <img
+                      src={banner.imageUrl}
+                      alt={banner.title}
+                      className="object-cover w-full"
+                      style={{
+                        height:
+                          banner.image_height &&
+                          banner.image_height !== "original"
+                            ? banner.image_height
+                            : "100%",
+                        width: "100%",
+                      }}
+                    />
+                  )
                 ) : (
                   <span className="text-gray-300 text-xs">이미지 없음</span>
                 )}
@@ -807,19 +874,33 @@ export default function BannerManager() {
                             : "8rem",
                       }}
                     >
-                      <img
-                        src={editingBanner.imageUrl}
-                        alt={editingBanner.title}
-                        className="object-cover w-full"
-                        style={{
-                          height:
-                            editingBanner.image_height &&
-                            editingBanner.image_height !== "original"
-                              ? editingBanner.image_height
-                              : "100%",
-                          width: "100%",
-                        }}
-                      />
+                      {isYoutubeUrl(editingBanner.imageUrl) &&
+                      extractYoutubeId(editingBanner.imageUrl) ? (
+                        <iframe
+                          src={`https://www.youtube.com/embed/${extractYoutubeId(editingBanner.imageUrl)}`}
+                          title={editingBanner.title}
+                          width="100%"
+                          height="100%"
+                          style={{ minHeight: 80, aspectRatio: "16/9" }}
+                          frameBorder={0}
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      ) : (
+                        <img
+                          src={editingBanner.imageUrl}
+                          alt={editingBanner.title}
+                          className="object-cover w-full"
+                          style={{
+                            height:
+                              editingBanner.image_height &&
+                              editingBanner.image_height !== "original"
+                                ? editingBanner.image_height
+                                : "100%",
+                            width: "100%",
+                          }}
+                        />
+                      )}
                     </div>
                   )}
 
@@ -1135,7 +1216,6 @@ export default function BannerManager() {
                       : crypto.randomUUID();
                   if (!validId || validId === "") validId = crypto.randomUUID();
 
-
                   const newBanner = {
                     ...editingBanner,
                     id: validId,
@@ -1150,7 +1230,7 @@ export default function BannerManager() {
                           html_content: "",
                         }),
                   };
-                  
+
                   // 1. 새 배너를 데이터베이스에 저장
                   const { error: upsertError } = await supabase
                     .from("cms_banners")
@@ -1178,25 +1258,32 @@ export default function BannerManager() {
                   if (upsertError) throw upsertError;
 
                   // 2. 로컬 상태 업데이트
-                  const updatedAllBanners = allBanners.some(b => b.id === newBanner.id)
-                    ? allBanners.map(b => b.id === newBanner.id ? newBanner : b)
+                  const updatedAllBanners = allBanners.some(
+                    (b) => b.id === newBanner.id
+                  )
+                    ? allBanners.map((b) =>
+                        b.id === newBanner.id ? newBanner : b
+                      )
                     : [...allBanners, newBanner];
-                  
+
                   setAllBanners(updatedAllBanners);
-                  
+
                   // 3. 필터링된 배너 목록 업데이트
                   const filteredBanners = selectedMenuId
-                    ? updatedAllBanners.filter(banner => banner.menu_id === selectedMenuId)
-                    : updatedAllBanners.filter(banner => banner.menu_id === null);
-                  
+                    ? updatedAllBanners.filter(
+                        (banner) => banner.menu_id === selectedMenuId
+                      )
+                    : updatedAllBanners.filter(
+                        (banner) => banner.menu_id === null
+                      );
+
                   // 4. 배너 목록 새로고침
                   await loadBanners();
-                  
+
                   toast({
                     title: "성공",
                     description: "배너가 저장되었습니다.",
                   });
-                  
                 } catch (error) {
                   console.error("배너 저장 오류:", error);
                   toast({

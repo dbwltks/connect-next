@@ -5,7 +5,7 @@ export type Banner = {
   id: string;
   title: string;
   subtitle?: string;
-  imageUrl: string;
+  imageUrl: string; // 이미지 또는 유튜브 링크 모두 가능
   hasButton: boolean;
   buttonText?: string;
   buttonUrl?: string;

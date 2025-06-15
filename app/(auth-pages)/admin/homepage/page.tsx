@@ -28,7 +28,7 @@ import LayoutManager from "@/components/admin/layout-manager";
 export default function HomepageManagementPage() {
   // 상태 관리
   const [activeTab, setActiveTab] = useState("sections");
-  
+
   // 초기에 모든 컴포넌트를 로드하도록 설정
   const [componentsLoaded, setComponentsLoaded] = useState({
     layout: true, // 처음부터 모든 탭의 컴포넌트를 로드하도록 true로 초기화
@@ -41,7 +41,7 @@ export default function HomepageManagementPage() {
   });
 
   return (
-    <div className="container py-6">
+    <div className=" py-6">
       <div className="flex flex-col space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
@@ -106,7 +106,7 @@ export default function HomepageManagementPage() {
             <div className="border-b border-gray-200 dark:border-gray-800" />
             {/* 모든 컴포넌트를 항상 렌더링하고 CSS로 표시 여부를 제어 */}
             {/* 탭의 활성화 여부에 따라 display 속성으로 표시/숨김만 전환 */}
-            
+
             {/* 레이아웃 관리 탭 */}
             <TabsContent
               className="bg-white dark:bg-gray-900 rounded-b-lg pt-4 px-6 pb-6 border-0"
@@ -126,7 +126,7 @@ export default function HomepageManagementPage() {
                 <MenuManager />
               </div>
             </TabsContent>
-            
+
             {/* 배너 관리 탭 */}
             <TabsContent
               className="bg-white dark:bg-gray-900 rounded-b-lg pt-4 px-6 pb-6 border-0"
@@ -136,7 +136,7 @@ export default function HomepageManagementPage() {
                 <BannerManager />
               </div>
             </TabsContent>
-            
+
             {/* 섹션 관리 탭 */}
             <TabsContent
               className="bg-white dark:bg-gray-900 rounded-b-lg pt-4 px-6 pb-6 border-0"
@@ -146,7 +146,7 @@ export default function HomepageManagementPage() {
                 <SectionManager />
               </div>
             </TabsContent>
-            
+
             {/* 카테고리 관리 탭 */}
             <TabsContent
               className="bg-white dark:bg-gray-900 rounded-b-lg pt-4 px-6 pb-6 border-0"
@@ -156,7 +156,7 @@ export default function HomepageManagementPage() {
                 <CategoryManager />
               </div>
             </TabsContent>
-            
+
             {/* 페이지 관리 탭 */}
             <TabsContent
               className="bg-white dark:bg-gray-900 rounded-b-lg pt-4 px-6 pb-6 border-0"
@@ -166,7 +166,7 @@ export default function HomepageManagementPage() {
                 <PageManager />
               </div>
             </TabsContent>
-            
+
             {/* 푸터 관리 탭 */}
             <TabsContent
               className="bg-white dark:bg-gray-900 rounded-b-lg pt-4 px-6 pb-6 border-0"
