@@ -1,4 +1,8 @@
 import { supabase } from "@/db";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { toast } from "@/components/ui/toaster";
+
+const supabaseClient = createClientComponentClient();
 
 // 유저 정보 가져오기 (세션 기반)
 export async function getHeaderUser() {
@@ -160,15 +164,15 @@ export async function saveBoardPost({
     console.log("[boardService] 삽입할 데이터:", {
       ...insertData,
       content: "(content length: " + content.length + ")",
-      files: "(files json length: " + filesJson.length + ")"
+      files: "(files json length: " + filesJson.length + ")",
     });
-    
+
     const insertResult = await supabase
       .from("board_posts")
       .insert([insertData])
       .select("id, user_id") // user_id도 함께 반환하도록 수정
       .single();
-    
+
     console.log("[boardService] 삽입 결과:", insertResult);
     result = insertResult;
     newId = insertResult.data?.id;
@@ -187,3 +191,47 @@ export async function getBoardPost({ postId }: { postId: string }) {
   if (error) throw error;
   return data;
 }
+
+async function handleRequest<T>(requestFn: () => Promise<T>): Promise<T> {
+  try {
+    return await requestFn();
+  } catch (error: any) {
+    // 세션 만료 에러 처리
+    if (error.status === 401) {
+      // 세션 갱신 시도
+      const {
+        data: { session },
+      } = await supabaseClient.auth.refreshSession();
+      if (session) {
+        // 세션 갱신 성공시 원래 요청 재시도
+        return await requestFn();
+      } else {
+        toast({
+          title: "세션이 만료되었습니다",
+          description: "다시 로그인해주세요",
+          variant: "destructive",
+        });
+        // 로그인 페이지로 리다이렉트
+        window.location.href = "/login";
+      }
+    }
+    throw error;
+  }
+}
+
+export const boardService = {
+  async getBoards() {
+    return handleRequest(async () => {
+      const { data, error } = await supabase
+        .from("boards")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data;
+    });
+  },
+
+  // 다른 메서드들도 handleRequest로 래핑
+  // ...
+};

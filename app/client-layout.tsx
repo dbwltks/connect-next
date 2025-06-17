@@ -13,12 +13,14 @@ export default function ClientLayout({
   user,
   footerMenus,
   footerSettings,
+  widgets,
 }: {
   children: React.ReactNode;
   menuItems: any[];
   user: any;
   footerMenus: any[];
   footerSettings: any;
+  widgets: any[];
 }) {
   return (
     <AuthProvider>

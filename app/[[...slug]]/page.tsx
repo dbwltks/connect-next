@@ -4,11 +4,6 @@ import { createClient } from "@/utils/supabase/server";
 
 import MainBanner from "@/components/home/main-banner";
 import Breadcrumb from "@/components/home/breadcrumb";
-import UpcomingEvents from "@/components/home/upcoming-events";
-import LatestSermon from "@/components/home/latest-sermon";
-import Announcements from "@/components/home/announcements";
-import WelcomeMessage from "@/components/home/welcome-message";
-import ServiceTimes from "@/components/home/service-times";
 import { Section } from "@/components/admin/section-manager";
 import BoardDetail from "@/components/sections/board-detail";
 import BoardWrite from "@/components/sections/board-write";
@@ -23,13 +18,21 @@ export default async function DynamicPage(props: { params: any }) {
 
   // 홈(/) 경로일 때: 기존 Home 페이지 UI 렌더링
   if (!params.slug || params.slug.length === 0) {
+    // 위젯 데이터 패칭
+    let { data: widgets } = await supabase
+      .from("cms_layout")
+      .select("*")
+      .eq("is_active", true)
+      .order("order", { ascending: true });
+    if (!widgets) widgets = [];
+
     return (
       <>
         <MainBanner menuId={null} />
         <main className="flex-1 flex flex-col gap-12 px-0 sm:px-4 py-4">
           {/* 위젯 섹션 - 컴포넌트 내부에서 데이터 로딩 */}
           <div className="mb-2">
-            <HomepageWidgets />
+            <HomepageWidgets widgets={widgets} />
           </div>
         </main>
       </>

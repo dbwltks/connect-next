@@ -34,8 +34,8 @@ export default async function RootLayout({
 }>) {
   const supabase = await createClient();
 
-  // 헤더/푸터 데이터 동시 패칭
-  const [menuRes, userRes, footerSettingsRes] = await Promise.all([
+  // 헤더/푸터/위젯 데이터 동시 패칭
+  const [menuRes, userRes, footerSettingsRes, widgetsRes] = await Promise.all([
     supabase
       .from("cms_menus")
       .select("*")
@@ -43,12 +43,18 @@ export default async function RootLayout({
       .order("order_num", { ascending: true }),
     supabase.auth.getUser(),
     supabase.from("cms_footer").select("*").limit(1).single(),
+    supabase
+      .from("cms_layout")
+      .select("*")
+      .eq("is_active", true)
+      .order("order", { ascending: true }),
   ]);
 
   const menuItemsRaw = menuRes.data || [];
   const menuItems = buildMenuTree(menuItemsRaw);
   const user = userRes.data?.user || null;
   const footerSettings = footerSettingsRes.data || null;
+  const widgets = widgetsRes.data || [];
 
   return (
     <html lang="ko" suppressHydrationWarning>
@@ -59,46 +65,69 @@ export default async function RootLayout({
       <body className={`bg-background text-foreground ${notoSansKr.className}`}>
         {/* glassmorphism SVG filter */}
         <svg style={{ display: "none" }}>
-          <filter id="lg-dist" x="0%" y="0%" width="100%" height="100%">
-            <feTurbulence
-              type="fractalNoise"
-              baseFrequency="0.008 0.008"
-              numOctaves="2"
-              seed="92"
-              result="noise"
-            />
-            <feGaussianBlur in="noise" stdDeviation="2" result="blurred" />
-            <feDisplacementMap
-              in="SourceGraphic"
-              in2="blurred"
-              scale="20"
-              xChannelSelector="R"
-              yChannelSelector="G"
-            />
-          </filter>
-          <filter id="lg-dist-small" x="0%" y="0%" width="100%" height="100%">
-            <feTurbulence
-              type="fractalNoise"
-              baseFrequency="0.008 0.008"
-              numOctaves="2"
-              seed="92"
-              result="noise"
-            />
-            <feGaussianBlur in="noise" stdDeviation="2" result="blurred" />
-            <feDisplacementMap
-              in="SourceGraphic"
-              in2="blurred"
-              scale="28"
-              xChannelSelector="R"
-              yChannelSelector="G"
-            />
-          </filter>
+          <defs>
+            <filter
+              id="lg-dist"
+              x="-50%"
+              y="-50%"
+              width="200%"
+              height="200%"
+              filterUnits="objectBoundingBox"
+              primitiveUnits="userSpaceOnUse"
+            >
+              <feTurbulence
+                type="fractalNoise"
+                baseFrequency="0.015 0.015"
+                numOctaves="3"
+                seed="92"
+                result="noise"
+                stitchTiles="stitch"
+              />
+              <feGaussianBlur in="noise" stdDeviation="1.5" result="blurred" />
+              <feDisplacementMap
+                in="SourceGraphic"
+                in2="blurred"
+                scale="20"
+                xChannelSelector="R"
+                yChannelSelector="G"
+                color-interpolation-filters="sRGB"
+              />
+            </filter>
+            <filter
+              id="lg-dist-small"
+              x="-50%"
+              y="-50%"
+              width="200%"
+              height="200%"
+              filterUnits="objectBoundingBox"
+              primitiveUnits="userSpaceOnUse"
+            >
+              <feTurbulence
+                type="fractalNoise"
+                baseFrequency="0.015 0.015"
+                numOctaves="3"
+                seed="92"
+                result="noise"
+                stitchTiles="stitch"
+              />
+              <feGaussianBlur in="noise" stdDeviation="1.5" result="blurred" />
+              <feDisplacementMap
+                in="SourceGraphic"
+                in2="blurred"
+                scale="28"
+                xChannelSelector="R"
+                yChannelSelector="G"
+                color-interpolation-filters="sRGB"
+              />
+            </filter>
+          </defs>
         </svg>
         <ClientLayout
           menuItems={menuItems}
           user={user}
           footerMenus={menuItemsRaw}
           footerSettings={footerSettings}
+          widgets={widgets}
         >
           {children}
         </ClientLayout>

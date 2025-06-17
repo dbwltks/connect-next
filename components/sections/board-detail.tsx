@@ -1736,14 +1736,14 @@ export default function BoardDetail() {
         </div>
 
         {/* 모바일 하단 고정 네비게이션 */}
-        <div className="fixed bottom-0 left-0 right-0 sm:hidden z-0">
+        <div className="fixed bottom-0 left-0 right-0 sm:hidden z-50">
           {/* 왼쪽: 목록으로 버튼 */}
           <GlassContainer className="mx-4 my-2 justify-between items-center">
             <Button
               variant="ghost"
               size="sm"
               onClick={handleGoList}
-              className="text-gray-600 hover:text-gray-900 flex items-center gap-1"
+              className=" hover:text-gray-900 flex items-center gap-1"
             >
               <ChevronLeft className="h-4 w-4" />
               <span>목록으로</span>

@@ -43,7 +43,7 @@ export default function ScrollToTop() {
             role="button"
             className="cursor-pointer"
           >
-            <ChevronUp className="h-8 w-8 text-black" />
+            <ChevronUp className="h-8 w-8" />
           </GlassContainer>
         </div>
       )}
