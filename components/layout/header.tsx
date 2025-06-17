@@ -120,6 +120,19 @@ const styles = `
 }
 `;
 
+// 모바일 메뉴 열릴 때 body 스크롤 잠금
+function useBodyScrollLock(isLocked: boolean) {
+  useEffect(() => {
+    if (isLocked) {
+      const original = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = original;
+      };
+    }
+  }, [isLocked]);
+}
+
 export default function Header({ menuItems }: { menuItems: any[] }) {
   const { user } = useAuth();
 
@@ -141,6 +154,9 @@ function HeaderClient({ user, menuItems }: { user: any; menuItems: any[] }) {
   );
   // 데스크톱 드롭다운 상태
   const [openedDropdownId, setOpenedDropdownId] = useState<string | null>(null);
+
+  // 모바일 메뉴 열릴 때 body 스크롤 잠금
+  useBodyScrollLock(isMenuOpen);
 
   // 트리 구조 메뉴 렌더링 함수
   function renderMenu(items: any[]) {
@@ -346,13 +362,9 @@ function HeaderClient({ user, menuItems }: { user: any; menuItems: any[] }) {
       {/* 모바일 메뉴 (Portal로 렌더링하여 DOM 트리와 분리) */}
       {createPortal(
         <div
-          className={`fixed top-[4rem] left-0 right-0 z-[8] bg-background shadow-xl rounded-b-2xl px-8 pt-4
-            overflow-y-auto transition-all duration-700
-            ${
-              isMenuOpen
-                ? "max-h-[600px] opacity-100 translate-y-0"
-                : "max-h-0 opacity-0 -translate-y-4 pointer-events-none"
-            }
+          className={`fixed top-[4rem] left-0 right-0 bottom-0 z-[8] bg-background shadow-xl rounded-b-2xl px-8 pt-4
+            h-auto min-h-0 max-h-full overflow-y-auto transition-all duration-700
+            ${isMenuOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none"}
           `}
           style={{ willChange: "opacity, max-height, transform" }}
         >
