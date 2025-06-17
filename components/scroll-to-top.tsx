@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ChevronUp } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import GlassContainer from "@/components/ui/glass-container";
 
 export default function ScrollToTop() {
   const [isVisible, setIsVisible] = useState(false);
@@ -35,13 +35,17 @@ export default function ScrollToTop() {
   return (
     <>
       {isVisible && (
-        <Button
-          onClick={scrollToTop}
-          className="fixed bottom-14 right-4 z-10 rounded-full opacity-70 hover:opacity-100 p-3 shadow-lg bg-primary hover:bg-primary/90 text-primary-foreground"
-          aria-label="맨 위로 스크롤"
-        >
-          <ChevronUp className="h-5 w-5" />
-        </Button>
+        <div className="fixed bottom-16 right-4 sm:bottom-14 sm:right-4 z-10">
+          <GlassContainer
+            size="small"
+            onClick={scrollToTop}
+            aria-label="맨 위로 스크롤"
+            role="button"
+            className="cursor-pointer"
+          >
+            <ChevronUp className="h-8 w-8 text-black" />
+          </GlassContainer>
+        </div>
       )}
     </>
   );

@@ -67,7 +67,7 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content }) => {
       ADD_ATTR: ["onerror", "onload", "src", "type"],
       FORCE_BODY: true,
     });
-    
+
     const doc = iframeRef.current.contentDocument;
     if (doc) {
       doc.open();
@@ -92,45 +92,45 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content }) => {
             }
           </style>
         </head>
-        <body class="p-4">
+        <body class="">
           ${sanitizedContent}
         </body>
         </html>
       `);
       doc.close();
-      
+
       // iframe 높이 자동 조절 (더 정확한 버전)
       const setIframeHeight = () => {
         if (!iframeRef.current || !iframeRef.current.contentWindow) return;
-        
+
         try {
           // 다양한 높이 값을 수집
           const doc = iframeRef.current.contentWindow.document;
           const body = doc.body;
           const html = doc.documentElement;
-          
+
           // 가장 정확한 높이를 구하기 위한 여러 방법
           const bodyHeight = Math.max(
-            body.scrollHeight, 
-            body.offsetHeight, 
-            html.clientHeight, 
-            html.scrollHeight, 
+            body.scrollHeight,
+            body.offsetHeight,
+            html.clientHeight,
+            html.scrollHeight,
             html.offsetHeight
           );
-          
+
           // 콘텐츠의 공간을 확보하기 위해 여백 추가 (20px)
           const heightWithMargin = bodyHeight + 20;
-          
+
           // iframe 높이 설정 + 최소 높이 보장
           iframeRef.current.style.height = `${Math.max(heightWithMargin, 100)}px`;
         } catch (e) {
-          console.error('iframe 높이 조절 오류:', e);
+          console.error("iframe 높이 조절 오류:", e);
         }
       };
-      
+
       // 콘텐츠 로드 완료 시 높이 조절
       iframeRef.current.onload = setIframeHeight;
-      
+
       // 더 자주 및 더 긴 시간동안 높이 체크 (동적 콘텐츠 대응)
       // 여러 시점에서 체크하여 가장 정확한 값 확보
       setTimeout(setIframeHeight, 50);
@@ -138,11 +138,11 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content }) => {
       setTimeout(setIframeHeight, 300);
       setTimeout(setIframeHeight, 500);
       setTimeout(setIframeHeight, 1000);
-      
+
       // 이미지 로드에 따른 동적 높이 조절
-      const images = doc.querySelectorAll('img');
+      const images = doc.querySelectorAll("img");
       if (images.length > 0) {
-        images.forEach(img => {
+        images.forEach((img) => {
           img.onload = setIframeHeight;
         });
       }
@@ -628,11 +628,8 @@ export default function ContentSection({
                   />
                 </CardContent>
               </Card>
-              
-              <Dialog
-                open={isPreviewOpen}
-                onOpenChange={setIsPreviewOpen}
-              >
+
+              <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
                 <DialogContent className="max-w-none w-[95vw] h-[90vh] p-0 flex flex-col">
                   <DialogHeader className="p-4 border-b flex-row justify-between items-center">
                     <DialogTitle>전체 화면 미리보기</DialogTitle>
@@ -646,12 +643,8 @@ export default function ContentSection({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="375">iPhone SE</SelectItem>
-                          <SelectItem value="390">
-                            iPhone 12/13
-                          </SelectItem>
-                          <SelectItem value="414">
-                            iPhone XR/11
-                          </SelectItem>
+                          <SelectItem value="390">iPhone 12/13</SelectItem>
+                          <SelectItem value="414">iPhone XR/11</SelectItem>
                           <SelectItem value="360">Galaxy S21</SelectItem>
                         </SelectContent>
                       </Select>
@@ -663,9 +656,7 @@ export default function ContentSection({
                         className="w-auto"
                       >
                         <TabsList className="inline-flex text-xs">
-                          <TabsTrigger value="desktop">
-                            데스크톱
-                          </TabsTrigger>
+                          <TabsTrigger value="desktop">데스크톱</TabsTrigger>
                           <TabsTrigger value="mobile">모바일</TabsTrigger>
                         </TabsList>
                       </Tabs>
@@ -719,7 +710,7 @@ export default function ContentSection({
           >
             <div
               className="w-full bg-white content-container prose max-w-none"
-              style={{ overflow: "visible", minHeight: "auto", padding: "16px" }}
+              style={{ overflow: "visible", minHeight: "auto" }}
             >
               {isClient && (
                 <>

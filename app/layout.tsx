@@ -35,16 +35,15 @@ export default async function RootLayout({
   const supabase = await createClient();
 
   // 헤더/푸터 데이터 동시 패칭
-  const [menuRes, userRes, footerSettingsRes] =
-    await Promise.all([
-      supabase
-        .from("cms_menus")
-        .select("*")
-        .eq("is_active", true)
-        .order("order_num", { ascending: true }),
-      supabase.auth.getUser(),
-      supabase.from("cms_footer").select("*").limit(1).single(),
-    ]);
+  const [menuRes, userRes, footerSettingsRes] = await Promise.all([
+    supabase
+      .from("cms_menus")
+      .select("*")
+      .eq("is_active", true)
+      .order("order_num", { ascending: true }),
+    supabase.auth.getUser(),
+    supabase.from("cms_footer").select("*").limit(1).single(),
+  ]);
 
   const menuItemsRaw = menuRes.data || [];
   const menuItems = buildMenuTree(menuItemsRaw);
@@ -58,6 +57,43 @@ export default async function RootLayout({
         <meta name="theme-color" content="#ffffff" />
       </head>
       <body className={`bg-background text-foreground ${notoSansKr.className}`}>
+        {/* glassmorphism SVG filter */}
+        <svg style={{ display: "none" }}>
+          <filter id="lg-dist" x="0%" y="0%" width="100%" height="100%">
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="0.008 0.008"
+              numOctaves="2"
+              seed="92"
+              result="noise"
+            />
+            <feGaussianBlur in="noise" stdDeviation="2" result="blurred" />
+            <feDisplacementMap
+              in="SourceGraphic"
+              in2="blurred"
+              scale="20"
+              xChannelSelector="R"
+              yChannelSelector="G"
+            />
+          </filter>
+          <filter id="lg-dist-small" x="0%" y="0%" width="100%" height="100%">
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="0.008 0.008"
+              numOctaves="2"
+              seed="92"
+              result="noise"
+            />
+            <feGaussianBlur in="noise" stdDeviation="2" result="blurred" />
+            <feDisplacementMap
+              in="SourceGraphic"
+              in2="blurred"
+              scale="28"
+              xChannelSelector="R"
+              yChannelSelector="G"
+            />
+          </filter>
+        </svg>
         <ClientLayout
           menuItems={menuItems}
           user={user}

@@ -49,6 +49,7 @@ import {
   DialogTitle,
   DialogClose,
 } from "@/components/ui/dialog";
+import GlassContainer from "@/components/ui/glass-container";
 
 interface BoardPost {
   id: string;
@@ -83,7 +84,10 @@ interface User {
 
 export default function BoardDetail() {
   // 글꼴 설정 메뉴 렌더링 함수
-  const renderFontSettingsMenu = (position: string = 'bottom-full', additionalClasses: string = '') => {
+  const renderFontSettingsMenu = (
+    position: string = "bottom-full",
+    additionalClasses: string = ""
+  ) => {
     return (
       <div
         ref={moreMenuRef}
@@ -345,20 +349,22 @@ export default function BoardDetail() {
     // 클릭 이벤트 핸들러 함수
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      
+
       // 메뉴 내부 클릭은 무시 (메뉴 내부 버튼 클릭을 허용하기 위함)
       if (moreMenuRef.current && moreMenuRef.current.contains(target)) {
         return;
       }
-      
+
       // 글꼴 버튼 클릭은 무시 (토글 기능을 위해)
-      const isFontButton = target.closest('.relative button[class*="flex flex-col items-center"]');
-      
+      const isFontButton = target.closest(
+        '.relative button[class*="flex flex-col items-center"]'
+      );
+
       // 더보기 메뉴 닫기 (버튼 클릭이 아닌 경우만)
       if (showMoreMenu && !isFontButton) {
         setShowMoreMenu(false);
       }
-      
+
       // 모바일 글꼴 설정 메뉴 닫기 (버튼 클릭이 아닌 경우만)
       if (showMobileFontMenu && !isFontButton) {
         setShowMobileFontMenu(false);
@@ -1047,7 +1053,7 @@ export default function BoardDetail() {
   const increaseFontSize = (e?: React.MouseEvent) => {
     // 클릭 이벤트의 기본 동작 방지
     if (e) e.preventDefault();
-    
+
     if (fontSizeLevel < 2) {
       const newSize = fontSizeLevel + 1;
       setFontSizeLevel(newSize);
@@ -1066,7 +1072,7 @@ export default function BoardDetail() {
   const increaseFontBold = (e?: React.MouseEvent) => {
     // 클릭 이벤트의 기본 동작 방지
     if (e) e.preventDefault();
-    
+
     if (fontBoldLevel < 3) {
       const newBold = fontBoldLevel + 1;
       setFontBoldLevel(newBold);
@@ -1085,7 +1091,7 @@ export default function BoardDetail() {
   const resetFontBold = (e?: React.MouseEvent) => {
     // 클릭 이벤트의 기본 동작 방지
     if (e) e.preventDefault();
-    
+
     setFontBoldLevel(0);
     saveFontSettings(fontSizeLevel, 0, fontFamily);
   };
@@ -1094,7 +1100,7 @@ export default function BoardDetail() {
   const resetFontSize = (e?: React.MouseEvent) => {
     // 클릭 이벤트의 기본 동작 방지
     if (e) e.preventDefault();
-    
+
     setFontSizeLevel(0);
     saveFontSettings(0, fontBoldLevel, fontFamily);
   };
@@ -1103,7 +1109,7 @@ export default function BoardDetail() {
   const changeFontFamily = (family: string, e?: React.MouseEvent) => {
     // 클릭 이벤트의 기본 동작 방지
     if (e) e.preventDefault();
-    
+
     setFontFamily(family);
     saveFontSettings(fontSizeLevel, fontBoldLevel, family);
   };
@@ -1488,7 +1494,12 @@ export default function BoardDetail() {
                 >
                   <span className="text-xl">…</span>
                 </button>
-                {showMoreMenu && menuSource === "more" && renderFontSettingsMenu("bottom-full sm:bottom-auto", "sm:w-40 sm:right-0 sm:mt-2")}
+                {showMoreMenu &&
+                  menuSource === "more" &&
+                  renderFontSettingsMenu(
+                    "bottom-full sm:bottom-auto",
+                    "sm:w-40 sm:right-0 sm:mt-2"
+                  )}
               </div>
             </div>
           </div>
@@ -1725,122 +1736,128 @@ export default function BoardDetail() {
         </div>
 
         {/* 모바일 하단 고정 네비게이션 */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2 flex justify-between items-center sm:hidden z-50">
+        <div className="fixed bottom-0 left-0 right-0 sm:hidden z-0">
           {/* 왼쪽: 목록으로 버튼 */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleGoList}
-            className="text-gray-600 hover:text-gray-900 flex items-center gap-1"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            <span>목록으로</span>
-          </Button>
+          <GlassContainer className="mx-4 my-2 justify-between items-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleGoList}
+              className="text-gray-600 hover:text-gray-900 flex items-center gap-1"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              <span>목록으로</span>
+            </Button>
 
-          {/* 오른쪽: 글꼴 설정, 좋아요, 댓글, 더보기 버튼 */}
-          <div className="flex items-center gap-4">
-            {/* 글꼴 설정 버튼 */}
-            <div className="relative">
+            {/* 오른쪽: 글꼴 설정, 좋아요, 댓글, 더보기 버튼 */}
+            <div className="flex items-center gap-4">
+              {/* 글꼴 설정 버튼 */}
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setShowMobileFontMenu(!showMobileFontMenu);
+                  }}
+                  className="flex flex-col items-center"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-5 w-5 text-gray-600"
+                  >
+                    <polyline points="4 7 4 4 20 4 20 7"></polyline>
+                    <line x1="9" y1="20" x2="15" y2="20"></line>
+                    <line x1="12" y1="4" x2="12" y2="20"></line>
+                  </svg>
+                  <span className="text-xs mt-0.5">글꼴</span>
+                </button>
+
+                {/* 모바일 글꼴 설정 메뉴 */}
+                {showMobileFontMenu &&
+                  renderFontSettingsMenu(
+                    "bottom-full",
+                    "border border-gray-200"
+                  )}
+              </div>
+
+              {/* 좋아요 버튼 */}
+              <button
+                onClick={toggleLike}
+                disabled={likeLoading}
+                className="flex flex-col items-center"
+              >
+                <Heart
+                  className={`h-5 w-5 ${liked ? "fill-red-600 text-red-600" : "text-gray-600"}`}
+                />
+                <span className="text-xs mt-0.5">{likeCount}</span>
+              </button>
+
+              {/* 댓글 버튼 */}
               <button
                 onClick={() => {
-                  setShowMobileFontMenu(!showMobileFontMenu);
+                  const commentSection =
+                    document.getElementById("comments-section");
+                  if (commentSection) {
+                    const y =
+                      commentSection.getBoundingClientRect().top +
+                      window.scrollY -
+                      100;
+                    window.scrollTo({ top: y, behavior: "smooth" });
+                  }
                 }}
                 className="flex flex-col items-center"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="h-5 w-5 text-gray-600"
-                >
-                  <polyline points="4 7 4 4 20 4 20 7"></polyline>
-                  <line x1="9" y1="20" x2="15" y2="20"></line>
-                  <line x1="12" y1="4" x2="12" y2="20"></line>
-                </svg>
-                <span className="text-xs mt-0.5">글꼴</span>
+                <MessageSquare className="h-5 w-5 text-gray-600" />
+                <span className="text-xs mt-0.5">{commentCount}</span>
               </button>
 
-              {/* 모바일 글꼴 설정 메뉴 */}
-              {showMobileFontMenu && renderFontSettingsMenu("bottom-full", "border border-gray-200")}
+              {/* 작성자인 경우에만 더보기 메뉴 표시 */}
+              {isAuthor && (
+                <div className="relative">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="p-2"
+                    onClick={() => setShowMobileMenu(!showMobileMenu)}
+                  >
+                    <span className="text-xl">⋮</span>
+                  </Button>
+                  {showMobileMenu && (
+                    <div className="absolute bottom-full right-0 mb-2 bg-white rounded-lg shadow-lg border border-gray-200">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setShowMobileMenu(false);
+                          router.push(`${pathname}/edit`);
+                        }}
+                        className="w-full justify-start px-4 py-2 text-gray-700 hover:bg-gray-50"
+                      >
+                        수정
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setShowMobileMenu(false);
+                          handleDelete();
+                        }}
+                        className="w-full justify-start px-4 py-2 text-red-600 hover:bg-red-50"
+                      >
+                        삭제
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-
-            {/* 좋아요 버튼 */}
-            <button
-              onClick={toggleLike}
-              disabled={likeLoading}
-              className="flex flex-col items-center"
-            >
-              <Heart
-                className={`h-5 w-5 ${liked ? "fill-red-600 text-red-600" : "text-gray-600"}`}
-              />
-              <span className="text-xs mt-0.5">{likeCount}</span>
-            </button>
-
-            {/* 댓글 버튼 */}
-            <button
-              onClick={() => {
-                const commentSection =
-                  document.getElementById("comments-section");
-                if (commentSection) {
-                  const y =
-                    commentSection.getBoundingClientRect().top +
-                    window.scrollY -
-                    100;
-                  window.scrollTo({ top: y, behavior: "smooth" });
-                }
-              }}
-              className="flex flex-col items-center"
-            >
-              <MessageSquare className="h-5 w-5 text-gray-600" />
-              <span className="text-xs mt-0.5">{commentCount}</span>
-            </button>
-
-            {/* 작성자인 경우에만 더보기 메뉴 표시 */}
-            {isAuthor && (
-              <div className="relative">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="p-2"
-                  onClick={() => setShowMobileMenu(!showMobileMenu)}
-                >
-                  <span className="text-xl">⋮</span>
-                </Button>
-                {showMobileMenu && (
-                  <div className="absolute bottom-full right-0 mb-2 bg-white rounded-lg shadow-lg border border-gray-200">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setShowMobileMenu(false);
-                        router.push(`${pathname}/edit`);
-                      }}
-                      className="w-full justify-start px-4 py-2 text-gray-700 hover:bg-gray-50"
-                    >
-                      수정
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setShowMobileMenu(false);
-                        handleDelete();
-                      }}
-                      className="w-full justify-start px-4 py-2 text-red-600 hover:bg-red-50"
-                    >
-                      삭제
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          </GlassContainer>
         </div>
       </Card>
     </>

@@ -188,7 +188,7 @@ export function MediaWidget({
               {/* Featured Video */}
               <div className="lg:col-span-2">
                 {posts.length > 0 ? (
-                  <div className="overflow-hidden border border-gray-200 hover:shadow-lg transition-all duration-500 transform hover:-translate-y-1 rounded-md">
+                  <div className=" border border-gray-200 hover:shadow-lg transition-all duration-500 transform hover:-translate-y-1 rounded-lg overflow-hidden">
                     <Link href={`${page?.slug}/${posts[0].id}`}>
                       <div className="relative aspect-video bg-gradient-to-br from-gray-900 to-gray-700 group cursor-pointer">
                         {posts[0].thumbnail_image ? (
@@ -385,7 +385,7 @@ export function MediaWidget({
 
                 <Link
                   href={page?.slug || "/"}
-                  className="w-full py-2 px-4 border border-gray-200 rounded-md hover:bg-blue-50 transition-colors text-sm flex items-center justify-center"
+                  className="w-full py-2 px-4 border border-gray-200 rounded-md hover:bg-blue-50 hover:shadow-lg transition-all duration-500 transform hover:-translate-y-1 text-sm flex items-center justify-center"
                 >
                   {widget.display_options?.media_more_text ||
                     "더 많은 미디어 보기"}
