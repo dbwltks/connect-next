@@ -120,54 +120,6 @@ const styles = `
 }
 `;
 
-// 햄버거(=)/플러스(+) 버튼 스타일
-const hamburgerPlusStyles = `
-.hamburger-eq {
-  position: relative;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.hamburger-bar {
-  position: absolute;
-  width: 20px;
-  height: 2.5px;
-  background: hsl(var(--foreground));
-  border-radius: 2px;
-  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), width 0.3s cubic-bezier(0.4,0,0.2,1), height 0.3s, top 0.3s, left 0.3s;
-}
-.hamburger-bar.top {
-  top: 8px;
-  left: 2px;
-  width: 20px;
-  height: 2.5px;
-  transform: rotate(0deg);
-}
-.hamburger-bar.bottom {
-  top: 14px;
-  left: 2px;
-  width: 20px;
-  height: 2.5px;
-  transform: rotate(0deg);
-}
-.hamburger-eq.open .hamburger-bar.top {
-  top: -2px;
-  left: 11px;
-  width: 2.5px;
-  height: 28px;
-  transform: rotate(0deg);
-}
-.hamburger-eq.open .hamburger-bar.bottom {
-  top: 7px;
-  left: 4px;
-  width: 16px;
-  height: 2.5px;
-  transform: rotate(0deg);
-}
-`;
-
 export default function Header({ menuItems }: { menuItems: any[] }) {
   const { user } = useAuth();
 
@@ -183,9 +135,7 @@ export default function Header({ menuItems }: { menuItems: any[] }) {
 function HeaderClient({ user, menuItems }: { user: any; menuItems: any[] }) {
   const { handleLogout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [animationClass, setAnimationClass] = useState("");
   const { theme, setTheme } = useTheme();
-  const [isHamburgerOpen, setIsHamburgerOpen] = useState(false);
   const [openSubmenus, setOpenSubmenus] = useState<{ [key: string]: boolean }>(
     {}
   );
@@ -251,28 +201,11 @@ function HeaderClient({ user, menuItems }: { user: any; menuItems: any[] }) {
     );
   }
 
-  // 모바일 메뉴 토글
-  const toggleMenu = () => {
-    if (isMenuOpen) {
-      setAnimationClass("animate-slideUp");
-      // 애니메이션이 끝난 후 isMenuOpen을 false로 설정
-      setTimeout(() => {
-        setIsMenuOpen(false);
-        setAnimationClass("");
-        setIsHamburgerOpen(false);
-      }, 400);
-    } else {
-      setIsMenuOpen(true);
-      setAnimationClass("animate-slideDown");
-      setIsHamburgerOpen(true);
-    }
-  };
-
   useEffect(() => {
     if (!document.getElementById("hamburger-eq-styles")) {
       const styleSheet = document.createElement("style");
       styleSheet.id = "hamburger-eq-styles";
-      styleSheet.textContent = hamburgerPlusStyles;
+      styleSheet.textContent = styles;
       document.head.appendChild(styleSheet);
     }
   }, []);
@@ -322,19 +255,27 @@ function HeaderClient({ user, menuItems }: { user: any; menuItems: any[] }) {
       </div>
 
       {/* 모바일 헤더 - md 미만에서 표시 */}
-      <div className="flex items-center w-full md:hidden">
-        {/* 좌측 햄버거 메뉴 - 고정 너비 적용 */}
-        <div className="w-[70px] flex justify-start">
+      <div className="flex items-center w-full h-16 md:hidden">
+        {/* 좌측 햄버거 메뉴 - 고정 너비/높이, 중앙 정렬 */}
+        <div className="w-[56px] h-16 flex justify-center items-center">
           <Button
             variant="ghost"
             size="icon"
             aria-label="Toggle Menu"
-            onClick={toggleMenu}
-            className={isHamburgerOpen ? "hamburger-eq open" : "hamburger-eq"}
+            onClick={() => setIsMenuOpen((prev) => !prev)}
+            className="w-10 h-10 flex items-center justify-center"
+            style={{ minWidth: 40, minHeight: 40 }}
           >
-            {/* = (닫힘) → + (열림) */}
-            <span className="hamburger-bar top" />
-            <span className="hamburger-bar bottom" />
+            <span className="relative w-6 h-6 flex items-center justify-center">
+              <span
+                className={`absolute left-0 w-6 h-0.5 rounded bg-gray-800 dark:bg-gray-100 transition-all duration-400
+                  ${isMenuOpen ? "top-3 rotate-45" : "top-2"}`}
+              />
+              <span
+                className={`absolute left-0 w-6 h-0.5 rounded bg-gray-800 dark:bg-gray-100 transition-all duration-400
+                  ${isMenuOpen ? "top-3 -rotate-45" : "top-4"}`}
+              />
+            </span>
           </Button>
         </div>
 
@@ -403,200 +344,193 @@ function HeaderClient({ user, menuItems }: { user: any; menuItems: any[] }) {
       </div>
 
       {/* 모바일 메뉴 (Portal로 렌더링하여 DOM 트리와 분리) */}
-      {isMenuOpen && (
-        <>
-          {/* 메뉴 컨텐츠 */}
-          {createPortal(
-            <div
-              className={`fixed top-[4rem] left-0 right-0 max-h-[calc(100vh)] bg-background shadow-xl rounded-b-2xl px-8 pt-4 z-[8] overflow-y-auto ${animationClass}`}
-            >
-              <ul className="space-y-4">
-                {menuItems.map((item: any, idx: number) => (
-                  <li key={item.id + idx}>
-                    <div className="flex items-center justify-between">
-                      {item.submenu && item.submenu.length > 0 ? (
-                        <button
-                          className="flex items-center w-full text-xl pt-4 pb-2 text-left focus:outline-none"
-                          onClick={() => {
-                            setOpenSubmenus((prev) => ({
-                              ...prev,
-                              [item.title]: !prev[item.title],
-                            }));
-                          }}
-                        >
-                          <span className="flex-1 text-left">{item.title}</span>
-                          <ChevronDown
-                            className={`w-6 h-6 ml-2 transition-transform duration-200 ${
-                              openSubmenus[item.title]
-                                ? "rotate-180 text-primary"
-                                : ""
-                            }`}
-                          />
-                        </button>
-                      ) : (
-                        <Link
-                          href={item.url}
-                          className="flex items-center w-full text-xl pt-4 pb-2 text-left focus:outline-none"
-                          onClick={toggleMenu}
-                        >
-                          <span className="flex-1 text-left">{item.title}</span>
-                        </Link>
-                      )}
-                    </div>
-                    {item.submenu && item.submenu.length > 0 && (
-                      <div
-                        className={`overflow-hidden transition-all duration-500 ${
-                          openSubmenus[item.title]
-                            ? "max-h-60 opacity-100"
-                            : "max-h-0 opacity-0"
-                        }`}
-                      >
-                        <ul className="pl-4">
-                          {item.submenu.map((child: any, subIdx: number) => (
-                            <li key={child.id + subIdx}>
-                              <Link
-                                href={child.url}
-                                className="block text-base py-2 text-gray-700 dark:text-gray-300 hover:font-semibold"
-                                onClick={toggleMenu}
-                              >
-                                {child.title}
-                              </Link>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </li>
-                ))}
-              </ul>
-
-              <div className="mt-12 border-t pt-8 space-y-6 pb-8">
+      {createPortal(
+        <div
+          className={`fixed top-[4rem] left-0 right-0 z-[8] bg-background shadow-xl rounded-b-2xl px-8 pt-4
+            overflow-y-auto transition-all duration-700
+            ${
+              isMenuOpen
+                ? "max-h-[600px] opacity-100 translate-y-0"
+                : "max-h-0 opacity-0 -translate-y-4 pointer-events-none"
+            }
+          `}
+          style={{ willChange: "opacity, max-height, transform" }}
+        >
+          <ul className="space-y-4">
+            {menuItems.map((item: any, idx: number) => (
+              <li key={item.id + idx}>
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground text-sm">테마</span>
-                  <div className="relative z-[10]">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="flex items-center gap-2"
-                        >
-                          {theme === "light" ? (
-                            <Sun size={16} className="text-muted-foreground" />
-                          ) : theme === "dark" ? (
-                            <Moon size={16} className="text-muted-foreground" />
-                          ) : (
-                            <Laptop
-                              size={16}
-                              className="text-muted-foreground"
-                            />
-                          )}
-                          <span className="text-sm">테마 변경</span>
-                          <ChevronDown
-                            size={16}
-                            className="text-muted-foreground"
-                          />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        align="end"
-                        className="w-[200px] bg-background shadow-xl rounded-lg z-[8]"
-                      >
-                        <DropdownMenuRadioGroup
-                          value={theme}
-                          onValueChange={setTheme}
-                        >
-                          <DropdownMenuRadioItem
-                            value="light"
-                            className="flex gap-2 py-3"
-                          >
-                            <Sun size={16} className="text-muted-foreground" />
-                            <span>라이트</span>
-                          </DropdownMenuRadioItem>
-                          <DropdownMenuRadioItem
-                            value="dark"
-                            className="flex gap-2 py-3"
-                          >
-                            <Moon size={16} className="text-muted-foreground" />
-                            <span>다크</span>
-                          </DropdownMenuRadioItem>
-                          <DropdownMenuRadioItem
-                            value="system"
-                            className="flex gap-2 py-3"
-                          >
-                            <Laptop
-                              size={16}
-                              className="text-muted-foreground"
-                            />
-                            <span>시스템</span>
-                          </DropdownMenuRadioItem>
-                        </DropdownMenuRadioGroup>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-                {user ? (
-                  <>
-                    <Link
-                      href="/mypage"
-                      onClick={toggleMenu}
-                      className="block text-base font-medium pb-2"
-                    >
-                      마이페이지
-                    </Link>
-                    <Link
-                      href="/settings"
-                      onClick={toggleMenu}
-                      className="block text-base font-medium pb-2"
-                    >
-                      설정
-                    </Link>
-                    {user.role?.toLowerCase() === "admin" && (
-                      <Link
-                        href="/admin"
-                        onClick={toggleMenu}
-                        className="block text-base font-medium pb-2"
-                      >
-                        관리자 페이지
-                      </Link>
-                    )}
+                  {item.submenu && item.submenu.length > 0 ? (
                     <button
+                      className="flex items-center w-full text-xl pt-4 pb-2 text-left focus:outline-none"
                       onClick={() => {
-                        handleLogout();
-                        toggleMenu();
+                        setOpenSubmenus((prev) => ({
+                          ...prev,
+                          [item.title]: !prev[item.title],
+                        }));
                       }}
-                      className="block text-base font-medium text-red-500 dark:text-red-400 pb-6"
                     >
-                      로그아웃
+                      <span className="flex-1 text-left">{item.title}</span>
+                      <ChevronDown
+                        className={`w-6 h-6 ml-2 transition-transform duration-200 ${
+                          openSubmenus[item.title]
+                            ? "rotate-180 text-primary"
+                            : ""
+                        }`}
+                      />
                     </button>
-                  </>
-                ) : (
-                  <Link
-                    href="/login"
-                    onClick={toggleMenu}
-                    className="block text-base font-medium pb-6"
+                  ) : (
+                    <Link
+                      href={item.url}
+                      className="flex items-center w-full text-xl pt-4 pb-2 text-left focus:outline-none"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <span className="flex-1 text-left">{item.title}</span>
+                    </Link>
+                  )}
+                </div>
+                {item.submenu && item.submenu.length > 0 && (
+                  <div
+                    className={`overflow-hidden transition-all duration-700 ${
+                      openSubmenus[item.title]
+                        ? "max-h-60 opacity-100"
+                        : "max-h-0 opacity-0"
+                    }`}
                   >
-                    로그인
+                    <ul className="pl-4">
+                      {item.submenu.map((child: any, subIdx: number) => (
+                        <li key={child.id + subIdx}>
+                          <Link
+                            href={child.url}
+                            className="block text-base py-2 text-gray-700 dark:text-gray-300 hover:font-semibold"
+                            onClick={() => setIsMenuOpen(false)}
+                          >
+                            {child.title}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-12 border-t pt-8 space-y-6 pb-8">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground text-sm">테마</span>
+              <div className="relative z-[10]">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="flex items-center gap-2"
+                    >
+                      {theme === "light" ? (
+                        <Sun size={16} className="text-muted-foreground" />
+                      ) : theme === "dark" ? (
+                        <Moon size={16} className="text-muted-foreground" />
+                      ) : (
+                        <Laptop size={16} className="text-muted-foreground" />
+                      )}
+                      <span className="text-sm">테마 변경</span>
+                      <ChevronDown
+                        size={16}
+                        className="text-muted-foreground"
+                      />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-[200px] bg-background shadow-xl rounded-lg z-[8]"
+                  >
+                    <DropdownMenuRadioGroup
+                      value={theme}
+                      onValueChange={setTheme}
+                    >
+                      <DropdownMenuRadioItem
+                        value="light"
+                        className="flex gap-2 py-3"
+                      >
+                        <Sun size={16} className="text-muted-foreground" />
+                        <span>라이트</span>
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem
+                        value="dark"
+                        className="flex gap-2 py-3"
+                      >
+                        <Moon size={16} className="text-muted-foreground" />
+                        <span>다크</span>
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem
+                        value="system"
+                        className="flex gap-2 py-3"
+                      >
+                        <Laptop size={16} className="text-muted-foreground" />
+                        <span>시스템</span>
+                      </DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+            {user ? (
+              <>
+                <Link
+                  href="/mypage"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block text-base font-medium pb-2"
+                >
+                  마이페이지
+                </Link>
+                <Link
+                  href="/settings"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block text-base font-medium pb-2"
+                >
+                  설정
+                </Link>
+                {user.role?.toLowerCase() === "admin" && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="block text-base font-medium pb-2"
+                  >
+                    관리자 페이지
                   </Link>
                 )}
-              </div>
-            </div>,
-            document.body
-          )}
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setIsMenuOpen(false);
+                  }}
+                  className="block text-base font-medium text-red-500 dark:text-red-400 pb-6"
+                >
+                  로그아웃
+                </button>
+              </>
+            ) : (
+              <Link
+                href="/login"
+                onClick={() => setIsMenuOpen(false)}
+                className="block text-base font-medium pb-6"
+              >
+                로그인
+              </Link>
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
 
-          {/* 오버레이 */}
-          {createPortal(
-            <div
-              className={`fixed top-[4rem] left-0 right-0 bottom-0 bg-black/50 z-[7] ${
-                animationClass === "animate-slideUp"
-                  ? "animate-fadeOut"
-                  : "animate-fadeIn"
-              }`}
-              onClick={toggleMenu}
-            />,
-            document.body
-          )}
-        </>
+      {/* 오버레이 */}
+      {createPortal(
+        <div
+          className={`fixed top-[4rem] left-0 right-0 bottom-0 bg-black/50 z-[7] transition-opacity duration-700 ${isMenuOpen ? "opacity-100" : "opacity-0"}`}
+          onClick={() => setIsMenuOpen(false)}
+        />,
+        document.body
       )}
     </>
   );

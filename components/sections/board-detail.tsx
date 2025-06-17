@@ -1790,7 +1790,7 @@ export default function BoardDetail() {
               <button
                 onClick={toggleLike}
                 disabled={likeLoading}
-                className="flex flex-col items-center"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-colors ${liked ? "bg-red-50 text-red-600" : "hover:bg-gray-100 text-gray-600"}`}
               >
                 <Heart
                   className={`h-5 w-5 ${liked ? "fill-red-600 text-red-600" : "text-gray-600"}`}

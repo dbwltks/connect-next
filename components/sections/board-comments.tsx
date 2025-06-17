@@ -263,12 +263,19 @@ export default function BoardComments({
   // 댓글 목록 불러온 후 user_id, reply_to 모두 users 테이블에서 avatar_url, username 조회
   useEffect(() => {
     async function loadUsersMap() {
-      const userIds = Array.from(
-        new Set([
-          ...comments.map((c) => c.user_id),
-          ...comments.map((c) => c.reply_to),
-        ])
-      ).filter((id): id is string => typeof id === "string");
+      // 댓글이 없으면 로그인 유저만 usersMap 조회
+      let userIds: string[] = [];
+      if (comments.length === 0 && user?.id) {
+        userIds = [user.id];
+      } else {
+        userIds = Array.from(
+          new Set([
+            ...comments.map((c) => c.user_id),
+            ...comments.map((c) => c.reply_to),
+          ])
+        ).filter((id): id is string => typeof id === "string");
+      }
+      if (userIds.length === 0) return;
       try {
         const usersMap = await fetchUsersMap(userIds);
         setReplyToMap(usersMap);
@@ -281,7 +288,7 @@ export default function BoardComments({
       } catch {}
     }
     loadUsersMap();
-  }, [comments]);
+  }, [comments, user]);
 
   useEffect(() => {
     async function fetchPostAuthor() {
@@ -781,9 +788,6 @@ export default function BoardComments({
           <div className="border-2 border-gray-200 rounded-lg overflow-hidden">
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-2">
-                {/* <div className="bg-gray-100 text-gray-600 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0">
-                  <User className="h-4 w-4" />
-                </div> */}
                 <UserAvatar
                   userId={user.id}
                   username={user.username}

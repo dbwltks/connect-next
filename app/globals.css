@@ -108,9 +108,9 @@
 .glass-container--medium {
   min-width: 25rem;
 }
-.glass-container svg {
-  fill: white;
-}
+/* .glass-container svg {
+  fill: transparent;
+} */
 /* ========== GLASS ITEM ========== */
 .glass-item {
   display: flex;
@@ -169,7 +169,7 @@
   justify-content: inherit;
   align-items: inherit;
   gap: inherit;
-  padding: 1rem;
+  padding: 0.5rem;
 }
 .glass-content--inline {
   padding: 0.25rem 2rem 0.25rem 0.75rem;
