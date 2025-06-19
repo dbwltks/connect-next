@@ -147,7 +147,7 @@ export default function Breadcrumb({
   if (loading) {
     return (
       <Card
-        className={`shadow-sm border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 ${className}`}
+        className={`sm:rounded-lg sm:shadow-sm sm:border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 ${className}`}
       >
         <CardContent className="p-3">
           <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -163,8 +163,8 @@ export default function Breadcrumb({
   }
 
   return (
-    <Card
-      className={`shadow-sm border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 ${className}`}
+    <div
+      className={`sm:rounded-lg sm:shadow-sm sm:border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 ${className}`}
     >
       <CardContent className="p-3">
         <nav aria-label="breadcrumb" className="text-sm">
@@ -199,6 +199,6 @@ export default function Breadcrumb({
           </ol>
         </nav>
       </CardContent>
-    </Card>
+    </div>
   );
 }
