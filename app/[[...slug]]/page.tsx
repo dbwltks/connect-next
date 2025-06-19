@@ -7,7 +7,7 @@ import Breadcrumb from "@/components/home/breadcrumb";
 import { Section } from "@/components/admin/section-manager";
 import BoardDetail from "@/components/sections/board-detail";
 import BoardWrite from "@/components/sections/board-write";
-import HomepageWidgets, { Widget } from "@/components/home/homepage-widgets";
+import HomepageWidgets from "@/components/home/homepage-widgets";
 
 export default async function DynamicPage(props: { params: any }) {
   const params =

@@ -297,6 +297,8 @@ export default function BoardWrite({
   const [uploadedFiles, setUploadedFiles] = useState<IFileInfo[]>([]);
   const [youtubeUrl, setYoutubeUrl] = useState<string>("");
   const [youtubeId, setYoutubeId] = useState<string>("");
+  // 숨김(관리자만 보기) 상태 추가
+  const [isHidden, setIsHidden] = useState<boolean>(false);
 
   // Refs
   const editorRef = useRef<any>(null);
@@ -500,169 +502,6 @@ export default function BoardWrite({
     }
   };
 
-  // status를 인자로 받아 저장하는 함수
-  const savePost = async (status: "draft" | "published") => {
-    const html = editorRef.current?.editor?.getHTML() || "";
-    if (!title.trim() || isContentEmpty(html)) {
-      setError("제목과 내용을 입력하세요.");
-      showToast({
-        title: "입력 필요",
-        description: "제목과 내용을 모두 입력해 주세요.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setError(null);
-    setSuccess(false);
-    setLoading(true);
-
-    // 사용자 정보 가져오기 및 디버깅
-    console.log("[BoardWrite] 사용자 정보 가져오기 시작");
-    const user = await getHeaderUser();
-    console.log(
-      "[BoardWrite] 가져온 사용자 정보:",
-      JSON.stringify(user, null, 2)
-    );
-
-    if (!user || !user.id) {
-      console.error("[BoardWrite] 사용자 정보 또는 ID가 없음");
-      setError("로그인 후 작성 가능합니다. 사용자 ID를 가져올 수 없습니다.");
-      setLoading(false);
-      showToast({
-        title: "오류",
-        description: "사용자 정보를 가져올 수 없습니다. 다시 로그인해주세요.",
-        variant: "destructive",
-      });
-      return;
-    }
-    const userId = user.id;
-    console.log("[BoardWrite] 사용할 userId:", userId);
-    let newId = postId;
-    try {
-      // 게시글 저장(등록) 시 number 자동 할당
-      let nextNumber = 1;
-      if (!isEditMode && !postId) {
-        try {
-          const { data: maxData } = await supabase
-            .from("board_posts")
-            .select("number")
-            .eq("page_id", pageId)
-            .order("number", { ascending: false })
-            .limit(1)
-            .single();
-          nextNumber = (maxData?.number || 0) + 1;
-        } catch {}
-      }
-      console.log("[BoardWrite] serviceSaveBoardPost 호출 전 데이터:", {
-        postId,
-        isEditMode,
-        title: title.substring(0, 20) + (title.length > 20 ? "..." : ""),
-        contentLength: html.length,
-        allowComments,
-        thumbnailImage: thumbnailImage ? "있음" : "없음",
-        uploadedFilesCount: uploadedFiles.length,
-        userId, // 중요: userId가 전달되는지 확인
-        pageId,
-        categoryId,
-        status,
-        number: nextNumber,
-      });
-
-      // 파일 데이터 JSON화
-      const filesJson = JSON.stringify(uploadedFiles);
-
-      // saveBoardPost 함수 정확히 호출
-      const result = await serviceSaveBoardPost({
-        postId,
-        isEditMode,
-        title,
-        content: html,
-        allowComments,
-        thumbnailImage,
-        uploadedFiles,
-        userId,
-        pageId,
-        categoryId,
-        status,
-        number: nextNumber,
-        description: description.trim(), // 상세 설명 추가
-      });
-
-      console.log("[BoardWrite] serviceSaveBoardPost 결과:", result);
-      newId = result.id;
-      setPostId(newId);
-    } catch (error: any) {
-      console.error("게시글 저장 중 오류 발생:", error);
-      setError("게시글 저장 중 오류가 발생했습니다.");
-      setLoading(false);
-      return;
-    }
-    setLoading(false);
-    if (status === "draft") {
-      setSuccess(true);
-      await loadDrafts();
-      showToast({
-        title: "임시등록 완료",
-        description: "내용이 임시등록되었습니다.",
-        variant: "default",
-      });
-      setTimeout(() => {
-        setSuccess(false);
-      }, 3000);
-    } else {
-      if (newId) {
-        // 상세페이지로 이동 (현재 경로에서 write 또는 edit 부분 제거)
-        const basePath = window.location.pathname.replace(
-          /\/(write|edit([^/]+)?)$/,
-          ""
-        );
-        if (basePath.endsWith(`/${newId}`)) {
-          router.push(basePath);
-        } else {
-          router.push(`${basePath}/${newId}`);
-        }
-      } else {
-        setTitle("");
-        setContent("");
-        setSuccess(true);
-        if (onSuccess) onSuccess();
-      }
-    }
-  };
-
-  // 등록 버튼
-  const handleFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await savePost("published");
-  };
-
-  useEffect(() => {
-    if (isEditMode && postId && (!initialData || !initialData.files)) {
-      loadPostData();
-    } else if (isEditMode && initialData?.files) {
-      try {
-        const parsedFiles = JSON.parse(initialData.files);
-        if (Array.isArray(parsedFiles)) {
-          setUploadedFiles(parsedFiles.map(normalizeFileInfo));
-          // 이미지가 있고 썸네일이 없으면 첫 번째 이미지를 자동 지정
-          if (!thumbnailImage) {
-            const firstImage = parsedFiles.find((f: any) =>
-              ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(
-                (f.type || "").toLowerCase()
-              )
-            );
-            if (firstImage) setThumbnailImage(firstImage.url);
-          }
-          console.log("초기 파일 정보 로드됨:", parsedFiles);
-        }
-      } catch (error) {
-        console.error("파일 정보 파싱 오류:", error);
-        setUploadedFiles([]);
-      }
-    }
-    loadDrafts();
-  }, [isEditMode, postId, initialData]);
-
   // 게시글 데이터 로드 함수 (수정 모드)
   const loadPostData = async () => {
     try {
@@ -683,6 +522,7 @@ export default function BoardWrite({
         setThumbnailImage(data.thumbnail || data.thumbnail_image || "");
         setAllowComments(data.allow_comments !== false);
         setDescription(data.description || ""); // 상세 설명 로드
+        setIsHidden(data.status === "hidden"); // 숨김 상태 반영
         let parsedFiles: any[] = [];
         if (data.files) {
           try {
@@ -973,7 +813,180 @@ export default function BoardWrite({
     setIsEditMode(propIsEditMode);
     setPostId(propPostId);
     setInitialData(propInitialData);
+    // 수정 모드에서 status가 hidden이면 isHidden true로
+    if (
+      propInitialData &&
+      typeof propInitialData === "object" &&
+      "status" in propInitialData
+    ) {
+      setIsHidden(propInitialData.status === "hidden");
+    }
   }, [propIsEditMode, propPostId, propInitialData]);
+
+  // status를 인자로 받아 저장하는 함수
+  const savePost = async (statusArg: "draft" | "published") => {
+    const html = editorRef.current?.editor?.getHTML() || "";
+    if (!title.trim() || isContentEmpty(html)) {
+      setError("제목과 내용을 입력하세요.");
+      showToast({
+        title: "입력 필요",
+        description: "제목과 내용을 모두 입력해 주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setError(null);
+    setSuccess(false);
+    setLoading(true);
+
+    // 사용자 정보 가져오기 및 디버깅
+    console.log("[BoardWrite] 사용자 정보 가져오기 시작");
+    const user = await getHeaderUser();
+    console.log(
+      "[BoardWrite] 가져온 사용자 정보:",
+      JSON.stringify(user, null, 2)
+    );
+
+    if (!user || !user.id) {
+      console.error("[BoardWrite] 사용자 정보 또는 ID가 없음");
+      setError("로그인 후 작성 가능합니다. 사용자 ID를 가져올 수 없습니다.");
+      setLoading(false);
+      showToast({
+        title: "오류",
+        description: "사용자 정보를 가져올 수 없습니다. 다시 로그인해주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const userId = user.id;
+    console.log("[BoardWrite] 사용할 userId:", userId);
+    let newId = postId;
+    try {
+      // 게시글 저장(등록) 시 number 자동 할당
+      let nextNumber = 1;
+      if (!isEditMode && !postId) {
+        try {
+          const { data: maxData } = await supabase
+            .from("board_posts")
+            .select("number")
+            .eq("page_id", pageId)
+            .order("number", { ascending: false })
+            .limit(1)
+            .single();
+          nextNumber = (maxData?.number || 0) + 1;
+        } catch {}
+      }
+      console.log("[BoardWrite] serviceSaveBoardPost 호출 전 데이터:", {
+        postId,
+        isEditMode,
+        title: title.substring(0, 20) + (title.length > 20 ? "..." : ""),
+        contentLength: html.length,
+        allowComments,
+        thumbnailImage: thumbnailImage ? "있음" : "없음",
+        uploadedFilesCount: uploadedFiles.length,
+        userId, // 중요: userId가 전달되는지 확인
+        pageId,
+        categoryId,
+        status:
+          statusArg === "draft" ? "draft" : isHidden ? "hidden" : "published",
+        number: nextNumber,
+      });
+
+      // 파일 데이터 JSON화
+      const filesJson = JSON.stringify(uploadedFiles);
+
+      // saveBoardPost 함수 정확히 호출
+      const result = await serviceSaveBoardPost({
+        postId,
+        isEditMode,
+        title,
+        content: html,
+        allowComments,
+        thumbnailImage,
+        uploadedFiles,
+        userId,
+        pageId,
+        categoryId,
+        status:
+          statusArg === "draft" ? "draft" : isHidden ? "hidden" : "published",
+        number: nextNumber,
+        description: description.trim(), // 상세 설명 추가
+      });
+
+      console.log("[BoardWrite] serviceSaveBoardPost 결과:", result);
+      newId = result.id;
+      setPostId(newId);
+    } catch (error: any) {
+      console.error("게시글 저장 중 오류 발생:", error);
+      setError("게시글 저장 중 오류가 발생했습니다.");
+      setLoading(false);
+      return;
+    }
+    setLoading(false);
+    if (statusArg === "draft") {
+      setSuccess(true);
+      await loadDrafts();
+      showToast({
+        title: "임시등록 완료",
+        description: "내용이 임시등록되었습니다.",
+        variant: "default",
+      });
+      setTimeout(() => {
+        setSuccess(false);
+      }, 3000);
+    } else {
+      if (newId) {
+        // 상세페이지로 이동 (현재 경로에서 write 또는 edit 부분 제거)
+        const basePath = window.location.pathname.replace(
+          /\/(write|edit([^/]+)?)$/,
+          ""
+        );
+        if (basePath.endsWith(`/${newId}`)) {
+          router.push(basePath);
+        } else {
+          router.push(`${basePath}/${newId}`);
+        }
+      } else {
+        setTitle("");
+        setContent("");
+        setSuccess(true);
+        if (onSuccess) onSuccess();
+      }
+    }
+  };
+
+  // 등록 버튼
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await savePost("published");
+  };
+
+  useEffect(() => {
+    if (isEditMode && postId && (!initialData || !initialData.files)) {
+      loadPostData();
+    } else if (isEditMode && initialData?.files) {
+      try {
+        const parsedFiles = JSON.parse(initialData.files);
+        if (Array.isArray(parsedFiles)) {
+          setUploadedFiles(parsedFiles.map(normalizeFileInfo));
+          // 이미지가 있고 썸네일이 없으면 첫 번째 이미지를 자동 지정
+          if (!thumbnailImage) {
+            const firstImage = parsedFiles.find((f: any) =>
+              ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(
+                (f.type || "").toLowerCase()
+              )
+            );
+            if (firstImage) setThumbnailImage(firstImage.url);
+          }
+          console.log("초기 파일 정보 로드됨:", parsedFiles);
+        }
+      } catch (error) {
+        console.error("파일 정보 파싱 오류:", error);
+        setUploadedFiles([]);
+      }
+    }
+    loadDrafts();
+  }, [isEditMode, postId, initialData]);
 
   return (
     <ToastProvider>
@@ -1161,6 +1174,23 @@ export default function BoardWrite({
                       className="text-sm font-medium"
                     >
                       댓글 허용
+                    </label>
+                  </div>
+                </div>
+
+                {/* 숨김(관리자만 보기) 카드 */}
+                <div className="border border-gray-200 rounded-md p-3 lg:p-4 bg-white mt-3">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="hidden"
+                      checked={isHidden}
+                      onChange={(e) => setIsHidden(e.target.checked)}
+                      disabled={loading}
+                      className="accent-blue-500"
+                    />
+                    <label htmlFor="hidden" className="text-sm font-medium">
+                      숨김(관리자만 보기)
                     </label>
                   </div>
                 </div>

@@ -22,12 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { MediaWidget } from "../widgets/media-widget";
 import { BoardWidget, BOARD_TEMPLATE } from "../widgets/board-widget";
@@ -53,12 +48,12 @@ export type Widget = {
     show_date?: boolean; // 날짜 표시 여부
     show_excerpt?: boolean; // 요약 표시 여부
     layout_type?: string | number; // 레이아웃 타입 (문자열 또는 숫자)
-    
+
     // 미디어 위젯 관련 속성
     media_title?: string; // 미디어 섹션 제목
     media_subtitle?: string; // 미디어 섹션 부제목
     media_more_text?: string; // 더 많은 미디어 보기 텍스트
-    
+
     // 위치 정보 위젯 관련 속성
     location_title?: string; // 위치 정보 섹션 제목
     location_subtitle?: string; // 위치 정보 섹션 부제목
@@ -67,7 +62,7 @@ export type Widget = {
     email?: string; // 이메일
     map_url?: string; // 지도 링크 URL
     embed_map_url?: string; // 임베드 지도 URL
-    
+
     page_id?: string; // 콘텐츠를 가져올 페이지 ID (미디어, 위치 등 공통)
   };
   is_active: boolean;
@@ -556,7 +551,7 @@ export default function LayoutManager(): React.ReactNode {
 
     return (
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" style={{ zIndex: 999 }}>
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>위젯 설정: {editingWidget.title}</DialogTitle>
             <DialogDescription>
@@ -564,7 +559,7 @@ export default function LayoutManager(): React.ReactNode {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
             <div className="space-y-2">
               <Label htmlFor="widget-title">제목</Label>
               <Input
@@ -746,7 +741,6 @@ export default function LayoutManager(): React.ReactNode {
                 </div>
               </div>
             )}
-
           </div>
 
           {/* 게시판 위젯 전용 설정 */}
@@ -1034,21 +1028,23 @@ export default function LayoutManager(): React.ReactNode {
           {editingWidget.type === "location" && (
             <div className="space-y-4 border rounded-md p-3 bg-gray-50">
               <h4 className="font-medium text-sm">위치 정보 설정</h4>
-              
+
               <Tabs defaultValue="info" className="w-full">
                 <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="info">기본 정보</TabsTrigger>
                   <TabsTrigger value="location">위치</TabsTrigger>
                   <TabsTrigger value="contact">연락처</TabsTrigger>
                 </TabsList>
-                
+
                 {/* 기본 정보 설정 탭 */}
                 <TabsContent value="info" className="space-y-4 pt-4">
                   <div className="space-y-2">
                     <Label htmlFor="location-title">위치 섹션 제목</Label>
                     <Input
                       id="location-title"
-                      value={editingWidget.display_options?.location_title || ""}
+                      value={
+                        editingWidget.display_options?.location_title || ""
+                      }
                       placeholder="위치 정보"
                       onChange={(e) =>
                         setEditingWidget({
@@ -1066,7 +1062,9 @@ export default function LayoutManager(): React.ReactNode {
                     <Label htmlFor="location-subtitle">위치 섹션 부제목</Label>
                     <Input
                       id="location-subtitle"
-                      value={editingWidget.display_options?.location_subtitle || ""}
+                      value={
+                        editingWidget.display_options?.location_subtitle || ""
+                      }
                       placeholder="저희 위치와 연락처 정보입니다"
                       onChange={(e) =>
                         setEditingWidget({
@@ -1079,9 +1077,11 @@ export default function LayoutManager(): React.ReactNode {
                       }
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
-                    <Label htmlFor="location-page">연결할 페이지 선택 (선택사항)</Label>
+                    <Label htmlFor="location-page">
+                      연결할 페이지 선택 (선택사항)
+                    </Label>
                     <Select
                       value={editingWidget.display_options?.page_id || ""}
                       onValueChange={(value) =>
@@ -1110,7 +1110,7 @@ export default function LayoutManager(): React.ReactNode {
                     </p>
                   </div>
                 </TabsContent>
-                
+
                 {/* 위치 설정 탭 */}
                 <TabsContent value="location" className="space-y-4 pt-4">
                   <div className="space-y-2">
@@ -1131,7 +1131,7 @@ export default function LayoutManager(): React.ReactNode {
                       }
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="location-map-url">지도 링크 URL</Label>
                     <Input
@@ -1149,12 +1149,15 @@ export default function LayoutManager(): React.ReactNode {
                       }
                     />
                     <p className="text-xs text-gray-500">
-                      지도 보기 링크로 사용됩니다 (예: 네이버 지도, 구글 지도 등 링크)
+                      지도 보기 링크로 사용됩니다 (예: 네이버 지도, 구글 지도 등
+                      링크)
                     </p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="location-embed-map-url">임베드 지도 코드</Label>
+                    <Label htmlFor="location-embed-map-url">
+                      임베드 지도 코드
+                    </Label>
                     <textarea
                       id="location-embed-map-url"
                       className="w-full min-h-[120px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -1171,12 +1174,13 @@ export default function LayoutManager(): React.ReactNode {
                       }
                     />
                     <p className="text-xs text-gray-500">
-                      구글 지도 &gt; 공유 &gt; 지도 퍼가기에서 제공하는 iframe 코드 전체를 붙여넣으세요.
-                      (iframe 태그 전체를 그대로 복사하여 붙여넣으면 됩니다)
+                      구글 지도 &gt; 공유 &gt; 지도 퍼가기에서 제공하는 iframe
+                      코드 전체를 붙여넣으세요. (iframe 태그 전체를 그대로
+                      복사하여 붙여넣으면 됩니다)
                     </p>
                   </div>
                 </TabsContent>
-                
+
                 {/* 연락처 설정 탭 */}
                 <TabsContent value="contact" className="space-y-4 pt-4">
                   <div className="space-y-2">
@@ -1458,10 +1462,7 @@ export default function LayoutManager(): React.ReactNode {
 
       case "media":
         return previewMode ? (
-          <MediaWidget
-            widget={widget}
-            page={pages.find((p) => p.id === widget.display_options?.page_id)}
-          />
+          <MediaWidget widget={widget} />
         ) : (
           <div className="bg-purple-50 p-4 rounded">
             <div className="font-medium">{widget.title || "미디어 콘텐츠"}</div>
@@ -1477,7 +1478,7 @@ export default function LayoutManager(): React.ReactNode {
             )}
           </div>
         );
-        
+
       case "location":
         return previewMode ? (
           <LocationWidget
@@ -1493,7 +1494,7 @@ export default function LayoutManager(): React.ReactNode {
             </div>
             {widget.display_options?.address && (
               <div className="text-xs text-blue-500 mt-1 truncate">
-                주소: {widget.display_options.address.split('\n')[0]}
+                주소: {widget.display_options.address.split("\n")[0]}
               </div>
             )}
           </div>
@@ -1745,7 +1746,7 @@ export default function LayoutManager(): React.ReactNode {
                                       <Plus className="h-4 w-4 mr-2" />
                                       미디어 추가
                                     </Button>
-                                    
+
                                     <Button
                                       variant="ghost"
                                       size="sm"

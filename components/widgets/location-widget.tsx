@@ -35,14 +35,14 @@ export default function LocationWidget({
   return (
     <section
       id={id}
-      className="w-full py-8 md:py-12"
+      className="w-full"
       // style={{
       //   backgroundColor:
       //     widget?.display_options?.background_color || "transparent",
       // }}
     >
       <div className="mx-auto">
-        <div className="mb-6 md:mb-8">
+        <div className="mb-4">
           <h2 className="text-2xl md:text-3xl font-bold mb-2">
             {widget.display_options?.location_title || "위치 정보"}
           </h2>

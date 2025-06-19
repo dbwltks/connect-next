@@ -77,6 +77,10 @@
   }
 }
 
+body {
+  background-color: #f1f5f9b3 !important;
+}
+
 /* ========== GLASS CONTAINER ========== */
 .glass-container {
   position: relative;

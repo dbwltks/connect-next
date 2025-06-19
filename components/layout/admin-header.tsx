@@ -56,6 +56,7 @@ export default function AdminHeader() {
                 height={128}
                 className="object-contain"
                 priority
+                style={{ width: 128, height: "auto" }}
               />
             </div>
           </Link>
@@ -140,6 +141,7 @@ export default function AdminHeader() {
                 height={96}
                 className="object-contain"
                 priority
+                style={{ width: 96, height: "auto" }}
               />
             </div>
           </Link>

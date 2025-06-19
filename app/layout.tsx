@@ -90,7 +90,7 @@ export default async function RootLayout({
                 scale="20"
                 xChannelSelector="R"
                 yChannelSelector="G"
-                color-interpolation-filters="sRGB"
+                colorInterpolationFilters="sRGB"
               />
             </filter>
             <filter
@@ -117,7 +117,7 @@ export default async function RootLayout({
                 scale="28"
                 xChannelSelector="R"
                 yChannelSelector="G"
-                color-interpolation-filters="sRGB"
+                colorInterpolationFilters="sRGB"
               />
             </filter>
           </defs>

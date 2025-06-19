@@ -50,6 +50,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import GlassContainer from "@/components/ui/glass-container";
+import { useAuth } from "@/contexts/auth-context";
 
 interface BoardPost {
   id: string;
@@ -66,6 +67,7 @@ interface BoardPost {
   category_id?: string;
   thumbnail_image?: string | null;
   files?: string; // 첨부파일 정보(문자열로 저장된 JSON)
+  status?: string;
 }
 
 // 첨부파일 정보 인터페이스
@@ -83,6 +85,9 @@ interface User {
 }
 
 export default function BoardDetail() {
+  const { user } = useAuth();
+  const isAdmin = user?.role?.toLowerCase() === "admin";
+
   // 글꼴 설정 메뉴 렌더링 함수
   const renderFontSettingsMenu = (
     position: string = "bottom-full",
@@ -290,8 +295,6 @@ export default function BoardDetail() {
   const [showFontMenu, setShowFontMenu] = useState(false);
   // 모바일 글꼴 설정 메뉴 표시 상태
   const [showMobileFontMenu, setShowMobileFontMenu] = useState(false);
-  // user 상태 추가
-  const [user, setUser] = useState<any>(null);
   // 작성자 여부 상태 추가
   const [isAuthor, setIsAuthor] = useState(false);
   // 작성자 아바타 상태 추가
@@ -632,48 +635,6 @@ export default function BoardDetail() {
     return () => window.removeEventListener("mousedown", handleClickOutside);
   }, [showAttachments]);
 
-  // useEffect에서 user 상태 관리
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadUser() {
-      try {
-        const userData = await getHeaderUser();
-        if (isMounted) {
-          setUser(userData);
-        }
-      } catch (error) {
-        console.error("사용자 정보 로드 오류:", error);
-      }
-    }
-
-    loadUser();
-
-    const handler = async () => {
-      await loadUser();
-    };
-
-    window.addEventListener("storage", handler);
-    return () => {
-      isMounted = false;
-      window.removeEventListener("storage", handler);
-    };
-  }, []);
-
-  // useEffect에서 user 상태가 변경될 때마다 작성자 여부 체크
-  useEffect(() => {
-    if (user && post) {
-      console.log("작성자 체크:", {
-        userId: user.id,
-        postUserId: post.user_id,
-        isMatch: user.id === post.user_id,
-      });
-      setIsAuthor(user.id === post.user_id);
-    } else {
-      setIsAuthor(false);
-    }
-  }, [user, post]);
-
   // 게시글/작성자 정보 로드 useEffect 내부에 추가
   useEffect(() => {
     if (post?.user_id) {
@@ -727,6 +688,29 @@ export default function BoardDetail() {
     );
   }
   if (!post) return null;
+
+  // 숨김글 접근 제한 처리
+  if (post.status === "hidden" && !isAdmin) {
+    return (
+      <Card className="my-8 border-yellow-200 bg-yellow-50">
+        <CardContent className="pt-6">
+          <div className="text-yellow-700 text-center p-4 flex flex-col items-center gap-2">
+            <span className="text-lg font-medium">
+              숨김 처리된 게시글입니다
+            </span>
+            <p>이 게시글은 관리자만 볼 수 있습니다.</p>
+            <Button
+              variant="outline"
+              className="mt-2"
+              onClick={() => router.back()}
+            >
+              <ChevronLeft className="mr-2 h-4 w-4" /> 뒤로 가기
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   // 삭제 핸들러
   async function handleDelete() {
@@ -1324,22 +1308,19 @@ export default function BoardDetail() {
         <div className="hidden sm:flex justify-between items-center px-4 sm:px-6 py-4 sm:py-6 border-b border-gray-100 space-x-2">
           {/* 수정, 삭제 버튼 - 작성자인 경우에만 표시 */}
           <div className="flex gap-2">
-            {isAuthor && (
+            {isAdmin && (
               <>
                 <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => router.push(`${pathname}/edit`)}
-                  className="p-3 bg-gray-200 text-gray-500 hover:bg-amber-50"
+                  variant="outline"
+                  onClick={() =>
+                    router.push(
+                      `${pathname.replace(/\/$/, "")}/${post.id}/edit`
+                    )
+                  }
                 >
                   수정
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleDelete}
-                  className="p-3 bg-gray-200 text-gray-500 hover:text-red-600 hover:bg-red-50"
-                >
+                <Button variant="destructive" onClick={handleDelete}>
                   삭제
                 </Button>
               </>
@@ -1818,7 +1799,7 @@ export default function BoardDetail() {
               </button>
 
               {/* 작성자인 경우에만 더보기 메뉴 표시 */}
-              {isAuthor && (
+              {isAdmin && (
                 <div className="relative">
                   <Button
                     variant="ghost"

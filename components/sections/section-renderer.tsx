@@ -36,12 +36,26 @@ interface SectionRendererProps {
   section: Section;
   className?: string;
   menuTitle?: string;
+  posts?: any[];
+  users?: any[];
+  totalCount?: number;
+  page?: number;
+  totalPages?: number;
+  searchType?: string;
+  searchTerm?: string;
 }
 
 export default function SectionRenderer({
   section,
   className = "",
   menuTitle,
+  posts = [],
+  users = [],
+  totalCount = 0,
+  page = 1,
+  totalPages = 1,
+  searchType = "title",
+  searchTerm = "",
 }: SectionRendererProps) {
   // 타입 안정성 확보: as any 단언 및 옵셔널 체이닝
   const s = section as any;
@@ -67,7 +81,7 @@ export default function SectionRenderer({
   // 기타 타입 분기(예: gallery 등)는 아래에 추가
   // 기본 fallback UI
   return (
-    <div className={`p-4 border border-dashed rounded-md ${className}`}>
+    <div className={`sm:p-4 border border-dashed rounded-md ${className}`}>
       <h2 className="text-xl font-bold">{section.title}</h2>
       <p className="text-muted-foreground">
         {section.description || "섹션 설명이 없습니다."}

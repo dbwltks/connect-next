@@ -27,6 +27,7 @@ interface BreadcrumbProps {
   homeTitle?: string;
   homeUrl?: string;
   currentTitle?: string; // 현재 페이지 제목 (URL에서 찾을 수 없는 경우 사용)
+  menuItems?: IMenuItem[]; // SSR에서 전달받은 메뉴 데이터
 }
 
 export default function Breadcrumb({
@@ -34,69 +35,64 @@ export default function Breadcrumb({
   homeTitle = "홈",
   homeUrl = "/",
   currentTitle,
+  menuItems,
 }: BreadcrumbProps) {
   const pathname = usePathname();
   const [breadcrumbs, setBreadcrumbs] = useState<IBreadcrumbItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function generateBreadcrumbs() {
+    async function generateBreadcrumbs(menuData: IMenuItem[] | undefined) {
       setLoading(true);
       try {
-        // 메뉴 데이터 가져오기
-        const { data: menuItems, error: supabaseError } = await supabase
-          .from("cms_menus")
-          .select("id, title, url, parent_id")
-          .eq("is_active", true);
-
-        if (supabaseError) {
-          console.error("Error fetching menu items:", supabaseError);
-          throw supabaseError;
+        let menuItemsData = menuData;
+        // SSR에서 menuItems가 없으면 CSR에서 fetch (fallback)
+        if (!menuItemsData) {
+          const { data: fetchedMenus, error: supabaseError } = await supabase
+            .from("cms_menus")
+            .select("id, title, url, parent_id")
+            .eq("is_active", true);
+          if (supabaseError) {
+            console.error("Error fetching menu items:", supabaseError);
+            throw supabaseError;
+          }
+          menuItemsData = fetchedMenus || [];
         }
-
-        if (!menuItems || menuItems.length === 0) {
+        if (!menuItemsData || menuItemsData.length === 0) {
           setBreadcrumbs([{ title: homeTitle, url: homeUrl, isLast: true }]);
           return;
         }
-
         // Optimization: Create a map for faster lookups by ID
         const menuItemMap = new Map<string, IMenuItem>();
-        menuItems.forEach((item) => menuItemMap.set(item.id, item));
-
+        menuItemsData.forEach((item) => menuItemMap.set(item.id, item));
         // 현재 경로에 해당하는 메뉴 항목 찾기
         const currentPath = pathname === "/" ? "/" : pathname;
-        let currentMenuItem = menuItems.find(
+        let currentMenuItem = menuItemsData.find(
           (item) => item.url === currentPath
         );
-
         // 현재 경로에 해당하는 메뉴 항목이 없는 경우 (부분 일치)
         if (!currentMenuItem && currentPath !== "/") {
-          currentMenuItem = menuItems.find(
+          currentMenuItem = menuItemsData.find(
             (item) => currentPath.startsWith(item.url) && item.url !== "/"
           );
         }
-
         const breadcrumbItems: IBreadcrumbItem[] = [];
-
         // 홈 항목 추가
         breadcrumbItems.push({
           title: homeTitle,
           url: homeUrl,
           isLast: currentPath === homeUrl,
         });
-
         // 현재 메뉴 항목이 있는 경우 계층 구조 생성
         if (currentMenuItem) {
           const parentItems: IMenuItem[] = [];
           let parentId = currentMenuItem.parent_id;
           const visitedParentIds = new Set<string>();
-
           while (parentId) {
             if (visitedParentIds.has(parentId)) {
               break;
             }
             visitedParentIds.add(parentId);
-
             const parentItem = menuItemMap.get(parentId);
             if (parentItem) {
               parentItems.unshift(parentItem);
@@ -105,7 +101,6 @@ export default function Breadcrumb({
               break;
             }
           }
-
           // 부모 항목들 브레드크럼에 추가
           parentItems.forEach((item) => {
             breadcrumbItems.push({
@@ -114,7 +109,6 @@ export default function Breadcrumb({
               isLast: false,
             });
           });
-
           // 현재 항목 추가
           breadcrumbItems.push({
             title: currentMenuItem.title,
@@ -139,7 +133,6 @@ export default function Breadcrumb({
             });
           });
         }
-
         setBreadcrumbs(breadcrumbItems);
       } catch (error) {
         console.error("브레드크럼 생성 오류:", error);
@@ -148,9 +141,8 @@ export default function Breadcrumb({
         setLoading(false);
       }
     }
-
-    generateBreadcrumbs();
-  }, [pathname, homeTitle, homeUrl, currentTitle]);
+    generateBreadcrumbs(menuItems);
+  }, [pathname, homeTitle, homeUrl, currentTitle, menuItems]);
 
   if (loading) {
     return (
@@ -172,7 +164,7 @@ export default function Breadcrumb({
 
   return (
     <Card
-      className={`shadow-sm border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 ${className}`}
+      className={`shadow-sm border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 ${className}`}
     >
       <CardContent className="p-3">
         <nav aria-label="breadcrumb" className="text-sm">

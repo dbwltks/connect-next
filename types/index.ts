@@ -36,7 +36,7 @@ export interface IBoardPost {
   page_id?: string;
   thumbnail_image?: string; // 실제 DB 필드명
   user_id?: string; // 작성자 ID
-  status?: string; // 게시물 상태(published, draft 등)
+  status?: BoardPostStatus; // 게시물 상태(published, draft, hidden)
 }
 
 // 위젯 기본 인터페이스
@@ -97,3 +97,6 @@ export interface IBannerWidgetConfig {
 
 // 기존 Banner 타입 재정의(컴포넌트 import용)
 export type { Banner } from "@/components/home/main-banner";
+
+// 게시글 상태 타입
+export type BoardPostStatus = "published" | "draft" | "hidden";

@@ -17,7 +17,6 @@ interface BoardWidgetProps {
     display_options?: IBoardWidgetOptions;
   };
   page?: IPage;
-  posts?: IBoardPost[];
 }
 
 // 게시판 템플릿 타입 정의
@@ -51,12 +50,8 @@ const templateInfo = {
   },
 };
 
-export function BoardWidget({
-  widget,
-  page,
-  posts: initialPosts = [],
-}: BoardWidgetProps) {
-  const [posts, setPosts] = useState<IBoardPost[]>(initialPosts);
+export function BoardWidget({ widget, page }: BoardWidgetProps) {
+  const [posts, setPosts] = useState<IBoardPost[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -301,18 +296,6 @@ export function BoardWidget({
 
   // 초기화 및 데이터 로드
   useEffect(() => {
-    // 초기 데이터가 있으면 사용
-    if (initialPosts && initialPosts.length > 0) {
-      setPosts(initialPosts);
-
-      // 초기 데이터도 캐싱
-      const pageId = page?.id || widget.display_options?.page_id;
-      if (pageId && widget.id) {
-        saveLocalBoardPosts(widget.id, pageId, initialPosts);
-      }
-      return;
-    }
-
     // 페이지 ID가 있으면 데이터 로드
     const pageId = page?.id || widget.display_options?.page_id;
     if (pageId && !dataLoadedRef.current) {
@@ -321,7 +304,7 @@ export function BoardWidget({
     }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page?.id, widget.id, widget.display_options?.page_id, initialPosts]);
+  }, [page?.id, widget.id, widget.display_options?.page_id]);
 
   // 캐시된 데이터 갱신을 위한 별도 useEffect
   useEffect(() => {
@@ -519,8 +502,8 @@ export function BoardWidget({
   };
 
   return (
-    <div className="h-full py-6">
-      <div className="p-2">
+    <div className="h-full">
+      <div className="pb-2">
         <div className="text-xl font-bold">
           {widget.title || page?.title || "게시판"}
         </div>

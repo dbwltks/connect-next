@@ -138,7 +138,7 @@ export default function Header({ menuItems }: { menuItems: any[] }) {
 
   return (
     <header className="sticky top-0 z-[9] w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center">
+      <div className="xl:container px-4 xl:px-0 flex h-16 items-center">
         <HeaderClient user={user} menuItems={menuItems} />
       </div>
     </header>
@@ -161,7 +161,7 @@ function HeaderClient({ user, menuItems }: { user: any; menuItems: any[] }) {
   // 트리 구조 메뉴 렌더링 함수
   function renderMenu(items: any[]) {
     return (
-      <ul className="flex gap-8 items-center">
+      <ul className="flex gap-4 xl:gap-8 items-center">
         {items.map((item: any, idx: number) => (
           <li
             key={item.id}
@@ -174,7 +174,7 @@ function HeaderClient({ user, menuItems }: { user: any; menuItems: any[] }) {
               <Link
                 href={item.url}
                 onClick={() => setOpenedDropdownId(null)}
-                className="px-2 py-1 text-base  text-gray-800 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-150"
+                className="px-2 py-1 text-sm font-medium xl:text-base text-gray-800 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-150"
               >
                 {item.title}
               </Link>
@@ -264,6 +264,7 @@ function HeaderClient({ user, menuItems }: { user: any; menuItems: any[] }) {
                 height={128}
                 className="object-contain"
                 priority
+                style={{ width: 128, height: "auto" }}
               />
             </div>
           </Link>
@@ -306,6 +307,7 @@ function HeaderClient({ user, menuItems }: { user: any; menuItems: any[] }) {
                 height={96}
                 className="object-contain"
                 priority
+                style={{ width: 96, height: "auto" }}
               />
             </div>
           </Link>
@@ -360,190 +362,193 @@ function HeaderClient({ user, menuItems }: { user: any; menuItems: any[] }) {
       </div>
 
       {/* 모바일 메뉴 (Portal로 렌더링하여 DOM 트리와 분리) */}
-      {createPortal(
-        <div
-          className={`fixed top-[4rem] left-0 right-0 bottom-0 z-[8] bg-background shadow-xl rounded-b-2xl px-8 pt-4
+      {isClient &&
+        createPortal(
+          <div
+            className={`fixed top-[4rem] left-0 right-0 bottom-0 z-[8] bg-background shadow-xl rounded-b-2xl px-8 pt-4
             h-auto min-h-0 max-h-full overflow-y-auto transition-all duration-700
             ${isMenuOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none"}
           `}
-          style={{ willChange: "opacity, max-height, transform" }}
-        >
-          <ul className="space-y-4">
-            {menuItems.map((item: any, idx: number) => (
-              <li key={item.id + idx}>
-                <div className="flex items-center justify-between">
-                  {item.submenu && item.submenu.length > 0 ? (
-                    <button
-                      className="flex items-center w-full text-xl pt-4 pb-2 text-left focus:outline-none"
-                      onClick={() => {
-                        setOpenSubmenus((prev) => ({
-                          ...prev,
-                          [item.title]: !prev[item.title],
-                        }));
-                      }}
-                    >
-                      <span className="flex-1 text-left">{item.title}</span>
-                      <ChevronDown
-                        className={`w-6 h-6 ml-2 transition-transform duration-200 ${
-                          openSubmenus[item.title]
-                            ? "rotate-180 text-primary"
-                            : ""
-                        }`}
-                      />
-                    </button>
-                  ) : (
-                    <Link
-                      href={item.url}
-                      className="flex items-center w-full text-xl pt-4 pb-2 text-left focus:outline-none"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <span className="flex-1 text-left">{item.title}</span>
-                    </Link>
-                  )}
-                </div>
-                {item.submenu && item.submenu.length > 0 && (
-                  <div
-                    className={`overflow-hidden transition-all duration-700 ${
-                      openSubmenus[item.title]
-                        ? "max-h-60 opacity-100"
-                        : "max-h-0 opacity-0"
-                    }`}
-                  >
-                    <ul className="pl-4">
-                      {item.submenu.map((child: any, subIdx: number) => (
-                        <li key={child.id + subIdx}>
-                          <Link
-                            href={child.url}
-                            className="block text-base py-2 text-gray-700 dark:text-gray-300 hover:font-semibold"
-                            onClick={() => setIsMenuOpen(false)}
-                          >
-                            {child.title}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
+            style={{ willChange: "opacity, max-height, transform" }}
+          >
+            <ul className="space-y-4">
+              {menuItems.map((item: any, idx: number) => (
+                <li key={item.id + idx}>
+                  <div className="flex items-center justify-between">
+                    {item.submenu && item.submenu.length > 0 ? (
+                      <button
+                        className="flex items-center w-full text-xl pt-4 pb-2 text-left focus:outline-none"
+                        onClick={() => {
+                          setOpenSubmenus((prev) => ({
+                            ...prev,
+                            [item.title]: !prev[item.title],
+                          }));
+                        }}
+                      >
+                        <span className="flex-1 text-left">{item.title}</span>
+                        <ChevronDown
+                          className={`w-6 h-6 ml-2 transition-transform duration-200 ${
+                            openSubmenus[item.title]
+                              ? "rotate-180 text-primary"
+                              : ""
+                          }`}
+                        />
+                      </button>
+                    ) : (
+                      <Link
+                        href={item.url}
+                        className="flex items-center w-full text-xl pt-4 pb-2 text-left focus:outline-none"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <span className="flex-1 text-left">{item.title}</span>
+                      </Link>
+                    )}
                   </div>
-                )}
-              </li>
-            ))}
-          </ul>
+                  {item.submenu && item.submenu.length > 0 && (
+                    <div
+                      className={`overflow-hidden transition-all duration-700 ${
+                        openSubmenus[item.title]
+                          ? "max-h-60 opacity-100"
+                          : "max-h-0 opacity-0"
+                      }`}
+                    >
+                      <ul className="pl-4">
+                        {item.submenu.map((child: any, subIdx: number) => (
+                          <li key={child.id + subIdx}>
+                            <Link
+                              href={child.url}
+                              className="block text-base py-2 text-gray-700 dark:text-gray-300 hover:font-semibold"
+                              onClick={() => setIsMenuOpen(false)}
+                            >
+                              {child.title}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
 
-          <div className="mt-12 border-t pt-8 space-y-6 pb-8">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-sm">테마</span>
-              <div className="relative z-[10]">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="flex items-center gap-2"
+            <div className="mt-12 border-t pt-8 space-y-6 pb-8">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground text-sm">테마</span>
+                <div className="relative z-[10]">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex items-center gap-2"
+                      >
+                        {theme === "light" ? (
+                          <Sun size={16} className="text-muted-foreground" />
+                        ) : theme === "dark" ? (
+                          <Moon size={16} className="text-muted-foreground" />
+                        ) : (
+                          <Laptop size={16} className="text-muted-foreground" />
+                        )}
+                        <span className="text-sm">테마 변경</span>
+                        <ChevronDown
+                          size={16}
+                          className="text-muted-foreground"
+                        />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="end"
+                      className="w-[200px] bg-background shadow-xl rounded-lg z-[8]"
                     >
-                      {theme === "light" ? (
-                        <Sun size={16} className="text-muted-foreground" />
-                      ) : theme === "dark" ? (
-                        <Moon size={16} className="text-muted-foreground" />
-                      ) : (
-                        <Laptop size={16} className="text-muted-foreground" />
-                      )}
-                      <span className="text-sm">테마 변경</span>
-                      <ChevronDown
-                        size={16}
-                        className="text-muted-foreground"
-                      />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="end"
-                    className="w-[200px] bg-background shadow-xl rounded-lg z-[8]"
-                  >
-                    <DropdownMenuRadioGroup
-                      value={theme}
-                      onValueChange={setTheme}
-                    >
-                      <DropdownMenuRadioItem
-                        value="light"
-                        className="flex gap-2 py-3"
+                      <DropdownMenuRadioGroup
+                        value={theme}
+                        onValueChange={setTheme}
                       >
-                        <Sun size={16} className="text-muted-foreground" />
-                        <span>라이트</span>
-                      </DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem
-                        value="dark"
-                        className="flex gap-2 py-3"
-                      >
-                        <Moon size={16} className="text-muted-foreground" />
-                        <span>다크</span>
-                      </DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem
-                        value="system"
-                        className="flex gap-2 py-3"
-                      >
-                        <Laptop size={16} className="text-muted-foreground" />
-                        <span>시스템</span>
-                      </DropdownMenuRadioItem>
-                    </DropdownMenuRadioGroup>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                        <DropdownMenuRadioItem
+                          value="light"
+                          className="flex gap-2 py-3"
+                        >
+                          <Sun size={16} className="text-muted-foreground" />
+                          <span>라이트</span>
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem
+                          value="dark"
+                          className="flex gap-2 py-3"
+                        >
+                          <Moon size={16} className="text-muted-foreground" />
+                          <span>다크</span>
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem
+                          value="system"
+                          className="flex gap-2 py-3"
+                        >
+                          <Laptop size={16} className="text-muted-foreground" />
+                          <span>시스템</span>
+                        </DropdownMenuRadioItem>
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
-            </div>
-            {user ? (
-              <>
-                <Link
-                  href="/mypage"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="block text-base font-medium pb-2"
-                >
-                  마이페이지
-                </Link>
-                <Link
-                  href="/settings"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="block text-base font-medium pb-2"
-                >
-                  설정
-                </Link>
-                {user.role?.toLowerCase() === "admin" && (
+              {user ? (
+                <>
                   <Link
-                    href="/admin"
+                    href="/mypage"
                     onClick={() => setIsMenuOpen(false)}
                     className="block text-base font-medium pb-2"
                   >
-                    관리자 페이지
+                    마이페이지
                   </Link>
-                )}
-                <button
-                  onClick={() => {
-                    handleLogout();
-                    setIsMenuOpen(false);
-                  }}
-                  className="block text-base font-medium text-red-500 dark:text-red-400 pb-6"
+                  <Link
+                    href="/settings"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="block text-base font-medium pb-2"
+                  >
+                    설정
+                  </Link>
+                  {user.role?.toLowerCase() === "admin" && (
+                    <Link
+                      href="/admin"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="block text-base font-medium pb-2"
+                    >
+                      관리자 페이지
+                    </Link>
+                  )}
+                  <button
+                    onClick={() => {
+                      handleLogout();
+                      setIsMenuOpen(false);
+                    }}
+                    className="block text-base font-medium text-red-500 dark:text-red-400 pb-6"
+                  >
+                    로그아웃
+                  </button>
+                </>
+              ) : (
+                <Link
+                  href="/login"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block text-base font-medium pb-6"
                 >
-                  로그아웃
-                </button>
-              </>
-            ) : (
-              <Link
-                href="/login"
-                onClick={() => setIsMenuOpen(false)}
-                className="block text-base font-medium pb-6"
-              >
-                로그인
-              </Link>
-            )}
-          </div>
-        </div>,
-        document.body
-      )}
+                  로그인
+                </Link>
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
 
-      {/* 오버레이 */}
-      {createPortal(
-        <div
-          className={`fixed top-[4rem] left-0 right-0 bottom-0 bg-black/50 z-[7] transition-opacity duration-700 ${isMenuOpen ? "opacity-100" : "opacity-0"}`}
-          onClick={() => setIsMenuOpen(false)}
-        />,
-        document.body
-      )}
+      {/* 오버레이: 메뉴가 완전히 열렸을 때만 렌더링 */}
+      {isClient &&
+        isMenuOpen &&
+        createPortal(
+          <div
+            className="fixed top-[4rem] left-0 right-0 bottom-0 bg-black/50 z-[7] opacity-100 transition-opacity duration-700"
+            onClick={() => setIsMenuOpen(false)}
+          />,
+          document.body
+        )}
     </>
   );
 }

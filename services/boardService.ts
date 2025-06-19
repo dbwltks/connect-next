@@ -1,6 +1,7 @@
 import { supabase } from "@/db";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { toast } from "@/components/ui/toaster";
+import type { BoardPostStatus } from "@/types/index";
 
 const supabaseClient = createClientComponentClient();
 
@@ -91,7 +92,7 @@ export async function saveBoardPost({
   userId: string;
   pageId: string;
   categoryId?: string;
-  status: "draft" | "published";
+  status: BoardPostStatus;
   number?: number;
   description?: string;
 }) {
