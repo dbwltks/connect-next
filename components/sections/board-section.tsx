@@ -817,7 +817,7 @@ export default function BoardSection({
   return (
     <div className={`board-section ${className} ${containerClass}`}>
       {/* 타이틀/설명 헤더를 최상단에 분리 */}
-      <div className="mb-2">
+      <div className="p-4 ">
         <h2 className="text-xl sm:text-2xl font-bold">{title}</h2>
         {description && <p className="text-gray-500 mt-1">{description}</p>}
       </div>
