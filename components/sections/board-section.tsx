@@ -1484,12 +1484,12 @@ export default function BoardSection({
       <div className="flex justify-center mt-6 mb-8 px-4 sm:px-6">
         <form
           onSubmit={handleSearch}
-          className="flex flex-row items-center gap-2 w-full max-w-lg sm:max-w-2xl" // max-w-lg 추가
+          className="flex flex-row items-stretch w-full max-w-lg sm:max-w-2xl space-x-2"
         >
           <select
             value={searchType}
             onChange={(e) => setSearchType(e.target.value)}
-            className="px-3 py-2 min-w-[80px] border-gray-100 h-10 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 w-[100px] border border-gray-100 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="title">제목</option>
             <option value="content">내용</option>
@@ -1500,9 +1500,9 @@ export default function BoardSection({
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="검색어를 입력하세요"
-            className="flex-1 h-10 px-3 py-2 border-gray-100 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" // min-w-0 추가
+            className="flex-1 px-3 py-2 border border-gray-100 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-0"
           />
-          <Button type="submit" className="px-4 py-2 flex-shrink-0">
+          <Button type="submit" className="px-4 whitespace-nowrap">
             검색
           </Button>
         </form>

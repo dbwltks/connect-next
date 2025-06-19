@@ -123,7 +123,7 @@ export default async function DynamicPage(props: { params: any }) {
     return (
       <>
         <MainBanner menuId={menu.id} />
-        <div className="sm:container mx-autop sm:mt-4 sm:px-4">
+        <div className="sm:container mx-autop sm:mt-4 border-b border-gray-200 sm:px-4">
           <Breadcrumb currentTitle={menu.title} />
         </div>
         <main>
