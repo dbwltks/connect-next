@@ -1303,7 +1303,7 @@ export default function BoardDetail() {
         <ToastViewport />
       </ToastProvider>
 
-      <Card className="my-0 sm:my-8 sm:shadow-md border-0 sm:border sm:border-gray-200 mx-0 sm:mx-auto w-full max-w-full overflow-hidden shadow-none bg-transparent sm:bg-white relative pb-16 sm:pb-0">
+      <Card className="sm:my-8 py-4 sm:shadow-md border-0 sm:border sm:border-gray-200 mx-0 sm:mx-auto w-full max-w-full overflow-hidden shadow-none bg-transparent bg-white relative sm:pb-0">
         {/* 수정, 삭제 버튼과 이전글, 다음글, 목록 버튼 한 줄에 배치 - 모바일에서는 숨김 */}
         <div className="hidden sm:flex justify-between items-center px-4 sm:px-6 py-4 sm:py-6 border-b border-gray-100 space-x-2">
           {/* 수정, 삭제 버튼 - 작성자인 경우에만 표시 */}

@@ -88,7 +88,7 @@ export default function BoardSection({
   menuTitle,
 }: BoardSectionProps) {
   // 컨테이너 클래스 설정 - 브레드크럼과 동일한 여백 적용
-  const containerClass = "container mx-auto sm:px-4 px-0";
+  const containerClass = "container mx-auto sm:px-8 px-0";
   const [showDropdown, setShowDropdown] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
@@ -815,7 +815,7 @@ export default function BoardSection({
   }
 
   return (
-    <div className={`board-section ${className} ${containerClass}`}>
+    <div className={`board-section mb-8 ${className} ${containerClass}`}>
       {/* 타이틀/설명 헤더를 최상단에 분리 */}
       <div className="p-4 ">
         <h2 className="text-xl sm:text-2xl font-bold">{title}</h2>
@@ -1413,99 +1413,98 @@ export default function BoardSection({
             </div>
           )}
         </div>
-      </div>
+        {/* 페이지네이션 */}
+        <div className="flex justify-center py-6 border-t border-gray-100 dark:border-gray-800">
+          <Pagination>
+            <PaginationContent className="flex flex-wrap justify-center">
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setPage((p) => Math.max(1, p - 1));
+                  }}
+                  className={page === 1 ? "pointer-events-none opacity-50" : ""}
+                />
+              </PaginationItem>
+              {Array.from({ length: totalPages }).map((_, idx) => {
+                // 모바일에서는 현재 페이지 주변의 페이지만 표시
+                const isCurrent = page === idx + 1;
+                const isNearCurrent = Math.abs(page - (idx + 1)) <= 1;
+                const isFirstOrLast = idx === 0 || idx === totalPages - 1;
+                const shouldShow =
+                  isNearCurrent || isFirstOrLast || totalPages <= 5;
 
-      {/* 페이지네이션 */}
-      <div className="flex justify-center my-6">
-        <Pagination>
-          <PaginationContent className="flex flex-wrap justify-center">
-            <PaginationItem>
-              <PaginationPrevious
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setPage((p) => Math.max(1, p - 1));
-                }}
-                className={page === 1 ? "pointer-events-none opacity-50" : ""}
-              />
-            </PaginationItem>
-            {Array.from({ length: totalPages }).map((_, idx) => {
-              // 모바일에서는 현재 페이지 주변의 페이지만 표시
-              const isCurrent = page === idx + 1;
-              const isNearCurrent = Math.abs(page - (idx + 1)) <= 1;
-              const isFirstOrLast = idx === 0 || idx === totalPages - 1;
-              const shouldShow =
-                isNearCurrent || isFirstOrLast || totalPages <= 5;
-
-              if (!shouldShow && idx === 1 && page > 3) {
-                return <PaginationEllipsis key={`ellipsis-start`} />;
-              }
-
-              if (
-                !shouldShow &&
-                idx === totalPages - 2 &&
-                page < totalPages - 2
-              ) {
-                return <PaginationEllipsis key={`ellipsis-end`} />;
-              }
-
-              return shouldShow ? (
-                <PaginationItem key={idx}>
-                  <PaginationLink
-                    href="#"
-                    isActive={isCurrent}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setPage(idx + 1);
-                    }}
-                  >
-                    {idx + 1}
-                  </PaginationLink>
-                </PaginationItem>
-              ) : null;
-            })}
-            <PaginationItem>
-              <PaginationNext
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setPage((p) => Math.min(totalPages, p + 1));
-                }}
-                className={
-                  page === totalPages ? "pointer-events-none opacity-50" : ""
+                if (!shouldShow && idx === 1 && page > 3) {
+                  return <PaginationEllipsis key={`ellipsis-start`} />;
                 }
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
-      </div>
 
-      {/* 검색 폼 */}
-      <div className="flex justify-center mt-6 mb-8 px-4 sm:px-6">
-        <form
-          onSubmit={handleSearch}
-          className="flex flex-row items-stretch w-full max-w-lg sm:max-w-2xl space-x-2"
-        >
-          <select
-            value={searchType}
-            onChange={(e) => setSearchType(e.target.value)}
-            className="px-3 py-2 w-[80px] border border-gray-100 rounded-md text-sm bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                if (
+                  !shouldShow &&
+                  idx === totalPages - 2 &&
+                  page < totalPages - 2
+                ) {
+                  return <PaginationEllipsis key={`ellipsis-end`} />;
+                }
+
+                return shouldShow ? (
+                  <PaginationItem key={idx}>
+                    <PaginationLink
+                      href="#"
+                      isActive={isCurrent}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setPage(idx + 1);
+                      }}
+                    >
+                      {idx + 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                ) : null;
+              })}
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setPage((p) => Math.min(totalPages, p + 1));
+                  }}
+                  className={
+                    page === totalPages ? "pointer-events-none opacity-50" : ""
+                  }
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+
+        {/* 검색 폼 */}
+        <div className="flex justify-center pb-8 px-4 sm:px-6">
+          <form
+            onSubmit={handleSearch}
+            className="flex flex-row items-stretch w-full max-w-lg sm:max-w-2xl space-x-2"
           >
-            <option value="title">제목</option>
-            <option value="content">내용</option>
-            <option value="author">작성자</option>
-          </select>
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="검색어를 입력하세요"
-            className="flex-1 px-3 py-2 border border-gray-100 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 min-w-0"
-          />
-          <Button type="submit" className="px-4 whitespace-nowrap">
-            검색
-          </Button>
-        </form>
+            <select
+              value={searchType}
+              onChange={(e) => setSearchType(e.target.value)}
+              className="px-3 py-2 w-[80px] border border-gray-100 rounded-md text-sm bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="title">제목</option>
+              <option value="content">내용</option>
+              <option value="author">작성자</option>
+            </select>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="검색어를 입력하세요"
+              className="flex-1 px-3 py-2 border border-gray-100 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 min-w-0"
+            />
+            <Button type="submit" className="px-4 whitespace-nowrap">
+              검색
+            </Button>
+          </form>
+        </div>
       </div>
     </div>
   );

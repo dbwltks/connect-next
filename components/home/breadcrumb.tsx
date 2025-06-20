@@ -164,7 +164,7 @@ export default function Breadcrumb({
 
   return (
     <div
-      className={`sm:rounded-lg sm:shadow-sm sm:border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 ${className}`}
+      className={`sm:rounded-lg sm:mx-4 bg-white dark:bg-gray-900 ${className}`}
     >
       <CardContent className="p-3">
         <nav aria-label="breadcrumb" className="text-sm">

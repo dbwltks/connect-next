@@ -66,6 +66,7 @@ export type Widget = {
     page_id?: string; // 콘텐츠를 가져올 페이지 ID (미디어, 위치 등 공통)
   };
   is_active: boolean;
+  page_id?: string | null; // 위젯이 속한 페이지 ID
 };
 
 // 레이아웃 영역 타입 정의
@@ -99,14 +100,15 @@ export default function LayoutManager(): React.ReactNode {
   const [banners, setBanners] = useState<any[]>([]);
   const [pages, setPages] = useState<any[]>([]);
   const [boardPosts, setBoardPosts] = useState<{ [key: string]: any[] }>({});
+  const [selectedPageId, setSelectedPageId] = useState<string | null>(null); // null은 홈페이지
 
   // 컴포넌트 마운트 시 레이아웃 데이터 및 메뉴 항목 로드
   useEffect(() => {
-    fetchLayoutData();
+    fetchLayoutData(selectedPageId);
     fetchMenuItems();
     fetchBanners();
     fetchPages();
-  }, []);
+  }, [selectedPageId]);
 
   // 메뉴 항목 가져오기
   const fetchMenuItems = async () => {
@@ -197,12 +199,20 @@ export default function LayoutManager(): React.ReactNode {
   };
 
   // 레이아웃 데이터 가져오기
-  const fetchLayoutData = async () => {
+  const fetchLayoutData = async (pageId: string | null) => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("cms_layout")
         .select("*")
         .order("order", { ascending: true });
+
+      if (pageId) {
+        query = query.eq("page_id", pageId);
+      } else {
+        query = query.is("page_id", null);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -415,6 +425,7 @@ export default function LayoutManager(): React.ReactNode {
           source_type: type,
           url: sourceItem?.url || null,
         },
+        page_id: selectedPageId,
       };
 
       // DB에 위젯 추가
@@ -526,7 +537,7 @@ export default function LayoutManager(): React.ReactNode {
       });
 
       // 레이아웃 데이터 다시 불러오기 - 비동기 처리 개선
-      await fetchLayoutData();
+      await fetchLayoutData(selectedPageId);
 
       // 다이얼로그 상태 초기화는 데이터 로딩 후에 처리
       setDialogOpen(false);
@@ -1508,14 +1519,28 @@ export default function LayoutManager(): React.ReactNode {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">홈페이지 레이아웃 관리</h2>
+        <h2 className="text-2xl font-bold">레이아웃 관리</h2>
+        <div className="w-64">
+          <Select
+            onValueChange={(value) => {
+              setSelectedPageId(value === "homepage" ? null : value);
+            }}
+            defaultValue={selectedPageId === null ? "homepage" : selectedPageId}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="편집할 페이지를 선택하세요" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="homepage">홈페이지 (기본)</SelectItem>
+              {pages.map((page) => (
+                <SelectItem key={page.id} value={page.id}>
+                  {page.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
-
-      {/* <div className="bg-gray-100 p-4 mb-4 rounded-lg text-center text-sm text-gray-500">
-        미리보기 모드: 위젯에 마우스를 올리면 편집 옵션이 표시됩니다. 드래그하여 위치를 변경할 수 있습니다.
-          ? "미리보기 모드: 위젯에 마우스를 올리면 편집 옵션이 표시됩니다. 드래그하여 위치를 변경할 수 있습니다."
-          : "기본 편집 모드: 위젯을 자유롭게 편집하고 배치할 수 있습니다."
-      </div> */}
 
       {renderWidgetSettingsDialog()}
 
