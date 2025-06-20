@@ -105,11 +105,13 @@ export default function BannerSlider({ banners }: BannerSliderProps) {
               allowFullScreen={false}
               style={{
                 position: "absolute",
-                top: "-60px",
-                left: 0,
-                width: "100%",
-                height: "calc(100% + 100px)",
-                border: 0,
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                width: "100vw",
+                height: "56.25vw" /* 16:9 aspect ratio */,
+                minWidth: "177.77vh" /* 16:9 aspect ratio */,
+                minHeight: "100vh",
                 pointerEvents: "none",
                 zIndex: 1,
               }}

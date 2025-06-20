@@ -692,7 +692,7 @@ export default function BoardSection({
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="flex items-center gap-1 px-2 py-1 rounded transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 border border-transparent bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
+                  className="flex items-center gap-1 px-2 py-1 rounded transition-colors cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-400 focus:ring-offset-2 border border-transparent bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
                   style={{ fontWeight: 600 }}
                 >
                   {label}
@@ -828,7 +828,7 @@ export default function BoardSection({
           <div></div>
           <div className="flex flex-wrap gap-2 items-center">
             <select
-              className="px-3 py-2 border-gray-100 border rounded-lg text-sm min-w-[75px] bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 border-gray-100 border rounded-lg text-sm min-w-[75px] bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
               value={itemCount}
               onChange={(e) => setItemCount(Number(e.target.value))}
             >
@@ -1079,7 +1079,7 @@ export default function BoardSection({
           ) : layout === "table" ? (
             // 테이블형
             <div
-              className={`overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-sm`}
+              className={`overflow-x-auto rounded-lg dark:border-gray-800 bg-white dark:bg-gray-900 text-sm`}
             >
               <Table
                 ref={tableRef}
@@ -1489,7 +1489,7 @@ export default function BoardSection({
           <select
             value={searchType}
             onChange={(e) => setSearchType(e.target.value)}
-            className="px-3 py-2 w-[100px] border border-gray-100 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 w-[80px] border border-gray-100 rounded-md text-sm bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
             <option value="title">제목</option>
             <option value="content">내용</option>
@@ -1500,7 +1500,7 @@ export default function BoardSection({
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="검색어를 입력하세요"
-            className="flex-1 px-3 py-2 border border-gray-100 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-0"
+            className="flex-1 px-3 py-2 border border-gray-100 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 min-w-0"
           />
           <Button type="submit" className="px-4 whitespace-nowrap">
             검색
