@@ -9,6 +9,8 @@ import { BannerWidget } from "@/components/widgets/banner-widget";
 import LocationWidget from "@/components/widgets/location-widget";
 import { IWidget } from "@/types/index";
 
+type LayoutStructure = "1-col" | "2-col-left" | "2-col-right" | "3-col";
+
 interface HomepageWidgetsProps {
   widgets: IWidget[];
 }
@@ -44,58 +46,103 @@ export default function HomepageWidgets({ widgets }: HomepageWidgetsProps) {
     }
   };
 
-  const sortAndGroupWidgets = () => {
-    const activeWidgets = widgets.filter((widget: IWidget) => widget.is_active);
-    return activeWidgets.sort((a: IWidget, b: IWidget) => {
-      if (a.column_position !== b.column_position) {
-        return a.column_position - b.column_position;
-      }
-      return a.order - b.order;
-    });
+  const getLayoutStructure = (widgets: IWidget[]): LayoutStructure => {
+    const activeWidgets = widgets.filter((w) => w.is_active);
+    const hasLeft = activeWidgets.some((w) => w.column_position === 0);
+    const hasRight = activeWidgets.some((w) => w.column_position === 2);
+
+    if (hasLeft && hasRight) return "3-col";
+    if (hasLeft) return "2-col-left";
+    if (hasRight) return "2-col-right";
+    return "1-col";
   };
 
-  const sortedWidgets = sortAndGroupWidgets();
+  const layoutStructure = getLayoutStructure(widgets);
+
+  const groupWidgets = () => {
+    const left: IWidget[] = [];
+    const main: IWidget[] = [];
+    const right: IWidget[] = [];
+
+    widgets
+      .filter((w) => w.is_active)
+      .forEach((widget) => {
+        switch (widget.column_position) {
+          case 0: // Left Sidebar
+            left.push(widget);
+            break;
+          case 2: // Right Sidebar
+            right.push(widget);
+            break;
+          default: // Main Content (1 or null)
+            main.push(widget);
+            break;
+        }
+      });
+
+    // 각 열 내부에서 위젯 순서 정렬
+    left.sort((a, b) => a.order - b.order);
+    main.sort((a, b) => a.order - b.order);
+    right.sort((a, b) => a.order - b.order);
+
+    return { left, main, right };
+  };
+
+  const { left, main, right } = groupWidgets();
+
+  const renderColumn = (widgetsToRender: IWidget[]) => (
+    <div className="space-y-6">
+      {widgetsToRender.map((widget) => (
+        <div
+          key={widget.id}
+          className="flex flex-col"
+          style={widget.height ? { height: `${widget.height}px` } : {}}
+        >
+          <div className="relative h-full w-full flex-1 overflow-hidden rounded-xl border border-gray-100">
+            {renderWidget(widget)}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const mainContent = renderColumn(main);
+  const leftSidebar = renderColumn(left);
+  const rightSidebar = renderColumn(right);
 
   return (
-    <div className="sm:container mx-auto py-4">
-      <div className="grid grid-cols-12 gap-4 space-y-6">
-        {sortedWidgets.map((widget) => {
-          let colSpan;
-          switch (widget.width) {
-            case 3:
-              colSpan = "col-span-12 sm:col-span-6 md:col-span-3";
-              break;
-            case 4:
-              colSpan = "col-span-12 sm:col-span-6 md:col-span-4";
-              break;
-            case 6:
-              colSpan = "col-span-12 md:col-span-6";
-              break;
-            case 8:
-              colSpan = "col-span-12 md:col-span-8";
-              break;
-            case 9:
-              colSpan = "col-span-12 md:col-span-9";
-              break;
-            case 12:
-              colSpan = "col-span-12";
-              break;
-            default:
-              colSpan = "col-span-12";
-          }
-
-          return (
-            <div
-              key={widget.id}
-              className={`${colSpan}`}
-              style={widget.height ? { height: `${widget.height}px` } : {}}
-            >
-              <div className="h-full w-full bg-white rounded-xl border border-gray-100 p-6">
-                {renderWidget(widget)}
-              </div>
+    <div className="2xl:container mx-auto sm:px-8 md:px-12 lg:px-16 py-8 2xl:px-0">
+      <div className="grid grid-cols-12 gap-6">
+        {layoutStructure === "1-col" && (
+          <div className="col-span-12">{mainContent}</div>
+        )}
+        {layoutStructure === "2-col-left" && (
+          <>
+            <div className="hidden lg:block col-span-12 lg:col-span-3 w-full sticky top-24 self-start">
+              {leftSidebar}
             </div>
-          );
-        })}
+            <div className="col-span-12 lg:col-span-9">{mainContent}</div>
+          </>
+        )}
+        {layoutStructure === "2-col-right" && (
+          <>
+            <div className="col-span-12 lg:col-span-9">{mainContent}</div>
+            <div className="hidden lg:block col-span-12 lg:col-span-3 sticky top-24 self-start">
+              {rightSidebar}
+            </div>
+          </>
+        )}
+        {layoutStructure === "3-col" && (
+          <>
+            <div className="hidden 2xl:block col-span-12 2xl:col-span-2 sticky top-24 self-start">
+              {leftSidebar}
+            </div>
+            <div className="col-span-12 2xl:col-span-8">{mainContent}</div>
+            <div className="hidden 2xl:block col-span-12 2xl:col-span-2 sticky top-24 self-start">
+              {rightSidebar}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

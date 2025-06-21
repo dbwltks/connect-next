@@ -102,12 +102,21 @@ export default function LayoutManager(): React.ReactNode {
   const [boardPosts, setBoardPosts] = useState<{ [key: string]: any[] }>({});
   const [selectedPageId, setSelectedPageId] = useState<string | null>(null); // null은 홈페이지
 
-  // 컴포넌트 마운트 시 레이아웃 데이터 및 메뉴 항목 로드
+  // 컴포넌트 마운트 시 데이터 로드
   useEffect(() => {
-    fetchLayoutData(selectedPageId);
     fetchMenuItems();
     fetchBanners();
     fetchPages();
+  }, []);
+
+  // 페이지 또는 레이아웃 구조 변경 시 위젯 데이터 다시 로드
+  useEffect(() => {
+    const doFetch = async () => {
+      setIsLoading(true);
+      await fetchLayoutData(selectedPageId);
+      setIsLoading(false);
+    };
+    doFetch();
   }, [selectedPageId]);
 
   // 메뉴 항목 가져오기
@@ -216,25 +225,23 @@ export default function LayoutManager(): React.ReactNode {
 
       if (error) throw error;
 
-      // 레이아웃 영역별로 위젯 그룹화
-      const groupedWidgets: { [key: string]: Widget[] } = {};
+      const areas: LayoutArea[] = [
+        { id: "left", name: "왼쪽 사이드바", widgets: [] },
+        { id: "main", name: "메인 영역", widgets: [] },
+        { id: "right", name: "오른쪽 사이드바", widgets: [] },
+      ];
+      const allWidgets = data || [];
 
-      data?.forEach((widget: Widget) => {
-        const areaId = "main"; // 현재는 메인 영역만 사용
-        if (!groupedWidgets[areaId]) {
-          groupedWidgets[areaId] = [];
-        }
-        groupedWidgets[areaId].push(widget);
+      allWidgets.forEach((w) => {
+        if (w.column_position === 0) areas[0].widgets.push(w);
+        else if (w.column_position === 2) areas[2].widgets.push(w);
+        else areas[1].widgets.push(w); // main: 1 or null
       });
 
-      // 레이아웃 영역 설정
-      const areas: LayoutArea[] = [
-        {
-          id: "main",
-          name: "",
-          widgets: groupedWidgets["main"] || [],
-        },
-      ];
+      // 각 영역 내에서 위젯 순서 정렬
+      areas.forEach((area) => {
+        area.widgets.sort((a, b) => a.order - b.order);
+      });
 
       setLayoutAreas(areas);
       return true; // 성공적으로 데이터를 가져왔음을 반환
@@ -267,56 +274,48 @@ export default function LayoutManager(): React.ReactNode {
       return;
     }
 
-    // 레이아웃 영역 복사
-    const newLayoutAreas = [...layoutAreas];
+    const newLayoutAreas = JSON.parse(JSON.stringify(layoutAreas));
 
-    // 소스 영역 찾기
-    const sourceAreaIndex = newLayoutAreas.findIndex(
-      (area) => area.id === source.droppableId
+    const sourceArea = newLayoutAreas.find(
+      (a: LayoutArea) => a.id === source.droppableId
     );
-
-    // 대상 영역 찾기
-    const destAreaIndex = newLayoutAreas.findIndex(
-      (area) => area.id === destination.droppableId
+    const destArea = newLayoutAreas.find(
+      (a: LayoutArea) => a.id === destination.droppableId
     );
 
     // 같은 영역 내에서 순서 변경
     if (source.droppableId === destination.droppableId) {
-      const widgets = [...newLayoutAreas[sourceAreaIndex].widgets];
-      const [movedWidget] = widgets.splice(source.index, 1);
-      widgets.splice(destination.index, 0, movedWidget);
+      const [movedWidget] = sourceArea.widgets.splice(source.index, 1);
+      destArea.widgets.splice(destination.index, 0, movedWidget);
 
-      // 순서 업데이트
-      const updatedWidgets = widgets.map((widget, index) => ({
-        ...widget,
-        order: index,
-      }));
+      const updatedWidgets = destArea.widgets.map(
+        (widget: Widget, index: number) => ({
+          ...widget,
+          order: index,
+        })
+      );
+      destArea.widgets = updatedWidgets;
 
-      newLayoutAreas[sourceAreaIndex].widgets = updatedWidgets;
       setLayoutAreas(newLayoutAreas);
 
       // DB 업데이트
       try {
         setIsLoading(true);
-
-        // 변경된 위젯들의 순서 업데이트
         for (const widget of updatedWidgets) {
-          console.log(`Updating widget ${widget.id} order to ${widget.order}`);
           await supabase
             .from("cms_layout")
             .update({ order: widget.order })
             .eq("id", widget.id);
         }
-
         toast({
           title: "성공",
           description: "위젯 순서가 업데이트되었습니다.",
         });
       } catch (error) {
-        console.error("위젯 순서 업데이트 중 오류가 발생했습니다:", error);
+        console.error("위젯 순서 업데이트 중 오류:", error);
         toast({
           title: "오류",
-          description: "위젯 순서 업데이트 중 오류가 발생했습니다.",
+          description: "위젯 순서 업데이트 중 오류 발생",
           variant: "destructive",
         });
       } finally {
@@ -324,36 +323,25 @@ export default function LayoutManager(): React.ReactNode {
       }
     } else {
       // 다른 영역으로 이동
-      const sourceWidgets = [...newLayoutAreas[sourceAreaIndex].widgets];
-      const destWidgets = [...newLayoutAreas[destAreaIndex].widgets];
-
-      // 소스에서 위젯 제거
-      const [movedWidget] = sourceWidgets.splice(source.index, 1);
-
-      // 대상 영역의 column 값으로 업데이트
-      const updatedWidget = {
-        ...movedWidget,
-        column_position: parseInt(destination.droppableId.split("-")[1] || "0"),
+      const areaIdToColPos: { [key: string]: number } = {
+        left: 0,
+        main: 1,
+        right: 2,
       };
 
-      // 대상에 위젯 추가
-      destWidgets.splice(destination.index, 0, updatedWidget);
+      const [movedWidget] = sourceArea.widgets.splice(source.index, 1);
+      const newColumnPosition = areaIdToColPos[destination.droppableId];
+      movedWidget.column_position = newColumnPosition;
 
-      // 소스 영역 위젯 순서 업데이트
-      newLayoutAreas[sourceAreaIndex].widgets = sourceWidgets.map(
-        (widget, index) => ({
-          ...widget,
-          order: index,
-        })
-      );
+      destArea.widgets.splice(destination.index, 0, movedWidget);
 
-      // 대상 영역 위젯 순서 업데이트
-      newLayoutAreas[destAreaIndex].widgets = destWidgets.map(
-        (widget, index) => ({
-          ...widget,
-          order: index,
-        })
-      );
+      // 각 영역의 순서 업데이트
+      sourceArea.widgets.forEach((widget: Widget, index: number) => {
+        widget.order = index;
+      });
+      destArea.widgets.forEach((widget: Widget, index: number) => {
+        widget.order = index;
+      });
 
       setLayoutAreas(newLayoutAreas);
 
@@ -361,29 +349,31 @@ export default function LayoutManager(): React.ReactNode {
       try {
         setIsLoading(true);
 
-        // 이동된 위젯 업데이트
+        // 이동된 위젯 업데이트 (위치 및 순서)
         await supabase
           .from("cms_layout")
           .update({
-            column_position: updatedWidget.column_position,
-            order: destWidgets.findIndex((w) => w.id === updatedWidget.id),
+            column_position: newColumnPosition,
+            order: movedWidget.order,
           })
-          .eq("id", updatedWidget.id);
+          .eq("id", movedWidget.id);
 
-        // 소스 영역 위젯 순서 업데이트
-        for (const widget of newLayoutAreas[sourceAreaIndex].widgets) {
+        // 이전 영역의 위젯들 순서 업데이트
+        for (const widget of sourceArea.widgets) {
           await supabase
             .from("cms_layout")
             .update({ order: widget.order })
             .eq("id", widget.id);
         }
 
-        // 대상 영역 위젯 순서 업데이트
-        for (const widget of newLayoutAreas[destAreaIndex].widgets) {
-          await supabase
-            .from("cms_layout")
-            .update({ order: widget.order })
-            .eq("id", widget.id);
+        // 새 영역의 위젯들 순서 업데이트 (이동된 위젯 제외)
+        for (const widget of destArea.widgets) {
+          if (widget.id !== movedWidget.id) {
+            await supabase
+              .from("cms_layout")
+              .update({ order: widget.order })
+              .eq("id", widget.id);
+          }
         }
 
         toast({
@@ -408,6 +398,10 @@ export default function LayoutManager(): React.ReactNode {
     try {
       setIsLoading(true);
 
+      const mainArea =
+        layoutAreas.find((a) => a.id === "main") || layoutAreas[0];
+      const newColumnPosition = 1; // 새 위젯은 항상 메인 영역(1)에 추가
+
       // 기본 위젯 설정
       const newWidget: Omit<Widget, "id"> = {
         type,
@@ -416,8 +410,8 @@ export default function LayoutManager(): React.ReactNode {
           WIDGET_TYPES.find((w) => w.id === type)?.name ||
           "새 위젯",
         content: sourceItem?.content || "",
-        column_position: 0,
-        order: layoutAreas[0].widgets.length,
+        column_position: newColumnPosition,
+        order: mainArea.widgets.length,
         width: 12,
         is_active: true,
         settings: {
@@ -439,7 +433,9 @@ export default function LayoutManager(): React.ReactNode {
 
       // 상태 업데이트
       const newLayoutAreas = [...layoutAreas];
-      newLayoutAreas[0].widgets.push(data);
+      const targetArea =
+        newLayoutAreas.find((a) => a.id === "main") || newLayoutAreas[0];
+      targetArea.widgets.push(data);
       setLayoutAreas(newLayoutAreas);
 
       toast({
@@ -562,7 +558,7 @@ export default function LayoutManager(): React.ReactNode {
 
     return (
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[700px]">
           <DialogHeader>
             <DialogTitle>위젯 설정: {editingWidget.title}</DialogTitle>
             <DialogDescription>
@@ -1520,285 +1516,310 @@ export default function LayoutManager(): React.ReactNode {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">레이아웃 관리</h2>
-        <div className="w-64">
-          <Select
-            onValueChange={(value) => {
-              setSelectedPageId(value === "homepage" ? null : value);
-            }}
-            defaultValue={selectedPageId === null ? "homepage" : selectedPageId}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="편집할 페이지를 선택하세요" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="homepage">홈페이지 (기본)</SelectItem>
-              {pages.map((page) => (
-                <SelectItem key={page.id} value={page.id}>
-                  {page.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex items-center gap-4">
+          <div className="w-64">
+            <Select
+              onValueChange={(value) => {
+                setSelectedPageId(value === "homepage" ? null : value);
+              }}
+              defaultValue={
+                selectedPageId === null ? "homepage" : selectedPageId
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="편집할 페이지를 선택하세요" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="homepage">홈페이지 (기본)</SelectItem>
+                {pages.map((page) => (
+                  <SelectItem key={page.id} value={page.id}>
+                    {page.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
       {renderWidgetSettingsDialog()}
 
       <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="grid grid-cols-1 gap-4">
-          {layoutAreas.map((area) => (
-            <Card
-              key={area.id}
-              className={previewMode ? "shadow-none border-0" : ""}
-            >
-              <CardHeader className={previewMode ? "" : ""}>
-                <div className="flex justify-between items-center">
-                  <CardTitle>{area.name}</CardTitle>
-                  {previewMode}
-                </div>
-              </CardHeader>
-              <CardContent className={previewMode ? "p-0" : ""}>
-                <Droppable droppableId={area.id}>
-                  {(provided) => (
-                    <div
-                      {...provided.droppableProps}
-                      ref={provided.innerRef}
-                      className={`min-h-[100px] ${!previewMode ? "border border-dashed border-gray-300 rounded-md p-4" : ""}`}
-                    >
-                      <div>
-                        {area.widgets.length === 0 ? (
-                          <div className="text-center text-gray-500 py-8">
-                            이 영역에 위젯을 추가하세요
-                          </div>
-                        ) : (
-                          <div className="flex flex-wrap gap-4 w-full">
-                            {area.widgets.map((widget, index) => (
-                              <Draggable
-                                key={widget.id}
-                                draggableId={widget.id}
-                                index={index}
-                              >
-                                {(provided) => (
-                                  <div
-                                    ref={provided.innerRef}
-                                    {...provided.draggableProps}
-                                    className={`${getWidthClass(widget.width)} ${
-                                      !widget.is_active ? "opacity-50" : ""
-                                    }`}
-                                  >
-                                    {previewMode ? (
-                                      <div className="w-full relative group">
-                                        {renderWidgetPreview(widget)}
-                                        {/* 미리보기 모드에서도 편집 컨트롤 표시 (호버 시) */}
-                                        <div className="absolute top-2 right-2 flex space-x-1 bg-white/80 backdrop-blur-sm rounded-md p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-7 w-7"
-                                            {...provided.dragHandleProps}
-                                          >
-                                            <MoveVertical className="h-3.5 w-3.5" />
-                                          </Button>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-7 w-7"
-                                            onClick={() => {
-                                              setEditingWidget(widget);
-                                              setDialogOpen(true);
-                                            }}
-                                          >
-                                            <Settings className="h-3.5 w-3.5" />
-                                          </Button>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-7 w-7"
-                                            onClick={() =>
-                                              deleteWidget(widget.id)
-                                            }
-                                          >
-                                            <Trash2 className="h-3.5 w-3.5" />
-                                          </Button>
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      <Card>
-                                        <CardHeader className="p-3 flex flex-row items-center justify-between space-y-0">
-                                          <CardTitle className="text-sm font-medium">
-                                            {widget.title}
-                                          </CardTitle>
-                                          <div className="flex space-x-1">
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              {...provided.dragHandleProps}
-                                            >
-                                              <MoveVertical className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              onClick={() => {
-                                                setEditingWidget(widget);
-                                                setDialogOpen(true);
-                                              }}
-                                            >
-                                              <Settings className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              onClick={() =>
-                                                deleteWidget(widget.id)
-                                              }
-                                            >
-                                              <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                          </div>
-                                        </CardHeader>
-                                        <CardContent className="p-3">
-                                          {renderWidgetPreview(widget)}
-                                        </CardContent>
-                                      </Card>
-                                    )}
-                                  </div>
-                                )}
-                              </Draggable>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      {provided.placeholder}
-                      <div className="mt-4 flex justify-center relative">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setShowWidgetMenu(!showWidgetMenu)}
-                          id={`add-widget-btn-${area.id}`}
+        <div
+          className={`grid gap-6 grid-cols-12 w-full max-w-screen-2xl mx-auto bg-gray-50`}
+        >
+          {layoutAreas.map((area) => {
+            let colSpanClass = area.id === "main" ? "col-span-8" : "col-span-2";
+
+            return (
+              <div key={area.id} className={colSpanClass}>
+                <Card
+                  key={area.id}
+                  className={
+                    previewMode
+                      ? "shadow-none border-0 bg-transparent"
+                      : "bg-gray-50/50"
+                  }
+                >
+                  <CardHeader
+                    className={
+                      previewMode
+                        ? "py-2 px-2 font-semibold"
+                        : "py-4 px-4 font-semibold"
+                    }
+                  >
+                    <div className="flex justify-between items-center">
+                      <CardTitle className="text-base">{area.name}</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent
+                    className={previewMode ? "p-0 space-y-4" : "space-y-4"}
+                  >
+                    <Droppable droppableId={area.id}>
+                      {(provided) => (
+                        <div
+                          {...provided.droppableProps}
+                          ref={provided.innerRef}
+                          className={`min-h-[100px] rounded-md ${!previewMode ? "border border-dashed border-gray-300 p-4" : ""}`}
                         >
-                          <Plus className="h-4 w-4 mr-2" />
-                          위젯 추가
-                        </Button>
-
-                        {showWidgetMenu && (
-                          <div
-                            className="fixed bg-black/30 inset-0 z-40"
-                            onClick={() => setShowWidgetMenu(false)}
-                          >
-                            <div
-                              className="absolute bg-white rounded-md shadow-lg border p-4 w-64 z-50"
-                              style={{
-                                top: "50%",
-                                left: "50%",
-                                transform: "translate(-50%, -50%)",
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <div>
-                                <div className="flex justify-between items-center mb-3">
-                                  <h4 className="text-sm font-medium">
-                                    위젯 추가
-                                  </h4>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-7 w-7 p-0"
-                                    onClick={() => setShowWidgetMenu(false)}
+                          <div>
+                            {area.widgets.length === 0 ? (
+                              <div className="text-center text-gray-500 py-8">
+                                이 영역에 위젯을 추가하세요
+                              </div>
+                            ) : (
+                              <div className="flex flex-wrap gap-4 w-full">
+                                {area.widgets.map((widget, index) => (
+                                  <Draggable
+                                    key={widget.id}
+                                    draggableId={widget.id}
+                                    index={index}
                                   >
-                                    ✕
-                                  </Button>
-                                </div>
+                                    {(provided) => (
+                                      <div
+                                        ref={provided.innerRef}
+                                        {...provided.draggableProps}
+                                        className={`${getWidthClass(
+                                          widget.width
+                                        )} ${
+                                          !widget.is_active ? "opacity-50" : ""
+                                        }`}
+                                      >
+                                        {previewMode ? (
+                                          <div className="w-full relative group">
+                                            {renderWidgetPreview(widget)}
+                                            {/* 미리보기 모드에서도 편집 컨트롤 표시 (호버 시) */}
+                                            <div className="absolute top-2 right-2 flex space-x-1 bg-white/80 backdrop-blur-sm rounded-md p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-7 w-7"
+                                                {...provided.dragHandleProps}
+                                              >
+                                                <MoveVertical className="h-3.5 w-3.5" />
+                                              </Button>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-7 w-7"
+                                                onClick={() => {
+                                                  setEditingWidget(widget);
+                                                  setDialogOpen(true);
+                                                }}
+                                              >
+                                                <Settings className="h-3.5 w-3.5" />
+                                              </Button>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-7 w-7"
+                                                onClick={() =>
+                                                  deleteWidget(widget.id)
+                                                }
+                                              >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <Card>
+                                            <CardHeader className="p-3 flex flex-row items-center justify-between space-y-0">
+                                              <CardTitle className="text-sm font-medium">
+                                                {widget.title}
+                                              </CardTitle>
+                                              <div className="flex space-x-1">
+                                                <Button
+                                                  variant="ghost"
+                                                  size="icon"
+                                                  {...provided.dragHandleProps}
+                                                >
+                                                  <MoveVertical className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                  variant="ghost"
+                                                  size="icon"
+                                                  onClick={() => {
+                                                    setEditingWidget(widget);
+                                                    setDialogOpen(true);
+                                                  }}
+                                                >
+                                                  <Settings className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                  variant="ghost"
+                                                  size="icon"
+                                                  onClick={() =>
+                                                    deleteWidget(widget.id)
+                                                  }
+                                                >
+                                                  <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                              </div>
+                                            </CardHeader>
+                                            <CardContent className="p-3">
+                                              {renderWidgetPreview(widget)}
+                                            </CardContent>
+                                          </Card>
+                                        )}
+                                      </div>
+                                    )}
+                                  </Draggable>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          {provided.placeholder}
+                          <div className="mt-4 flex justify-center relative">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setShowWidgetMenu(!showWidgetMenu)}
+                              id={`add-widget-btn-${area.id}`}
+                            >
+                              <Plus className="h-4 w-4 mr-2" />
+                              위젯 추가
+                            </Button>
 
-                                <div className="max-h-[60vh] overflow-y-auto pr-1 space-y-1">
-                                  <div className="sticky top-0 bg-white z-10 pb-1 space-y-1">
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="w-full justify-start"
-                                      onClick={() => {
-                                        addNewWidget("banner", {
-                                          title: "배너",
-                                        });
-                                        setShowWidgetMenu(false);
-                                      }}
-                                    >
-                                      <Plus className="h-4 w-4 mr-2" />
-                                      배너 추가
-                                    </Button>
+                            {showWidgetMenu && (
+                              <div
+                                className="fixed bg-black/30 inset-0 z-40"
+                                onClick={() => setShowWidgetMenu(false)}
+                              >
+                                <div
+                                  className="absolute bg-white rounded-md shadow-lg border p-4 w-64 z-50"
+                                  style={{
+                                    top: "50%",
+                                    left: "50%",
+                                    transform: "translate(-50%, -50%)",
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <div>
+                                    <div className="flex justify-between items-center mb-3">
+                                      <h4 className="text-sm font-medium">
+                                        위젯 추가
+                                      </h4>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 w-7 p-0"
+                                        onClick={() => setShowWidgetMenu(false)}
+                                      >
+                                        ✕
+                                      </Button>
+                                    </div>
 
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="w-full justify-start"
-                                      onClick={() => {
-                                        addNewWidget("board", {
-                                          title: "게시판",
-                                        });
-                                        setShowWidgetMenu(false);
-                                      }}
-                                    >
-                                      <Plus className="h-4 w-4 mr-2" />
-                                      게시판 추가
-                                    </Button>
+                                    <div className="max-h-[60vh] overflow-y-auto pr-1 space-y-1">
+                                      <div className="sticky top-0 bg-white z-10 pb-1 space-y-1">
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="w-full justify-start"
+                                          onClick={() => {
+                                            addNewWidget("banner", {
+                                              title: "배너",
+                                            });
+                                            setShowWidgetMenu(false);
+                                          }}
+                                        >
+                                          <Plus className="h-4 w-4 mr-2" />
+                                          배너 추가
+                                        </Button>
 
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="w-full justify-start"
-                                      onClick={() => {
-                                        addNewWidget("gallery", {
-                                          title: "갤러리",
-                                        });
-                                        setShowWidgetMenu(false);
-                                      }}
-                                    >
-                                      <Plus className="h-4 w-4 mr-2" />
-                                      갤러리 추가
-                                    </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="w-full justify-start"
+                                          onClick={() => {
+                                            addNewWidget("board", {
+                                              title: "게시판",
+                                            });
+                                            setShowWidgetMenu(false);
+                                          }}
+                                        >
+                                          <Plus className="h-4 w-4 mr-2" />
+                                          게시판 추가
+                                        </Button>
 
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="w-full justify-start"
-                                      onClick={() => {
-                                        addNewWidget("media", {
-                                          title: "미디어",
-                                        });
-                                        setShowWidgetMenu(false);
-                                      }}
-                                    >
-                                      <Plus className="h-4 w-4 mr-2" />
-                                      미디어 추가
-                                    </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="w-full justify-start"
+                                          onClick={() => {
+                                            addNewWidget("gallery", {
+                                              title: "갤러리",
+                                            });
+                                            setShowWidgetMenu(false);
+                                          }}
+                                        >
+                                          <Plus className="h-4 w-4 mr-2" />
+                                          갤러리 추가
+                                        </Button>
 
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="w-full justify-start"
-                                      onClick={() => {
-                                        addNewWidget("location", {
-                                          title: "위치 정보",
-                                        });
-                                        setShowWidgetMenu(false);
-                                      }}
-                                    >
-                                      <Plus className="h-4 w-4 mr-2" />
-                                      위치 정보 추가
-                                    </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="w-full justify-start"
+                                          onClick={() => {
+                                            addNewWidget("media", {
+                                              title: "미디어",
+                                            });
+                                            setShowWidgetMenu(false);
+                                          }}
+                                        >
+                                          <Plus className="h-4 w-4 mr-2" />
+                                          미디어 추가
+                                        </Button>
+
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="w-full justify-start"
+                                          onClick={() => {
+                                            addNewWidget("location", {
+                                              title: "위치 정보",
+                                            });
+                                            setShowWidgetMenu(false);
+                                          }}
+                                        >
+                                          <Plus className="h-4 w-4 mr-2" />
+                                          위치 정보 추가
+                                        </Button>
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </Droppable>
-              </CardContent>
-            </Card>
-          ))}
+                        </div>
+                      )}
+                    </Droppable>
+                  </CardContent>
+                </Card>
+              </div>
+            );
+          })}
         </div>
       </DragDropContext>
     </div>

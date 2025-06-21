@@ -502,7 +502,7 @@ export function BoardWidget({ widget, page }: BoardWidgetProps) {
   };
 
   return (
-    <div className="h-full">
+    <div className="h-full bg-white rounded-xl border border-gray-100 p-6">
       <div className="pb-2">
         <div className="text-xl font-bold">
           {widget.title || page?.title || "게시판"}

@@ -29,7 +29,7 @@ export default async function DynamicPage(props: { params: any }) {
     return (
       <>
         <MainBanner menuId={null} />
-        <main className="flex-1 flex flex-col gap-12 px-0 sm:px-4 py-4">
+        <main className="flex-1 flex flex-col gap-12">
           {/* 위젯 섹션 - 컴포넌트 내부에서 데이터 로딩 */}
           <div className="mb-2">
             <HomepageWidgets widgets={widgets} />

@@ -67,7 +67,7 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
   }
 
   return (
-    <div className="h-full">
+    <div className="h-full bg-white rounded-xl border border-gray-100 p-6">
       <div>
         <div className="text-center mb-6">
           {widget.display_options?.media_description && (
@@ -85,11 +85,11 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
+        <div className=" grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4 ">
           {/* Featured Video */}
           <div className="lg:col-span-2">
             {posts.length > 0 ? (
-              <div className=" border border-gray-100 hover:shadow-lg transition-all duration-500 transform hover:-translate-y-1 rounded-lg overflow-hidden">
+              <div className="border border-gray-100 hover:shadow-lg transition-all duration-500 transform hover:-translate-y-1 rounded-lg overflow-hidden">
                 <Link
                   href={`${widget.display_options?.page_slug}/${posts[0].id}`}
                 >
@@ -228,7 +228,7 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
                       </div>
                       <div className="p-1.5 sm:p-2 flex-1 w-full overflow-hidden">
                         <div className="w-full overflow-hidden">
-                          <h4 className="text-md font-medium truncate block w-full">
+                          <h4 className="text-md truncate block w-full">
                             {post.title}
                           </h4>
                         </div>
