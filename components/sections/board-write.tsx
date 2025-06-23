@@ -14,6 +14,14 @@ import {
   ToastTitle,
   ToastDescription,
 } from "@/components/ui/toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import dynamic from "next/dynamic";
 import { X, FileText, FileSpreadsheet, Presentation, File } from "lucide-react";
 import {
@@ -45,7 +53,7 @@ interface IFileInfo {
 }
 
 interface BoardWriteProps {
-  pageId: string;
+  pageId?: string;
   categoryId?: string;
   onSuccess?: () => void;
   postId?: string; // 수정 모드에서 사용할 게시글 ID
@@ -261,7 +269,7 @@ const FileManager = ({
 };
 
 export default function BoardWrite({
-  pageId,
+  pageId: initialPageId,
   categoryId: initialCategoryId,
   onSuccess,
   postId: propPostId,
@@ -274,6 +282,13 @@ export default function BoardWrite({
   const [postId, setPostId] = useState<string | undefined>(propPostId);
   const [isEditMode, setIsEditMode] = useState<boolean>(propIsEditMode);
   const [initialData, setInitialData] = useState<any>(propInitialData);
+  // Page and Category selection state
+  const [selectedPageId, setSelectedPageId] = useState<string | undefined>(
+    initialPageId
+  );
+  const [boardPages, setBoardPages] = useState<{ id: string; title: string }[]>(
+    []
+  );
   // Form state
   const [title, setTitle] = useState(initialData?.title || "");
   const [content, setContent] = useState(initialData?.content || "");
@@ -319,17 +334,45 @@ export default function BoardWrite({
     setTimeout(() => setToastState((s) => ({ ...s, open: false })), 3000);
   };
 
+  useEffect(() => {
+    const fetchBoardPages = async () => {
+      const { data, error } = await supabase
+        .from("cms_pages")
+        .select("id, title");
+
+      if (error) {
+        console.error("Error fetching board pages:", error);
+        showToast({
+          title: "게시판 목록 로딩 실패",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        setBoardPages(data || []);
+        if (initialPageId) {
+          setSelectedPageId(initialPageId);
+        }
+      }
+    };
+    fetchBoardPages();
+  }, []);
+
   // 로컬 스토리지 키 생성 (페이지와 카테고리별 구분)
-  const getStorageKey = () => `board_draft_${pageId}_${categoryId || "none"}`;
+  const getStorageKey = () =>
+    `board_draft_${selectedPageId || "none"}_${categoryId || "none"}`;
 
   //임시등록 목록 불러오기 (board_posts의 status='draft')
   const loadDrafts = async () => {
+    if (!selectedPageId) {
+      setDrafts([]);
+      return [];
+    }
     try {
       const user = await getHeaderUser();
       if (!user || !user.id) return setDrafts([]);
       const data = await fetchDrafts({
         userId: user.id,
-        pageId,
+        pageId: selectedPageId,
         categoryId,
       });
       setDrafts(
@@ -377,6 +420,14 @@ export default function BoardWrite({
 
   //임시등록 수동 실행 (board_posts에 status='draft'로 저장)
   const handleManualSave = async () => {
+    if (!selectedPageId) {
+      showToast({
+        title: "선택 필요",
+        description: "먼저 게시판을 선택해주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (drafts.length >= 5) {
       showToast({
         title: "임시등록 한도 초과",
@@ -453,6 +504,7 @@ export default function BoardWrite({
         setThumbnailImage(parsedData.thumbnailImage);
       if (parsedData.allowComments !== undefined)
         setAllowComments(parsedData.allowComments);
+      if (parsedData.pageId) setSelectedPageId(parsedData.pageId);
 
       // 파일 정보 로드
       if (parsedData.files && Array.isArray(parsedData.files)) {
@@ -481,8 +533,9 @@ export default function BoardWrite({
         variant: "default",
       });
 
+      /*
       if (
-        parsedData.pageId !== pageId ||
+        parsedData.pageId !== selectedPageId ||
         parsedData.categoryId !== categoryId
       ) {
         showToast({
@@ -492,6 +545,7 @@ export default function BoardWrite({
         });
         return;
       }
+      */
     } catch (error) {
       console.error("임시등록 불러오기 오류:", error);
       showToast({
@@ -677,7 +731,7 @@ export default function BoardWrite({
         thumbnailImage,
         files: filesToSave, // 파일 정보 저장
         allowComments,
-        pageId,
+        pageId: selectedPageId,
         categoryId,
       };
 
@@ -747,6 +801,7 @@ export default function BoardWrite({
                         size="sm"
                         variant="outline"
                         onClick={() => {
+                          setSelectedPageId(draft.data.pageId);
                           setTitle(draft.data.title || "");
                           setContent(draft.data.content || "");
                           if (editorRef.current?.editor) {
@@ -826,6 +881,17 @@ export default function BoardWrite({
   // status를 인자로 받아 저장하는 함수
   const savePost = async (statusArg: "draft" | "published") => {
     const html = editorRef.current?.editor?.getHTML() || "";
+
+    if (!selectedPageId) {
+      setError("게시판을 선택해야 합니다.");
+      showToast({
+        title: "선택 필요",
+        description: "게시글을 등록할 게시판을 선택해주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!title.trim() || isContentEmpty(html)) {
       setError("제목과 내용을 입력하세요.");
       showToast({
@@ -869,7 +935,7 @@ export default function BoardWrite({
           const { data: maxData } = await supabase
             .from("board_posts")
             .select("number")
-            .eq("page_id", pageId)
+            .eq("page_id", selectedPageId)
             .order("number", { ascending: false })
             .limit(1)
             .single();
@@ -885,7 +951,7 @@ export default function BoardWrite({
         thumbnailImage: thumbnailImage ? "있음" : "없음",
         uploadedFilesCount: uploadedFiles.length,
         userId, // 중요: userId가 전달되는지 확인
-        pageId,
+        pageId: selectedPageId,
         categoryId,
         status:
           statusArg === "draft" ? "draft" : isHidden ? "hidden" : "published",
@@ -905,7 +971,7 @@ export default function BoardWrite({
         thumbnailImage,
         uploadedFiles,
         userId,
-        pageId,
+        pageId: selectedPageId,
         categoryId,
         status:
           statusArg === "draft" ? "draft" : isHidden ? "hidden" : "published",
@@ -1070,132 +1136,179 @@ export default function BoardWrite({
 
           {/* 입력 영역 */}
           <div className="p-2 sm:p-6">
-            {/* 제목 입력 */}
-            <div className="space-y-2">
-              <Input
-                id="title"
-                placeholder="제목을 입력해 주세요."
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                disabled={loading}
-                required
-                className="w-full text-base sm:text-sm px-2 rounded-none sm:rounded-md border-0 border-b sm:border"
-              />
-            </div>
-
-            {/* TipTap 에디터 + 사이드바 영역 */}
-            <div className="lg:flex lg:gap-4">
-              {/* TipTap 에디터 */}
-              <div className="flex-1 mb-4 lg:mb-0">
-                <div className="relative min-h-[300px] sm:min-h-[400px]">
-                  <TipTapEditor
-                    ref={editorRef}
-                    content={content}
-                    placeholder="내용을 입력하세요..."
-                    thumbnailUrl={thumbnailImage}
-                    onThumbnailChange={handleThumbnailSelect}
-                    onUploadedFilesChange={handleUploadedFilesChange}
-                    category={initialCategoryId}
-                    pageId={postId}
-                    uploadedFiles={uploadedFiles.map((file) => ({
-                      ...file,
-                      size: String(file.size || "크기 알 수 없음"),
-                      type: String(file.type || ""),
-                      uploadedAt: String(file.uploadedAt || ""),
-                    }))}
-                    setUploadedFiles={setUploadedFiles}
-                  />
-                </div>
-
-                {/* 에러 메시지 */}
-                {error && (
-                  <div className="p-3 text-sm text-red-500 bg-red-50 border border-red-200 rounded-md mt-4">
-                    {error}
-                  </div>
-                )}
-
-                {/* 성공 메시지 */}
-                {success && (
-                  <div className="p-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md mt-4">
-                    {lastSaved ? "임시등록되었습니다." : "글이 등록되었습니다."}
-                  </div>
-                )}
+            {/* 게시판 선택 */}
+            {!isEditMode && (
+              <div className="space-y-2 mb-4">
+                <Label htmlFor="page-select"></Label>
+                <Select
+                  value={selectedPageId}
+                  onValueChange={(value) => setSelectedPageId(value)}
+                  disabled={loading || isEditMode}
+                >
+                  <SelectTrigger id="page-select" className="w-full">
+                    <SelectValue placeholder="게시판을 선택하세요" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {!initialPageId && boardPages.length > 0 && (
+                      <>
+                        <SelectItem value="placeholder" disabled>
+                          게시판을 선택하세요
+                        </SelectItem>
+                        <SelectSeparator />
+                      </>
+                    )}
+                    {boardPages.map((page) => (
+                      <SelectItem key={page.id} value={page.id}>
+                        {page.title}
+                      </SelectItem>
+                    ))}
+                    {boardPages.length === 0 && (
+                      <SelectItem value="no-pages" disabled>
+                        선택 가능한 게시판이 없습니다.
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
-
-              {/* 사이드바: 업로드된 파일 + 댓글 허용 */}
-              <div className="lg:w-[320px] lg:min-w-[220px] lg:max-w-[400px] mt-4 sticky lg:top-24 transition-all duration-300">
-                {/* 업로드된 파일 카드 */}
-                <div className="border border-gray-200 rounded-md p-3 lg:p-4 mb-3 bg-white">
-                  <h3 className="text-sm font-semibold mb-2">업로드된 파일</h3>
-                  {uploadedFiles.length > 0 ? (
-                    <FileManager
-                      uploadedFiles={uploadedFiles}
-                      setUploadedFiles={setUploadedFiles}
-                      selectedThumbnail={thumbnailImage}
-                      setSelectedThumbnail={(url) =>
-                        setThumbnailImage(url || "")
-                      }
-                      onThumbnailChange={handleThumbnailSelect}
-                      editor={editorRef.current?.editor}
-                      showToast={showToast}
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-[80px] lg:h-[100px] text-gray-500 text-center text-sm">
-                      업로드된 파일이 없습니다.
-                    </div>
-                  )}
-                </div>
-
-                {/* 상세 설명 카드 */}
-                <div className="border border-gray-200 rounded-md p-3 lg:p-4 mb-3 bg-white">
-                  <h3 className="text-sm font-semibold mb-2">상세 설명</h3>
-                  <textarea
-                    placeholder="게시글에 대한 추가 설명을 입력해주세요."
-                    className="w-full h-24 p-2 text-sm border border-gray-200 rounded-md resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
+            )}
+            {isEditMode || selectedPageId ? (
+              <>
+                {/* 제목 입력 */}
+                <div className="space-y-2">
+                  <Input
+                    id="title"
+                    placeholder="제목을 입력해 주세요."
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
                     disabled={loading}
+                    required
+                    className="w-full text-base sm:text-sm px-2 rounded-none sm:rounded-md border-0 border-b sm:border"
                   />
                 </div>
 
-                {/* 댓글 허용 카드 */}
-                <div className="border border-gray-200 rounded-md p-3 lg:p-4 bg-white">
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="allow-comments"
-                      checked={allowComments}
-                      onChange={(e) => setAllowComments(e.target.checked)}
-                      disabled={loading}
-                      className="accent-blue-500"
-                    />
-                    <label
-                      htmlFor="allow-comments"
-                      className="text-sm font-medium"
-                    >
-                      댓글 허용
-                    </label>
-                  </div>
-                </div>
+                {/* TipTap 에디터 + 사이드바 영역 */}
+                <div className="lg:flex lg:gap-4">
+                  {/* TipTap 에디터 */}
+                  <div className="flex-1 mb-4 lg:mb-0">
+                    <div className="relative min-h-[300px] sm:min-h-[400px]">
+                      <TipTapEditor
+                        ref={editorRef}
+                        content={content}
+                        placeholder="내용을 입력하세요..."
+                        thumbnailUrl={thumbnailImage}
+                        onThumbnailChange={handleThumbnailSelect}
+                        onUploadedFilesChange={handleUploadedFilesChange}
+                        category={initialCategoryId}
+                        pageId={selectedPageId}
+                        uploadedFiles={uploadedFiles.map((file) => ({
+                          ...file,
+                          size: String(file.size || "크기 알 수 없음"),
+                          type: String(file.type || ""),
+                          uploadedAt: String(file.uploadedAt || ""),
+                        }))}
+                        setUploadedFiles={setUploadedFiles}
+                      />
+                    </div>
 
-                {/* 숨김(관리자만 보기) 카드 */}
-                <div className="border border-gray-200 rounded-md p-3 lg:p-4 bg-white mt-3">
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="hidden"
-                      checked={isHidden}
-                      onChange={(e) => setIsHidden(e.target.checked)}
-                      disabled={loading}
-                      className="accent-blue-500"
-                    />
-                    <label htmlFor="hidden" className="text-sm font-medium">
-                      숨김(관리자만 보기)
-                    </label>
+                    {/* 에러 메시지 */}
+                    {error && (
+                      <div className="p-3 text-sm text-red-500 bg-red-50 border border-red-200 rounded-md mt-4">
+                        {error}
+                      </div>
+                    )}
+
+                    {/* 성공 메시지 */}
+                    {success && (
+                      <div className="p-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md mt-4">
+                        {lastSaved
+                          ? "임시등록되었습니다."
+                          : "글이 등록되었습니다."}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 사이드바: 업로드된 파일 + 댓글 허용 */}
+                  <div className="lg:w-[320px] lg:min-w-[220px] lg:max-w-[400px] mt-4 sticky lg:top-24 transition-all duration-300">
+                    {/* 업로드된 파일 카드 */}
+                    <div className="border border-gray-200 rounded-md p-3 lg:p-4 mb-3 bg-white">
+                      <h3 className="text-sm font-semibold mb-2">
+                        업로드된 파일
+                      </h3>
+                      {uploadedFiles.length > 0 ? (
+                        <FileManager
+                          uploadedFiles={uploadedFiles}
+                          setUploadedFiles={setUploadedFiles}
+                          selectedThumbnail={thumbnailImage}
+                          setSelectedThumbnail={(url) =>
+                            setThumbnailImage(url || "")
+                          }
+                          onThumbnailChange={handleThumbnailSelect}
+                          editor={editorRef.current?.editor}
+                          showToast={showToast}
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-[80px] lg:h-[100px] text-gray-500 text-center text-sm">
+                          업로드된 파일이 없습니다.
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 상세 설명 카드 */}
+                    <div className="border border-gray-200 rounded-md p-3 lg:p-4 mb-3 bg-white">
+                      <h3 className="text-sm font-semibold mb-2">상세 설명</h3>
+                      <textarea
+                        placeholder="게시글에 대한 추가 설명을 입력해주세요."
+                        className="w-full h-24 p-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        disabled={loading}
+                      />
+                    </div>
+
+                    {/* 댓글 허용 카드 */}
+                    <div className="border border-gray-200 rounded-md p-3 lg:p-4 bg-white">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="allow-comments"
+                          checked={allowComments}
+                          onChange={(e) => setAllowComments(e.target.checked)}
+                          disabled={loading}
+                          className="accent-blue-500"
+                        />
+                        <label
+                          htmlFor="allow-comments"
+                          className="text-sm font-medium"
+                        >
+                          댓글 허용
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* 숨김(관리자만 보기) 카드 */}
+                    <div className="border border-gray-200 rounded-md p-3 lg:p-4 bg-white mt-3">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="hidden"
+                          checked={isHidden}
+                          onChange={(e) => setIsHidden(e.target.checked)}
+                          disabled={loading}
+                          className="accent-blue-500"
+                        />
+                        <label htmlFor="hidden" className="text-sm font-medium">
+                          숨김(관리자만 보기)
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 </div>
+              </>
+            ) : (
+              <div className="text-center py-20 text-gray-500 bg-gray-50 rounded-md my-4">
+                <p>게시글을 작성할 게시판을 먼저 선택해주세요.</p>
               </div>
-            </div>
+            )}
           </div>
         </form>
       </div>

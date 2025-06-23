@@ -74,6 +74,7 @@ export type Section = {
   // 데이터베이스 관련 필드
   dbTable?: string; // 데이터베이스 테이블 이름
   pageType?: string; // 페이지 타입
+  pageId?: string; // 페이지 ID 추가
   category?: Category; // 카테고리 정보 추가
 };
 

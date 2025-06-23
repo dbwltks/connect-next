@@ -25,13 +25,17 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { MediaWidget } from "../widgets/media-widget";
-import { BoardWidget, BOARD_TEMPLATE } from "../widgets/board-widget";
+import { BoardlistWidget, BOARD_TEMPLATE } from "../widgets/boardlist-widget";
+import { BoardWidget } from "../widgets/board-widget";
 import LocationWidget from "../widgets/location-widget";
+import MenuListWidget from "../widgets/menu-list-widget";
 import { supabase } from "@/db";
-import { toast } from "@/components/ui/toaster";
+import { toast } from "@/hooks/use-toast";
 import { Plus, Trash2, MoveVertical, Settings, Eye } from "lucide-react";
+import { IWidget } from "@/types";
 
-// 위젯 타입 정의
+// 위젯 타입 정의 (IWidget으로 대체)
+/*
 export type Widget = {
   id: string;
   type: string;
@@ -64,25 +68,38 @@ export type Widget = {
     embed_map_url?: string; // 임베드 지도 URL
 
     page_id?: string; // 콘텐츠를 가져올 페이지 ID (미디어, 위치 등 공통)
+
+    // 인기 게시글 위젯 관련 속성
+    sort_by?: 'views' | 'likes' | 'comments';
+
+    // 로그인 위젯 관련 속성
+    logged_out_title?: string;
+    logged_in_title?: string;
   };
   is_active: boolean;
   page_id?: string | null; // 위젯이 속한 페이지 ID
 };
+*/
 
 // 레이아웃 영역 타입 정의
 type LayoutArea = {
   id: string;
   name: string;
-  widgets: Widget[];
+  widgets: IWidget[];
 };
 
 // 사용 가능한 위젯 타입
 const WIDGET_TYPES = [
   { id: "banner", name: "배너" },
-  { id: "board", name: "게시판" },
+  { id: "board", name: "게시판 (목록)" },
+  { id: "board-section", name: "게시판 (섹션)" },
   { id: "gallery", name: "갤러리" },
   { id: "media", name: "미디어" },
   { id: "location", name: "위치 정보" },
+  { id: "menu-list", name: "메뉴 목록" },
+  { id: "recent-comments", name: "최근 댓글" },
+  { id: "관리자페이지 정렬ㅈ", name: "인기 게시글" },
+  { id: "login", name: "로그인" },
 ];
 
 export default function LayoutManager(): React.ReactNode {
@@ -91,11 +108,13 @@ export default function LayoutManager(): React.ReactNode {
   const [layoutAreas, setLayoutAreas] = useState<LayoutArea[]>([
     { id: "main", name: "메인 영역1", widgets: [] },
   ]);
-  const [editingWidget, setEditingWidget] = useState<Widget | null>(null);
+  const [editingWidget, setEditingWidget] = useState<IWidget | null>(null);
   const [showWidgetSettings, setShowWidgetSettings] = useState(false);
   const [previewMode, setPreviewMode] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [showWidgetMenu, setShowWidgetMenu] = useState(false);
+  const [addingWidgetToArea, setAddingWidgetToArea] = useState<string | null>(
+    null
+  );
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [banners, setBanners] = useState<any[]>([]);
   const [pages, setPages] = useState<any[]>([]);
@@ -289,7 +308,7 @@ export default function LayoutManager(): React.ReactNode {
       destArea.widgets.splice(destination.index, 0, movedWidget);
 
       const updatedWidgets = destArea.widgets.map(
-        (widget: Widget, index: number) => ({
+        (widget: IWidget, index: number) => ({
           ...widget,
           order: index,
         })
@@ -336,10 +355,10 @@ export default function LayoutManager(): React.ReactNode {
       destArea.widgets.splice(destination.index, 0, movedWidget);
 
       // 각 영역의 순서 업데이트
-      sourceArea.widgets.forEach((widget: Widget, index: number) => {
+      sourceArea.widgets.forEach((widget: IWidget, index: number) => {
         widget.order = index;
       });
-      destArea.widgets.forEach((widget: Widget, index: number) => {
+      destArea.widgets.forEach((widget: IWidget, index: number) => {
         widget.order = index;
       });
 
@@ -394,16 +413,43 @@ export default function LayoutManager(): React.ReactNode {
   };
 
   // 새 위젯 추가
-  const addNewWidget = async (type: string, sourceItem?: any) => {
+  const addNewWidget = async (
+    type: string,
+    targetAreaId: string,
+    sourceItem?: any
+  ) => {
+    if (!targetAreaId) {
+      console.error("위젯을 추가할 영역이 지정되지 않았습니다.");
+      toast({
+        title: "오류",
+        description: "위젯을 추가할 영역을 찾을 수 없습니다.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setIsLoading(true);
 
-      const mainArea =
-        layoutAreas.find((a) => a.id === "main") || layoutAreas[0];
-      const newColumnPosition = 1; // 새 위젯은 항상 메인 영역(1)에 추가
+      const targetArea = layoutAreas.find((a) => a.id === targetAreaId);
+      if (!targetArea) {
+        console.error(`영역(ID: ${targetAreaId})을 찾을 수 없습니다.`);
+        toast({
+          title: "오류",
+          description: "지정된 영역을 찾을 수 없습니다.",
+          variant: "destructive",
+        });
+        return;
+      }
+      const areaIdToColPos: { [key: string]: number } = {
+        left: 0,
+        main: 1,
+        right: 2,
+      };
+      const newColumnPosition = areaIdToColPos[targetAreaId];
 
       // 기본 위젯 설정
-      const newWidget: Omit<Widget, "id"> = {
+      const newWidgetData: Omit<IWidget, "id" | "created_at"> = {
         type,
         title:
           sourceItem?.title ||
@@ -411,7 +457,7 @@ export default function LayoutManager(): React.ReactNode {
           "새 위젯",
         content: sourceItem?.content || "",
         column_position: newColumnPosition,
-        order: mainArea.widgets.length,
+        order: targetArea.widgets.length,
         width: 12,
         is_active: true,
         settings: {
@@ -425,7 +471,7 @@ export default function LayoutManager(): React.ReactNode {
       // DB에 위젯 추가
       const { data, error } = await supabase
         .from("cms_layout")
-        .insert(newWidget)
+        .insert(newWidgetData)
         .select()
         .single();
 
@@ -433,9 +479,10 @@ export default function LayoutManager(): React.ReactNode {
 
       // 상태 업데이트
       const newLayoutAreas = [...layoutAreas];
-      const targetArea =
-        newLayoutAreas.find((a) => a.id === "main") || newLayoutAreas[0];
-      targetArea.widgets.push(data);
+      const finalTargetArea = newLayoutAreas.find((a) => a.id === targetAreaId);
+      if (finalTargetArea) {
+        finalTargetArea.widgets.push(data);
+      }
       setLayoutAreas(newLayoutAreas);
 
       toast({
@@ -753,7 +800,7 @@ export default function LayoutManager(): React.ReactNode {
           {/* 게시판 위젯 전용 설정 */}
           {editingWidget.type === "board" && (
             <div className="space-y-4">
-              <h4 className="font-medium text-sm">게시판 설정</h4>
+              <h4 className="font-medium text-sm">게시판 (목록) 설정</h4>
 
               <div className="space-y-2">
                 <Label htmlFor="board-item-count">표시할 게시물 개수</Label>
@@ -911,6 +958,48 @@ export default function LayoutManager(): React.ReactNode {
                   />
                   <Label htmlFor="show-excerpt-board">내용 요약 표시</Label>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* 게시판 섹션 위젯 전용 설정 */}
+          {editingWidget.type === "board-section" && (
+            <div className="space-y-4">
+              <h4 className="font-medium text-sm">게시판 (섹션) 설정</h4>
+              <div className="space-y-2">
+                <Label htmlFor="board-section-page">콘텐츠 페이지 선택</Label>
+                <Select
+                  value={editingWidget.display_options?.page_id || ""}
+                  onValueChange={(value) =>
+                    setEditingWidget({
+                      ...editingWidget,
+                      display_options: {
+                        ...editingWidget.display_options,
+                        page_id: value,
+                      },
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="페이지 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {pages.map((page) => (
+                      <SelectItem
+                        key={page.id}
+                        value={page.id}
+                        disabled={page.page_type !== "widget"}
+                      >
+                        {page.title}{" "}
+                        {page.page_type !== "widget" && "(게시판 타입 아님)"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-500 mt-1">
+                  선택한 페이지의 게시물이 위젯에 표시됩니다. 반드시 '게시판'
+                  타입의 페이지를 선택해주세요.
+                </p>
               </div>
             </div>
           )}
@@ -1231,6 +1320,179 @@ export default function LayoutManager(): React.ReactNode {
             </div>
           )}
 
+          {/* 메뉴 목록 위젯 전용 설정 */}
+          {editingWidget.type === "menu-list" && (
+            <div className="space-y-4">
+              <h4 className="font-medium text-sm">메뉴 목록 설정</h4>
+              <div className="space-y-2">
+                <Label htmlFor="menu-list-parent">상위 메뉴 선택</Label>
+                <Select
+                  value={editingWidget.settings?.parent_menu_id || ""}
+                  onValueChange={(value) =>
+                    setEditingWidget({
+                      ...editingWidget,
+                      settings: {
+                        ...editingWidget.settings,
+                        parent_menu_id: value,
+                      },
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="표시할 메뉴 그룹을 선택하세요" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {menuItems
+                      .filter((item) => !item.parent_id) // 최상위 메뉴만 필터링
+                      .map((menu) => (
+                        <SelectItem key={menu.id} value={menu.id}>
+                          {menu.title}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-500 mt-1">
+                  선택한 메뉴의 하위 메뉴들이 목록으로 표시됩니다.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* 최근 댓글 위젯 설정 */}
+          {editingWidget.type === "recent-comments" && (
+            <div className="space-y-4">
+              <h4 className="font-medium text-sm">최근 댓글 설정</h4>
+              <div className="space-y-2">
+                <Label htmlFor="rc-item-count">표시할 댓글 개수</Label>
+                <Select
+                  value={String(editingWidget.display_options?.item_count || 5)}
+                  onValueChange={(value) =>
+                    setEditingWidget({
+                      ...editingWidget,
+                      display_options: {
+                        ...editingWidget.display_options,
+                        item_count: parseInt(value),
+                      },
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="개수 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="3">3개</SelectItem>
+                    <SelectItem value="5">5개</SelectItem>
+                    <SelectItem value="10">10개</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
+          {/* 인기 게시글 위젯 설정 */}
+          {editingWidget.type === "popular-posts" && (
+            <div className="space-y-4">
+              <h4 className="font-medium text-sm">인기 게시글 설정</h4>
+              <div className="space-y-2">
+                <Label htmlFor="pp-item-count">표시할 게시글 개수</Label>
+                <Select
+                  value={String(editingWidget.display_options?.item_count || 5)}
+                  onValueChange={(value) =>
+                    setEditingWidget({
+                      ...editingWidget,
+                      display_options: {
+                        ...editingWidget.display_options,
+                        item_count: parseInt(value),
+                      },
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="개수 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="3">3개</SelectItem>
+                    <SelectItem value="5">5개</SelectItem>
+                    <SelectItem value="10">10개</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pp-sort-by">정렬 기준</Label>
+                <Select
+                  value={editingWidget.display_options?.sort_by || "views"}
+                  onValueChange={(value: "views" | "likes" | "comments") =>
+                    setEditingWidget({
+                      ...editingWidget,
+                      display_options: {
+                        ...editingWidget.display_options,
+                        sort_by: value,
+                      },
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="정렬 기준 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="views">조회수</SelectItem>
+                    <SelectItem value="likes">좋아요수</SelectItem>
+                    <SelectItem value="comments">댓글수</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
+          {/* 로그인 위젯 설정 */}
+          {editingWidget.type === "login" && (
+            <div className="space-y-4">
+              <h4 className="font-medium text-sm">로그인 위젯 설정</h4>
+              <div className="space-y-2">
+                <Label htmlFor="login-logged-out-title">
+                  로그아웃 상태 문구
+                </Label>
+                <Input
+                  id="login-logged-out-title"
+                  value={
+                    editingWidget.display_options?.logged_out_title ||
+                    "로그인이 필요합니다."
+                  }
+                  onChange={(e) =>
+                    setEditingWidget({
+                      ...editingWidget,
+                      display_options: {
+                        ...editingWidget.display_options,
+                        logged_out_title: e.target.value,
+                      },
+                    })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="login-logged-in-title">
+                  로그인 상태 환영 문구
+                </Label>
+                <Input
+                  id="login-logged-in-title"
+                  value={
+                    editingWidget.display_options?.logged_in_title ||
+                    "님, 환영합니다!"
+                  }
+                  onChange={(e) =>
+                    setEditingWidget({
+                      ...editingWidget,
+                      display_options: {
+                        ...editingWidget.display_options,
+                        logged_in_title: e.target.value,
+                      },
+                    })
+                  }
+                />
+              </div>
+            </div>
+          )}
+
           <DialogFooter>
             <Button
               variant="outline"
@@ -1276,7 +1538,7 @@ export default function LayoutManager(): React.ReactNode {
     }
   };
   // 위젯 타입에 따른 미리보기 렌더링
-  const renderWidgetPreview = (widget: Widget) => {
+  const renderWidgetPreview = (widget: IWidget) => {
     const sourceId = widget.settings?.source_id;
 
     switch (widget.type) {
@@ -1414,14 +1676,31 @@ export default function LayoutManager(): React.ReactNode {
         );
       case "board":
         return previewMode ? (
-          <BoardWidget
+          <BoardlistWidget
             widget={widget}
             page={pages.find((p) => p.id === widget.display_options?.page_id)}
           />
         ) : (
           <div className="bg-green-50 p-4 rounded">
             <div className="font-medium">{widget.title || "게시판"}</div>
-            <div className="text-sm text-gray-500 mt-1">게시판 위젯</div>
+            <div className="text-sm text-gray-500 mt-1">게시판 (목록) 위젯</div>
+            {widget.display_options?.page_id && (
+              <div className="text-xs text-blue-500 mt-1">
+                선택된 페이지:{" "}
+                {pages.find((p) => p.id === widget.display_options?.page_id)
+                  ?.title || "없음"}
+              </div>
+            )}
+          </div>
+        );
+
+      case "board-section":
+        return previewMode ? (
+          <BoardWidget widget={widget} />
+        ) : (
+          <div className="bg-teal-50 p-4 rounded">
+            <div className="font-medium">{widget.title || "게시판 (섹션)"}</div>
+            <div className="text-sm text-gray-500 mt-1">게시판 (섹션) 위젯</div>
             {widget.display_options?.page_id && (
               <div className="text-xs text-blue-500 mt-1">
                 선택된 페이지:{" "}
@@ -1507,6 +1786,94 @@ export default function LayoutManager(): React.ReactNode {
           </div>
         );
 
+      case "menu-list":
+        const parentMenuId = widget.settings?.parent_menu_id;
+        const parentMenu = menuItems.find((m) => m.id === parentMenuId);
+        const childMenus = menuItems.filter(
+          (m) => m.parent_id === parentMenuId
+        );
+
+        return previewMode ? (
+          <MenuListWidget widget={widget} />
+        ) : (
+          <div className="bg-indigo-50 p-4 rounded">
+            <div className="font-medium">{widget.title || "메뉴 목록"}</div>
+            <div className="text-sm text-gray-500 mt-1">
+              {parentMenu
+                ? `그룹: ${parentMenu.title}`
+                : "메뉴 그룹이 선택되지 않았습니다."}
+            </div>
+          </div>
+        );
+
+      case "recent-comments":
+        return previewMode ? (
+          <div className="bg-white shadow rounded overflow-hidden">
+            <div className="p-4 border-b">
+              <h3 className="text-lg font-bold">{widget.title}</h3>
+            </div>
+            <ul className="p-4 space-y-3">
+              <li className="text-sm">
+                <p className="truncate">
+                  첫 번째 댓글 미리보기입니다. 반갑습니다.
+                </p>
+                <span className="text-xs text-gray-500">- 첫 번째 게시글</span>
+              </li>
+              <li className="text-sm">
+                <p className="truncate">
+                  두 번째 댓글은 내용이 조금 더 길 수 있습니다.
+                </p>
+                <span className="text-xs text-gray-500">- 공지사항</span>
+              </li>
+            </ul>
+          </div>
+        ) : (
+          <div className="bg-yellow-50 p-4 rounded">
+            <div className="font-medium">{widget.title || "최근 댓글"}</div>
+          </div>
+        );
+
+      case "popular-posts":
+        return previewMode ? (
+          <div className="bg-white shadow rounded overflow-hidden">
+            <div className="p-4 border-b">
+              <h3 className="text-lg font-bold">{widget.title}</h3>
+            </div>
+            <ol className="p-4 space-y-2 list-decimal list-inside">
+              <li className="text-sm truncate">가장 인기있는 게시글 제목</li>
+              <li className="text-sm truncate">두 번째로 인기있는 글</li>
+              <li className="text-sm truncate">세 번째 글입니다.</li>
+            </ol>
+          </div>
+        ) : (
+          <div className="bg-red-50 p-4 rounded">
+            <div className="font-medium">{widget.title || "인기 게시글"}</div>
+          </div>
+        );
+
+      case "login":
+        return previewMode ? (
+          <div className="bg-white shadow rounded p-4 text-center">
+            <h3 className="font-bold mb-3">
+              {widget.title || "로그인/프로필"}
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              {widget.display_options?.logged_out_title ||
+                "로그인이 필요합니다."}
+            </p>
+            <Button size="sm" className="w-full">
+              로그인
+            </Button>
+            <Button size="sm" variant="ghost" className="w-full mt-2">
+              회원가입
+            </Button>
+          </div>
+        ) : (
+          <div className="bg-gray-100 p-4 rounded">
+            <div className="font-medium">{widget.title || "로그인"}</div>
+          </div>
+        );
+
       default:
         return <div className="bg-gray-100 p-4 rounded">알 수 없는 위젯</div>;
     }
@@ -1544,9 +1911,194 @@ export default function LayoutManager(): React.ReactNode {
 
       {renderWidgetSettingsDialog()}
 
+      {addingWidgetToArea && (
+        <div
+          className="fixed bg-black/30 inset-0 z-40"
+          onClick={() => setAddingWidgetToArea(null)}
+        >
+          <div
+            className="absolute bg-white rounded-md shadow-lg border p-4 w-64 z-50"
+            style={{
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div>
+              <div className="flex justify-between items-center mb-3">
+                <h4 className="text-sm font-medium">위젯 추가</h4>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0"
+                  onClick={() => setAddingWidgetToArea(null)}
+                >
+                  ✕
+                </Button>
+              </div>
+
+              <div className="max-h-[60vh] overflow-y-auto pr-1 space-y-1">
+                <div className="sticky top-0 bg-white z-10 pb-1 space-y-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      addNewWidget("banner", addingWidgetToArea, {
+                        title: "배너",
+                      });
+                      setAddingWidgetToArea(null);
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    배너 추가
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      addNewWidget("board", addingWidgetToArea, {
+                        title: "게시판 (목록)",
+                      });
+                      setAddingWidgetToArea(null);
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    게시판 (목록) 추가
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      addNewWidget("board-section", addingWidgetToArea, {
+                        title: "게시판 (섹션)",
+                      });
+                      setAddingWidgetToArea(null);
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    게시판 (섹션) 추가
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      addNewWidget("gallery", addingWidgetToArea, {
+                        title: "갤러리",
+                      });
+                      setAddingWidgetToArea(null);
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    갤러리 추가
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      addNewWidget("media", addingWidgetToArea, {
+                        title: "미디어",
+                      });
+                      setAddingWidgetToArea(null);
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    미디어 추가
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      addNewWidget("location", addingWidgetToArea, {
+                        title: "위치 정보",
+                      });
+                      setAddingWidgetToArea(null);
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    위치 정보 추가
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      addNewWidget("menu-list", addingWidgetToArea, {
+                        title: "하위 메뉴 목록",
+                      });
+                      setAddingWidgetToArea(null);
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    메뉴 목록 추가
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      addNewWidget("recent-comments", addingWidgetToArea, {
+                        title: "최신 댓글",
+                      });
+                      setAddingWidgetToArea(null);
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    최근 댓글 추가
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      addNewWidget("popular-posts", addingWidgetToArea, {
+                        title: "인기 게시글",
+                      });
+                      setAddingWidgetToArea(null);
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    인기 게시글 추가
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      addNewWidget("login", addingWidgetToArea, {
+                        title: "로그인",
+                      });
+                      setAddingWidgetToArea(null);
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    로그인 위젯 추가
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <DragDropContext onDragEnd={handleDragEnd}>
         <div
-          className={`grid gap-6 grid-cols-12 w-full max-w-screen-2xl mx-auto bg-gray-50`}
+          className={`grid gap-6 grid-cols-12 w-full max-w-screen-2xl mx-auto`}
         >
           {layoutAreas.map((area) => {
             let colSpanClass = area.id === "main" ? "col-span-8" : "col-span-2";
@@ -1592,7 +2144,7 @@ export default function LayoutManager(): React.ReactNode {
                                 {area.widgets.map((widget, index) => (
                                   <Draggable
                                     key={widget.id}
-                                    draggableId={widget.id}
+                                    draggableId={widget.id.toString()}
                                     index={index}
                                   >
                                     {(provided) => (
@@ -1693,124 +2245,12 @@ export default function LayoutManager(): React.ReactNode {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => setShowWidgetMenu(!showWidgetMenu)}
+                              onClick={() => setAddingWidgetToArea(area.id)}
                               id={`add-widget-btn-${area.id}`}
                             >
                               <Plus className="h-4 w-4 mr-2" />
                               위젯 추가
                             </Button>
-
-                            {showWidgetMenu && (
-                              <div
-                                className="fixed bg-black/30 inset-0 z-40"
-                                onClick={() => setShowWidgetMenu(false)}
-                              >
-                                <div
-                                  className="absolute bg-white rounded-md shadow-lg border p-4 w-64 z-50"
-                                  style={{
-                                    top: "50%",
-                                    left: "50%",
-                                    transform: "translate(-50%, -50%)",
-                                  }}
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <div>
-                                    <div className="flex justify-between items-center mb-3">
-                                      <h4 className="text-sm font-medium">
-                                        위젯 추가
-                                      </h4>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-7 w-7 p-0"
-                                        onClick={() => setShowWidgetMenu(false)}
-                                      >
-                                        ✕
-                                      </Button>
-                                    </div>
-
-                                    <div className="max-h-[60vh] overflow-y-auto pr-1 space-y-1">
-                                      <div className="sticky top-0 bg-white z-10 pb-1 space-y-1">
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="w-full justify-start"
-                                          onClick={() => {
-                                            addNewWidget("banner", {
-                                              title: "배너",
-                                            });
-                                            setShowWidgetMenu(false);
-                                          }}
-                                        >
-                                          <Plus className="h-4 w-4 mr-2" />
-                                          배너 추가
-                                        </Button>
-
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="w-full justify-start"
-                                          onClick={() => {
-                                            addNewWidget("board", {
-                                              title: "게시판",
-                                            });
-                                            setShowWidgetMenu(false);
-                                          }}
-                                        >
-                                          <Plus className="h-4 w-4 mr-2" />
-                                          게시판 추가
-                                        </Button>
-
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="w-full justify-start"
-                                          onClick={() => {
-                                            addNewWidget("gallery", {
-                                              title: "갤러리",
-                                            });
-                                            setShowWidgetMenu(false);
-                                          }}
-                                        >
-                                          <Plus className="h-4 w-4 mr-2" />
-                                          갤러리 추가
-                                        </Button>
-
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="w-full justify-start"
-                                          onClick={() => {
-                                            addNewWidget("media", {
-                                              title: "미디어",
-                                            });
-                                            setShowWidgetMenu(false);
-                                          }}
-                                        >
-                                          <Plus className="h-4 w-4 mr-2" />
-                                          미디어 추가
-                                        </Button>
-
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="w-full justify-start"
-                                          onClick={() => {
-                                            addNewWidget("location", {
-                                              title: "위치 정보",
-                                            });
-                                            setShowWidgetMenu(false);
-                                          }}
-                                        >
-                                          <Plus className="h-4 w-4 mr-2" />
-                                          위치 정보 추가
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
                           </div>
                         </div>
                       )}

@@ -88,7 +88,7 @@ export default function BoardSection({
   menuTitle,
 }: BoardSectionProps) {
   // 컨테이너 클래스 설정 - 브레드크럼과 동일한 여백 적용
-  const containerClass = "container mx-auto sm:px-8 px-0";
+  const containerClass = "container mx-auto px-0";
   const [showDropdown, setShowDropdown] = useState(false);
   const router = useRouter();
   const pathname = usePathname();

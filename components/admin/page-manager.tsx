@@ -534,8 +534,8 @@ export default function PageManager({ pageId, templateId }: PageManagerProps) {
                   <SelectItem value="board">
                     게시판 (테이블 목록 형식)
                   </SelectItem>
-                  <SelectItem value="gallery">
-                    갤러리 (사진 카드 형식)
+                  <SelectItem value="widget">
+                    위젯 페이지 (레이아웃으로 구성)
                   </SelectItem>
                   <SelectItem value="content">콘텐츠 (일반 페이지)</SelectItem>
                 </SelectContent>

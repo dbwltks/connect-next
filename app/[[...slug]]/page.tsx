@@ -13,15 +13,16 @@ export default async function DynamicPage(props: { params: any }) {
   const params =
     typeof props.params.then === "function" ? await props.params : props.params;
   const supabase = await createClient();
+  const slug = params.slug || [];
 
   // 메뉴 항목은 이미 app/layout.tsx에서 가져오므로 여기서는 제거
 
-  // 홈(/) 경로일 때: 기존 Home 페이지 UI 렌더링
-  if (!params.slug || params.slug.length === 0) {
-    // 위젯 데이터 패칭
+  // --- 0. 홈페이지 (/) 처리 ---
+  if (slug.length === 0) {
     let { data: widgets } = await supabase
       .from("cms_layout")
       .select("*")
+      .is("page_id", null) // page_id가 null인 위젯만 필터링
       .eq("is_active", true)
       .order("order", { ascending: true });
     if (!widgets) widgets = [];
@@ -30,7 +31,6 @@ export default async function DynamicPage(props: { params: any }) {
       <>
         <MainBanner menuId={null} />
         <main className="flex-1 flex flex-col gap-12">
-          {/* 위젯 섹션 - 컴포넌트 내부에서 데이터 로딩 */}
           <div className="mb-2">
             <HomepageWidgets widgets={widgets} />
           </div>
@@ -38,9 +38,8 @@ export default async function DynamicPage(props: { params: any }) {
       </>
     );
   }
-  // slug가 없으면 홈('/') 처리
-  const currentPath =
-    params.slug && params.slug.length > 0 ? "/" + params.slug.join("/") : "/";
+
+  const currentPath = "/" + slug.join("/");
   console.log("currentPath:", currentPath);
 
   // 1. 글쓰기 페이지: .../write로 끝나면 BoardWrite 렌더링
@@ -108,61 +107,159 @@ export default async function DynamicPage(props: { params: any }) {
     );
   }
 
-  // 1. 메뉴 url로 먼저 조회
+  // 1. 메뉴 url로 먼저 조회 (정확한 매칭)
   const { data: menu, error: menuError } = await supabase
     .from("cms_menus")
     .select("*, page:page_id(*, category:category_id(*))")
     .eq("url", currentPath)
     .single();
 
+  // 1-1. 정확히 일치하는 메뉴가 있고, 페이지가 연결된 경우
   if (menu && menu.page) {
-    console.log("currentPath:", currentPath);
-    console.log("menu:", menu);
-    console.log("menu.page:", menu.page);
-    console.log("menuError:", menuError);
-    return (
-      <>
-        <MainBanner menuId={menu.id} />
-        <div className="sm:container mx-autop sm:mt-4 border-b border-gray-200 sm:px-4">
-          <Breadcrumb currentTitle={menu.title} />
-        </div>
-        <main>
-          <div className="container mx-auto px-0 sm:px-4">
-            <h1 className="text-3xl font-bold mb-4"></h1>
-          </div>
-          <SectionRenderer
-            section={{
-              ...menu.page,
-              category: menu.page?.category,
-              display_type: menu.page?.category?.display_type,
-            }}
-            menuTitle={menu.title}
-          />
-        </main>
-      </>
-    );
+    // 페이지 타입에 따라 렌더링 분기
+    switch (menu.page.page_type) {
+      case "widget":
+        let { data: widgets } = await supabase
+          .from("cms_layout")
+          .select("*")
+          .eq("page_id", menu.page.id)
+          .eq("is_active", true)
+          .order("order", { ascending: true });
+        if (!widgets) widgets = [];
+
+        return (
+          <>
+            <MainBanner menuId={menu.id} />
+            <div className="sm:container mx-auto sm:mt-4 border border-gray-50 px-0">
+              <Breadcrumb currentTitle={menu.title} />
+            </div>
+            <main className="flex-1 flex flex-col gap-12">
+              <div className="mb-2">
+                <HomepageWidgets widgets={widgets} />
+              </div>
+            </main>
+          </>
+        );
+
+      default: // 'board', 'content' 등 나머지 타입
+        return (
+          <>
+            <MainBanner menuId={menu.id} />
+            <div className="sm:container mx-auto sm:mt-4 border-gray-200 px-0">
+              <Breadcrumb currentTitle={menu.title} />
+            </div>
+            <main>
+              <div className="container mx-auto px-0 sm:px-4">
+                <h1 className="text-3xl font-bold mb-4"></h1>
+              </div>
+              <SectionRenderer
+                section={{
+                  ...menu.page,
+                  category: menu.page?.category,
+                  display_type: menu.page?.category?.display_type,
+                }}
+                menuTitle={menu.title}
+              />
+            </main>
+          </>
+        );
+    }
   }
 
-  // 2. 게시글 상세: 경로가 .../[id] (id가 6자 이상, UUID 등)이면서 /edit으로 끝나지 않는 경우 BoardDetail 렌더링
-  const postPathMatch = currentPath.match(/\/([a-zA-Z0-9\-]{6,})$/);
-  if (postPathMatch && !isEditPage) {
-    // 게시글이 속한 메뉴 정보 가져오기
-    const basePath = currentPath.replace(/\/[^/]+$/, "");
-    const { data: postMenu } = await supabase
-      .from("cms_menus")
-      .select("id")
-      .eq("url", basePath)
+  // 1-b. URL의 마지막 부분이 게시글 ID인지 확인하여 처리
+  const lastSegment = slug[slug.length - 1];
+  if (lastSegment && !isEditPage) {
+    const { data: post } = await supabase
+      .from("board_posts")
+      .select("id, page_id")
+      .eq("id", lastSegment)
       .maybeSingle();
 
-    // 게시글 상세 컴포넌트 (클라이언트 컴포넌트)
-    return (
-      <>
-        <MainBanner menuId={postMenu?.id} />
-        <main className="container mx-auto py-8 px-0 sm:px-4">
-          <BoardDetail />
-        </main>
-      </>
-    );
+    if (post) {
+      // 게시글이 존재하면, BoardDetail 컴포넌트를 렌더링합니다.
+      // 배너에 필요한 메뉴 정보를 찾기 위해 post의 page_id를 사용합니다.
+      let menuForBanner = null;
+      if (post.page_id) {
+        const { data: pageMenu } = await supabase
+          .from("cms_menus")
+          .select("id")
+          .eq("page_id", post.page_id)
+          .is("is_active", true)
+          .limit(1)
+          .single();
+        if (pageMenu) {
+          menuForBanner = pageMenu;
+        }
+      }
+      return (
+        <>
+          <MainBanner menuId={menuForBanner?.id} />
+          <main className="container mx-auto py-8 px-0 sm:px-4">
+            <BoardDetail />
+          </main>
+        </>
+      );
+    }
+  }
+
+  // 2. 상위 경로에서 페이지 타입 추론 (게시글 상세, 하위 위젯 페이지 등)
+  if (!isEditPage) {
+    let parentPath = currentPath;
+    let parentMenu = null;
+
+    // 현재 경로에서부터 시작하여 / 로 구분된 경로를 하나씩 줄여가며 상위 메뉴를 찾음
+    while (parentPath.includes("/")) {
+      parentPath = parentPath.substring(0, parentPath.lastIndexOf("/"));
+      if (!parentPath) break;
+
+      const { data, error } = await supabase
+        .from("cms_menus")
+        .select("*, page:page_id(page_type)")
+        .eq("url", parentPath)
+        .maybeSingle();
+
+      if (data && data.page) {
+        parentMenu = data;
+        break;
+      }
+    }
+
+    if (parentMenu && parentMenu.page) {
+      if (parentMenu.page.page_type === "board") {
+        // 게시글 상세 컴포넌트 (클라이언트 컴포넌트)
+        return (
+          <>
+            <MainBanner menuId={parentMenu.id} />
+            <main className="container mx-auto py-8 px-0 sm:px-4">
+              <BoardDetail />
+            </main>
+          </>
+        );
+      } else if (parentMenu.page.page_type === "widget") {
+        // 상위 페이지가 위젯 페이지이면, 현재 경로도 위젯 페이지로 간주
+        let { data: widgets } = await supabase
+          .from("cms_layout")
+          .select("*")
+          .eq("page_id", parentMenu.page.id) // 상위 페이지의 위젯을 그대로 사용
+          .eq("is_active", true)
+          .order("order", { ascending: true });
+        if (!widgets) widgets = [];
+
+        return (
+          <>
+            <MainBanner menuId={parentMenu.id} />
+            <div className="sm:container mx-auto sm:mt-4 border border-gray-50 px-0">
+              <Breadcrumb currentTitle={parentMenu.title} />
+            </div>
+            <main className="flex-1 flex flex-col gap-12">
+              <div className="mb-2">
+                <HomepageWidgets widgets={widgets} />
+              </div>
+            </main>
+          </>
+        );
+      }
+    }
   }
 
   // 3. fallback: /page/[id] 형식이면 pageId로 직접 조회

@@ -3,10 +3,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 // 위젯 컴포넌트 가져오기
 import { MediaWidget } from "@/components/widgets/media-widget";
+import { BoardlistWidget } from "@/components/widgets/boardlist-widget";
 import { BoardWidget } from "@/components/widgets/board-widget";
 import { GalleryWidget } from "@/components/widgets/gallery-widget";
 import { BannerWidget } from "@/components/widgets/banner-widget";
 import LocationWidget from "@/components/widgets/location-widget";
+import MenuListWidget from "@/components/widgets/menu-list-widget";
+import RecentCommentsWidget from "@/components/widgets/recent-comments-widget";
+import PopularPostsWidget from "@/components/widgets/popular-posts-widget";
+import LoginWidget from "@/components/widgets/login-widget";
 import { IWidget } from "@/types/index";
 
 type LayoutStructure = "1-col" | "2-col-left" | "2-col-right" | "3-col";
@@ -27,11 +32,21 @@ export default function HomepageWidgets({ widgets }: HomepageWidgetsProps) {
       case "gallery":
         return <GalleryWidget widget={widget} />;
       case "board":
+        return <BoardlistWidget widget={widget} />;
+      case "board-section":
         return <BoardWidget widget={widget} />;
       case "location":
         return (
           <LocationWidget id={`location-widget-${widget.id}`} widget={widget} />
         );
+      case "menu-list":
+        return <MenuListWidget widget={widget} />;
+      case "recent-comments":
+        return <RecentCommentsWidget widget={widget} />;
+      case "popular-posts":
+        return <PopularPostsWidget widget={widget} />;
+      case "login":
+        return <LoginWidget widget={widget} />;
       default:
         return (
           <Card className="h-full">
@@ -106,7 +121,40 @@ export default function HomepageWidgets({ widgets }: HomepageWidgetsProps) {
     </div>
   );
 
-  const mainContent = renderColumn(main);
+  const getWidgetWidthClass = (width: number): string => {
+    switch (width) {
+      case 3:
+        return "col-span-12 lg:col-span-3";
+      case 4:
+        return "col-span-12 lg:col-span-4";
+      case 6:
+        return "col-span-12 lg:col-span-6";
+      case 8:
+        return "col-span-12 lg:col-span-8";
+      case 9:
+        return "col-span-12 lg:col-span-9";
+      case 12:
+        return "col-span-12";
+      default:
+        return "col-span-12";
+    }
+  };
+
+  const mainContent = (
+    <div className="grid grid-cols-12 gap-6">
+      {main.map((widget) => (
+        <div
+          key={widget.id}
+          className={`${getWidgetWidthClass(widget.width)} flex flex-col`}
+          style={widget.height ? { height: `${widget.height}px` } : {}}
+        >
+          <div className="relative h-full w-full flex-1 overflow-hidden">
+            {renderWidget(widget)}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
   const leftSidebar = renderColumn(left);
   const rightSidebar = renderColumn(right);
 
