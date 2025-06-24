@@ -3,6 +3,8 @@
 import BoardSection from "@/components/sections/board-section";
 import { Section } from "@/components/admin/section-manager";
 import { IWidget } from "@/types/index";
+import useSWR from "swr";
+import { fetchBoardSectionPosts } from "@/services/widgetService";
 
 interface BoardWidgetProps {
   widget: IWidget;
@@ -15,6 +17,16 @@ export function BoardWidget({ widget }: BoardWidgetProps) {
   const pageId = widget.display_options?.page_id;
   console.log("Extracted pageId:", pageId);
   console.log("-------------------------");
+
+  const { data, error, isLoading, mutate } = useSWR(
+    pageId ? ["boardSectionPosts", pageId] : null,
+    () => fetchBoardSectionPosts(pageId),
+    { revalidateOnFocus: true }
+  );
+
+  if (isLoading) return <div>로딩중...</div>;
+  if (error) return <div>오류: {error.message}</div>;
+  if (!data) return <div>데이터 없음</div>;
 
   if (!pageId) {
     return (

@@ -5,13 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MediaWidget } from "@/components/widgets/media-widget";
 import { BoardlistWidget } from "@/components/widgets/boardlist-widget";
 import { BoardWidget } from "@/components/widgets/board-widget";
-import { GalleryWidget } from "@/components/widgets/gallery-widget";
 import { BannerWidget } from "@/components/widgets/banner-widget";
 import LocationWidget from "@/components/widgets/location-widget";
 import MenuListWidget from "@/components/widgets/menu-list-widget";
 import RecentCommentsWidget from "@/components/widgets/recent-comments-widget";
 import PopularPostsWidget from "@/components/widgets/popular-posts-widget";
 import LoginWidget from "@/components/widgets/login-widget";
+import { StripWidget } from "@/components/widgets/strip-widget";
 import { IWidget } from "@/types/index";
 
 type LayoutStructure = "1-col" | "2-col-left" | "2-col-right" | "3-col";
@@ -29,8 +29,6 @@ export default function HomepageWidgets({ widgets }: HomepageWidgetsProps) {
         return <MediaWidget widget={widget} />;
       case "banner":
         return <BannerWidget widget={widget} />;
-      case "gallery":
-        return <GalleryWidget widget={widget} />;
       case "board":
         return <BoardlistWidget widget={widget} />;
       case "board-section":
@@ -47,6 +45,8 @@ export default function HomepageWidgets({ widgets }: HomepageWidgetsProps) {
         return <PopularPostsWidget widget={widget} />;
       case "login":
         return <LoginWidget widget={widget} />;
+      case "strip":
+        return <StripWidget widget={widget} />;
       default:
         return (
           <Card className="h-full">
@@ -162,7 +162,9 @@ export default function HomepageWidgets({ widgets }: HomepageWidgetsProps) {
     <div className="2xl:container mx-auto sm:px-8 md:px-12 lg:px-16 py-8 2xl:px-0">
       <div className="grid grid-cols-12 gap-6">
         {layoutStructure === "1-col" && (
-          <div className="col-span-12">{mainContent}</div>
+          <div className="col-span-12 flex justify-center">
+            <div className="w-full max-w-7xl">{mainContent}</div>
+          </div>
         )}
         {layoutStructure === "2-col-left" && (
           <>

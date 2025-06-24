@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ import { BoardlistWidget, BOARD_TEMPLATE } from "../widgets/boardlist-widget";
 import { BoardWidget } from "../widgets/board-widget";
 import LocationWidget from "../widgets/location-widget";
 import MenuListWidget from "../widgets/menu-list-widget";
+import { StripWidget } from "../widgets/strip-widget";
 import { supabase } from "@/db";
 import { toast } from "@/hooks/use-toast";
 import { Plus, Trash2, MoveVertical, Settings, Eye } from "lucide-react";
@@ -98,8 +99,9 @@ const WIDGET_TYPES = [
   { id: "location", name: "위치 정보" },
   { id: "menu-list", name: "메뉴 목록" },
   { id: "recent-comments", name: "최근 댓글" },
-  { id: "관리자페이지 정렬ㅈ", name: "인기 게시글" },
+  { id: "popular-posts", name: "인기 게시글" },
   { id: "login", name: "로그인" },
+  { id: "strip", name: "스트립(띠 배너)" },
 ];
 
 export default function LayoutManager(): React.ReactNode {
@@ -120,6 +122,8 @@ export default function LayoutManager(): React.ReactNode {
   const [pages, setPages] = useState<any[]>([]);
   const [boardPosts, setBoardPosts] = useState<{ [key: string]: any[] }>({});
   const [selectedPageId, setSelectedPageId] = useState<string | null>(null); // null은 홈페이지
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [stripUploading, setStripUploading] = useState(false);
 
   // 컴포넌트 마운트 시 데이터 로드
   useEffect(() => {
@@ -464,6 +468,7 @@ export default function LayoutManager(): React.ReactNode {
           source_id: sourceItem?.id || null,
           source_type: type,
           url: sourceItem?.url || null,
+          ...(type === "strip" ? { strip_type: "image", strip_value: "" } : {}),
         },
         page_id: selectedPageId,
       };
@@ -801,32 +806,31 @@ export default function LayoutManager(): React.ReactNode {
           {editingWidget.type === "board" && (
             <div className="space-y-4">
               <h4 className="font-medium text-sm">게시판 (목록) 설정</h4>
-
               <div className="space-y-2">
                 <Label htmlFor="board-item-count">표시할 게시물 개수</Label>
-                <Select
-                  value={String(
-                    editingWidget.display_options?.item_count || 10
-                  )}
-                  onValueChange={(value) =>
+                <Input
+                  id="board-item-count"
+                  type="number"
+                  min={1}
+                  max={10}
+                  step={1}
+                  value={editingWidget.display_options?.item_count || 10}
+                  onChange={(e) => {
+                    let value = parseInt(e.target.value, 10);
+                    if (isNaN(value) || value < 1) value = 1;
+                    if (value > 10) value = 10;
                     setEditingWidget({
                       ...editingWidget,
                       display_options: {
                         ...editingWidget.display_options,
-                        item_count: parseInt(value, 10),
+                        item_count: value,
                       },
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="개수 선택" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="3">3개</SelectItem>
-                    <SelectItem value="5">5개</SelectItem>
-                    <SelectItem value="10">10개</SelectItem>
-                  </SelectContent>
-                </Select>
+                    });
+                  }}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  최대 10개까지 입력할 수 있습니다.
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -894,6 +898,9 @@ export default function LayoutManager(): React.ReactNode {
                     </SelectItem>
                     <SelectItem value={String(BOARD_TEMPLATE.NOTICE)}>
                       공지형
+                    </SelectItem>
+                    <SelectItem value={String(BOARD_TEMPLATE.GALLERY)}>
+                      갤러리형 - 썸네일만 큼직하게
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -1493,6 +1500,182 @@ export default function LayoutManager(): React.ReactNode {
             </div>
           )}
 
+          {editingWidget.type === "strip" && (
+            <div className="space-y-4">
+              <h4 className="font-medium text-sm">스트립(띠 배너) 설정</h4>
+              <div className="space-y-2">
+                <Label htmlFor="strip-type">타입 선택</Label>
+                <Select
+                  value={editingWidget.settings?.strip_type || "image"}
+                  onValueChange={(value) =>
+                    setEditingWidget({
+                      ...editingWidget,
+                      settings: {
+                        ...editingWidget.settings,
+                        strip_type: value,
+                      },
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="타입 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="image">이미지 URL/업로드</SelectItem>
+                    <SelectItem value="html">HTML 코드</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {editingWidget.settings?.strip_type === "image" && (
+                <div className="space-y-2">
+                  <Label htmlFor="strip-image-url">이미지 URL</Label>
+                  <Input
+                    id="strip-image-url"
+                    value={editingWidget.settings?.strip_value || ""}
+                    placeholder="https://example.com/banner.jpg"
+                    onChange={(e) =>
+                      setEditingWidget({
+                        ...editingWidget,
+                        settings: {
+                          ...editingWidget.settings,
+                          strip_value: e.target.value,
+                        },
+                      })
+                    }
+                  />
+                  <div className="flex items-center mt-2">
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="hidden"
+                      accept="image/*"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setStripUploading(true);
+                        try {
+                          const fileName = file.name;
+                          const filePath = `strip-banners/${Date.now()}_${fileName}`;
+                          const { error: uploadError } = await supabase.storage
+                            .from("homepage-banners")
+                            .upload(filePath, file, {
+                              cacheControl: "3600",
+                              upsert: true,
+                            });
+                          if (uploadError) {
+                            throw uploadError;
+                          }
+                          const { data: publicUrlData } = supabase.storage
+                            .from("homepage-banners")
+                            .getPublicUrl(filePath);
+                          setEditingWidget({
+                            ...editingWidget,
+                            settings: {
+                              ...editingWidget.settings,
+                              strip_value: publicUrlData.publicUrl,
+                            },
+                          });
+                          toast({
+                            title: "이미지 업로드 성공",
+                            description:
+                              "이미지가 성공적으로 업로드되었습니다.",
+                          });
+                        } catch (err) {
+                          toast({
+                            title: "이미지 업로드 실패",
+                            description:
+                              (err as any).message || "업로드 중 오류 발생",
+                            variant: "destructive",
+                          });
+                        } finally {
+                          setStripUploading(false);
+                        }
+                      }}
+                      disabled={stripUploading}
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={stripUploading}
+                      onClick={() => fileInputRef.current?.click()}
+                      className="ml-2"
+                    >
+                      {stripUploading ? "업로드 중..." : "파일 업로드"}
+                    </Button>
+                  </div>
+                  {/* 이미지 높이 설정 */}
+                  <div className="flex items-center gap-2 mt-2">
+                    <Label htmlFor="strip-image-height">이미지 높이</Label>
+                    <select
+                      id="strip-image-height"
+                      className="border rounded px-2 py-1"
+                      value={editingWidget.settings?.strip_height || "original"}
+                      onChange={(e) =>
+                        setEditingWidget({
+                          ...editingWidget,
+                          settings: {
+                            ...editingWidget.settings,
+                            strip_height: e.target.value,
+                          },
+                        })
+                      }
+                    >
+                      <option value="original">원본</option>
+                      <option value="48px">48px</option>
+                      <option value="64px">64px</option>
+                      <option value="80px">80px</option>
+                      <option value="120px">120px</option>
+                      <option value="160px">160px</option>
+                      <option value="240px">240px</option>
+                      <option value="320px">320px</option>
+                      <option value="100vh">100vh</option>
+                      <option value="custom">직접입력</option>
+                    </select>
+                    {editingWidget.settings?.strip_height === "custom" && (
+                      <Input
+                        className="w-32 ml-2"
+                        placeholder="ex) 200px, 20vh"
+                        value={
+                          editingWidget.settings?.strip_custom_height || ""
+                        }
+                        onChange={(e) =>
+                          setEditingWidget({
+                            ...editingWidget,
+                            settings: {
+                              ...editingWidget.settings,
+                              strip_custom_height: e.target.value,
+                            },
+                          })
+                        }
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
+              {editingWidget.settings?.strip_type === "html" && (
+                <div className="space-y-2">
+                  <Label htmlFor="strip-html">HTML 코드</Label>
+                  <textarea
+                    id="strip-html"
+                    className="w-full min-h-[60px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    value={editingWidget.settings?.strip_value || ""}
+                    placeholder="<div style='color:red;'>띠 배너 HTML</div>"
+                    onChange={(e) =>
+                      setEditingWidget({
+                        ...editingWidget,
+                        settings: {
+                          ...editingWidget.settings,
+                          strip_value: e.target.value,
+                        },
+                      })
+                    }
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
           <DialogFooter>
             <Button
               variant="outline"
@@ -1874,6 +2057,9 @@ export default function LayoutManager(): React.ReactNode {
           </div>
         );
 
+      case "strip":
+        return <StripWidget widget={widget} />;
+
       default:
         return <div className="bg-gray-100 p-4 rounded">알 수 없는 위젯</div>;
     }
@@ -2088,6 +2274,21 @@ export default function LayoutManager(): React.ReactNode {
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     로그인 위젯 추가
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      addNewWidget("strip", addingWidgetToArea, {
+                        title: "스트립(띠 배너)",
+                      });
+                      setAddingWidgetToArea(null);
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    스트립(띠 배너) 추가
                   </Button>
                 </div>
               </div>

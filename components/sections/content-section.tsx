@@ -247,106 +247,20 @@ export default function ContentSection({
         <title>미리보기</title>
         <!-- 로컬 스타일시트 사용 -->
         <script>
-          // 정확한 높이 계산을 위한 함수
-          function getFullHeight() {
-            // 요소들의 높이 계산
-            const contentContainer = document.querySelector('.content-container');
-            const contentHeight = contentContainer ? contentContainer.scrollHeight : 0;
-            
-            // 모든 요소를 포함한 전체 높이 계산
-            const allElements = document.querySelectorAll('*');
-            let maxBottom = 0;
-            
-            // 모든 요소의 하단 경계를 계산하여 가장 낮은 지점 찾기
-            allElements.forEach(el => {
-              const rect = el.getBoundingClientRect();
-              const bottom = rect.bottom + window.scrollY;
-              if (bottom > maxBottom) maxBottom = bottom;
-            });
-            
-            // 추가 요소들의 높이
-            const bodyHeight = document.body.scrollHeight;
-            const offsetHeight = document.body.offsetHeight;
-            const clientHeight = document.body.clientHeight;
-            const docHeight = document.documentElement.scrollHeight;
-            
-            // 모든 값 중 가장 큰 값 사용
-            const calculatedHeight = Math.max(maxBottom, bodyHeight, offsetHeight, clientHeight, docHeight, contentHeight);
-            
-            // 최소한의 여백만 추가 (10px)
-            const finalHeight = calculatedHeight + 10;
-            
-            return {
-              calculatedHeight: finalHeight, // 여백이 포함된 최종 높이
-              maxBottom,
-              bodyHeight,
-              offsetHeight,
-              clientHeight,
-              docHeight,
-              contentHeight,
-              originalHeight: calculatedHeight // 여백 없는 원래 계산값
-            };
-          }
-          
-          // 높이 조절 및 부모에게 전송
           function resizeIframe() {
-            const heights = getFullHeight();
-            
-            // 부모 프레임에 메시지 전송 - 정확한 높이를 전달
-            window.parent.postMessage({
-              type: 'resize',
-              height: heights.calculatedHeight,
-              source: window.name || 'unknown-iframe'
-            }, '*');
+            const height = document.body.scrollHeight + 2;
+            window.parent.postMessage({ type: 'resize', height, source: window.name || '' }, '*');
           }
-          
-          // 이미지 로드 완료 후 높이 재계산
-          function setupImageListeners() {
-            document.querySelectorAll('img').forEach(img => {
-              img.addEventListener('load', function() {
-                setTimeout(resizeIframe, 10);
-              });
-              
-              if (img.complete) {
-                setTimeout(resizeIframe, 10);
-              }
-            });
-          }
-          
-          // 초기화 및 이벤트 설정
-          function initialize() {
-            // 초기 높이 설정
-            resizeIframe();
-            
-            // 이미지 로드 이벤트 설정
-            setupImageListeners();
-            
-            // 여러 시점에서 높이 재계산
-            setTimeout(resizeIframe, 2000);
-            
-            // 동적 변경 감지
-            const observer = new MutationObserver(() => {
-              setTimeout(resizeIframe, 10);
-            });
-            
-            observer.observe(document.body, { 
-              childList: true, 
-              subtree: true, 
-              attributes: true,
-              characterData: true
-            });
-          }
-          
-          // 메시지 수신 처리 (높이 갱신 요청)
-          window.addEventListener('message', (event) => {
-            if (event.data && event.data.type === 'checkHeight') {
-              setTimeout(resizeIframe, 10);
-            }
+          window.addEventListener('DOMContentLoaded', resizeIframe);
+          window.addEventListener('load', resizeIframe);
+          document.querySelectorAll('img').forEach(img => {
+            img.addEventListener('load', resizeIframe);
+            if (img.complete) setTimeout(resizeIframe, 10);
           });
-          
-          // 페이지 로드 이벤트 설정
-          window.addEventListener('DOMContentLoaded', initialize);
-          window.addEventListener('load', initialize);
+          const observer = new MutationObserver(() => {
+            resizeIframe();
+          });
+          observer.observe(document.body, { childList: true, subtree: true });
         </script>
         <style>
           html, body { 
@@ -448,27 +362,12 @@ export default function ContentSection({
   ]);
 
   // 일반 보기 모드 콘텐츠 초기화 및 업데이트
-  useEffect(() => {
-    // (불러오기) 필요시 fetchContent 사용 예시
-    // useEffect(() => {
-    //   async function loadContent() {
-    //     const data = await fetchContent(section.id);
-    //     // setHtmlContent(data.content); 등 상태 반영
-    //   }
-    //   if (!isEditing) {
-    //     loadContent();
-    //     updateIframe(contentIframeRef, section.content || "", "contentDisplay");
-    //     setTimeout(() => {
-    //       if (contentIframeRef.current?.contentWindow) {
-    //         contentIframeRef.current.contentWindow.postMessage(
-    //           { type: "checkHeight" },
-    //           "*"
-    //         );
-    //       }
-    //     }, 500);
-    //   }
-    // }, [isEditing, section.content, section.content_type, fullWidth]);
-  }, [isEditing, section.content, section.content_type, fullWidth]);
+  useEffect(() => {}, [
+    isEditing,
+    section.content,
+    section.content_type,
+    fullWidth,
+  ]);
 
   // 팝업 열릴 때와 팝업 탭 변경 시 업데이트
   useEffect(() => {
@@ -542,7 +441,7 @@ export default function ContentSection({
   };
 
   return (
-    <div className="content-section-wrapper w-full my-8">
+    <div className="content-section-wrapper w-full">
       {/* 섹션 간 간격 추가 */}
       <div className="container mx-auto px-4 mb-4">
         {/* 서버와 클라이언트 간 일관된 렌더링을 위해 항상 div는 유지하고 내용만 조건부 렌더링 */}

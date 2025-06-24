@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/db";
 import { IWidget } from "@/types";
+import useSWR from "swr";
 
 interface Menu {
   id: string;
@@ -17,99 +18,78 @@ interface MenuListWidgetProps {
   widget: IWidget;
 }
 
-export default function MenuListWidget({ widget }: MenuListWidgetProps) {
-  const [childMenus, setChildMenus] = useState<Menu[]>([]);
-  const [parentMenu, setParentMenu] = useState<Menu | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const pathname = usePathname();
+interface UseMenuListResult {
+  parentMenu: Menu | null;
+  childMenus: Menu[];
+}
 
-  useEffect(() => {
-    const fetchMenus = async () => {
-      // 위젯 설정에서 parent_menu_id를 가져옴
-      // 또는 현재 경로를 기반으로 동적으로 부모 메뉴를 찾을 수도 있음 (고급 기능)
+function useMenuList(widget: IWidget, pathname: string) {
+  return useSWR<UseMenuListResult>(
+    ["menuList", widget.settings?.parent_menu_id, pathname],
+    async () => {
       let parentMenuId = widget.settings?.parent_menu_id;
-      let tempParentMenu = null;
-
-      setIsLoading(true);
-
-      try {
-        // 1. 명시적으로 부모 메뉴 ID가 설정된 경우
-        if (parentMenuId) {
-          const { data, error } = await supabase
-            .from("cms_menus")
-            .select("id, title, url, parent_id")
-            .eq("id", parentMenuId)
-            .single();
-          if (error) throw error;
-          tempParentMenu = data;
-        } else {
-          // 2. 부모 메뉴 ID가 설정되지 않은 경우, 현재 URL을 기반으로 동적 탐색
-          const { data: currentMenu, error: currentMenuError } = await supabase
-            .from("cms_menus")
-            .select("id, title, url, parent_id")
-            .eq("url", pathname)
-            .single();
-
-          if (currentMenuError) {
-            // 현재 URL에 정확히 일치하는 메뉴가 없는 경우, 상위 경로로 탐색
-            let parentPath = pathname;
-            while (parentPath.includes("/")) {
-              parentPath = parentPath.substring(0, parentPath.lastIndexOf("/"));
-              if (!parentPath) break;
-
-              const { data: foundMenu } = await supabase
-                .from("cms_menus")
-                .select("id, title, url, parent_id")
-                .eq("url", parentPath)
-                .single();
-
-              if (foundMenu) {
-                tempParentMenu = foundMenu;
-                break;
-              }
-            }
-          } else if (currentMenu?.parent_id) {
-            // 현재 메뉴에 부모가 있으면 그 부모를 사용
-            const { data: parentData, error: parentErr } = await supabase
+      let tempParentMenu: Menu | null = null;
+      if (parentMenuId) {
+        const { data, error } = await supabase
+          .from("cms_menus")
+          .select("id, title, url, parent_id")
+          .eq("id", parentMenuId)
+          .single();
+        if (error) throw error;
+        tempParentMenu = data;
+      } else {
+        const { data: currentMenu, error: currentMenuError } = await supabase
+          .from("cms_menus")
+          .select("id, title, url, parent_id")
+          .eq("url", pathname)
+          .single();
+        if (currentMenuError) {
+          let parentPath = pathname;
+          while (parentPath.includes("/")) {
+            parentPath = parentPath.substring(0, parentPath.lastIndexOf("/"));
+            if (!parentPath) break;
+            const { data: foundMenu } = await supabase
               .from("cms_menus")
               .select("id, title, url, parent_id")
-              .eq("id", currentMenu.parent_id)
+              .eq("url", parentPath)
               .single();
-            if (parentErr) throw parentErr;
-            tempParentMenu = parentData;
-          } else {
-            // 현재 메뉴가 최상위 메뉴이면 자신을 부모로 사용
-            tempParentMenu = currentMenu;
+            if (foundMenu) {
+              tempParentMenu = foundMenu;
+              break;
+            }
           }
-        }
-
-        setParentMenu(tempParentMenu);
-
-        // 최종적으로 결정된 부모 메뉴의 자식들을 가져옴
-        if (tempParentMenu) {
-          const { data: children, error: childrenError } = await supabase
+        } else if (currentMenu?.parent_id) {
+          const { data: parentData, error: parentErr } = await supabase
             .from("cms_menus")
             .select("id, title, url, parent_id")
-            .eq("parent_id", tempParentMenu.id)
-            .eq("is_active", true)
-            .order("order_num", { ascending: true });
-
-          if (childrenError) throw childrenError;
-          setChildMenus(children || []);
+            .eq("id", currentMenu.parent_id)
+            .single();
+          if (parentErr) throw parentErr;
+          tempParentMenu = parentData;
         } else {
-          setChildMenus([]);
+          tempParentMenu = currentMenu;
         }
-      } catch (error) {
-        console.error("메뉴 위젯 데이터 로딩 오류:", error);
-        setChildMenus([]);
-      } finally {
-        setIsLoading(false);
       }
-    };
+      let childMenus: Menu[] = [];
+      if (tempParentMenu) {
+        const { data: children, error: childrenError } = await supabase
+          .from("cms_menus")
+          .select("id, title, url, parent_id")
+          .eq("parent_id", tempParentMenu.id)
+          .eq("is_active", true)
+          .order("order_num", { ascending: true });
+        if (childrenError) throw childrenError;
+        childMenus = children || [];
+      }
+      return { parentMenu: tempParentMenu, childMenus };
+    },
+    { revalidateOnFocus: true }
+  );
+}
 
-    fetchMenus();
-  }, [widget.settings?.parent_menu_id, pathname]);
-
+export default function MenuListWidget({ widget }: MenuListWidgetProps) {
+  const pathname = usePathname();
+  const { data, error, isLoading } = useMenuList(widget, pathname);
   if (isLoading) {
     return (
       <div className="p-4 bg-white rounded-lg shadow-sm">
@@ -122,6 +102,13 @@ export default function MenuListWidget({ widget }: MenuListWidgetProps) {
       </div>
     );
   }
+  if (error) {
+    return (
+      <div className="p-4 text-red-500">메뉴 로딩 오류: {error.message}</div>
+    );
+  }
+  const parentMenu = data?.parentMenu;
+  const childMenus = data?.childMenus || [];
 
   // 표시할 자식 메뉴가 없으면 위젯을 렌더링하지 않음
   if (childMenus.length === 0) {
@@ -148,9 +135,9 @@ export default function MenuListWidget({ widget }: MenuListWidgetProps) {
   return (
     <aside className="p-4 bg-white rounded-lg backdrop-blur-sm border border-gray-50">
       {parentMenu && (
-        <h3 className="text-lg font-semibold mb-3 text-gray-800 px-3">
+        <div className="text-lg font-semibold mb-3 text-gray-800">
           {parentMenu.title}
-        </h3>
+        </div>
       )}
       <nav>
         <ul className="space-y-1">

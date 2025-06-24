@@ -58,3 +58,20 @@ export async function fetchMediaWidgetPosts(pageId: string, limit: number = 5) {
   if (error) throw error;
   return posts;
 }
+
+// 게시판 섹션 위젯용 게시글 조회 (pageId 기반)
+export async function fetchBoardSectionPosts(
+  pageId: string,
+  limit: number = 10
+) {
+  const supabase = createClient();
+  const { data: posts, error } = await supabase
+    .from("board_posts")
+    .select("*")
+    .eq("page_id", pageId)
+    .eq("status", "published")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return { posts: posts || [] };
+}

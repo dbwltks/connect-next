@@ -11,6 +11,9 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { formatRelativeTime } from "@/utils/utils";
+import useSWR from "swr";
+import { fetchBoardWidgetPosts } from "@/services/widgetService";
 
 interface BoardWidgetProps {
   widget: IWidget & {
@@ -28,6 +31,7 @@ export const BOARD_TEMPLATE = {
   COMPACT: 2,
   CARD: 3,
   NOTICE: 4,
+  GALLERY: 5,
 };
 
 // 템플릿별 기능 및 스타일 설명
@@ -48,6 +52,10 @@ const templateInfo = {
     name: "공지형",
     description: "공지사항 형태의 실선과 NEW 표시가 강조된 스타일",
   },
+  [BOARD_TEMPLATE.GALLERY]: {
+    name: "갤러리형",
+    description: "썸네일만 큼직하게 보여주는 갤러리 스타일",
+  },
 };
 
 export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
@@ -55,6 +63,19 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const pageId = widget.display_options?.page_id;
+  const {
+    data,
+    error: swr_error,
+    isLoading: swr_isLoading,
+    mutate,
+  } = useSWR(
+    pageId ? ["boardWidgetPosts", pageId] : null,
+    () => fetchBoardWidgetPosts(pageId).then((posts) => ({ posts })),
+    { revalidateOnFocus: true }
+  );
+
+  // 게시글 개수는 props에서만 사용 (입력 UI 없음)
   // 캐시 키 생성 - 위젯 ID와 페이지 ID 기반
   const getCacheKey = (widgetId: string, pageId: string) => {
     return `board_widget_${widgetId}_${pageId}`;
@@ -323,7 +344,6 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
 
   // 템플릿별 렌더링 함수
   const renderByTemplate = () => {
-    // 로딩 및 에러 상태 처리
     if (isLoading) {
       return (
         <div className="py-4 text-center text-gray-500">
@@ -344,21 +364,31 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
       );
     }
 
+    const menuUrl = page?.slug || widget.display_options?.menu_url || "/board";
+
     switch (templateNumber) {
       case BOARD_TEMPLATE.COMPACT:
         return (
-          <div className="space-y-2">
+          <div className="space-y-1">
             {posts.map((post) => (
-              <div key={post.id} className="py-2 border-b last:border-b-0">
+              <div
+                key={post.id}
+                className="py-2 truncate last:border-b-0 transition-transform duration-150 hover:scale-105"
+              >
                 <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-medium truncate flex-1">
-                    {post.title}
-                  </h4>
+                  <Link
+                    href={`${menuUrl}/${post.id}`}
+                    className="  hover:text-blue-600"
+                  >
+                    <h4 className="text-xs text-gray-500 font-medium truncate flex-1">
+                      {post.title}
+                    </h4>
+                  </Link>
                   {showDate && (
-                    <div className="text-xs text-gray-500 flex items-center space-x-1 ml-2 flex-shrink-0">
-                      <Clock size={12} />
+                    <div className="block text-xs text-gray-400 flex items-center space-x-1 ml-2 flex-shrink-0">
+                      {/* <Clock size={12} /> */}
                       <span className="truncate max-w-[80px]">
-                        {new Date(post.created_at).toLocaleDateString()}
+                        {formatRelativeTime(post.created_at)}
                       </span>
                     </div>
                   )}
@@ -370,11 +400,11 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
 
       case BOARD_TEMPLATE.CARD:
         return (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {posts.map((post) => (
               <div
                 key={post.id}
-                className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow"
+                className="border-gray-100 border rounded-lg overflow-hidden hover:shadow-md transition-shadow"
               >
                 {showThumbnail && post.thumbnail_image ? (
                   <div className="aspect-video w-full overflow-hidden">
@@ -386,20 +416,51 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
                   </div>
                 ) : (
                   <div className="aspect-video w-full bg-gray-100 flex items-center justify-center">
-                    <MessageSquare className="text-gray-300" size={32} />
+                    {/* <MessageSquare className="text-gray-300" size={32} /> */}
                   </div>
                 )}
                 <div className="p-3">
-                  <h4 className="font-medium truncate">{post.title}</h4>
+                  <Link
+                    href={`${menuUrl}/${post.id}`}
+                    className="block transition-transform duration-150 hover:scale-105 hover:text-blue-600"
+                  >
+                    <h4 className="font-medium truncate">{post.title}</h4>
+                  </Link>
                   {showDate && (
                     <div className="flex items-center space-x-1 text-xs text-gray-500 mt-2">
-                      <Calendar size={12} />
+                      {/* <Calendar size={12} /> */}
                       <span className="truncate">
-                        {new Date(post.created_at).toLocaleDateString()}
+                        {formatRelativeTime(post.created_at)}
                       </span>
                     </div>
                   )}
                 </div>
+              </div>
+            ))}
+          </div>
+        );
+
+      case BOARD_TEMPLATE.GALLERY:
+        return (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {posts.map((post) => (
+              <div
+                key={post.id}
+                className="rounded overflow-hidden border-gray-50 border"
+              >
+                <Link href={`${menuUrl}/${post.id}`}>
+                  {showThumbnail && post.thumbnail_image ? (
+                    <img
+                      src={post.thumbnail_image}
+                      alt={post.title}
+                      className="w-full h-32 sm:h-40 object-cover transition-transform hover:scale-105"
+                    />
+                  ) : (
+                    <div className="w-full h-32 sm:h-40 bg-gray-100 flex items-center justify-center">
+                      <span className="text-gray-300">No Image</span>
+                    </div>
+                  )}
+                </Link>
               </div>
             ))}
           </div>
@@ -425,9 +486,14 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
                 >
                   <div className="flex-1 min-w-0 mr-2">
                     <div className="flex items-center space-x-3 overflow-hidden">
-                      <h4 className="font-medium group-hover:text-blue-600 transition-colors truncate flex-1">
-                        {post.title}
-                      </h4>
+                      <Link
+                        href={`${menuUrl}/${post.id}`}
+                        className="block transition-transform duration-150 hover:scale-105 hover:text-blue-600"
+                      >
+                        <h4 className="font-medium group-hover:text-blue-600 transition-colors truncate flex-1">
+                          {post.title}
+                        </h4>
+                      </Link>
                       {isNew && (
                         <Badge className="bg-red-100 text-red-800 text-xs animate-pulse flex-shrink-0">
                           NEW
@@ -439,7 +505,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
                         {post.author}
                       </span>
                       <span className="truncate max-w-[90px]">
-                        {new Date(post.created_at).toLocaleDateString()}
+                        {formatRelativeTime(post.created_at)}
                       </span>
                       <div className="flex items-center space-x-1 flex-shrink-0">
                         <Eye className="w-3 h-3 flex-shrink-0" />
@@ -457,12 +523,9 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
       // 기본 클래식 템플릿
       default:
         return (
-          <div className="space-y-4">
+          <div className="space-y-2">
             {posts.map((post) => (
-              <div
-                key={post.id}
-                className="flex items-start space-x-4 border-b"
-              >
+              <div key={post.id} className="flex items-start space-x-4">
                 {showThumbnail && post.thumbnail_image ? (
                   <div className="w-20 h-20 flex-shrink-0">
                     <img
@@ -477,12 +540,19 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
                   </div>
                 ) : null}
                 <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-medium truncate">{post.title}</h4>
+                  <Link
+                    href={`${menuUrl}/${post.id}`}
+                    className="block transition-transform duration-150 hover:scale-105 hover:text-blue-600"
+                  >
+                    <h4 className="text-sm font-medium truncate">
+                      {post.title}
+                    </h4>
+                  </Link>
                   {showDate && (
                     <div className="text-xs text-gray-500 mt-1 mb-2 flex items-center space-x-1">
-                      <Calendar size={12} className="flex-shrink-0" />
+                      {/* <Calendar size={12} className="flex-shrink-0" /> */}
                       <span className="truncate">
-                        {new Date(post.created_at).toLocaleDateString()}
+                        {formatRelativeTime(post.created_at)}
                       </span>
                     </div>
                   )}
@@ -502,22 +572,22 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
   };
 
   return (
-    <div className="h-full bg-white rounded-xl border border-gray-100 p-6">
+    <div className="h-full bg-white rounded-xl border border-gray-100 p-4">
       <div className="pb-2">
-        <div className="text-xl font-bold">
+        <div className="text-base font-semibold">
           {widget.title || page?.title || "게시판"}
         </div>
       </div>
       <div>
         {renderByTemplate()}
-        <div className="mt-3 text-center">
+        {/* <div className="mt-3 text-center">
           <Link
             href={page?.slug || "/"}
             className="w-full py-2 px-4 border border-gray-200 rounded-md hover:bg-blue-50 transition-colors text-sm flex items-center justify-center"
           >
             더보기
           </Link>
-        </div>
+        </div> */}
       </div>
     </div>
   );

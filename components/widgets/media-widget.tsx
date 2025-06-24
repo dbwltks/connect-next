@@ -3,44 +3,50 @@ import { IPage, IWidget, IMediaWidgetOptions, IBoardPost } from "@/types/index";
 import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import { fetchMediaWidgetPosts } from "@/services/widgetService";
+import useSWR from "swr";
+import { supabase } from "@/db";
+import { Heart } from "lucide-react";
 
 interface MediaWidgetProps {
   widget: IWidget;
 }
 
 export function MediaWidget({ widget }: MediaWidgetProps) {
-  const [posts, setPosts] = useState<IBoardPost[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    console.log("미디어 위젯 데이터:", {
-      widget,
-      displayOptions: widget.display_options,
-      pageId: widget.display_options?.page_id,
-    });
-
-    const pageId = widget.display_options?.page_id;
-    if (!pageId) {
-      setError("페이지가 선택되지 않았습니다.");
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    fetchMediaWidgetPosts(pageId)
-      .then((data) => {
-        setPosts(data || []);
-        setIsLoading(false);
-      })
-      .catch((err) => {
-        console.error("미디어 게시글 로딩 실패:", err);
-        setError("게시글을 불러오는데 실패했습니다.");
-        setIsLoading(false);
-      });
-  }, [widget.display_options?.page_id]);
+  const pageId = widget.display_options?.page_id;
+  const { data, error, isLoading, mutate } = useSWR(
+    pageId ? ["mediaWidgetPosts", pageId] : null,
+    async () => {
+      // 1. 게시글 데이터
+      const posts = await fetchMediaWidgetPosts(pageId);
+      if (!posts || posts.length === 0) return { posts: [] };
+      // 2. 좋아요 수 집계
+      const postIds = posts.map((p: any) => p.id);
+      let likeCounts: Record<string, number> = {};
+      if (postIds.length > 0) {
+        const { data: likeData, error: likeError } = await supabase
+          .from("board_like")
+          .select("post_id")
+          .in("post_id", postIds);
+        if (!likeError && likeData) {
+          likeCounts = (likeData || []).reduce(
+            (acc: Record<string, number>, like: any) => {
+              if (like.post_id)
+                acc[like.post_id] = (acc[like.post_id] || 0) + 1;
+              return acc;
+            },
+            {}
+          );
+        }
+      }
+      // 3. posts에 likes_count 추가
+      const postsWithLikes = posts.map((post: any) => ({
+        ...post,
+        likes_count: likeCounts[post.id] || 0,
+      }));
+      return { posts: postsWithLikes };
+    },
+    { revalidateOnFocus: true }
+  );
 
   if (isLoading) {
     return (
@@ -53,21 +59,21 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
   if (error) {
     return (
       <div className="h-full flex items-center justify-center">
-        <div className="text-red-500">{error}</div>
+        <div className="text-red-500">{error.message}</div>
       </div>
     );
   }
 
-  if (!posts.length) {
+  if (!data) {
     return (
       <div className="h-full flex items-center justify-center">
-        <div className="text-gray-500">게시글이 없습니다.</div>
+        <div className="text-gray-500">데이터가 없습니다.</div>
       </div>
     );
   }
 
   return (
-    <div className="h-full bg-white rounded-xl border border-gray-100 p-6">
+    <div className="h-full bg-white rounded-xl border border-gray-100 p-4">
       <div>
         <div className="text-center mb-6">
           {widget.display_options?.media_description && (
@@ -88,16 +94,16 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
         <div className=" grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4 ">
           {/* Featured Video */}
           <div className="lg:col-span-2">
-            {posts.length > 0 ? (
+            {data.posts.length > 0 ? (
               <div className="border border-gray-100 hover:shadow-lg transition-all duration-500 transform hover:-translate-y-1 rounded-lg overflow-hidden">
                 <Link
-                  href={`${widget.display_options?.page_slug}/${posts[0].id}`}
+                  href={`${widget.display_options?.page_slug}/${data.posts[0].id}`}
                 >
                   <div className="relative aspect-video bg-gradient-to-br from-gray-900 to-gray-700 group cursor-pointer">
-                    {posts[0].thumbnail_image ? (
+                    {data.posts[0].thumbnail_image ? (
                       <img
-                        src={posts[0].thumbnail_image}
-                        alt={posts[0].title}
+                        src={data.posts[0].thumbnail_image}
+                        alt={data.posts[0].title}
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -129,22 +135,24 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
                   <div className="p-3 bg-white">
                     <div className="w-full overflow-hidden">
                       <h4 className="text-lg font-medium truncate block w-full">
-                        {posts[0].title}
+                        {data.posts[0].title}
                       </h4>
                     </div>
                     <div className="h-5 flex items-center space-x-3 truncate text-sm text-gray-700">
-                      {posts[0].description && (
-                        <span>{posts[0].description}</span>
+                      {data.posts[0].description && (
+                        <span>{data.posts[0].description}</span>
                       )}
                     </div>
                     <div className="pt-1 flex items-center justify-end space-x-2">
                       <span className="text-xs text-gray-500 ">
-                        {posts[0].author || ""} ·{" "}
-                        {new Date(posts[0].created_at).toLocaleDateString()}
+                        {data.posts[0].author || ""} ·{" "}
+                        {new Date(
+                          data.posts[0].created_at
+                        ).toLocaleDateString()}
                       </span>
                       <div className="flex items-center space-x-2 text-xs text-gray-500">
                         <div className="flex items-center space-x-1">
-                          <svg
+                          {/* <svg
                             xmlns="http://www.w3.org/2000/svg"
                             width="12"
                             height="12"
@@ -157,14 +165,16 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
                           >
                             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                             <circle cx="12" cy="12" r="3"></circle>
-                          </svg>
-
+                          </svg> */}
+                          <span className="">👀</span>
                           <span>
-                            {posts[0].views || posts[0].view_count || 0}
+                            {data.posts[0].views ||
+                              data.posts[0].view_count ||
+                              0}
                           </span>
                         </div>
                         <div className="flex items-center space-x-1">
-                          <svg
+                          {/* <svg
                             xmlns="http://www.w3.org/2000/svg"
                             width="12"
                             height="12"
@@ -176,8 +186,9 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
                             strokeLinejoin="round"
                           >
                             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                          </svg>
-                          <span> {posts[0].likes_count || 0}</span>
+                          </svg> */}
+                          <Heart className="w-3 h-3 text-red-500 fill-current" />
+                          <span> {data.posts[0].likes_count || 0}</span>
                         </div>
                       </div>
                     </div>
@@ -189,8 +200,8 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
 
           {/* Video List */}
           <div className="space-y-3">
-            {posts.length > 1
-              ? posts.slice(1).map((post) => (
+            {data.posts.length > 1
+              ? data.posts.slice(1).map((post) => (
                   <div
                     key={post.id}
                     className="overflow-hidden border border-gray-100 hover:shadow-md transition-all duration-500 transform hover:-translate-y-1 rounded-lg w-full"
@@ -228,9 +239,9 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
                       </div>
                       <div className="p-1.5 sm:p-2 flex-1 w-full overflow-hidden">
                         <div className="w-full overflow-hidden">
-                          <h4 className="text-md truncate block w-full">
+                          <div className="text-sm truncate block w-full">
                             {post.title}
-                          </h4>
+                          </div>
                         </div>
                         <div className="h-5 flex items-center space-x-3 truncate text-xs text-gray-600">
                           {post.description && <span>{post.description}</span>}
@@ -242,7 +253,7 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
                           </span>
                           <div className="flex items-center space-x-2 text-[10px] text-gray-500">
                             <div className="flex items-center space-x-1">
-                              <svg
+                              {/* <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 width="10"
                                 height="10"
@@ -255,11 +266,12 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
                               >
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                                 <circle cx="12" cy="12" r="3"></circle>
-                              </svg>
+                              </svg> */}
+                              <span className="">👀</span>
                               <span>{post.views || 0}</span>
                             </div>
                             <div className="flex items-center space-x-1">
-                              <svg
+                              {/* <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 width="10"
                                 height="10"
@@ -271,7 +283,8 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
                                 strokeLinejoin="round"
                               >
                                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                              </svg>
+                              </svg> */}
+                              <Heart className="w-3 h-3 text-red-500 fill-current" />
                               <span>{post.likes_count || 0}</span>
                             </div>
                           </div>
@@ -280,7 +293,7 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
                     </Link>
                   </div>
                 ))
-              : posts.length === 0
+              : data.posts.length === 0
                 ? null
                 : null}
 

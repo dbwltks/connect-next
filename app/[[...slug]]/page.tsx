@@ -130,7 +130,7 @@ export default async function DynamicPage(props: { params: any }) {
         return (
           <>
             <MainBanner menuId={menu.id} />
-            <div className="sm:container mx-auto sm:mt-4 border border-gray-50 px-0">
+            <div className="sm:container block lg:hidden mx-auto sm:mt-4 border border-gray-50 px-0">
               <Breadcrumb currentTitle={menu.title} />
             </div>
             <main className="flex-1 flex flex-col gap-12">
@@ -145,7 +145,7 @@ export default async function DynamicPage(props: { params: any }) {
         return (
           <>
             <MainBanner menuId={menu.id} />
-            <div className="sm:container mx-auto sm:mt-4 border-gray-200 px-0">
+            <div className="sm:container block lg:hidden mx-auto sm:mt-4 border-gray-200 px-0">
               <Breadcrumb currentTitle={menu.title} />
             </div>
             <main>
@@ -248,7 +248,7 @@ export default async function DynamicPage(props: { params: any }) {
         return (
           <>
             <MainBanner menuId={parentMenu.id} />
-            <div className="sm:container mx-auto sm:mt-4 border border-gray-50 px-0">
+            <div className="sm:container block lg:hidden mx-auto sm:mt-4 border border-gray-50 px-0">
               <Breadcrumb currentTitle={parentMenu.title} />
             </div>
             <main className="flex-1 flex flex-col gap-12">

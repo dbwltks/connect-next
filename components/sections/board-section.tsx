@@ -50,6 +50,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/db";
 import { useAuth } from "@/contexts/auth-context";
+import useSWR from "swr";
 
 interface BoardPost {
   id: string;
@@ -80,6 +81,99 @@ interface BoardSectionProps {
   section: Section;
   className?: string;
   menuTitle?: string;
+}
+
+// fetcher 함수 분리
+interface FetchBoardDataParams {
+  pageId?: string;
+  categoryId?: string;
+  itemCount: number;
+  page: number;
+  searchType: string;
+  searchTerm: string;
+}
+async function fetchBoardData({
+  pageId,
+  categoryId,
+  itemCount,
+  page,
+  searchType,
+  searchTerm,
+}: FetchBoardDataParams) {
+  // 1. 전체 게시글 수(count) 쿼리
+  let countQuery = supabase
+    .from("board_posts")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "published");
+  if (pageId) countQuery = countQuery.eq("page_id", pageId);
+  if (categoryId) countQuery = countQuery.eq("category_id", categoryId);
+  if (searchTerm) {
+    if (searchType === "title")
+      countQuery = countQuery.ilike("title", `%${searchTerm}%`);
+    else if (searchType === "content")
+      countQuery = countQuery.ilike("content", `%${searchTerm}%`);
+    else if (searchType === "author")
+      countQuery = countQuery.ilike("user_id", `%${searchTerm}%`);
+  }
+  const { count: totalCount, error: countError } = await countQuery;
+  if (countError) throw countError;
+  const pageSize = itemCount;
+  const totalPages = Math.max(1, Math.ceil((totalCount || 0) / pageSize));
+
+  // 2. 실제 게시글 목록 쿼리 (페이지네이션 적용)
+  let query = supabase
+    .from("board_posts")
+    .select(
+      `id, title, content, user_id, created_at, views, category_id, page_id, is_notice, is_pinned, comment_count:board_comments(count), thumbnail_image, status`
+    )
+    .eq("status", "published")
+    .order("is_pinned", { ascending: false })
+    .order("is_notice", { ascending: false })
+    .order("created_at", { ascending: false })
+    .range((page - 1) * itemCount, page * itemCount - 1);
+  if (pageId) query = query.eq("page_id", pageId);
+  if (categoryId) query = query.eq("category_id", categoryId);
+  if (searchTerm) {
+    if (searchType === "title") query = query.ilike("title", `%${searchTerm}%`);
+    else if (searchType === "content")
+      query = query.ilike("content", `%${searchTerm}%`);
+    else if (searchType === "author")
+      query = query.ilike("user_id", `%${searchTerm}%`);
+  }
+  const { data, error } = await query;
+  if (error) throw error;
+  const postsWithComments = (data || []).map((post) => ({
+    ...post,
+    comment_count: post.comment_count?.[0]?.count || 0,
+    view_count: post.views || 0,
+  }));
+
+  // 3. 작성자 정보 가져오기
+  const userIds = postsWithComments
+    .map((post) => post.user_id)
+    .filter((id): id is string => Boolean(id))
+    .filter((id, index, self) => self.indexOf(id) === index);
+  let authorInfoMap: Record<string, UserInfo> = {};
+  if (userIds.length > 0) {
+    const { data: usersData, error: usersError } = await supabase
+      .from("users")
+      .select("id, username, avatar_url")
+      .in("id", userIds);
+    if (!usersError && usersData) {
+      usersData.forEach((user) => {
+        authorInfoMap[user.id] = {
+          username: user.username || "익명",
+          avatar_url: user.avatar_url,
+        };
+      });
+    }
+  }
+  return {
+    posts: postsWithComments,
+    totalCount: totalCount || 0,
+    totalPages,
+    authorInfoMap,
+  };
 }
 
 export default function BoardSection({
@@ -135,21 +229,12 @@ export default function BoardSection({
     s.settings?.pageId ?? (typeof s.pageId === "string" ? s.pageId : undefined);
   const showViewAll = s.settings?.showViewAll !== false;
 
-  const [posts, setPosts] = useState<BoardPost[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [authorInfoMap, setAuthorInfoMap] = useState<Record<string, UserInfo>>(
-    {}
-  );
-
   // 검색 관련 상태
   const [searchType, setSearchType] = useState<string>("title");
   const [searchTerm, setSearchTerm] = useState<string>("");
 
   // Pagination state
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
 
   // 레이아웃 타입 정의
   type LayoutType = "table" | "card" | "list";
@@ -436,124 +521,34 @@ export default function BoardSection({
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     setPage(1); // 검색 시 첫 페이지로 이동
-    fetchBoardPosts();
+    mutate();
   };
 
-  // 게시글 목록 및 전체 개수 fetch 함수 분리
-  async function fetchBoardPosts() {
-    try {
-      setLoading(true);
-      setError(null);
-      // 1. 전체 게시글 수(count) 쿼리
-      let countQuery = supabase
-        .from("board_posts")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "published"); // 게시된 게시물만 카운트
-      if (pageId) countQuery = countQuery.eq("page_id", pageId);
-      if (categoryId) countQuery = countQuery.eq("category_id", categoryId);
-
-      // 검색 조건을 count 쿼리에도 적용
-      if (searchTerm) {
-        if (searchType === "title") {
-          countQuery = countQuery.ilike("title", `%${searchTerm}%`);
-        } else if (searchType === "content") {
-          countQuery = countQuery.ilike("content", `%${searchTerm}%`);
-        } else if (searchType === "author") {
-          countQuery = countQuery.ilike("user_id", `%${searchTerm}%`);
-        }
-      }
-
-      const { count: totalCount, error: countError } = await countQuery;
-      if (countError) throw countError;
-      const pageSize = itemCount;
-      setTotalCount(totalCount || 0);
-      setTotalPages(Math.max(1, Math.ceil((totalCount || 0) / pageSize)));
-
-      // 2. 실제 게시글 목록 쿼리 (페이지네이션 적용)
-      let query = supabase
-        .from("board_posts")
-        .select(
-          `
-          id, title, content, user_id, created_at, views, 
-          category_id, page_id, is_notice, is_pinned,
-          comment_count:board_comments(count),
-          thumbnail_image, status
-        `
-        )
-        .eq("status", "published") // 게시된 게시물만 표시
-        .order("is_pinned", { ascending: false })
-        .order("is_notice", { ascending: false })
-        .order("created_at", { ascending: false })
-        .range((page - 1) * itemCount, page * itemCount - 1);
-      if (pageId) query = query.eq("page_id", pageId);
-      if (categoryId) query = query.eq("category_id", categoryId);
-
-      // 검색 조건 적용
-      if (searchTerm) {
-        if (searchType === "title") {
-          query = query.ilike("title", `%${searchTerm}%`);
-        } else if (searchType === "content") {
-          query = query.ilike("content", `%${searchTerm}%`);
-        } else if (searchType === "author") {
-          // 작성자 검색은 별도 처리 필요 (username으로 검색하려면 join이 필요)
-          // 현재는 단순화를 위해 user_id로 검색
-          query = query.ilike("user_id", `%${searchTerm}%`);
-        }
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      const postsWithComments = (data || []).map((post) => ({
-        ...post,
-        comment_count: post.comment_count?.[0]?.count || 0,
-        view_count: post.views || 0,
-      }));
-      setPosts(postsWithComments);
-
-      // 3. 작성자 정보 가져오기
-      // 중복 제거된 user_id 목록 추출 - filter와 reduce를 사용하여 Set 대신 중복 제거
-      const userIds: string[] = postsWithComments
-        .map((post) => post.user_id)
-        .filter((id): id is string => Boolean(id))
-        .filter((id, index, self) => self.indexOf(id) === index);
-
-      if (userIds.length > 0) {
-        const { data: usersData, error: usersError } = await supabase
-          .from("users")
-          .select("id, username, avatar_url")
-          .in("id", userIds);
-
-        if (usersError) {
-          console.error("작성자 정보 로드 오류:", usersError);
-        } else if (usersData) {
-          // user_id를 키로 하는 맵 생성
-          const newAuthorInfoMap: Record<string, UserInfo> = {};
-          usersData.forEach((user) => {
-            newAuthorInfoMap[user.id] = {
-              username: user.username || "익명",
-              avatar_url: user.avatar_url,
-            };
-          });
-          setAuthorInfoMap(newAuthorInfoMap);
-        }
-      }
-    } catch (err) {
-      console.error("게시판 데이터 로드 오류:", err);
-      setError("게시판 데이터를 불러오는 중 오류가 발생했습니다.");
-    } finally {
-      setLoading(false);
+  // 대신 SWR 사용
+  const { data, error, isLoading, mutate } = useSWR(
+    ["boardData", pageId, categoryId, itemCount, page, searchType, searchTerm],
+    () =>
+      fetchBoardData({
+        pageId,
+        categoryId,
+        itemCount,
+        page,
+        searchType,
+        searchTerm,
+      }),
+    {
+      revalidateOnFocus: true,
+      shouldRetryOnError: true,
+      errorRetryInterval: 5000,
     }
-  }
-
-  useEffect(() => {
-    fetchBoardPosts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageId, categoryId, itemCount, page]);
+  );
 
   // 공지/고정글/일반글 분리
   const now = Date.now();
-  const notices = posts.filter((p) => p.is_notice || p.is_pinned);
-  const normals = posts.filter((p) => !p.is_notice && !p.is_pinned);
+  const notices =
+    data?.posts.filter((p: BoardPost) => p.is_notice || p.is_pinned) || [];
+  const normals =
+    data?.posts.filter((p: BoardPost) => !p.is_notice && !p.is_pinned) || [];
 
   // 실제 테이블에 표시할 posts
   const sortedNotices = getSortedPosts(notices);
@@ -641,7 +636,7 @@ export default function BoardSection({
 
   // 게시글 작성 폼 표시 제어
   const handleWriteSuccess = () => {
-    fetchBoardPosts(); // 최신 글 목록 반영
+    mutate(); // 최신 글 목록 반영
   };
 
   // 컬럼 헤더 렌더링 함수 (리사이저는 마지막 컬럼 제외, handleResizeStart만 사용)
@@ -766,7 +761,7 @@ export default function BoardSection({
   }, []);
 
   // 로딩 상태 UI
-  if (loading) {
+  if (isLoading) {
     return (
       <div className={`board-section ${className} ${containerClass}`}>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
@@ -802,22 +797,23 @@ export default function BoardSection({
         className={`board-section ${className} ${containerClass} bg-red-50 border border-red-200 rounded sm:p-4 my-4 text-red-800`}
       >
         <h3 className="font-bold mb-2">데이터 로드 오류</h3>
-        <p>{error}</p>
-        <Button
-          variant="outline"
-          className="mt-2"
-          onClick={() => fetchBoardPosts()}
-        >
+        <p>{error.message}</p>
+        <Button variant="outline" className="mt-2" onClick={() => mutate()}>
           다시 시도
         </Button>
       </div>
     );
   }
 
+  const posts: BoardPost[] = data?.posts || [];
+  const totalCount: number = data?.totalCount || 0;
+  const totalPages: number = data?.totalPages || 1;
+  const authorInfoMap: Record<string, UserInfo> = data?.authorInfoMap || {};
+
   return (
     <div className={`board-section mb-8 ${className} ${containerClass}`}>
       {/* 타이틀/설명 헤더를 최상단에 분리 */}
-      <div className="p-4 ">
+      <div className="mb-4">
         <h2 className="text-xl sm:text-2xl font-bold">{title}</h2>
         {description && <p className="text-gray-500 mt-1">{description}</p>}
       </div>

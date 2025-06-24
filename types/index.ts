@@ -45,7 +45,7 @@ export interface IWidget {
   type: string;
   title?: string;
   content?: string;
-  settings?: any;
+  settings?: any; // strip 위젯: { strip_type: 'image' | 'html', strip_value: string }
   column_position: number;
   order: number;
   width: number;
