@@ -823,9 +823,10 @@ export default function BoardWrite({
   }, [propIsEditMode, propPostId, propInitialData]);
 
   // status를 인자로 받아 저장하는 함수
-  // 임시 폴더의 파일들을 정식 폴더로 이동
+  // 임시 폴더의 파일들을 정식 폴더로 이동하고 URL 매핑 반환
   const moveFilesFromTemp = async (files: IFileInfo[]) => {
     const movedFiles: IFileInfo[] = [];
+    const urlMapping: { [oldUrl: string]: string } = {}; // 이전 URL -> 새 URL 매핑
 
     for (const file of files) {
       if (file.url.includes("/temp/")) {
@@ -862,6 +863,9 @@ export default function BoardWrite({
             .from("board")
             .getPublicUrl(newPath);
 
+          // URL 매핑 저장
+          urlMapping[file.url] = publicUrlData.publicUrl;
+
           // 임시 파일 삭제
           await supabase.storage.from("board").remove([tempPath]);
 
@@ -880,7 +884,7 @@ export default function BoardWrite({
       }
     }
 
-    return movedFiles;
+    return { movedFiles, urlMapping };
   };
 
   const savePost = async (statusArg: "draft" | "published") => {
@@ -934,9 +938,76 @@ export default function BoardWrite({
     try {
       // 게시글이 정식 발행되는 경우 임시 파일들을 정식 폴더로 이동
       let finalUploadedFiles = uploadedFiles;
+      let finalThumbnailImage = thumbnailImage;
+      let finalContent = html;
+
       if (statusArg === "published") {
-        finalUploadedFiles = await moveFilesFromTemp(uploadedFiles);
+        // 업로드된 파일들 이동 및 URL 매핑 얻기
+        const { movedFiles, urlMapping } =
+          await moveFilesFromTemp(uploadedFiles);
+        finalUploadedFiles = movedFiles;
         setUploadedFiles(finalUploadedFiles);
+
+        // 썸네일 이미지도 temp에서 정식 폴더로 이동
+        if (thumbnailImage && thumbnailImage.includes("/temp/")) {
+          try {
+            const tempPath = thumbnailImage.split(
+              "/storage/v1/object/public/board/"
+            )[1];
+            const newPath = tempPath.replace("temp/", "");
+
+            // 파일 복사
+            const { data: downloadData, error: downloadError } =
+              await supabase.storage.from("board").download(tempPath);
+
+            if (!downloadError && downloadData) {
+              // 새 위치에 업로드
+              const { error: uploadError } = await supabase.storage
+                .from("board")
+                .upload(newPath, downloadData, { upsert: true });
+
+              if (!uploadError) {
+                // 새 URL 생성
+                const { data: publicUrlData } = supabase.storage
+                  .from("board")
+                  .getPublicUrl(newPath);
+
+                finalThumbnailImage = publicUrlData.publicUrl;
+                setThumbnailImage(finalThumbnailImage);
+
+                // 썸네일 URL 매핑에도 추가
+                urlMapping[thumbnailImage] = finalThumbnailImage;
+
+                // 임시 파일 삭제
+                await supabase.storage.from("board").remove([tempPath]);
+              }
+            }
+          } catch (error) {
+            console.error("썸네일 이미지 이동 중 오류:", error);
+            // 실패해도 계속 진행
+          }
+        }
+
+        // 에디터 내용에서 temp URL들을 정식 URL로 교체
+        finalContent = html;
+        for (const [oldUrl, newUrl] of Object.entries(urlMapping)) {
+          const escapedOldUrl = oldUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const regex = new RegExp(escapedOldUrl, "g");
+          finalContent = finalContent.replace(regex, newUrl);
+        }
+
+        // 에디터에도 업데이트된 내용 반영
+        if (editorRef.current?.editor && finalContent !== html) {
+          editorRef.current.editor.commands.setContent(finalContent);
+        }
+
+        console.log("파일 이동 및 URL 교체 완료:", {
+          originalFilesCount: uploadedFiles.length,
+          movedFilesCount: finalUploadedFiles.length,
+          urlMappingCount: Object.keys(urlMapping).length,
+          contentChanged: finalContent !== html,
+          thumbnailChanged: finalThumbnailImage !== thumbnailImage,
+        });
       }
 
       // 게시글 저장(등록) 시 number 자동 할당
@@ -977,9 +1048,9 @@ export default function BoardWrite({
         postId,
         isEditMode,
         title,
-        content: html,
+        content: finalContent, // temp URL이 정식 URL로 교체된 내용 사용
         allowComments,
-        thumbnailImage,
+        thumbnailImage: finalThumbnailImage,
         uploadedFiles: finalUploadedFiles,
         userId,
         pageId: selectedPageId,

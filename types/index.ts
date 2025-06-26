@@ -61,6 +61,7 @@ export interface IMediaWidgetOptions {
   media_more_text?: string;
   item_count?: number; // 표시할 미디어 항목 개수
   page_id?: string;
+  page_slug?: string; // 페이지 슬러그 (메뉴 URL)
 }
 
 // 배너 위젯 옵션 인터페이스

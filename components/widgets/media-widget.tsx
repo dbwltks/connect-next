@@ -16,9 +16,38 @@ interface MediaWidgetProps {
 const fetchMediaData = async (pageId: string, maxItems: number = 5) => {
   // 1. 게시글 데이터
   const posts = await fetchMediaWidgetPosts(pageId, maxItems);
-  if (!posts || posts.length === 0) return { posts: [] };
+  if (!posts || posts.length === 0) return { posts: [], menuUrl: null };
 
-  // 2. 좋아요 수 집계
+  // 2. 각 게시글의 page_id로 메뉴 URL 찾기
+  const uniquePageIds = Array.from(
+    new Set(posts.map((post: any) => post.page_id))
+  );
+  const menuUrlMap: Record<string, string> = {};
+
+  for (const pId of uniquePageIds) {
+    console.log("메뉴 검색 중 - page_id:", pId);
+
+    // 먼저 모든 메뉴 데이터를 확인
+    const { data: allMenus, error: allError } = await supabase
+      .from("cms_menus")
+      .select("*");
+
+    console.log("전체 메뉴 데이터:", allMenus, allError);
+
+    // 특정 page_id로 검색
+    const { data: menuData, error: menuError } = await supabase
+      .from("cms_menus")
+      .select("*")
+      .eq("page_id", pId);
+
+    console.log("메뉴 검색 결과:", { pId, menuData, menuError });
+
+    if (!menuError && menuData && menuData.length > 0) {
+      menuUrlMap[pId] = menuData[0].url;
+    }
+  }
+
+  // 3. 좋아요 수 집계
   const postIds = posts.map((p: any) => p.id);
   let likeCounts: Record<string, number> = {};
 
@@ -39,13 +68,25 @@ const fetchMediaData = async (pageId: string, maxItems: number = 5) => {
     }
   }
 
-  // 3. posts에 likes_count 추가
+  // 4. posts에 likes_count 추가
   const postsWithLikes = posts.map((post: any) => ({
     ...post,
     likes_count: likeCounts[post.id] || 0,
   }));
 
-  return { posts: postsWithLikes };
+  console.log("fetchMediaData - 최종 데이터:", {
+    postsCount: postsWithLikes.length,
+    menuUrlMap,
+    uniquePageIds,
+    firstPostPageId: postsWithLikes[0]?.page_id,
+    posts: postsWithLikes.map((p) => ({
+      id: p.id,
+      title: p.title,
+      page_id: p.page_id,
+    })),
+  });
+
+  return { posts: postsWithLikes, menuUrlMap };
 };
 
 export function MediaWidget({ widget }: MediaWidgetProps) {
@@ -156,6 +197,19 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
     );
   }
 
+  // 게시글별 메뉴 URL 매핑을 함수로 처리
+  const getPostUrl = (post: any) => {
+    const menuUrl = data?.menuUrlMap?.[post.page_id];
+    console.log("🔗 링크 생성:", {
+      post_id: post.id,
+      page_id: post.page_id,
+      menuUrlMap: data?.menuUrlMap,
+      menuUrl,
+      finalUrl: menuUrl ? `${menuUrl}/${post.id}` : `/${post.id}`,
+    });
+    return menuUrl ? `${menuUrl}/${post.id}` : `/${post.id}`;
+  };
+
   // 데이터가 없는 경우
   if (!data || data.posts.length === 0) {
     return (
@@ -207,9 +261,13 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
           {/* Featured Video */}
           <div className="lg:col-span-3 col-span-2">
             <div className="border border-gray-100 hover:shadow-lg transition-all duration-500 transform hover:-translate-y-1 rounded-lg overflow-hidden">
-              <Link
-                href={`${widget.display_options?.page_slug}/${data.posts[0].id}`}
-              >
+              {(() => {
+                const linkUrl = getPostUrl(data.posts[0]);
+                console.log("Featured Video 링크:", linkUrl);
+                console.log("post:", data.posts[0]);
+                return null;
+              })()}
+              <Link href={getPostUrl(data.posts[0])}>
                 <div className="relative aspect-video bg-gradient-to-br from-gray-900 to-gray-700 group cursor-pointer">
                   {data.posts[0].thumbnail_image ? (
                     <img
@@ -295,8 +353,14 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
                     console.log(`렌더링 중인 post ${index + 1}:`, post.title);
                     return null;
                   })()}
+                  {(() => {
+                    const linkUrl = getPostUrl(post);
+                    console.log(`Video List 링크 ${index + 1}:`, linkUrl);
+                    console.log("post:", post);
+                    return null;
+                  })()}
                   <Link
-                    href={`${widget.display_options?.page_slug}/${post.id}`}
+                    href={getPostUrl(post)}
                     className="flex flex-row w-full group"
                   >
                     <div className="relative w-20 sm:w-28 h-20 flex-shrink-0">
@@ -359,7 +423,7 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
               ))}
 
             <Link
-              href={widget.display_options?.page_slug || "/"}
+              href={data?.menuUrlMap?.[Object.keys(data.menuUrlMap)[0]] || "/"}
               className="w-full py-2 px-4 border border-gray-200 rounded-md hover:shadow-lg transition-all duration-500 transform hover:-translate-y-1 text-sm flex items-center justify-center group"
             >
               {widget.display_options?.media_more_text || "더 많은 미디어 보기"}
