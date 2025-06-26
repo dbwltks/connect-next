@@ -1,14 +1,36 @@
-import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs";
+import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
   try {
     // 응답 객체 생성
-    const res = NextResponse.next();
+    let supabaseResponse = NextResponse.next({
+      request,
+    });
 
-    // Supabase 클라이언트 생성
-    const supabase = createMiddlewareClient({ req: request, res });
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value }) =>
+              request.cookies.set(name, value)
+            );
+            supabaseResponse = NextResponse.next({
+              request,
+            });
+            cookiesToSet.forEach(({ name, value, options }) =>
+              supabaseResponse.cookies.set(name, value, options)
+            );
+          },
+        },
+      }
+    );
 
     // 세션 가져오기
     const {
@@ -37,7 +59,7 @@ export async function middleware(request: NextRequest) {
 
     // 관리자 페이지는 임시로 보호 제외
     console.log("Middleware - Allowing access to path:", path);
-    return res;
+    return supabaseResponse;
   } catch (error) {
     console.error("Middleware Error:", error);
     return NextResponse.next();

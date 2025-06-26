@@ -318,7 +318,7 @@ export default function HomepageWidgets({
       ))}
 
       {/* 기존 메인 레이아웃 */}
-      <div className="2xl:container mx-auto sm:px-8 md:px-12 lg:px-16 py-8 2xl:px-0">
+      <div className="2xl:container mx-auto sm:px-8 md:px-12 lg:px-16 py-4 2xl:px-0">
         <div className="grid grid-cols-12 gap-6">
           {layoutStructure === "1-col" && (
             <div className="col-span-12 flex justify-center">

@@ -1,37 +1,37 @@
 import { supabase } from "@/db";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { toast } from "@/components/ui/toaster";
 import type { BoardPostStatus } from "@/types/index";
 
-const supabaseClient = createClientComponentClient();
-
 // 유저 정보 가져오기 (세션 기반)
-export async function getHeaderUser() {
+export const getCurrentUser = async () => {
   try {
     const {
       data: { session },
     } = await supabase.auth.getSession();
-    if (session?.user) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("username, full_name")
-        .eq("id", session.user.id)
-        .single();
-      return {
-        id: session.user.id,
-        username:
-          profile?.username || session.user.email?.split("@")[0] || "익명",
-        email: session.user.email,
-      };
-    }
-    if (typeof window === "undefined") return null;
-    const stored =
-      localStorage.getItem("user") || sessionStorage.getItem("user");
-    return stored ? JSON.parse(stored) : null;
+
+    const { data: profile } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", session?.user?.id)
+      .single();
+
+    return { session, profile };
   } catch (error) {
+    console.error("사용자 정보 가져오기 실패:", error);
+    return { session: null, profile: null };
+  }
+};
+
+// 헤더용 사용자 정보 가져오기 (호환성을 위해 추가)
+export const getHeaderUser = async () => {
+  try {
+    const { session, profile } = await getCurrentUser();
+    return profile || session?.user || null;
+  } catch (error) {
+    console.error("헤더 사용자 정보 가져오기 실패:", error);
     return null;
   }
-}
+};
 
 // 임시등록 목록 불러오기 (status='draft')
 export async function fetchDrafts({
@@ -216,7 +216,7 @@ async function handleRequest<T>(requestFn: () => Promise<T>): Promise<T> {
       // 세션 갱신 시도
       const {
         data: { session },
-      } = await supabaseClient.auth.refreshSession();
+      } = await supabase.auth.refreshSession();
       if (session) {
         // 세션 갱신 성공시 원래 요청 재시도
         return await requestFn();

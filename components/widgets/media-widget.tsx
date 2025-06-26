@@ -15,7 +15,8 @@ interface MediaWidgetProps {
 // SWR 키와 페처 함수
 const fetchMediaData = async (pageId: string, maxItems: number = 5) => {
   // 1. 게시글 데이터
-  const posts = await fetchMediaWidgetPosts(pageId, maxItems);
+  const postsData = await fetchMediaWidgetPosts(pageId, maxItems);
+  const posts = postsData.posts;
   if (!posts || posts.length === 0) return { posts: [], menuUrl: null };
 
   // 2. 각 게시글의 page_id로 메뉴 URL 찾기
@@ -43,7 +44,7 @@ const fetchMediaData = async (pageId: string, maxItems: number = 5) => {
     console.log("메뉴 검색 결과:", { pId, menuData, menuError });
 
     if (!menuError && menuData && menuData.length > 0) {
-      menuUrlMap[pId] = menuData[0].url;
+      menuUrlMap[pId] = (menuData[0] as any).url;
     }
   }
 
@@ -79,7 +80,7 @@ const fetchMediaData = async (pageId: string, maxItems: number = 5) => {
     menuUrlMap,
     uniquePageIds,
     firstPostPageId: postsWithLikes[0]?.page_id,
-    posts: postsWithLikes.map((p) => ({
+    posts: postsWithLikes.map((p: any) => ({
       id: p.id,
       title: p.title,
       page_id: p.page_id,
@@ -303,7 +304,7 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
                 </div>
                 <div className="p-3 bg-white">
                   <div className="w-full overflow-hidden">
-                    <h4 className="text-lg font-medium truncate block w-full">
+                    <h4 className="text-xl font-medium truncate block w-full">
                       {data.posts[0].title}
                     </h4>
                   </div>
@@ -347,7 +348,7 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
               data.posts.slice(1).map((post: any, index: number) => (
                 <div
                   key={post.id}
-                  className="overflow-hidden border border-gray-100 hover:shadow-md transition-all duration-500 transform hover:-translate-y-1 rounded-lg w-full"
+                  className="overflow-hidden bg-white border border-gray-100 hover:shadow-md transition-all duration-500 transform hover:-translate-y-1 rounded-lg w-full"
                 >
                   {(() => {
                     console.log(`렌더링 중인 post ${index + 1}:`, post.title);
@@ -394,7 +395,7 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
                     </div>
                     <div className="p-1.5 sm:p-2 flex-1 w-full overflow-hidden">
                       <div className="w-full overflow-hidden">
-                        <div className="text-sm truncate block w-full">
+                        <div className="text-base truncate block w-full">
                           {post.title}
                         </div>
                       </div>
@@ -424,7 +425,7 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
 
             <Link
               href={data?.menuUrlMap?.[Object.keys(data.menuUrlMap)[0]] || "/"}
-              className="w-full py-2 px-4 border border-gray-200 rounded-md hover:shadow-lg transition-all duration-500 transform hover:-translate-y-1 text-sm flex items-center justify-center group"
+              className="w-full bg-white py-2 px-4 border border-gray-200 rounded-md hover:shadow-lg transition-all duration-500 transform hover:-translate-y-1 text-sm flex items-center justify-center group"
             >
               {widget.display_options?.media_more_text || "더 많은 미디어 보기"}
               <svg
