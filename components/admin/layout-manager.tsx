@@ -32,6 +32,10 @@ import LocationWidget from "../widgets/location-widget";
 import MenuListWidget from "../widgets/menu-list-widget";
 import { StripWidget } from "../widgets/strip-widget";
 import { CarouselWidget, CAROUSEL_TYPES } from "../widgets/carousel-widget";
+import {
+  OrganizationChartWidget,
+  CHART_STYLES,
+} from "../widgets/organization-chart-widget";
 import { supabase } from "@/db";
 import { toast } from "@/hooks/use-toast";
 import { Plus, Trash2, MoveVertical, Settings, Eye } from "lucide-react";
@@ -55,12 +59,12 @@ export type Widget = {
     show_date?: boolean; // 날짜 표시 여부
     show_excerpt?: boolean; // 요약 표시 여부
     layout_type?: string | number; // 레이아웃 타입 (문자열 또는 숫자)
-
+    
     // 미디어 위젯 관련 속성
     media_title?: string; // 미디어 섹션 제목
     media_subtitle?: string; // 미디어 섹션 부제목
     media_more_text?: string; // 더 많은 미디어 보기 텍스트
-
+    
     // 위치 정보 위젯 관련 속성
     location_title?: string; // 위치 정보 섹션 제목
     location_subtitle?: string; // 위치 정보 섹션 부제목
@@ -69,7 +73,7 @@ export type Widget = {
     email?: string; // 이메일
     map_url?: string; // 지도 링크 URL
     embed_map_url?: string; // 임베드 지도 URL
-
+    
     page_id?: string; // 콘텐츠를 가져올 페이지 ID (미디어, 위치 등 공통)
 
     // 인기 게시글 위젯 관련 속성
@@ -105,9 +109,10 @@ const WIDGET_TYPES = [
   { id: "login", name: "로그인" },
   { id: "strip", name: "스트립(띠 배너)" },
   { id: "carousel", name: "캐러셀 슬라이드" },
+  { id: "organization-chart", name: "조직도" },
 ];
 
-export default function LayoutManager(): React.ReactNode {
+export default function LayoutManager(): JSX.Element {
   // 상태 관리
   const [isLoading, setIsLoading] = useState(false);
   const [layoutAreas, setLayoutAreas] = useState<LayoutArea[]>([
@@ -130,6 +135,9 @@ export default function LayoutManager(): React.ReactNode {
   const carouselFileInputRef = useRef<HTMLInputElement>(null);
   const [carouselUploading, setCarouselUploading] = useState(false);
   const [showImageBrowser, setShowImageBrowser] = useState(false);
+  const [editingMember, setEditingMember] = useState<any | null>(null);
+  const [memberImageUploading, setMemberImageUploading] = useState(false);
+  const memberFileInputRef = useRef<HTMLInputElement>(null);
 
   // 컴포넌트 마운트 시 데이터 로드
   useEffect(() => {
@@ -549,6 +557,96 @@ export default function LayoutManager(): React.ReactNode {
     }
   };
 
+  // 조직원 관리 함수들
+  const addOrUpdateMember = (memberData: any) => {
+    if (!editingWidget) return;
+
+    let currentMembers = editingWidget.settings?.custom_data || [];
+
+    if (editingMember && editingMember.id) {
+      // 기존 멤버 수정 (id가 있는 경우)
+      currentMembers = currentMembers.map((member: any) =>
+        member.id === editingMember.id
+          ? { ...memberData, id: editingMember.id }
+          : member
+      );
+    } else {
+      // 새 멤버 추가 (id가 없거나 editingMember가 빈 객체인 경우)
+      const newMember = {
+        ...memberData,
+        id: Date.now().toString(),
+      };
+      currentMembers = [...currentMembers, newMember];
+    }
+
+    setEditingWidget({
+      ...editingWidget,
+      settings: {
+        ...editingWidget.settings,
+        custom_data: currentMembers,
+      },
+    });
+
+    toast({
+      title:
+        editingMember && editingMember.id
+          ? "조직원 수정 완료"
+          : "조직원 추가 완료",
+      description: `${memberData.name}님이 ${editingMember && editingMember.id ? "수정" : "추가"}되었습니다.`,
+    });
+  };
+
+  const deleteMember = (memberId: string) => {
+    if (!editingWidget) return;
+
+    const currentMembers = editingWidget.settings?.custom_data || [];
+    const updatedMembers = currentMembers.filter(
+      (member: any) => member.id !== memberId
+    );
+
+    setEditingWidget({
+      ...editingWidget,
+      settings: {
+        ...editingWidget.settings,
+        custom_data: updatedMembers,
+      },
+    });
+
+    toast({
+      title: "조직원 삭제 완료",
+      description: "조직원이 삭제되었습니다.",
+    });
+  };
+
+  // 조직원 순서 변경 함수 (위/아래 이동)
+  const moveMember = (index: number, direction: "up" | "down") => {
+    if (!editingWidget) return;
+
+    const currentData = [...(editingWidget.settings?.custom_data || [])];
+    const newIndex = direction === "up" ? index - 1 : index + 1;
+
+    if (newIndex < 0 || newIndex >= currentData.length) return;
+
+    // 두 요소의 위치를 바꿈
+    [currentData[index], currentData[newIndex]] = [
+      currentData[newIndex],
+      currentData[index],
+    ];
+
+    setEditingWidget({
+      ...editingWidget,
+      settings: {
+        ...editingWidget.settings,
+        custom_data: currentData,
+      },
+    });
+
+    toast({
+      title: "순서 변경",
+      description: `조직원이 ${direction === "up" ? "위로" : "아래로"} 이동되었습니다.`,
+    });
+  };
+
   // 위젯 설정 저장
   const saveWidgetSettings = async () => {
     if (!editingWidget) return;
@@ -616,7 +714,7 @@ export default function LayoutManager(): React.ReactNode {
 
     return (
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[700px]">
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>위젯 설정: {editingWidget.title}</DialogTitle>
             <DialogDescription>
@@ -2531,6 +2629,682 @@ export default function LayoutManager(): React.ReactNode {
             </div>
           )}
 
+          {/* 조직도 위젯 설정 */}
+          {editingWidget?.type === "organization-chart" && (
+            <div className="space-y-4">
+              <h4 className="font-medium text-sm">조직도 설정</h4>
+
+              <Tabs defaultValue="basic" className="w-full">
+                <TabsList className="grid w-full grid-cols-4">
+                  <TabsTrigger value="basic">기본 설정</TabsTrigger>
+                  <TabsTrigger value="people">인사 관리</TabsTrigger>
+                  <TabsTrigger value="display">표시 옵션</TabsTrigger>
+                  <TabsTrigger value="style">스타일링</TabsTrigger>
+                </TabsList>
+
+                {/* 기본 설정 탭 */}
+                <TabsContent value="basic" className="space-y-4 pt-4">
+                  <div>
+                    <Label htmlFor="chart-style">조직도 스타일</Label>
+                    <Select
+                      value={
+                        editingWidget.settings?.chart_style || CHART_STYLES.TREE
+                      }
+                      onValueChange={(value) => {
+                        setEditingWidget({
+                          ...editingWidget,
+                          settings: {
+                            ...editingWidget.settings,
+                            chart_style: value,
+                          },
+                        });
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={CHART_STYLES.TREE}>
+                          트리형 (수직)
+                        </SelectItem>
+                        <SelectItem value={CHART_STYLES.HORIZONTAL}>
+                          수평형
+                        </SelectItem>
+                        <SelectItem value={CHART_STYLES.COMPACT}>
+                          컴팩트형
+                        </SelectItem>
+                        <SelectItem value={CHART_STYLES.CARDS}>
+                          카드형 (그리드)
+                        </SelectItem>
+                        <SelectItem value={CHART_STYLES.DETAILED}>
+                          상세라인형
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      조직도의 표시 방식을 선택합니다.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="org-description">조직도 설명</Label>
+                    <textarea
+                      id="org-description"
+                      className="w-full min-h-[80px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      value={editingWidget.settings?.description || ""}
+                      placeholder="조직도에 대한 간단한 설명을 입력하세요"
+                      onChange={(e) =>
+                        setEditingWidget({
+                          ...editingWidget,
+                          settings: {
+                            ...editingWidget.settings,
+                            description: e.target.value,
+                          },
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="space-y-3 pt-4 border-t border-gray-200">
+                    <Label className="text-sm font-medium">
+                      계층별 이름 설정
+                    </Label>
+                    <p className="text-xs text-gray-500">
+                      각 계층의 표시 이름을 설정할 수 있습니다. (카드형
+                      레이아웃에서 사용)
+                    </p>
+
+                    {[0, 1, 2, 3, 4].map((level) => (
+                      <div
+                        key={level}
+                        className="grid grid-cols-4 gap-2 items-center"
+                      >
+                        <Label className="text-xs text-gray-600">
+                          Level {level}:
+                        </Label>
+                        <div className="col-span-3">
+                          <Input
+                            placeholder={
+                              level === 0
+                                ? "최고 경영진"
+                                : level === 1
+                                  ? "임원진"
+                                  : level === 2
+                                    ? "부서장"
+                                    : level === 3
+                                      ? "팀장"
+                                      : "팀원"
+                            }
+                            value={
+                              editingWidget.settings?.level_names?.[level] || ""
+                            }
+                            onChange={(e) => {
+                              const currentLevelNames =
+                                editingWidget.settings?.level_names || {};
+                              setEditingWidget({
+                                ...editingWidget,
+                                settings: {
+                                  ...editingWidget.settings,
+                                  level_names: {
+                                    ...currentLevelNames,
+                                    [level]: e.target.value,
+                                  },
+                                },
+                              });
+                            }}
+                            className="h-8 text-xs"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </TabsContent>
+
+                {/* 인사 관리 탭 */}
+                <TabsContent value="people" className="space-y-4 pt-4">
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <div className="flex items-center justify-between mb-3">
+                      <h5 className="font-medium text-sm">
+                        현재 조직원 (
+                        {(editingWidget.settings?.custom_data || []).length}명)
+                      </h5>
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          setEditingMember(editingMember ? null : {})
+                        }
+                        className="h-7"
+                      >
+                        {editingMember && !editingMember.id
+                          ? "취소"
+                          : "+ 조직원 추가"}
+                      </Button>
+                    </div>
+
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {(editingWidget.settings?.custom_data || []).length ===
+                      0 ? (
+                        <div className="text-center py-8 text-gray-500">
+                          <p className="text-sm">등록된 조직원이 없습니다.</p>
+                          <p className="text-xs mt-1">
+                            위의 '조직원 추가' 버튼을 클릭해서 조직원을
+                            추가해보세요.
+                          </p>
+                        </div>
+                      ) : (
+                        (editingWidget.settings?.custom_data || []).map(
+                          (person: any, index: number) => (
+                            <div
+                              key={person.id || index}
+                              className="flex items-center justify-between bg-white p-3 rounded border hover:bg-gray-50 transition-colors"
+                            >
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                {person.avatar && (
+                                  <img
+                                    src={person.avatar}
+                                    alt={person.name}
+                                    className="w-8 h-8 rounded-full object-cover border"
+                                  />
+                                )}
+                                <div>
+                                  <span className="font-medium text-sm block">
+                                    {person.name}
+                                  </span>
+                                  <span className="text-xs text-gray-500">
+                                    {person.position}
+                                  </span>
+                                  {person.department && (
+                                    <span className="text-xs text-blue-600 ml-2">
+                                      · {person.department}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <span className="text-xs bg-gray-100 px-2 py-1 rounded whitespace-nowrap">
+                                  Level {person.level}
+                                </span>
+
+                                {/* 순서 변경 버튼 */}
+                                <div className="flex flex-col gap-1">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-4 w-6 p-0 flex-shrink-0"
+                                    onClick={() => moveMember(index, "up")}
+                                    disabled={index === 0}
+                                    title="위로 이동"
+                                  >
+                                    <svg
+                                      className="w-3 h-3"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M5 15l7-7 7 7"
+                                      />
+                                    </svg>
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-4 w-6 p-0 flex-shrink-0"
+                                    onClick={() => moveMember(index, "down")}
+                                    disabled={
+                                      index ===
+                                      (
+                                        editingWidget.settings?.custom_data ||
+                                        []
+                                      ).length -
+                                        1
+                                    }
+                                    title="아래로 이동"
+                                  >
+                                    <svg
+                                      className="w-3 h-3"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M19 9l-7 7-7-7"
+                                      />
+                                    </svg>
+                                  </Button>
+                                </div>
+
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 w-7 p-0 flex-shrink-0"
+                                  onClick={() =>
+                                    setEditingMember(
+                                      editingMember?.id === person.id
+                                        ? null
+                                        : person
+                                    )
+                                  }
+                                >
+                                  ✏️
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
+                                  onClick={() => {
+                                    if (
+                                      confirm(
+                                        `'${person.name}' 조직원을 삭제하시겠습니까?`
+                                      )
+                                    ) {
+                                      deleteMember(person.id);
+                                    }
+                                  }}
+                                >
+                                  🗑️
+                                </Button>
+                              </div>
+                            </div>
+                          )
+                        )
+                      )}
+                    </div>
+
+                    {/* 조직원 편집 폼 */}
+                    {editingMember && (
+                      <div className="mt-4 p-4 border rounded-lg bg-gray-50">
+                        <h6 className="font-medium text-sm mb-3">
+                          {editingMember.id
+                            ? "조직원 정보 수정"
+                            : "새 조직원 추가"}
+                        </h6>
+                        <MemberForm
+                          member={editingMember}
+                          onSave={(data) => {
+                            addOrUpdateMember(data);
+                            setEditingMember(null);
+                          }}
+                          onCancel={() => setEditingMember(null)}
+                          existingMembers={
+                            editingWidget?.settings?.custom_data || []
+                          }
+                        />
+                      </div>
+                    )}
+
+                    <div className="mt-4 flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => {
+                          // 기존 데이터가 있으면 확인
+                          const currentData =
+                            editingWidget.settings?.custom_data || [];
+                          if (currentData.length > 0) {
+                            if (
+                              !confirm(
+                                "기존 조직원 데이터가 삭제됩니다. 계속하시겠습니까?"
+                              )
+                            ) {
+                              return;
+                            }
+                          }
+
+                          // 샘플 데이터로 초기화 (계층별 하나씩)
+                          const sampleData = [
+                            {
+                              id: "1",
+                              name: "홍대표",
+                              position: "대표",
+                              department: "경영진",
+                              level: 0,
+                              email: "ceo@example.com",
+                              phone: "02-1234-5678",
+                              avatar:
+                                "https://via.placeholder.com/80x80/6366f1/ffffff?text=홍대표",
+                            },
+                            {
+                              id: "2",
+                              name: "김부장",
+                              position: "부장",
+                              department: "개발팀",
+                              level: 1,
+                              parentId: "1",
+                              email: "manager@example.com",
+                              phone: "02-1234-5679",
+                              avatar:
+                                "https://via.placeholder.com/80x80/3b82f6/ffffff?text=김부장",
+                            },
+                            {
+                              id: "3",
+                              name: "이팀장",
+                              position: "팀장",
+                              department: "개발팀",
+                              level: 2,
+                              parentId: "2",
+                              email: "team@example.com",
+                              avatar:
+                                "https://via.placeholder.com/80x80/06b6d4/ffffff?text=이팀장",
+                            },
+                          ];
+                          setEditingWidget({
+                            ...editingWidget,
+                            settings: {
+                              ...editingWidget.settings,
+                              custom_data: sampleData,
+                            },
+                          });
+
+                          // 편집 모드 리셋
+                          setEditingMember(null);
+
+                          toast({
+                            title: "샘플 데이터 로드",
+                            description: "샘플 조직도 데이터가 로드되었습니다.",
+                          });
+                        }}
+                      >
+                        📋 샘플 조직도 데이터 불러오기
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="bg-green-50 p-3 rounded">
+                    <p className="text-sm text-green-700">
+                      ✅ 조직원을 추가, 편집, 삭제할 수 있습니다. 변경사항은
+                      저장 버튼을 클릭해야 적용됩니다.
+                    </p>
+                  </div>
+                </TabsContent>
+
+                {/* 표시 옵션 탭 */}
+                <TabsContent value="display" className="space-y-4 pt-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="show-avatars"
+                        checked={editingWidget.settings?.show_avatars ?? true}
+                        onCheckedChange={(checked) => {
+                          setEditingWidget({
+                            ...editingWidget,
+                            settings: {
+                              ...editingWidget.settings,
+                              show_avatars: checked,
+                            },
+                          });
+                        }}
+                      />
+                      <Label htmlFor="show-avatars" className="text-sm">
+                        아바타 표시
+                      </Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="show-departments"
+                        checked={
+                          editingWidget.settings?.show_departments ?? true
+                        }
+                        onCheckedChange={(checked) => {
+                          setEditingWidget({
+                            ...editingWidget,
+                            settings: {
+                              ...editingWidget.settings,
+                              show_departments: checked,
+                            },
+                          });
+                        }}
+                      />
+                      <Label htmlFor="show-departments" className="text-sm">
+                        부서 정보 표시
+                      </Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="show-contact"
+                        checked={editingWidget.settings?.show_contact ?? false}
+                        onCheckedChange={(checked) => {
+                          setEditingWidget({
+                            ...editingWidget,
+                            settings: {
+                              ...editingWidget.settings,
+                              show_contact: checked,
+                            },
+                          });
+                        }}
+                      />
+                      <Label htmlFor="show-contact" className="text-sm">
+                        연락처 정보 표시
+                      </Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="show-position-icons"
+                        checked={
+                          editingWidget.settings?.show_position_icons ?? true
+                        }
+                        onCheckedChange={(checked) => {
+                          setEditingWidget({
+                            ...editingWidget,
+                            settings: {
+                              ...editingWidget.settings,
+                              show_position_icons: checked,
+                            },
+                          });
+                        }}
+                      />
+                      <Label htmlFor="show-position-icons" className="text-sm">
+                        직책 아이콘 표시
+                      </Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="enable-expand-collapse"
+                        checked={
+                          editingWidget.settings?.enable_expand_collapse ?? true
+                        }
+                        onCheckedChange={(checked) => {
+                          setEditingWidget({
+                            ...editingWidget,
+                            settings: {
+                              ...editingWidget.settings,
+                              enable_expand_collapse: checked,
+                            },
+                          });
+                        }}
+                      />
+                      <Label
+                        htmlFor="enable-expand-collapse"
+                        className="text-sm"
+                      >
+                        펼치기/접기 기능 사용
+                      </Label>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="card-size">카드 크기</Label>
+                    <Select
+                      value={editingWidget.settings?.card_size || "medium"}
+                      onValueChange={(value) => {
+                        setEditingWidget({
+                          ...editingWidget,
+                          settings: {
+                            ...editingWidget.settings,
+                            card_size: value,
+                          },
+                        });
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="small">작음</SelectItem>
+                        <SelectItem value="medium">보통</SelectItem>
+                        <SelectItem value="large">큼</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </TabsContent>
+
+                {/* 스타일링 탭 */}
+                <TabsContent value="style" className="space-y-4 pt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="theme-color">테마 색상</Label>
+                    <Select
+                      value={editingWidget.settings?.theme_color || "blue"}
+                      onValueChange={(value) => {
+                        setEditingWidget({
+                          ...editingWidget,
+                          settings: {
+                            ...editingWidget.settings,
+                            theme_color: value,
+                          },
+                        });
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="blue">파란색</SelectItem>
+                        <SelectItem value="purple">보라색</SelectItem>
+                        <SelectItem value="green">초록색</SelectItem>
+                        <SelectItem value="orange">주황색</SelectItem>
+                        <SelectItem value="gray">회색</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="background-style">배경 스타일</Label>
+                    <Select
+                      value={
+                        editingWidget.settings?.background_style || "gradient"
+                      }
+                      onValueChange={(value) => {
+                        setEditingWidget({
+                          ...editingWidget,
+                          settings: {
+                            ...editingWidget.settings,
+                            background_style: value,
+                          },
+                        });
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="gradient">그라데이션</SelectItem>
+                        <SelectItem value="solid">단색</SelectItem>
+                        <SelectItem value="transparent">투명</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="card-spacing">카드 간격</Label>
+                    <Select
+                      value={editingWidget.settings?.card_spacing || "normal"}
+                      onValueChange={(value) => {
+                        setEditingWidget({
+                          ...editingWidget,
+                          settings: {
+                            ...editingWidget.settings,
+                            card_spacing: value,
+                          },
+                        });
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="tight">좁음</SelectItem>
+                        <SelectItem value="normal">보통</SelectItem>
+                        <SelectItem value="wide">넓음</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="enable-animations"
+                        checked={
+                          editingWidget.settings?.enable_animations ?? true
+                        }
+                        onCheckedChange={(checked) => {
+                          setEditingWidget({
+                            ...editingWidget,
+                            settings: {
+                              ...editingWidget.settings,
+                              enable_animations: checked,
+                            },
+                          });
+                        }}
+                      />
+                      <Label htmlFor="enable-animations" className="text-sm">
+                        애니메이션 효과 사용
+                      </Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="enable-shadows"
+                        checked={editingWidget.settings?.enable_shadows ?? true}
+                        onCheckedChange={(checked) => {
+                          setEditingWidget({
+                            ...editingWidget,
+                            settings: {
+                              ...editingWidget.settings,
+                              enable_shadows: checked,
+                            },
+                          });
+                        }}
+                      />
+                      <Label htmlFor="enable-shadows" className="text-sm">
+                        카드 그림자 효과
+                      </Label>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 p-3 rounded">
+                    <p className="text-sm text-gray-600">
+                      스타일 설정은 실시간으로 미리보기에 반영됩니다.
+                    </p>
+                  </div>
+                </TabsContent>
+              </Tabs>
+
+              <div className="pt-4 border-t">
+                <h5 className="font-medium text-sm mb-3">조직도 정보</h5>
+                <div className="space-y-2 text-sm text-gray-600">
+                  <p>• 현재 샘플 데이터가 표시됩니다</p>
+                  <p>
+                    • 실제 조직도 데이터는 인사 관리 탭에서 설정할 수 있습니다
+                  </p>
+                  <p>
+                    • 트리형은 계층 구조를, 카드형은 레벨별 그리드로 표시됩니다
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <DialogFooter>
             <Button
               variant="outline"
@@ -2943,6 +3717,23 @@ export default function LayoutManager(): React.ReactNode {
           </div>
         );
 
+      case "organization-chart":
+        return previewMode ? (
+          <OrganizationChartWidget widget={widget} />
+        ) : (
+          <div className="bg-teal-50 p-4 rounded">
+            <div className="font-medium">{widget.title || "조직도"}</div>
+            <div className="text-sm text-gray-500 mt-1">조직도 위젯</div>
+            {widget.display_options?.page_id && (
+              <div className="text-xs text-blue-500 mt-1">
+                선택된 페이지:{" "}
+                {pages.find((p) => p.id === widget.display_options?.page_id)
+                  ?.title || "없음"}
+              </div>
+            )}
+          </div>
+        );
+
       default:
         return <div className="bg-gray-100 p-4 rounded">알 수 없는 위젯</div>;
     }
@@ -3188,6 +3979,21 @@ export default function LayoutManager(): React.ReactNode {
                     <Plus className="h-4 w-4 mr-2" />
                     캐러셀 슬라이드 추가
                   </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      addNewWidget("organization-chart", addingWidgetToArea, {
+                        title: "조직도",
+                      });
+                      setAddingWidgetToArea(null);
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    조직도 추가
+                  </Button>
                 </div>
               </div>
             </div>
@@ -3404,5 +4210,511 @@ export default function LayoutManager(): React.ReactNode {
         title="캐러셀용 이미지 선택"
       />
     </div>
+  );
+}
+
+// 조직원 추가/편집 폼 컴포넌트
+function MemberForm({
+  member,
+  onSave,
+  onCancel,
+  existingMembers,
+}: {
+  member?: any;
+  onSave: (data: any) => void;
+  onCancel: () => void;
+  existingMembers: any[];
+}) {
+  const [formData, setFormData] = useState({
+    name: member?.name || "",
+    position: member?.position || "",
+    department: member?.department || "",
+    level: member?.level || 0,
+    parentId: member?.parentId || "",
+    email: member?.email || "",
+    phone: member?.phone || "",
+    avatar: member?.avatar || "",
+    social_links: member?.social_links || {
+      facebook: "",
+      twitter: "",
+      linkedin: "",
+      instagram: "",
+      youtube: "",
+      threads: "",
+    },
+  });
+  const [showImageBrowser, setShowImageBrowser] = useState(false);
+  const [memberImageUploading, setMemberImageUploading] = useState(false);
+  const memberFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name.trim() || !formData.position.trim()) {
+      return;
+    }
+    onSave(formData);
+  };
+
+  const handleChange = (field: string, value: any) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const availableParents = existingMembers.filter(
+    (m) => m.id !== member?.id && m.level < (formData.level || 0)
+  );
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="name">이름 *</Label>
+          <Input
+            id="name"
+            value={formData.name}
+            onChange={(e) => handleChange("name", e.target.value)}
+            placeholder="이름을 입력하세요"
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="position">직책 *</Label>
+          <Input
+            id="position"
+            list="position-suggestions"
+            value={formData.position}
+            onChange={(e) => handleChange("position", e.target.value)}
+            placeholder="직책을 입력하세요"
+            required
+          />
+          <datalist id="position-suggestions">
+            {/* 교회 직책 */}
+            <option value="담임목사" />
+            <option value="부목사" />
+            <option value="전도사" />
+            <option value="장로" />
+            <option value="안수집사" />
+            <option value="집사" />
+            <option value="권사" />
+            <option value="서리집사" />
+            <option value="교육부장" />
+            <option value="찬양팀장" />
+
+            {/* 일반 조직 직책 */}
+            <option value="대표이사" />
+            <option value="부사장" />
+            <option value="상무" />
+            <option value="이사" />
+            <option value="부장" />
+            <option value="차장" />
+            <option value="과장" />
+            <option value="대리" />
+            <option value="주임" />
+            <option value="사원" />
+
+            {/* 학교 직책 */}
+            <option value="교장" />
+            <option value="교감" />
+            <option value="부장교사" />
+            <option value="교사" />
+
+            {/* 정부/공공기관 직책 */}
+            <option value="국장" />
+            <option value="과장" />
+            <option value="팀장" />
+            <option value="주무관" />
+
+            {/* 병원 직책 */}
+            <option value="원장" />
+            <option value="부원장" />
+            <option value="진료부장" />
+            <option value="과장" />
+            <option value="전문의" />
+            <option value="간호사" />
+          </datalist>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="department">부서</Label>
+          <Input
+            id="department"
+            value={formData.department}
+            onChange={(e) => handleChange("department", e.target.value)}
+            placeholder="부서명을 입력하세요"
+          />
+        </div>
+        <div>
+          <Label htmlFor="level">계층 레벨</Label>
+          <Select
+            value={formData.level.toString()}
+            onValueChange={(value) => handleChange("level", parseInt(value))}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="0">0 (최상위)</SelectItem>
+              <SelectItem value="1">1</SelectItem>
+              <SelectItem value="2">2</SelectItem>
+              <SelectItem value="3">3</SelectItem>
+              <SelectItem value="4">4</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {formData.level > 0 && availableParents.length > 0 && (
+        <div>
+          <Label htmlFor="parent">상위자</Label>
+          <Select
+            value={formData.parentId || "none"}
+            onValueChange={(value) =>
+              handleChange("parentId", value === "none" ? "" : value)
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="상위자를 선택하세요" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">없음</SelectItem>
+              {availableParents.map((parent) => (
+                <SelectItem key={parent.id} value={parent.id}>
+                  {parent.name} ({parent.position})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="email">이메일</Label>
+          <Input
+            id="email"
+            type="email"
+            value={formData.email}
+            onChange={(e) => handleChange("email", e.target.value)}
+            placeholder="email@example.com"
+          />
+        </div>
+        <div>
+          <Label htmlFor="phone">전화번호</Label>
+          <Input
+            id="phone"
+            value={formData.phone}
+            onChange={(e) => handleChange("phone", e.target.value)}
+            placeholder="010-1234-5678"
+          />
+        </div>
+      </div>
+
+      <div>
+        <Label>프로필 이미지</Label>
+        <div className="space-y-3">
+          <div className="flex gap-2">
+            <Input
+              value={formData.avatar}
+              onChange={(e) => handleChange("avatar", e.target.value)}
+              placeholder="https://example.com/image.jpg"
+              className="flex-1"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowImageBrowser(true)}
+              className="whitespace-nowrap"
+            >
+              📁 서버 이미지
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => memberFileInputRef.current?.click()}
+              disabled={memberImageUploading}
+              className="whitespace-nowrap"
+            >
+              {memberImageUploading ? "업로드 중..." : "📤 업로드"}
+            </Button>
+          </div>
+          {formData.avatar && (
+            <div className="flex items-center gap-3">
+              <img
+                src={formData.avatar}
+                alt="미리보기"
+                className="w-16 h-16 rounded-full object-cover border"
+                onError={(e) => {
+                  e.currentTarget.src =
+                    "https://via.placeholder.com/80x80/gray/white?text=?";
+                }}
+              />
+              <div className="text-sm text-gray-600">
+                <p>미리보기</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleChange("avatar", "")}
+                  className="mt-1"
+                >
+                  이미지 제거
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 파일 업로드 input */}
+        <input
+          type="file"
+          ref={memberFileInputRef}
+          className="hidden"
+          accept="image/*"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+
+            setMemberImageUploading(true);
+            try {
+              const fileName = file.name;
+              const filePath = `organization-avatars/${Date.now()}_${fileName}`;
+              const { error: uploadError } = await supabase.storage
+                .from("homepage-banners")
+                .upload(filePath, file, {
+                  cacheControl: "3600",
+                  upsert: true,
+                });
+
+              if (uploadError) throw uploadError;
+
+              const { data: publicUrlData } = supabase.storage
+                .from("homepage-banners")
+                .getPublicUrl(filePath);
+
+              handleChange("avatar", publicUrlData.publicUrl);
+
+              toast({
+                title: "이미지 업로드 성공",
+                description: "프로필 이미지가 성공적으로 업로드되었습니다.",
+              });
+            } catch (err) {
+              toast({
+                title: "이미지 업로드 실패",
+                description: (err as any).message || "업로드 중 오류 발생",
+                variant: "destructive",
+              });
+            } finally {
+              setMemberImageUploading(false);
+            }
+          }}
+        />
+      </div>
+
+      {/* 소셜 링크 섹션 */}
+      <div className="pt-4 border-t border-gray-200">
+        <Label className="text-sm font-medium mb-3 block">
+          소셜 링크 (선택사항)
+        </Label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <Label htmlFor="facebook" className="text-xs text-gray-600">
+              Facebook
+            </Label>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg
+                  className="w-4 h-4 text-white"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                </svg>
+              </div>
+              <Input
+                id="facebook"
+                value={formData.social_links.facebook}
+                onChange={(e) =>
+                  handleChange("social_links", {
+                    ...formData.social_links,
+                    facebook: e.target.value,
+                  })
+                }
+                placeholder="https://facebook.com/username"
+                className="text-xs"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="twitter" className="text-xs text-gray-600">
+              X (Twitter)
+            </Label>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg
+                  className="w-4 h-4 text-white"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                </svg>
+              </div>
+              <Input
+                id="twitter"
+                value={formData.social_links.twitter}
+                onChange={(e) =>
+                  handleChange("social_links", {
+                    ...formData.social_links,
+                    twitter: e.target.value,
+                  })
+                }
+                placeholder="https://x.com/username"
+                className="text-xs"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="linkedin" className="text-xs text-gray-600">
+              LinkedIn
+            </Label>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-blue-700 rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg
+                  className="w-4 h-4 text-white"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                </svg>
+              </div>
+              <Input
+                id="linkedin"
+                value={formData.social_links.linkedin}
+                onChange={(e) =>
+                  handleChange("social_links", {
+                    ...formData.social_links,
+                    linkedin: e.target.value,
+                  })
+                }
+                placeholder="https://linkedin.com/in/username"
+                className="text-xs"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="instagram" className="text-xs text-gray-600">
+              Instagram
+            </Label>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-purple-600 via-pink-600 to-orange-400 rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg
+                  className="w-4 h-4 text-white"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+                </svg>
+              </div>
+              <Input
+                id="instagram"
+                value={formData.social_links.instagram}
+                onChange={(e) =>
+                  handleChange("social_links", {
+                    ...formData.social_links,
+                    instagram: e.target.value,
+                  })
+                }
+                placeholder="https://instagram.com/username"
+                className="text-xs"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="threads" className="text-xs text-gray-600">
+              Threads
+            </Label>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg
+                  className="w-4 h-4 text-white"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.472 12.01v-.017c.03-3.579.879-6.43 2.525-8.482C5.845 1.205 8.6.024 12.18 0h.014c2.746.02 5.043.725 6.826 2.098 1.677 1.29 2.858 3.13 3.509 5.467l-2.04.569c-1.104-3.96-3.898-5.984-8.304-6.015-2.91.022-5.11.936-6.54 2.717C4.307 6.504 3.616 8.914 3.589 12c.027 3.086.718 5.496 2.057 7.164 1.43 1.781 3.631 2.695 6.54 2.717 2.623-.02 4.358-.631 5.8-2.045 1.647-1.613 1.618-3.593 1.09-4.798-.31-.71-.873-1.3-1.634-1.75-.192 1.352-.622 2.446-1.284 3.272-.886 1.102-2.14 1.704-3.73 1.79-1.202.065-2.361-.218-3.259-.801-1.063-.689-1.685-1.74-1.752-2.964-.065-1.19.408-2.285 1.33-3.082.88-.76 2.119-1.207 3.583-1.291a13.853 13.853 0 0 1 3.02.142c-.126-.742-.375-1.332-.745-1.757-.513-.589-1.293-.2-2.253-.2-.809 0-1.612.159-2.38.472l-.48-1.874c.912-.375 1.918-.563 2.99-.563 1.505 0 2.658.483 3.425 1.437.637.793.951 1.824 1.034 2.958.085.05.168.102.249.156 1.16.784 1.857 1.751 2.095 2.882.309 1.471.157 3.307-1.188 5.185C17.999 22.663 15.598 23.971 12.186 24zM9.225 15.15c.49 0 .965-.04 1.41-.119.565-.095 1.023-.283 1.323-.544.328-.286.551-.679.652-1.14a11.459 11.459 0 0 0-2.717-.285c-.715.042-1.224.25-1.414.576-.146.251-.1.464-.025.617.117.238.342.386.771.386z" />
+                </svg>
+              </div>
+              <Input
+                id="threads"
+                value={formData.social_links.threads}
+                onChange={(e) =>
+                  handleChange("social_links", {
+                    ...formData.social_links,
+                    threads: e.target.value,
+                  })
+                }
+                placeholder="https://threads.net/@username"
+                className="text-xs"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="youtube" className="text-xs text-gray-600">
+              YouTube
+            </Label>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg
+                  className="w-4 h-4 text-white"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                </svg>
+              </div>
+              <Input
+                id="youtube"
+                value={formData.social_links.youtube}
+                onChange={(e) =>
+                  handleChange("social_links", {
+                    ...formData.social_links,
+                    youtube: e.target.value,
+                  })
+                }
+                placeholder="https://youtube.com/@username"
+                className="text-xs"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-2 pt-4">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          취소
+        </Button>
+        <Button type="submit">{member ? "수정" : "추가"}</Button>
+      </div>
+
+      {/* 이미지 브라우저 다이얼로그 */}
+      <ImageBrowser
+        isOpen={showImageBrowser}
+        onClose={() => setShowImageBrowser(false)}
+        onImageSelect={(imageUrl: string, imageName?: string) => {
+          handleChange("avatar", imageUrl);
+          setShowImageBrowser(false);
+          toast({
+            title: "이미지 선택 완료",
+            description: `${imageName || "이미지"}가 선택되었습니다.`,
+          });
+        }}
+        buckets={["homepage-banners", "images", "admin"]}
+        title="프로필 이미지 선택"
+      />
+    </form>
   );
 }

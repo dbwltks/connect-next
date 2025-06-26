@@ -879,8 +879,15 @@ export default function BoardSection({
     <div className={`board-section mb-8 ${className} ${containerClass}`}>
       {/* 타이틀/설명 헤더를 최상단에 분리 */}
       <div className="mb-4">
-        <h2 className="text-xl sm:text-2xl font-bold">{title}</h2>
-        {description && <p className="text-gray-500 mt-1">{description}</p>}
+        <div className="flex items-center gap-3 px-2 sm:px-0">
+          <h2 className="text-xl sm:text-2xl font-bold">{title}</h2>
+          <div className="text-xs text-blue-500 bg-white px-2 py-1 rounded-xl">
+            {totalCount}
+          </div>
+        </div>
+        {description && (
+          <p className="text-gray-500 mt-1 px-2 sm:px-0">{description}</p>
+        )}
       </div>
       {/* 필터/버튼 + 게시글 목록을 하나의 카드로 감싸기 */}
       <div className="sm:rounded-lg border-gray-100 shadow-sm bg-white">

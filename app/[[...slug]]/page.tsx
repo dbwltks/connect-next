@@ -146,7 +146,7 @@ export default async function DynamicPage(props: { params: any }) {
         return (
           <>
             <MainBanner menuId={menu.id} />
-            <div className="sm:container block lg:hidden mx-auto sm:mt-4 border-gray-200 px-0">
+            <div className="sm:container mx-auto sm:mt-4 border-gray-200 px-0">
               <Breadcrumb currentTitle={menu.title} />
             </div>
             <main>
@@ -284,6 +284,9 @@ export default async function DynamicPage(props: { params: any }) {
       return (
         <>
           <MainBanner menuId={pageMenu?.id} />
+          <div className="sm:container block lg:hidden mx-auto sm:mt-4 border border-gray-50 px-0">
+            <Breadcrumb currentTitle={page.title} />
+          </div>
           <main className="container mx-auto py-8 px-0 sm:px-4">
             <h1 className="text-3xl font-bold mb-4">{page.title}</h1>
             <SectionRenderer section={page} />

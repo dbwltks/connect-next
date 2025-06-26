@@ -14,6 +14,7 @@ import PopularPostsWidget from "@/components/widgets/popular-posts-widget";
 import LoginWidget from "@/components/widgets/login-widget";
 import { StripWidget } from "@/components/widgets/strip-widget";
 import { CarouselWidget } from "@/components/widgets/carousel-widget";
+import { OrganizationChartWidget } from "@/components/widgets/organization-chart-widget";
 import { IWidget } from "@/types/index";
 import useSWR from "swr";
 import { supabase } from "@/db";
@@ -97,6 +98,8 @@ export default function HomepageWidgets({
         return <StripWidget widget={widget} useContainer={useContainer} />;
       case "carousel":
         return <CarouselWidget widget={widget} />;
+      case "organization-chart":
+        return <OrganizationChartWidget widget={widget} />;
       default:
         return (
           <Card className="h-full">
