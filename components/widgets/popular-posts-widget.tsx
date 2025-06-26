@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "@/db";
 import { IWidget } from "@/types";
 import { Heart } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import useSWR from "swr";
 
 interface Post {
@@ -19,119 +19,143 @@ interface PopularPostsWidgetProps {
   widget: IWidget;
 }
 
-function usePopularPosts(widget: IWidget) {
-  const itemCount = widget.display_options?.item_count || 5;
-  const sortBy = widget.display_options?.sort_by || "views";
-  return useSWR<Post[]>(
-    ["popularPosts", itemCount, sortBy],
-    async () => {
-      let finalPosts: Post[] = [];
-      if (sortBy === "likes") {
-        const { data: likeData, error: likeError } = await supabase
-          .from("board_like")
-          .select("post_id");
-        if (likeError) throw likeError;
-        const likeCounts = (likeData || []).reduce(
-          (acc: Record<string, number>, like: any) => {
-            if (like.post_id) acc[like.post_id] = (acc[like.post_id] || 0) + 1;
-            return acc;
-          },
-          {} as Record<string, number>
-        );
-        const sortedPostIds = Object.entries(likeCounts)
-          .sort(([, a], [, b]) => b - a)
-          .slice(0, itemCount)
-          .map(([id]) => id);
-        if (sortedPostIds.length > 0) {
-          const { data: postData, error: postError } = await supabase
-            .from("board_posts")
-            .select("id, title, views")
-            .in("id", sortedPostIds)
-            .eq("status", "published");
-          if (postError) throw postError;
-          const postsWithLikes = (postData || [])
-            .map((post: any) => ({
-              ...post,
-              like_count: likeCounts[post.id] || 0,
-              comment_count: 0,
-            }))
-            .sort((a: Post, b: Post) => b.like_count - a.like_count);
-          finalPosts = postsWithLikes;
-        }
-      } else if (sortBy === "comments") {
-        const { data: commentData, error: commentError } = await supabase
-          .from("board_comments")
-          .select("post_id");
-        if (commentError) throw commentError;
-        const commentCounts = (commentData || []).reduce(
-          (acc: Record<string, number>, comment: any) => {
-            if (comment.post_id)
-              acc[comment.post_id] = (acc[comment.post_id] || 0) + 1;
-            return acc;
-          },
-          {} as Record<string, number>
-        );
-        const sortedPostIds = Object.entries(commentCounts)
-          .sort(([, a], [, b]) => b - a)
-          .slice(0, itemCount)
-          .map(([id]) => id);
-        if (sortedPostIds.length > 0) {
-          const { data: postData, error: postError } = await supabase
-            .from("board_posts")
-            .select("id, title, views")
-            .in("id", sortedPostIds)
-            .eq("status", "published");
-          if (postError) throw postError;
-          const postsWithComments = (postData || [])
-            .map((post: any) => ({
-              ...post,
-              like_count: 0,
-              comment_count: commentCounts[post.id] || 0,
-            }))
-            .sort((a: Post, b: Post) => b.comment_count - a.comment_count);
-          finalPosts = postsWithComments;
-        }
-      } else {
-        const { data: postData, error: postError } = await supabase
-          .from("board_posts")
-          .select("id, title, views")
-          .eq("status", "published")
-          .order("views", { ascending: false })
-          .limit(itemCount);
-        if (postError) throw postError;
-        if (postData && postData.length > 0) {
-          finalPosts = postData.map((post: any) => ({
-            ...post,
-            like_count: 0,
-            comment_count: 0,
-          }));
-        }
-      }
-      return finalPosts;
-    },
-    { revalidateOnFocus: true }
-  );
+// SWR 페처 함수 분리
+async function fetchPopularPosts(
+  itemCount: number,
+  sortBy: string
+): Promise<Post[]> {
+  let finalPosts: Post[] = [];
+
+  if (sortBy === "likes") {
+    const { data: likeData, error: likeError } = await supabase
+      .from("board_like")
+      .select("post_id");
+    if (likeError) throw likeError;
+
+    const likeCounts = (likeData || []).reduce(
+      (acc: Record<string, number>, like: any) => {
+        if (like.post_id) acc[like.post_id] = (acc[like.post_id] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
+
+    const sortedPostIds = Object.entries(likeCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, itemCount)
+      .map(([id]) => id);
+
+    if (sortedPostIds.length > 0) {
+      const { data: postData, error: postError } = await supabase
+        .from("board_posts")
+        .select("id, title, views")
+        .in("id", sortedPostIds)
+        .eq("status", "published");
+      if (postError) throw postError;
+
+      const postsWithLikes = (postData || [])
+        .map((post: any) => ({
+          ...post,
+          like_count: likeCounts[post.id] || 0,
+          comment_count: 0,
+        }))
+        .sort((a: Post, b: Post) => b.like_count - a.like_count);
+      finalPosts = postsWithLikes;
+    }
+  } else if (sortBy === "comments") {
+    const { data: commentData, error: commentError } = await supabase
+      .from("board_comments")
+      .select("post_id");
+    if (commentError) throw commentError;
+
+    const commentCounts = (commentData || []).reduce(
+      (acc: Record<string, number>, comment: any) => {
+        if (comment.post_id)
+          acc[comment.post_id] = (acc[comment.post_id] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
+
+    const sortedPostIds = Object.entries(commentCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, itemCount)
+      .map(([id]) => id);
+
+    if (sortedPostIds.length > 0) {
+      const { data: postData, error: postError } = await supabase
+        .from("board_posts")
+        .select("id, title, views")
+        .in("id", sortedPostIds)
+        .eq("status", "published");
+      if (postError) throw postError;
+
+      const postsWithComments = (postData || [])
+        .map((post: any) => ({
+          ...post,
+          like_count: 0,
+          comment_count: commentCounts[post.id] || 0,
+        }))
+        .sort((a: Post, b: Post) => b.comment_count - a.comment_count);
+      finalPosts = postsWithComments;
+    }
+  } else {
+    const { data: postData, error: postError } = await supabase
+      .from("board_posts")
+      .select("id, title, views")
+      .eq("status", "published")
+      .order("views", { ascending: false })
+      .limit(itemCount);
+    if (postError) throw postError;
+
+    if (postData && postData.length > 0) {
+      finalPosts = postData.map((post: any) => ({
+        ...post,
+        like_count: 0,
+        comment_count: 0,
+      }));
+    }
+  }
+
+  return finalPosts;
 }
 
 export default function PopularPostsWidget({
   widget,
 }: PopularPostsWidgetProps) {
-  const { data: posts, error, isLoading } = usePopularPosts(widget);
   const itemCount = widget.display_options?.item_count || 5;
   const sortBy = widget.display_options?.sort_by || "views";
 
+  const {
+    data: posts,
+    error,
+    isLoading,
+  } = useSWR(
+    ["popularPosts", itemCount, sortBy],
+    () => fetchPopularPosts(itemCount, sortBy),
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      dedupingInterval: 300000, // 5분간 중복 요청 방지 (인기글은 자주 변하지 않음)
+      errorRetryCount: 3,
+      errorRetryInterval: 5000,
+      shouldRetryOnError: true,
+    }
+  );
+
+  // 로딩 상태
   if (isLoading) {
     return (
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="p-4 py-5 border-b">
-          <div className="h-6 w-3/5 bg-gray-200 rounded animate-pulse"></div>
+      <div className="bg-white shadow rounded-lg overflow-hidden border-gray-100 border">
+        <div className="px-4 py-3 border-b">
+          <Skeleton className="h-5 w-24" />
         </div>
-        <div className="p-4 space-y-3">
+        <div className="px-4 py-2 space-y-3">
           {[...Array(itemCount)].map((_, i) => (
             <div key={i} className="flex items-center space-x-3">
-              <div className="h-5 w-5 bg-gray-200 rounded-md animate-pulse"></div>
-              <div className="h-4 bg-gray-200 rounded w-full animate-pulse"></div>
-              <div className="h-4 w-10 bg-gray-200 rounded animate-pulse"></div>
+              <Skeleton className="h-4 w-4 rounded-sm" />
+              <Skeleton className="h-4 flex-1" />
+              <Skeleton className="h-4 w-8" />
             </div>
           ))}
         </div>
@@ -139,10 +163,22 @@ export default function PopularPostsWidget({
     );
   }
 
+  // 에러 상태
   if (error) {
     return (
-      <div className="p-4 text-red-500">
-        인기 게시글 로딩 오류: {error.message}
+      <div className="bg-white shadow rounded-lg overflow-hidden border-red-200 border">
+        <div className="px-4 py-3 border-b">
+          <h3 className="text-base text-gray-800 font-semibold">
+            {widget.title || "인기 게시글"}
+          </h3>
+        </div>
+        <div className="p-4 text-center">
+          <div className="text-red-600">
+            <div className="text-lg mb-1">❌</div>
+            <div className="font-medium mb-1">데이터를 불러올 수 없습니다</div>
+            <div className="text-sm text-red-500">{error.message}</div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -189,7 +225,6 @@ export default function PopularPostsWidget({
                   </div>
                 ) : sortBy === "comments" ? (
                   <div className="flex items-center ml-2 text-xs">
-                    {/* <MessageSquare className="w-3 h-3 mr-1.5 text-gray-400" /> */}
                     <span className="mr-1">💬</span>
                     <span className="text-blue-400">
                       {post.comment_count || 0}
@@ -197,7 +232,6 @@ export default function PopularPostsWidget({
                   </div>
                 ) : (
                   <div className="flex items-center ml-2 text-xs">
-                    {/* <Eye className="w-3 h-3 mr-1.5 text-gray-400" /> */}
                     <span className="mr-1">👀</span>
                     <span className="text-blue-400">{post.views || 0}</span>
                   </div>
@@ -207,7 +241,10 @@ export default function PopularPostsWidget({
           })}
         </ul>
       ) : (
-        <div className="p-4 text-center text-gray-500">게시글이 없습니다.</div>
+        <div className="p-4 text-center text-gray-500">
+          <div className="text-lg mb-2">📝</div>
+          <div>게시글이 없습니다</div>
+        </div>
       )}
     </div>
   );

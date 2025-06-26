@@ -61,6 +61,8 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import useSWR from "swr";
+import { fetchMenus, fetchPages } from "@/services/adminService";
 
 // 메뉴 항목 타입 정의
 export type MenuItem = {
@@ -225,7 +227,6 @@ function SortableMenuItem({
 export default function MenuManager() {
   // 상태 관리
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [pages, setPages] = useState<PageItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -247,27 +248,18 @@ export default function MenuManager() {
     })
   );
 
-  // 컴포넌트 마운트 시 데이터 로드
+  // SWR로 메뉴 데이터 패칭
+  const { data: menus, error } = useSWR("menus", fetchMenus);
+
+  // SWR로 페이지 데이터 패칭
+  const { data: pages, error: pagesError } = useSWR("pages", fetchPages);
+
+  // SWR 데이터가 바뀔 때마다 menuItems 상태에 트리 구조로 반영
   useEffect(() => {
-    // 초기화 상태 설정
-    setMenuItems([]);
-    setPages([]);
-    setIsLoading(true);
-
-    // 데이터 로드
-    const loadData = async () => {
-      try {
-        await fetchMenuItems();
-        await fetchPages();
-      } catch (error) {
-        console.error("Error loading data:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadData();
-  }, []);
+    if (menus && Array.isArray(menus)) {
+      setMenuItems(buildMenuTree(menus));
+    }
+  }, [menus]);
 
   // 드래그 오버 핸들러
   const handleDragOver = (event: any) => {
@@ -531,36 +523,6 @@ export default function MenuManager() {
     }
   };
 
-  // 페이지 데이터 로드
-  const fetchPages = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("cms_pages")
-        .select("*")
-        .eq("is_active", true)
-        .order("title", { ascending: true });
-
-      if (error) {
-        throw error;
-      }
-
-      const pageItems = data.map((item: any) => ({
-        id: item.id,
-        title: item.title,
-        slug: item.slug || "",
-        sectionId: item.section_id,
-        categoryId: item.category_id,
-        pageType: item.page_type,
-        views: item.views || 0,
-        isActive: item.is_active,
-      }));
-
-      setPages(pageItems);
-    } catch (error) {
-      console.error("Error fetching pages:", error);
-    }
-  };
-
   // 메뉴 트리 구성 함수
   const buildMenuTree = (items: MenuItem[]): MenuItem[] => {
     // 최상위 메뉴 항목들 찾기
@@ -730,7 +692,7 @@ export default function MenuManager() {
     }
 
     // 선택한 페이지 찾기
-    const selectedPage = pages.find((page) => page.id === pageId);
+    const selectedPage = (pages ?? []).find((page) => page.id === pageId);
 
     if (selectedPage) {
       // pageId만 업데이트, url은 사용자가 직접 입력/수정한 값만 유지
@@ -803,12 +765,11 @@ export default function MenuManager() {
                   <SelectItem value="none">
                     선택 안함 (직접 URL 입력)
                   </SelectItem>
-                  {Array.isArray(pages) &&
-                    pages.map((page) => (
-                      <SelectItem key={page.id} value={page.id}>
-                        {page.title}
-                      </SelectItem>
-                    ))}
+                  {(pages ?? []).map((page) => (
+                    <SelectItem key={page.id} value={page.id}>
+                      {page.title}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

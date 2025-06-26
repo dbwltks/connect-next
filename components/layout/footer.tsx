@@ -50,6 +50,10 @@ interface FooterSettings {
   youtube_url: string;
   service_times: ServiceTime[];
   copyright_text: string;
+  logo_url?: string;
+  logo_or_name: string;
+  logo_fit?: string;
+  logo_height?: number;
 }
 
 export default function Footer({
@@ -79,6 +83,14 @@ export default function Footer({
     service_times: settings.service_times,
   };
 
+  // 교회 정보 렌더링에서 logo_or_name, logo_url, logo_fit, logo_height가 settings.settings에도 있을 수 있으니 fallback 처리
+  const logoOrName =
+    settings.logo_or_name || settings.settings?.logo_or_name || "name";
+  const logoUrl = settings.logo_url || settings.settings?.logo_url || "";
+  const logoFit = settings.logo_fit || settings.settings?.logo_fit || "contain";
+  const logoHeight =
+    settings.logo_height || settings.settings?.logo_height || 40;
+
   return (
     <footer className="bg-gray-50 dark:bg-gray-900 border-t">
       <div className="container py-8">
@@ -87,7 +99,20 @@ export default function Footer({
           {/* 교회 정보 */}
           <div className="space-y-3">
             <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200">
-              {info.name}
+              {logoOrName === "logo" && logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt={settings.church_name || "로고"}
+                  style={{
+                    height: logoHeight ? `${logoHeight}px` : "40px",
+                    width: "auto",
+                    display: "block",
+                    marginLeft: 0,
+                  }}
+                />
+              ) : (
+                settings.church_name
+              )}
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-line">
               {info.slogan}

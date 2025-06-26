@@ -84,7 +84,12 @@ interface User {
   email?: string;
 }
 
-export default function BoardDetail() {
+interface BoardDetailProps {
+  postId?: string;
+  onBack?: () => void;
+}
+
+export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
   const { user } = useAuth();
   const isAdmin = user?.role?.toLowerCase() === "admin";
 
@@ -471,155 +476,155 @@ export default function BoardDetail() {
     async function fetchPost() {
       setLoading(true);
       setError(null);
-      const id = Array.isArray(params?.slug)
-        ? params.slug.at(-1)
-        : params?.slug;
-      if (!id) {
-        setError("잘못된 접근입니다.");
-        setLoading(false);
-        return;
-      }
       try {
+        // postId prop이 있으면 그걸 우선 사용, 없으면 params에서 추출
+        let id = postId || (params?.id as string);
+        if (!id) {
+          setError("잘못된 접근입니다.");
+          setLoading(false);
+          return;
+        }
+        // 게시글 데이터 패칭
         const { data, error } = await supabase
           .from("board_posts")
           .select("*")
           .eq("id", id)
           .single();
-
         if (error || !data) {
           setError("게시글을 찾을 수 없습니다.");
+          setLoading(false);
+          return;
+        }
+        setPost(data);
+        console.log("게시글 데이터:", data);
+
+        // 작성자 정보 별도 조회
+        if (data.user_id) {
+          const { data: user, error: userErr } = await supabase
+            .from("users")
+            .select("username, avatar_url")
+            .eq("id", data.user_id)
+            .single();
+          if (!userErr && user) setAuthorInfo(user);
+          else setAuthorInfo(null);
         } else {
-          setPost(data);
-          console.log("게시글 데이터:", data);
+          setAuthorInfo(null);
+        }
 
-          // 작성자 정보 별도 조회
-          if (data.user_id) {
-            const { data: user, error: userErr } = await supabase
-              .from("users")
-              .select("username, avatar_url")
-              .eq("id", data.user_id)
-              .single();
-            if (!userErr && user) setAuthorInfo(user);
-            else setAuthorInfo(null);
-          } else {
-            setAuthorInfo(null);
-          }
+        // 현재 로그인한 사용자 정보 가져오기
+        const currentUser = await getHeaderUser();
+        console.log("현재 사용자:", currentUser);
+        console.log("게시글 user_id:", data.user_id);
 
-          // 현재 로그인한 사용자 정보 가져오기
-          const currentUser = await getHeaderUser();
-          console.log("현재 사용자:", currentUser);
-          console.log("게시글 user_id:", data.user_id);
+        if (currentUser) {
+          // user_id가 일치하는지 확인
+          const isUserAuthor = currentUser.id === data.user_id;
+          console.log("작성자 여부:", isUserAuthor);
+          setIsAuthor(isUserAuthor);
+        }
 
-          if (currentUser) {
-            // user_id가 일치하는지 확인
-            const isUserAuthor = currentUser.id === data.user_id;
-            console.log("작성자 여부:", isUserAuthor);
-            setIsAuthor(isUserAuthor);
-          }
+        // 이전글, 다음글 가져오기
+        fetchPrevNextPosts(id, data.page_id);
 
-          // 이전글, 다음글 가져오기
-          fetchPrevNextPosts(id, data.page_id);
+        // 좋아요 수와 댓글 수 가져오기
+        try {
+          // 좋아요 수 가져오기
+          const { count: likeCount } = await supabase
+            .from("board_like")
+            .select("*", { count: "exact", head: true })
+            .eq("post_id", id);
 
-          // 좋아요 수와 댓글 수 가져오기
-          try {
-            // 좋아요 수 가져오기
-            const { count: likeCount } = await supabase
+          setLikeCount(likeCount || 0);
+
+          // 댓글 수 가져오기
+          const { count: commentCount } = await supabase
+            .from("board_comments")
+            .select("*", { count: "exact", head: true })
+            .eq("post_id", id);
+
+          setCommentCount(commentCount || 0);
+
+          // 현재 사용자의 좋아요 여부 확인
+          const userData = await getHeaderUser();
+          if (userData?.username) {
+            const { data: likeData } = await supabase
               .from("board_like")
-              .select("*", { count: "exact", head: true })
-              .eq("post_id", id);
+              .select("id")
+              .eq("post_id", id)
+              .eq("user_id", userData.username)
+              .maybeSingle();
 
-            setLikeCount(likeCount || 0);
+            setLiked(!!likeData);
+          }
 
-            // 댓글 수 가져오기
-            const { count: commentCount } = await supabase
-              .from("board_comments")
-              .select("*", { count: "exact", head: true })
-              .eq("post_id", id);
+          // 해당 게시글의 cms_pages 정보를 통해 메뉴 정보 가져오기
+          if (post && post.page_id) {
+            try {
+              // 1. 게시글의 page_id로 cms_pages 정보 가져오기
+              const { data: pageData, error: pageError } = await supabase
+                .from("cms_pages")
+                .select("title, slug, section_id, category_id")
+                .eq("id", post.page_id)
+                .single();
 
-            setCommentCount(commentCount || 0);
+              if (pageError) throw pageError;
 
-            // 현재 사용자의 좋아요 여부 확인
-            const userData = await getHeaderUser();
-            if (userData?.username) {
-              const { data: likeData } = await supabase
-                .from("board_like")
-                .select("id")
-                .eq("post_id", id)
-                .eq("user_id", userData.username)
-                .maybeSingle();
+              if (pageData) {
+                // 2. cms_pages 정보를 바탕으로 cms_menus에서 메뉴 찾기
+                const { data: menuData, error: menuError } = await supabase
+                  .from("cms_menus")
+                  .select("title, url, parent_id")
+                  .eq("page_id", post.page_id)
+                  .eq("is_active", true)
+                  .order("order_num")
+                  .limit(1);
 
-              setLiked(!!likeData);
-            }
+                if (menuError) throw menuError;
 
-            // 해당 게시글의 cms_pages 정보를 통해 메뉴 정보 가져오기
-            if (post && post.page_id) {
-              try {
-                // 1. 게시글의 page_id로 cms_pages 정보 가져오기
-                const { data: pageData, error: pageError } = await supabase
-                  .from("cms_pages")
-                  .select("title, slug, section_id, category_id")
-                  .eq("id", post.page_id)
-                  .single();
-
-                if (pageError) throw pageError;
-
-                if (pageData) {
-                  // 2. cms_pages 정보를 바탕으로 cms_menus에서 메뉴 찾기
-                  const { data: menuData, error: menuError } = await supabase
-                    .from("cms_menus")
-                    .select("title, url, parent_id")
-                    .eq("page_id", post.page_id)
-                    .eq("is_active", true)
-                    .order("order_num")
-                    .limit(1);
-
-                  if (menuError) throw menuError;
-
-                  if (menuData && menuData.length > 0) {
-                    // 게시글에 직접 연결된 메뉴 정보 사용
-                    setMenuInfo(menuData[0]);
-                  } else {
-                    // 메뉴를 찾지 못한 경우 cms_pages 정보로 대체
-                    setMenuInfo({
-                      title: pageData.title,
-                      url: `/page/${post.page_id}`,
-                    });
-                  }
+                if (menuData && menuData.length > 0) {
+                  // 게시글에 직접 연결된 메뉴 정보 사용
+                  setMenuInfo(menuData[0]);
+                } else {
+                  // 메뉴를 찾지 못한 경우 cms_pages 정보로 대체
+                  setMenuInfo({
+                    title: pageData.title,
+                    url: `/page/${post.page_id}`,
+                  });
                 }
-              } catch (err) {
-                console.error("메뉴 정보 가져오기 오류:", err);
+              }
+            } catch (err) {
+              console.error("메뉴 정보 가져오기 오류:", err);
 
-                // 오류 발생 시 URL 경로를 통해 메뉴 추정
-                const segments = pathname.split("/").filter(Boolean);
-                if (segments.length > 0) {
-                  const boardType = segments[0]; // board, notice 등
-                  const { data: menuData } = await supabase
-                    .from("cms_menus")
-                    .select("title, url")
-                    .eq("is_active", true)
-                    .ilike("url", `/${boardType}%`)
-                    .order("order_num")
-                    .limit(1);
+              // 오류 발생 시 URL 경로를 통해 메뉴 추정
+              const segments = pathname.split("/").filter(Boolean);
+              if (segments.length > 0) {
+                const boardType = segments[0]; // board, notice 등
+                const { data: menuData } = await supabase
+                  .from("cms_menus")
+                  .select("title, url")
+                  .eq("is_active", true)
+                  .ilike("url", `/${boardType}%`)
+                  .order("order_num")
+                  .limit(1);
 
-                  if (menuData && menuData.length > 0) {
-                    setMenuInfo(menuData[0]);
-                  }
+                if (menuData && menuData.length > 0) {
+                  setMenuInfo(menuData[0]);
                 }
               }
             }
-          } catch (err) {
-            console.error("좋아요/댓글 정보 가져오기 오류:", err);
           }
+        } catch (err) {
+          console.error("좋아요/댓글 정보 가져오기 오류:", err);
         }
       } catch (err) {
-        console.error("게시글 로드 오류:", err);
+        console.error("게시글 로드 중 오류가 발생했습니다.");
         setError("게시글을 불러오는 중 오류가 발생했습니다.");
       } finally {
         setLoading(false);
       }
     }
     fetchPost();
-  }, [params]);
+  }, [postId, params, editing]);
 
   useEffect(() => {
     if (!showAttachments) return;
@@ -725,7 +730,11 @@ export default function BoardDetail() {
       return;
     }
     alert("삭제되었습니다.");
-    router.back(); // 또는 router.push("/board") 등 원하는 경로로 이동
+    if (onBack) {
+      onBack();
+    } else {
+      router.back(); // 또는 router.push("/board") 등 원하는 경로로 이동
+    }
   }
 
   // 이전 경로를 가져오는 함수
@@ -733,15 +742,19 @@ export default function BoardDetail() {
     if (typeof pathname !== "string") return "/";
     const segments = pathname.split("/").filter(Boolean);
     if (segments.length > 1) {
-      return "/" + segments.slice(0, -1).join("/");
+      return "/" + segments.slice(0, -1).join("/") + window.location.search;
     }
-    return "/";
+    return "/" + window.location.search;
   }
 
   // 목록으로 이동
   function handleGoList(e?: React.MouseEvent) {
     if (e) e.preventDefault();
-    router.push(getParentPath());
+    if (onBack) {
+      onBack();
+    } else {
+      router.push(getParentPath());
+    }
   }
 
   // 목록 경로와 이름 가져오기
@@ -1303,7 +1316,7 @@ export default function BoardDetail() {
         <ToastViewport />
       </ToastProvider>
 
-      <Card className="sm:my-8 py-4 sm:shadow-md border-0 sm:border sm:border-gray-200 mx-0 sm:mx-auto w-full max-w-full overflow-hidden shadow-none bg-transparent bg-white relative sm:pb-0">
+      <Card className="py-4 sm:py-0 sm:shadow-md border-0 sm:border sm:border-gray-200 mx-0 sm:mx-auto w-full max-w-full overflow-hidden shadow-none bg-transparent bg-white relative sm:pb-0">
         {/* 수정, 삭제 버튼과 이전글, 다음글, 목록 버튼 한 줄에 배치 - 모바일에서는 숨김 */}
         <div className="hidden sm:flex justify-between items-center px-4 sm:px-6 py-4 sm:py-6 border-b border-gray-100 space-x-2">
           {/* 수정, 삭제 버튼 - 작성자인 경우에만 표시 */}

@@ -1,7 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { IBoardPost, IPage, IWidget, IBoardWidgetOptions } from "@/types/index";
 import Link from "next/link";
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React from "react";
 import { supabase } from "@/db";
 import {
   Calendar,
@@ -13,7 +14,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { formatRelativeTime } from "@/utils/utils";
 import useSWR from "swr";
-import { fetchBoardWidgetPosts } from "@/services/widgetService";
 
 interface BoardWidgetProps {
   widget: IWidget & {
@@ -58,74 +58,56 @@ const templateInfo = {
   },
 };
 
+// 게시판 위젯 데이터를 가져오는 fetcher 함수
+async function fetchBoardWidgetPosts(
+  pageId: string,
+  limit: number = 10
+): Promise<IBoardPost[]> {
+  const { data, error } = await supabase
+    .from("board_posts")
+    .select("*")
+    .eq("page_id", pageId)
+    .eq("status", "published")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw new Error(`게시판 데이터 로드 실패: ${error.message}`);
+  }
+
+  return (data as IBoardPost[]) || [];
+}
+
 export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
-  const [posts, setPosts] = useState<IBoardPost[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // 페이지 ID와 표시할 게시물 수 계산
+  const pageId = page?.id || widget.display_options?.page_id;
+  let limit = 10; // 기본값
 
-  const pageId = widget.display_options?.page_id;
+  if (widget.display_options?.item_count) {
+    if (typeof widget.display_options.item_count === "string") {
+      limit = parseInt(widget.display_options.item_count, 10) || 10;
+    } else {
+      limit = widget.display_options.item_count;
+    }
+  }
+
+  // SWR을 사용해서 게시판 데이터 관리
   const {
-    data,
-    error: swr_error,
-    isLoading: swr_isLoading,
-    mutate,
+    data: posts,
+    error,
+    isLoading,
   } = useSWR(
-    pageId ? ["boardWidgetPosts", pageId] : null,
-    () => fetchBoardWidgetPosts(pageId).then((posts) => ({ posts })),
-    { revalidateOnFocus: true }
+    pageId ? ["boardWidgetPosts", pageId, limit] : null,
+    () => fetchBoardWidgetPosts(pageId!, limit),
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      dedupingInterval: 300000, // 5분간 중복 요청 방지
+      errorRetryCount: 3,
+      errorRetryInterval: 5000,
+      shouldRetryOnError: true,
+    }
   );
-
-  // 게시글 개수는 props에서만 사용 (입력 UI 없음)
-  // 캐시 키 생성 - 위젯 ID와 페이지 ID 기반
-  const getCacheKey = (widgetId: string, pageId: string) => {
-    return `board_widget_${widgetId}_${pageId}`;
-  };
-
-  // 로컬 스토리지에서 게시판 데이터 가져오기
-  const getLocalBoardPosts = (widgetId: string, pageId: string) => {
-    if (typeof window === "undefined") return null;
-
-    try {
-      const cacheKey = getCacheKey(widgetId, pageId);
-      const cachedData = localStorage.getItem(cacheKey);
-      if (!cachedData) return null;
-
-      const { posts: cachedPosts, timestamp } = JSON.parse(cachedData);
-
-      // 캐시 유효시간 확인 (10분)
-      const isExpired = Date.now() - timestamp > 10 * 60 * 1000;
-
-      if (isExpired) {
-        return null; // 캐시 만료되었으면 null 반환
-      }
-
-      return cachedPosts;
-    } catch (err) {
-      console.error("캐시된 게시판 데이터 불러오기 오류:", err);
-      return null;
-    }
-  };
-
-  // 로컬 스토리지에 게시판 데이터 저장
-  const saveLocalBoardPosts = (
-    widgetId: string,
-    pageId: string,
-    postsData: IBoardPost[]
-  ) => {
-    if (typeof window === "undefined") return;
-
-    try {
-      const cacheKey = getCacheKey(widgetId, pageId);
-      const dataToCache = {
-        posts: postsData,
-        timestamp: Date.now(),
-      };
-
-      localStorage.setItem(cacheKey, JSON.stringify(dataToCache));
-    } catch (err) {
-      console.error("게시판 데이터 캐싱 오류:", err);
-    }
-  };
 
   // 템플릿 번호 가져오기 (문자열 또는 숫자 처리)
   const getTemplateNumber = (template: string | number | undefined): number => {
@@ -153,212 +135,114 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
   const showDate = widget.display_options?.show_date ?? true;
   const showExcerpt = widget.display_options?.show_excerpt ?? true;
 
-  // 게시판 데이터 로드 함수 (캐시 사용 여부 지정 가능)
-  const loadBoardPosts = async (pageId: string, skipCache = false) => {
-    if (!pageId || !widget.id) {
-      setError("페이지 ID가 없어 데이터를 로드할 수 없습니다.");
-      return;
-    }
+  // 로딩 상태 스켈레톤 렌더링
+  const renderSkeleton = () => {
+    const skeletonCount = Math.min(limit, 5); // 최대 5개 스켈레톤
 
-    try {
-      // 캐시 사용 여부 확인
-      if (!skipCache) {
-        const cachedPosts = getLocalBoardPosts(widget.id, pageId);
-        if (cachedPosts) {
-          setPosts(cachedPosts);
-          // 백그라운드에서 데이터 갱신 (사용자에게 로딩 표시 없이)
-          // 추가 요청은 렌더링 완료 후 한 번만 하도록 설정 (무한 루프 방지)
-          const timer = setTimeout(() => loadBoardPosts(pageId, true), 500);
-          return () => clearTimeout(timer); // 클린업 함수로 타이머 제거
-        }
-      }
+    switch (templateNumber) {
+      case BOARD_TEMPLATE.COMPACT:
+        return (
+          <div className="space-y-2">
+            {Array.from({ length: skeletonCount }).map((_, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between py-2"
+              >
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+            ))}
+          </div>
+        );
 
-      if (!skipCache) {
-        setIsLoading(true);
-      }
-      setError(null);
+      case BOARD_TEMPLATE.CARD:
+        return (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {Array.from({ length: Math.min(skeletonCount, 3) }).map(
+              (_, index) => (
+                <div
+                  key={index}
+                  className="border border-gray-100 rounded-lg overflow-hidden"
+                >
+                  <Skeleton className="aspect-video w-full" />
+                  <div className="p-3 space-y-2">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-3 w-2/3" />
+                  </div>
+                </div>
+              )
+            )}
+          </div>
+        );
 
-      // 게시물 조회
-      let query = supabase
-        .from("board_posts")
-        .select("*")
-        .eq("page_id", pageId)
-        .eq("status", "published")
-        .order("created_at", { ascending: false });
+      case BOARD_TEMPLATE.GALLERY:
+        return (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {Array.from({ length: Math.min(skeletonCount, 4) }).map(
+              (_, index) => (
+                <Skeleton key={index} className="w-full h-32 sm:h-40 rounded" />
+              )
+            )}
+          </div>
+        );
 
-      // 표시할 게시물 수 제한 (기본 10개)
-      let limit = 10; // 기본값
+      case BOARD_TEMPLATE.NOTICE:
+        return (
+          <div className="space-y-4">
+            {Array.from({ length: skeletonCount }).map((_, index) => (
+              <div
+                key={index}
+                className="p-4 border border-gray-200 rounded-lg"
+              >
+                <Skeleton className="h-4 w-3/4 mb-2" />
+                <div className="flex items-center space-x-4">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-3 w-12" />
+                </div>
+              </div>
+            ))}
+          </div>
+        );
 
-      // item_count가 문자열인 경우 숫자로 변환 (레이아웃 관리자에서 문자열로 저장하는 경우 처리)
-      if (widget.display_options?.item_count) {
-        if (typeof widget.display_options.item_count === "string") {
-          limit = parseInt(widget.display_options.item_count, 10) || 10;
-        } else {
-          limit = widget.display_options.item_count;
-        }
-      }
-
-      console.log("[게시판 위젯] 표시 개수:", limit);
-      query = query.limit(limit);
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error("[게시판 위젯] 데이터 조회 오류:", error);
-        if (!skipCache) {
-          setError("데이터를 가져오는 중 오류가 발생했습니다.");
-        }
-        return;
-      }
-
-      if (data && data.length > 0) {
-        setPosts(data as IBoardPost[]);
-        // 캐시에 데이터 저장
-        saveLocalBoardPosts(widget.id, pageId, data as IBoardPost[]);
-      } else {
-        setPosts([]);
-        // 빈 배열도 캐싱 (서버에 데이터가 없다는 사실도 캐싱 가치가 있음)
-        saveLocalBoardPosts(widget.id, pageId, []);
-      }
-    } catch (err) {
-      console.error("[게시판 위젯] 데이터 로드 오류:", err);
-      if (!skipCache) {
-        setError("데이터를 가져오는 중 오류가 발생했습니다.");
-      }
-    } finally {
-      if (!skipCache) {
-        setIsLoading(false);
-      }
+      default: // CLASSIC
+        return (
+          <div className="space-y-4">
+            {Array.from({ length: skeletonCount }).map((_, index) => (
+              <div key={index} className="flex items-start space-x-4">
+                {showThumbnail && <Skeleton className="w-20 h-20 rounded" />}
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                  {showExcerpt && <Skeleton className="h-3 w-full" />}
+                </div>
+              </div>
+            ))}
+          </div>
+        );
     }
   };
-
-  // 초기 데이터 로드 상태를 추적하는 ref
-  const dataLoadedRef = useRef(false);
-
-  // loadBoardPosts 함수를 useCallback으로 메모이제이션
-  const memorizedLoadBoardPosts = useCallback(
-    async (pageId: string, skipCache = false) => {
-      // loadBoardPosts 내부 로직
-      if (!pageId || !widget.id) {
-        setError("페이지 ID가 없어 데이터를 로드할 수 없습니다.");
-        return;
-      }
-
-      try {
-        // 캐시 사용 여부 확인
-        if (!skipCache) {
-          const cachedPosts = getLocalBoardPosts(widget.id, pageId);
-          if (cachedPosts) {
-            setPosts(cachedPosts);
-            return;
-          }
-        }
-
-        if (!skipCache) {
-          setIsLoading(true);
-        }
-        setError(null);
-
-        // 게시물 조회
-        let query = supabase
-          .from("board_posts")
-          .select("*")
-          .eq("page_id", pageId)
-          .eq("status", "published")
-          .order("created_at", { ascending: false });
-
-        // 표시할 게시물 수 제한 (기본 10개)
-        let limit = 10; // 기본값
-
-        // item_count가 문자열인 경우 숫자로 변환
-        if (widget.display_options?.item_count) {
-          if (typeof widget.display_options.item_count === "string") {
-            limit = parseInt(widget.display_options.item_count, 10) || 10;
-          } else {
-            limit = widget.display_options.item_count;
-          }
-        }
-
-        console.log("[게시판 위젯] 표시 개수:", limit);
-        query = query.limit(limit);
-
-        const { data, error } = await query;
-
-        if (error) {
-          console.error("[게시판 위젯] 데이터 조회 오류:", error);
-          if (!skipCache) {
-            setError("데이터를 가져오는 중 오류가 발생했습니다.");
-          }
-          return;
-        }
-
-        if (data && data.length > 0) {
-          setPosts(data as IBoardPost[]);
-          // 캐시에 데이터 저장
-          saveLocalBoardPosts(widget.id, pageId, data as IBoardPost[]);
-        } else {
-          setPosts([]);
-          // 빈 배열도 캐싱
-          saveLocalBoardPosts(widget.id, pageId, []);
-        }
-      } catch (err) {
-        console.error("[게시판 위젯] 데이터 로드 오류:", err);
-        if (!skipCache) {
-          setError("데이터를 가져오는 중 오류가 발생했습니다.");
-        }
-      } finally {
-        if (!skipCache) {
-          setIsLoading(false);
-        }
-      }
-    },
-    [widget.id, widget.display_options?.item_count]
-  );
-
-  // 초기화 및 데이터 로드
-  useEffect(() => {
-    // 페이지 ID가 있으면 데이터 로드
-    const pageId = page?.id || widget.display_options?.page_id;
-    if (pageId && !dataLoadedRef.current) {
-      memorizedLoadBoardPosts(pageId);
-      dataLoadedRef.current = true;
-    }
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page?.id, widget.id, widget.display_options?.page_id]);
-
-  // 캐시된 데이터 갱신을 위한 별도 useEffect
-  useEffect(() => {
-    const pageId = page?.id || widget.display_options?.page_id;
-
-    if (pageId) {
-      // 컴포넌트 마운트 후 한 번만 백그라운드 갱신 수행
-      const timer = setTimeout(() => {
-        memorizedLoadBoardPosts(pageId, true);
-      }, 1000);
-
-      return () => clearTimeout(timer);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // 템플릿별 렌더링 함수
   const renderByTemplate = () => {
     if (isLoading) {
+      return renderSkeleton();
+    }
+
+    if (error) {
       return (
-        <div className="py-4 text-center text-gray-500">
-          게시물을 불러오는 중...
+        <div className="py-8 text-center">
+          <div className="text-red-500 text-sm font-medium mb-1">
+            데이터 로드 오류
+          </div>
+          <div className="text-gray-500 text-xs">{error.message}</div>
         </div>
       );
     }
 
-    if (error) {
-      return <div className="py-4 text-center text-gray-500">{error}</div>;
-    }
-
-    if (posts.length === 0) {
+    if (!posts || posts.length === 0) {
       return (
-        <div className="py-4 text-center text-gray-500">
+        <div className="py-8 text-center text-gray-500 text-sm">
           등록된 게시물이 없습니다.
         </div>
       );
@@ -378,7 +262,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
                 <div className="flex items-center justify-between">
                   <Link
                     href={`${menuUrl}/${post.id}`}
-                    className="  hover:text-blue-600"
+                    className="hover:text-blue-600"
                   >
                     <h4 className="text-xs text-gray-500 font-medium truncate flex-1">
                       {post.title}
@@ -386,7 +270,6 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
                   </Link>
                   {showDate && (
                     <div className="block text-xs text-gray-400 flex items-center space-x-1 ml-2 flex-shrink-0">
-                      {/* <Clock size={12} /> */}
                       <span className="truncate max-w-[80px]">
                         {formatRelativeTime(post.created_at)}
                       </span>
@@ -416,7 +299,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
                   </div>
                 ) : (
                   <div className="aspect-video w-full bg-gray-100 flex items-center justify-center">
-                    {/* <MessageSquare className="text-gray-300" size={32} /> */}
+                    <MessageSquare className="text-gray-300" size={32} />
                   </div>
                 )}
                 <div className="p-3">
@@ -428,7 +311,6 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
                   </Link>
                   {showDate && (
                     <div className="flex items-center space-x-1 text-xs text-gray-500 mt-2">
-                      {/* <Calendar size={12} /> */}
                       <span className="truncate">
                         {formatRelativeTime(post.created_at)}
                       </span>
@@ -457,7 +339,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
                     />
                   ) : (
                     <div className="w-full h-32 sm:h-40 bg-gray-100 flex items-center justify-center">
-                      <span className="text-gray-300">No Image</span>
+                      <span className="text-gray-300 text-xs">No Image</span>
                     </div>
                   )}
                 </Link>
@@ -550,7 +432,6 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
                   </Link>
                   {showDate && (
                     <div className="text-xs text-gray-500 mt-1 mb-2 flex items-center space-x-1">
-                      {/* <Calendar size={12} className="flex-shrink-0" /> */}
                       <span className="truncate">
                         {formatRelativeTime(post.created_at)}
                       </span>
@@ -571,6 +452,22 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
     }
   };
 
+  // 페이지 ID가 없으면 설정 필요 메시지 표시
+  if (!pageId) {
+    return (
+      <div className="h-full bg-white rounded-xl border border-gray-100 p-4">
+        <div className="pb-2">
+          <div className="text-base font-semibold">
+            {widget.title || "게시판"}
+          </div>
+        </div>
+        <div className="py-8 text-center text-gray-500 text-sm">
+          게시판 페이지를 설정해주세요.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full bg-white rounded-xl border border-gray-100 p-4">
       <div className="pb-2">
@@ -578,17 +475,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
           {widget.title || page?.title || "게시판"}
         </div>
       </div>
-      <div>
-        {renderByTemplate()}
-        {/* <div className="mt-3 text-center">
-          <Link
-            href={page?.slug || "/"}
-            className="w-full py-2 px-4 border border-gray-200 rounded-md hover:bg-blue-50 transition-colors text-sm flex items-center justify-center"
-          >
-            더보기
-          </Link>
-        </div> */}
-      </div>
+      <div>{renderByTemplate()}</div>
     </div>
   );
 }

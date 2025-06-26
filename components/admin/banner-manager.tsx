@@ -55,6 +55,8 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Trash2 as Trash, Edit, Plus } from "lucide-react";
 import { supabase } from "@/db";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import ImageBrowser from "@/components/ui/image-browser";
 
 // 메뉴 타입
 export type Menu = {
@@ -410,6 +412,7 @@ export default function BannerManager() {
   const [savedImages, setSavedImages] = useState<CmsImage[]>([]);
   const [loadingImages, setLoadingImages] = useState(false);
   const [isLoading, setIsLoading] = useState(false); // 로딩 상태 관리
+  const [showImageBrowser, setShowImageBrowser] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -1006,9 +1009,18 @@ export default function BannerManager() {
                         variant="outline"
                         disabled={uploadingImage}
                         onClick={() => fileInputRef.current?.click()}
-                        className="w-full"
+                        className="flex-1"
                       >
                         {uploadingImage ? "업로드 중..." : "파일 선택"}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setShowImageBrowser(true)}
+                        className="flex-1"
+                      >
+                        📁 서버 이미지
                       </Button>
                     </div>
                   </div>
@@ -1305,6 +1317,27 @@ export default function BannerManager() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 이미지 브라우저 컴포넌트 */}
+      <ImageBrowser
+        isOpen={showImageBrowser}
+        onClose={() => setShowImageBrowser(false)}
+        onImageSelect={(imageUrl: string, imageName?: string) => {
+          if (!editingBanner) return;
+
+          setEditingBanner({
+            ...editingBanner,
+            imageUrl: imageUrl,
+          });
+
+          toast({
+            title: "이미지 선택 완료",
+            description: `${imageName || "이미지"}가 배너에 설정되었습니다.`,
+          });
+        }}
+        buckets={["homepage-banners", "images", "admin"]}
+        title="배너 이미지 선택"
+      />
     </div>
   );
 }

@@ -108,11 +108,12 @@ export default async function DynamicPage(props: { params: any }) {
   }
 
   // 1. 메뉴 url로 먼저 조회 (정확한 매칭)
-  const { data: menu, error: menuError } = await supabase
+  const { data: menus, error: menuError } = await supabase
     .from("cms_menus")
     .select("*, page:page_id(*, category:category_id(*))")
     .eq("url", currentPath)
-    .single();
+    .limit(1);
+  const menu = Array.isArray(menus) ? menus[0] : menus;
 
   // 1-1. 정확히 일치하는 메뉴가 있고, 페이지가 연결된 경우
   if (menu && menu.page) {
@@ -212,12 +213,12 @@ export default async function DynamicPage(props: { params: any }) {
       parentPath = parentPath.substring(0, parentPath.lastIndexOf("/"));
       if (!parentPath) break;
 
-      const { data, error } = await supabase
+      const { data: parentMenus, error } = await supabase
         .from("cms_menus")
         .select("*, page:page_id(page_type)")
         .eq("url", parentPath)
-        .maybeSingle();
-
+        .limit(1);
+      const data = Array.isArray(parentMenus) ? parentMenus[0] : parentMenus;
       if (data && data.page) {
         parentMenu = data;
         break;

@@ -48,6 +48,8 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Edit, Trash, Plus } from "lucide-react";
 import { toast } from "@/components/ui/toaster";
 import { supabase } from "@/db";
+import useSWR from "swr";
+import { fetchSections } from "@/services/adminService";
 
 // 섹션 타입 정의 (단순화)
 export type SectionType = string;
@@ -167,10 +169,17 @@ export default function SectionManager({
     })
   );
 
-  // 컴포넌트 마운트 시 섹션 로드
+  // SWR로 섹션 데이터 패칭
+  const { data: sectionsData, error } = useSWR("sections", fetchSections);
+
+  // SWR 데이터가 바뀔 때마다 sections 상태에 반영
   useEffect(() => {
-    loadSections();
-  }, []);
+    console.log("sectionsData:", sectionsData);
+    console.log("SWR error:", error);
+    if (sectionsData && Array.isArray(sectionsData)) {
+      setSections(sectionsData);
+    }
+  }, [sectionsData, error]);
 
   // 드래그 종료 핸들러
   const handleDragEnd = (event: DragEndEvent) => {

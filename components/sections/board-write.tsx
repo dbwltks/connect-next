@@ -22,8 +22,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import dynamic from "next/dynamic";
-import { X, FileText, FileSpreadsheet, Presentation, File } from "lucide-react";
+import {
+  X,
+  FileText,
+  FileSpreadsheet,
+  Presentation,
+  File,
+  Settings,
+} from "lucide-react";
 import {
   getHeaderUser,
   fetchDrafts,
@@ -31,6 +47,7 @@ import {
   saveBoardPost as serviceSaveBoardPost,
   getBoardPost as serviceGetBoardPost,
 } from "@/services/boardService";
+import { useAuth } from "@/contexts/auth-context";
 
 // TipTap 에디터 컴포넌트를 동적으로 불러옴 (SSR 방지)
 // 동적 임포트 방식을 수정하여 ChunkLoadError 해결
@@ -314,6 +331,14 @@ export default function BoardWrite({
   const [youtubeId, setYoutubeId] = useState<string>("");
   // 숨김(관리자만 보기) 상태 추가
   const [isHidden, setIsHidden] = useState<boolean>(false);
+  // 관리자 설정 상태 추가
+  const [isNotice, setIsNotice] = useState<boolean>(false);
+  const [publishDate, setPublishDate] = useState<string>("");
+  const [showAdminSettings, setShowAdminSettings] = useState<boolean>(false);
+
+  // useAuth 훅 사용
+  const { user } = useAuth();
+  const isAdmin = user?.role?.toLowerCase() === "admin";
 
   // Refs
   const editorRef = useRef<any>(null);
@@ -338,7 +363,8 @@ export default function BoardWrite({
     const fetchBoardPages = async () => {
       const { data, error } = await supabase
         .from("cms_pages")
-        .select("id, title");
+        .select("id, title")
+        .eq("is_active", true);
 
       if (error) {
         console.error("Error fetching board pages:", error);
@@ -349,19 +375,29 @@ export default function BoardWrite({
         });
       } else {
         setBoardPages(data || []);
-        if (initialPageId) {
+        // 쿼리스트링에서 pageId 추출
+        let pageIdFromQuery = undefined;
+        if (typeof window !== "undefined") {
+          const params = new URLSearchParams(window.location.search);
+          pageIdFromQuery = params.get("pageId");
+        }
+        // 우선순위: initialPageId > 쿼리 pageId > 첫 번째 게시판
+        if (initialPageId && (data || []).some((p) => p.id === initialPageId)) {
           setSelectedPageId(initialPageId);
+        } else if (
+          pageIdFromQuery &&
+          (data || []).some((p) => p.id === pageIdFromQuery)
+        ) {
+          setSelectedPageId(pageIdFromQuery);
+        } else if ((data || []).length > 0) {
+          setSelectedPageId((data || [])[0].id);
         }
       }
     };
     fetchBoardPages();
   }, []);
 
-  // 로컬 스토리지 키 생성 (페이지와 카테고리별 구분)
-  const getStorageKey = () =>
-    `board_draft_${selectedPageId || "none"}_${categoryId || "none"}`;
-
-  //임시등록 목록 불러오기 (board_posts의 status='draft')
+  // 임시등록 목록 불러오기 (DB 기반, 현재 게시판+유저 기준)
   const loadDrafts = async () => {
     if (!selectedPageId) {
       setDrafts([]);
@@ -369,7 +405,10 @@ export default function BoardWrite({
     }
     try {
       const user = await getHeaderUser();
-      if (!user || !user.id) return setDrafts([]);
+      if (!user || !user.id) {
+        setDrafts([]);
+        return [];
+      }
       const data = await fetchDrafts({
         userId: user.id,
         pageId: selectedPageId,
@@ -418,7 +457,7 @@ export default function BoardWrite({
     }
   };
 
-  //임시등록 수동 실행 (board_posts에 status='draft'로 저장)
+  // 임시등록 수동 실행 (DB에 status='draft'로 저장)
   const handleManualSave = async () => {
     if (!selectedPageId) {
       showToast({
@@ -437,14 +476,16 @@ export default function BoardWrite({
       });
       return;
     }
+    setPostId(undefined); // 항상 새 draft로 저장
     await savePost("draft");
+    await loadDrafts();
   };
 
-  //임시등록 삭제 (board_posts에서 status='draft' row 삭제)
+  // 임시등록 삭제 (DB 기반)
   const deleteDraft = async (draftKey: string) => {
     try {
       await serviceDeleteDraft({ draftId: draftKey });
-      setDrafts(drafts.filter((d) => d.key !== draftKey));
+      setDrafts((prev) => prev.filter((d) => d.key !== draftKey));
       showToast({
         title: "삭제 완료",
         description: "선택한 임시등록이 삭제되었습니다.",
@@ -460,53 +501,32 @@ export default function BoardWrite({
     }
   };
 
-  //임시등록 목록 토글
+  // 임시등록 목록 토글
   const toggleDraftList = () => {
     if (!showDraftList) {
       loadDrafts();
     }
-    setShowDraftList(!showDraftList);
+    setShowDraftList((prev) => !prev);
   };
 
-  // 특정임시등록 불러오기 (기본 저장된 데이터)
-  const loadDraftItem = (draftKey?: string) => {
+  // 특정임시등록 불러오기 (DB 기반)
+  const loadDraftItem = async (draftKey?: string) => {
     try {
-      const key = draftKey || getStorageKey();
-      const savedData = localStorage.getItem(key);
-
-      if (!savedData) {
-        throw new Error("임시등록을 찾을 수 없습니다.");
-      }
-
-      const parsedData = JSON.parse(savedData);
-      console.log("불러온임시등록 데이터:", {
-        ...parsedData,
-        files: parsedData.files
-          ? parsedData.files.map((f: any) => ({
-              name: f.name,
-              type: f.type,
-              size: f.size,
-              url: f.url ? "..." : "empty", // URL은 너무 길어서 축약
-            }))
-          : [],
-      });
-
-      // 상태 업데이트
+      const draft = drafts.find((d) => d.key === draftKey);
+      if (!draft) throw new Error("임시등록을 찾을 수 없습니다.");
+      const parsedData = draft.data;
       if (parsedData.title) setTitle(parsedData.title);
       if (parsedData.content) {
         setContent(parsedData.content);
-        // TipTap 에디터 내용 업데이트
         if (editorRef.current?.editor) {
           editorRef.current.editor.commands.setContent(parsedData.content);
         }
       }
-      if (parsedData.thumbnailImage)
-        setThumbnailImage(parsedData.thumbnailImage);
-      if (parsedData.allowComments !== undefined)
-        setAllowComments(parsedData.allowComments);
+      if (parsedData.thumbnail_image)
+        setThumbnailImage(parsedData.thumbnail_image);
+      if (parsedData.allow_comments !== undefined)
+        setAllowComments(parsedData.allow_comments);
       if (parsedData.pageId) setSelectedPageId(parsedData.pageId);
-
-      // 파일 정보 로드
       if (parsedData.files && Array.isArray(parsedData.files)) {
         const validFiles = parsedData.files.filter(
           (file: any) =>
@@ -521,31 +541,15 @@ export default function BoardWrite({
       } else {
         setUploadedFiles([]);
       }
-
       setLastSaved(
         parsedData.savedAt || new Date(parsedData.timestamp).toLocaleString()
       );
       setShowDraftList(false);
-
       showToast({
         title: "임시등록 불러오기 완료",
         description: "임시등록을 불러왔습니다.",
         variant: "default",
       });
-
-      /*
-      if (
-        parsedData.pageId !== selectedPageId ||
-        parsedData.categoryId !== categoryId
-      ) {
-        showToast({
-          title: "불러오기 실패",
-          description: "현재 페이지/카테고리와 맞지 않는 임시저장입니다.",
-          variant: "destructive",
-        });
-        return;
-      }
-      */
     } catch (error) {
       console.error("임시등록 불러오기 오류:", error);
       showToast({
@@ -577,6 +581,12 @@ export default function BoardWrite({
         setAllowComments(data.allow_comments !== false);
         setDescription(data.description || ""); // 상세 설명 로드
         setIsHidden(data.status === "hidden"); // 숨김 상태 반영
+        setIsNotice(data.is_notice === true); // 공지사항 상태 반영
+        setPublishDate(
+          data.published_at
+            ? new Date(data.published_at).toISOString().slice(0, 16)
+            : ""
+        ); // 게시일 반영
         let parsedFiles: any[] = [];
         if (data.files) {
           try {
@@ -715,48 +725,7 @@ export default function BoardWrite({
     });
   };
 
-  //임시등록 함수 (자동저장 제거)
-  const saveDraft = async (newContent: string) => {
-    try {
-      const key = getStorageKey();
-      const now = new Date();
-
-      // uploadedFiles가 배열이 아닌 경우 빈 배열로 초기화
-      const filesToSave = Array.isArray(uploadedFiles) ? uploadedFiles : [];
-
-      const draftData = {
-        title,
-        content: newContent || content,
-        savedAt: now.toISOString(),
-        thumbnailImage,
-        files: filesToSave, // 파일 정보 저장
-        allowComments,
-        pageId: selectedPageId,
-        categoryId,
-      };
-
-      console.log("임시등록 데이터:", {
-        ...draftData,
-        files: filesToSave.map((f) => ({
-          name: f.name,
-          type: f.type,
-          size: f.size,
-          url: f.url ? "..." : "empty", // URL은 너무 길어서 축약
-        })),
-      });
-
-      localStorage.setItem(key, JSON.stringify(draftData));
-      setLastSaved(now.toLocaleString());
-
-      return true;
-    } catch (e) {
-      console.error("임시등록 오류:", e);
-      setError("임시등록 중 오류가 발생했습니다.");
-      return false;
-    }
-  };
-
-  //임시등록 목록을 표시하는 모달 (DB 기반)
+  //임시등록 목록을 표시하는 모달 (DB 기반, 현재 게시판 기준)
   const DraftListModal = () => {
     if (!showDraftList) return null;
     return (
@@ -800,45 +769,8 @@ export default function BoardWrite({
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => {
-                          setSelectedPageId(draft.data.pageId);
-                          setTitle(draft.data.title || "");
-                          setContent(draft.data.content || "");
-                          if (editorRef.current?.editor) {
-                            editorRef.current.editor.commands.setContent(
-                              draft.data.content || ""
-                            );
-                          }
-                          setAllowComments(draft.data.allow_comments !== false);
-                          setThumbnailImage(draft.data.thumbnail_image || "");
-                          // 파일 정복원 (문자열/배열 모두 지원)
-                          let files = [];
-                          if (draft.data.files) {
-                            if (typeof draft.data.files === "string") {
-                              try {
-                                files = JSON.parse(draft.data.files);
-                              } catch {
-                                files = [];
-                              }
-                            } else if (Array.isArray(draft.data.files)) {
-                              files = draft.data.files;
-                            }
-                          }
-                          setUploadedFiles(files.map(normalizeFileInfo));
-                          setShowDraftList(false);
-                          setPostId(draft.key); // uuid 세팅
-                          setIsEditMode(false); // 임시저장 불러오기는 항상 새글모드
-                          setInitialData({
-                            title: draft.data.title,
-                            content: draft.data.content,
-                            allow_comments: draft.data.allow_comments,
-                            files: JSON.stringify(draft.data.files),
-                          });
-                          showToast({
-                            title: "임시등록 불러오기 완료",
-                            description: "임시등록된 내용을 불러왔습니다.",
-                            variant: "default",
-                          });
+                        onClick={async () => {
+                          await loadDraftItem(draft.key);
                         }}
                       >
                         불러오기
@@ -977,6 +909,8 @@ export default function BoardWrite({
           statusArg === "draft" ? "draft" : isHidden ? "hidden" : "published",
         number: nextNumber,
         description: description.trim(), // 상세 설명 추가
+        isNotice, // 공지사항 설정 추가
+        publishedAt: publishDate ? new Date(publishDate).toISOString() : null, // 게시일 추가
       });
 
       console.log("[BoardWrite] serviceSaveBoardPost 결과:", result);
@@ -1001,17 +935,24 @@ export default function BoardWrite({
         setSuccess(false);
       }, 3000);
     } else {
-      if (newId) {
-        // 상세페이지로 이동 (현재 경로에서 write 또는 edit 부분 제거)
-        const basePath = window.location.pathname.replace(
-          /\/(write|edit([^/]+)?)$/,
-          ""
-        );
-        if (basePath.endsWith(`/${newId}`)) {
-          router.push(basePath);
-        } else {
-          router.push(`${basePath}/${newId}`);
-        }
+      if (isEditMode) {
+        // 수정 모드: 뒤로 가기 또는 상세 페이지로 이동
+        showToast({
+          title: "수정 완료",
+          description: "게시글이 성공적으로 수정되었습니다.",
+          variant: "default",
+        });
+        setTimeout(() => {
+          router.back();
+        }, 1000);
+      } else if (newId) {
+        // 신규 작성 모드: 상세 페이지로 이동
+        const params = new URLSearchParams(window.location.search);
+        params.set("post", newId);
+        if (selectedPageId) params.set("pageId", selectedPageId);
+        // 현재 경로에서 write 부분 제거
+        const basePath = window.location.pathname.replace(/\/write$/, "");
+        router.push(`${basePath}?${params.toString()}`);
       } else {
         setTitle("");
         setContent("");
@@ -1054,6 +995,81 @@ export default function BoardWrite({
     loadDrafts();
   }, [isEditMode, postId, initialData]);
 
+  // 게시판(페이지) 선택이 바뀔 때마다 임시등록 목록 자동 갱신
+  useEffect(() => {
+    loadDrafts();
+  }, [selectedPageId]);
+
+  // 관리자 설정 다이얼로그 컴포넌트
+  const AdminSettingsDialog = () => {
+    return (
+      <Dialog open={showAdminSettings} onOpenChange={setShowAdminSettings}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>관리자 설정</DialogTitle>
+            <DialogDescription>
+              게시글의 고급 설정을 관리합니다.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            {/* 숨김 설정 */}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="admin-hidden"
+                checked={isHidden}
+                onCheckedChange={(checked) => setIsHidden(checked === true)}
+              />
+              <Label htmlFor="admin-hidden" className="text-sm font-medium">
+                숨김 (관리자만 보기)
+              </Label>
+            </div>
+
+            {/* 공지 설정 */}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="admin-notice"
+                checked={isNotice}
+                onCheckedChange={(checked) => setIsNotice(checked === true)}
+              />
+              <Label htmlFor="admin-notice" className="text-sm font-medium">
+                공지사항으로 설정
+              </Label>
+            </div>
+
+            {/* 게시일 설정 */}
+            <div className="space-y-2">
+              <Label htmlFor="publish-date" className="text-sm font-medium">
+                게시일 설정 (선택사항)
+              </Label>
+              <Input
+                id="publish-date"
+                type="datetime-local"
+                value={publishDate}
+                onChange={(e) => setPublishDate(e.target.value)}
+                className="w-full"
+              />
+              <p className="text-xs text-gray-500">
+                게시일을 설정하지 않으면 생성일 기준으로 정렬됩니다.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowAdminSettings(false)}
+            >
+              취소
+            </Button>
+            <Button type="button" onClick={() => setShowAdminSettings(false)}>
+              적용
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  };
+
   return (
     <ToastProvider>
       <ToastViewport />
@@ -1088,6 +1104,24 @@ export default function BoardWrite({
 
             {/* 액션 버튼 영역 - 우측 */}
             <div className="grid grid-cols-8 sm:flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+              {/* 관리자 설정 버튼 */}
+              {(() => {
+                console.log("[BoardWrite] 현재 userRole:", isAdmin);
+                console.log("[BoardWrite] 관리자 버튼 표시 조건:", isAdmin);
+                return isAdmin;
+              })() && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setShowAdminSettings(true)}
+                  className="col-span-1 sm:col-auto h-9 sm:h-10"
+                  title="관리자 설정"
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+              )}
+
               {/* 임시등록 버튼(텍스트/숫자 분리 클릭) */}
               {!isEditMode && (
                 <div className="flex items-center border rounded h-9 sm:h-10 col-span-4 sm:col-auto">
@@ -1133,6 +1167,9 @@ export default function BoardWrite({
 
           {/* DraftListModal 팝업 렌더링 */}
           <DraftListModal />
+
+          {/* AdminSettingsDialog 팝업 렌더링 */}
+          <AdminSettingsDialog />
 
           {/* 입력 영역 */}
           <div className="p-2 sm:p-6">
@@ -1281,23 +1318,6 @@ export default function BoardWrite({
                           className="text-sm font-medium"
                         >
                           댓글 허용
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* 숨김(관리자만 보기) 카드 */}
-                    <div className="border border-gray-200 rounded-md p-3 lg:p-4 bg-white mt-3">
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id="hidden"
-                          checked={isHidden}
-                          onChange={(e) => setIsHidden(e.target.checked)}
-                          disabled={loading}
-                          className="accent-blue-500"
-                        />
-                        <label htmlFor="hidden" className="text-sm font-medium">
-                          숨김(관리자만 보기)
                         </label>
                       </div>
                     </div>

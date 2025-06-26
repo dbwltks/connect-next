@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ImageBrowser from "@/components/ui/image-browser";
 
 import { MediaWidget } from "../widgets/media-widget";
 import { BoardlistWidget, BOARD_TEMPLATE } from "../widgets/boardlist-widget";
@@ -30,6 +31,7 @@ import { BoardWidget } from "../widgets/board-widget";
 import LocationWidget from "../widgets/location-widget";
 import MenuListWidget from "../widgets/menu-list-widget";
 import { StripWidget } from "../widgets/strip-widget";
+import { CarouselWidget, CAROUSEL_TYPES } from "../widgets/carousel-widget";
 import { supabase } from "@/db";
 import { toast } from "@/hooks/use-toast";
 import { Plus, Trash2, MoveVertical, Settings, Eye } from "lucide-react";
@@ -102,6 +104,7 @@ const WIDGET_TYPES = [
   { id: "popular-posts", name: "인기 게시글" },
   { id: "login", name: "로그인" },
   { id: "strip", name: "스트립(띠 배너)" },
+  { id: "carousel", name: "캐러셀 슬라이드" },
 ];
 
 export default function LayoutManager(): React.ReactNode {
@@ -124,6 +127,9 @@ export default function LayoutManager(): React.ReactNode {
   const [selectedPageId, setSelectedPageId] = useState<string | null>(null); // null은 홈페이지
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [stripUploading, setStripUploading] = useState(false);
+  const carouselFileInputRef = useRef<HTMLInputElement>(null);
+  const [carouselUploading, setCarouselUploading] = useState(false);
+  const [showImageBrowser, setShowImageBrowser] = useState(false);
 
   // 컴포넌트 마운트 시 데이터 로드
   useEffect(() => {
@@ -1503,6 +1509,31 @@ export default function LayoutManager(): React.ReactNode {
           {editingWidget.type === "strip" && (
             <div className="space-y-4">
               <h4 className="font-medium text-sm">스트립(띠 배너) 설정</h4>
+
+              {/* 전체 너비 사용 설정 */}
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="use-full-width"
+                    checked={editingWidget.settings?.use_full_width ?? true}
+                    onCheckedChange={(checked) =>
+                      setEditingWidget({
+                        ...editingWidget,
+                        settings: {
+                          ...editingWidget.settings,
+                          use_full_width: checked === true,
+                        },
+                      })
+                    }
+                  />
+                  <Label htmlFor="use-full-width">전체 화면 너비 사용</Label>
+                </div>
+                <p className="text-xs text-gray-500">
+                  체크하면 위젯 컨테이너를 벗어나 전체 화면 너비로 표시됩니다.
+                  체크하지 않으면 위젯 컨테이너 안에서만 표시됩니다.
+                </p>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="strip-type">타입 선택</Label>
                 <Select
@@ -1673,6 +1704,830 @@ export default function LayoutManager(): React.ReactNode {
                   />
                 </div>
               )}
+            </div>
+          )}
+
+          {/* 캐러셀 위젯 전용 설정 */}
+          {editingWidget.type === "carousel" && (
+            <div className="space-y-4">
+              <h4 className="font-medium text-sm">캐러셀 슬라이드 설정</h4>
+
+              <Tabs defaultValue="basic" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="basic">기본 설정</TabsTrigger>
+                  <TabsTrigger value="data">데이터 관리</TabsTrigger>
+                  <TabsTrigger value="display">표시 옵션</TabsTrigger>
+                </TabsList>
+
+                {/* 기본 설정 탭 */}
+                <TabsContent value="basic" className="space-y-4 pt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="carousel-type">캐러셀 타입</Label>
+                    <Select
+                      value={
+                        editingWidget.settings?.carousel_type ||
+                        CAROUSEL_TYPES.BASIC
+                      }
+                      onValueChange={(value) =>
+                        setEditingWidget({
+                          ...editingWidget,
+                          settings: {
+                            ...editingWidget.settings,
+                            carousel_type: value,
+                          },
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="캐러셀 타입 선택" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={CAROUSEL_TYPES.BASIC}>
+                          기본 슬라이드형
+                        </SelectItem>
+                        <SelectItem value={CAROUSEL_TYPES.GALLERY}>
+                          갤러리 카드형
+                        </SelectItem>
+                        <SelectItem value={CAROUSEL_TYPES.FULLSCREEN}>
+                          풀스크린 모드
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500">
+                      기본: 전체 너비 슬라이드, 갤러리: 카드형 가로 스크롤,
+                      풀스크린: 썸네일 클릭 시 전체 화면 보기
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="carousel-data-source">데이터 소스</Label>
+                    <Select
+                      value={editingWidget.settings?.data_source || "sample"}
+                      onValueChange={(value) =>
+                        setEditingWidget({
+                          ...editingWidget,
+                          settings: {
+                            ...editingWidget.settings,
+                            data_source: value,
+                          },
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="데이터 소스 선택" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="sample">기본 샘플 이미지</SelectItem>
+                        <SelectItem value="page">페이지 콘텐츠</SelectItem>
+                        <SelectItem value="custom">직접 이미지 관리</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500">
+                      샘플: 기본 더미 이미지, 페이지: 선택한 페이지의 게시물,
+                      직접: 업로드한 이미지들
+                    </p>
+                  </div>
+                </TabsContent>
+
+                {/* 데이터 관리 탭 */}
+                <TabsContent value="data" className="space-y-4 pt-4">
+                  {/* 페이지 선택 (페이지 콘텐츠 모드일 때만) */}
+                  {editingWidget.settings?.data_source === "page" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="carousel-page">콘텐츠 페이지 선택</Label>
+                      <Select
+                        value={
+                          editingWidget.display_options?.page_id || "default"
+                        }
+                        onValueChange={(value) =>
+                          setEditingWidget({
+                            ...editingWidget,
+                            display_options: {
+                              ...editingWidget.display_options,
+                              page_id: value === "default" ? undefined : value,
+                            },
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="페이지 선택" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {pages.map((page) => (
+                            <SelectItem key={page.id} value={page.id}>
+                              {page.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-gray-500">
+                        선택한 페이지의 썸네일이 있는 게시물들이 캐러셀에
+                        표시됩니다.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* 직접 이미지 관리 (커스텀 모드일 때만) */}
+                  {editingWidget.settings?.data_source === "custom" && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Label>이미지 관리</Label>
+                        <div className="text-xs text-gray-500">
+                          {(editingWidget.settings?.custom_images || []).length}
+                          /8
+                        </div>
+                      </div>
+
+                      {/* 이미지 추가 버튼들 */}
+                      <div className="space-y-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setShowImageBrowser(true)}
+                          className="w-full"
+                          disabled={
+                            (editingWidget.settings?.custom_images || [])
+                              .length >= 8
+                          }
+                        >
+                          📁 서버 이미지 브라우저
+                        </Button>
+
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              carouselFileInputRef.current?.click()
+                            }
+                            disabled={
+                              carouselUploading ||
+                              (editingWidget.settings?.custom_images || [])
+                                .length >= 8
+                            }
+                            className="flex-shrink-0"
+                          >
+                            {carouselUploading ? "업로드 중..." : "파일 업로드"}
+                          </Button>
+                          <span className="text-sm text-gray-500">또는</span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <Input
+                            placeholder="이미지 URL 입력 (https://...)"
+                            disabled={
+                              (editingWidget.settings?.custom_images || [])
+                                .length >= 8
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                const url = e.currentTarget.value.trim();
+                                if (
+                                  url &&
+                                  (url.startsWith("http://") ||
+                                    url.startsWith("https://"))
+                                ) {
+                                  const currentImages =
+                                    editingWidget.settings?.custom_images || [];
+
+                                  if (currentImages.length >= 8) {
+                                    toast({
+                                      title: "이미지 개수 제한",
+                                      description:
+                                        "최대 8개까지만 추가할 수 있습니다.",
+                                      variant: "destructive",
+                                    });
+                                    return;
+                                  }
+
+                                  const newImage = {
+                                    image_url: url,
+                                    title: "",
+                                    description: "",
+                                    link_url: "",
+                                  };
+
+                                  setEditingWidget({
+                                    ...editingWidget,
+                                    settings: {
+                                      ...editingWidget.settings,
+                                      custom_images: [
+                                        ...currentImages,
+                                        newImage,
+                                      ],
+                                    },
+                                  });
+
+                                  e.currentTarget.value = "";
+
+                                  toast({
+                                    title: "이미지 추가 성공",
+                                    description:
+                                      "URL 이미지가 성공적으로 추가되었습니다.",
+                                  });
+                                } else {
+                                  toast({
+                                    title: "올바르지 않은 URL",
+                                    description:
+                                      "http:// 또는 https://로 시작하는 유효한 URL을 입력해주세요.",
+                                    variant: "destructive",
+                                  });
+                                }
+                              }
+                            }}
+                            className="flex-1"
+                          />
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="default"
+                            disabled={
+                              (editingWidget.settings?.custom_images || [])
+                                .length >= 8
+                            }
+                            onClick={(e) => {
+                              const input = e.currentTarget
+                                .previousElementSibling as HTMLInputElement;
+                              const url = input?.value.trim();
+                              if (
+                                url &&
+                                (url.startsWith("http://") ||
+                                  url.startsWith("https://"))
+                              ) {
+                                const currentImages =
+                                  editingWidget.settings?.custom_images || [];
+
+                                if (currentImages.length >= 8) {
+                                  toast({
+                                    title: "이미지 개수 제한",
+                                    description:
+                                      "최대 8개까지만 추가할 수 있습니다.",
+                                    variant: "destructive",
+                                  });
+                                  return;
+                                }
+
+                                const newImage = {
+                                  image_url: url,
+                                  title: "",
+                                  description: "",
+                                  link_url: "",
+                                };
+
+                                setEditingWidget({
+                                  ...editingWidget,
+                                  settings: {
+                                    ...editingWidget.settings,
+                                    custom_images: [...currentImages, newImage],
+                                  },
+                                });
+
+                                input.value = "";
+
+                                toast({
+                                  title: "이미지 추가 성공",
+                                  description:
+                                    "URL 이미지가 성공적으로 추가되었습니다.",
+                                });
+                              } else {
+                                toast({
+                                  title: "올바르지 않은 URL",
+                                  description:
+                                    "http:// 또는 https://로 시작하는 유효한 URL을 입력해주세요.",
+                                  variant: "destructive",
+                                });
+                              }
+                            }}
+                          >
+                            URL 추가
+                          </Button>
+                        </div>
+
+                        {(editingWidget.settings?.custom_images || []).length >=
+                          8 && (
+                          <p className="text-xs text-amber-600">
+                            ⚠️ 최대 8개까지만 추가할 수 있습니다. (성능 최적화)
+                          </p>
+                        )}
+
+                        <p className="text-xs text-gray-500">
+                          파일을 업로드하거나 이미지 URL을 입력하여 추가할 수
+                          있습니다. 이미지를 클릭하면 상세 설정을 할 수
+                          있습니다.
+                        </p>
+                      </div>
+
+                      {/* 이미지 썸네일 그리드 */}
+                      <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto">
+                        {(editingWidget.settings?.custom_images || []).map(
+                          (img: any, index: number) => (
+                            <div
+                              key={index}
+                              className="relative group cursor-pointer rounded-lg overflow-hidden border-2 border-transparent hover:border-blue-300 transition-all"
+                              onClick={() => {
+                                setEditingWidget({
+                                  ...editingWidget,
+                                  settings: {
+                                    ...editingWidget.settings,
+                                    selectedImageIndex: index,
+                                  },
+                                });
+                              }}
+                            >
+                              <img
+                                src={img.image_url}
+                                alt={img.title || `이미지 ${index + 1}`}
+                                className="w-full h-20 object-cover"
+                              />
+
+                              {/* 삭제 버튼 */}
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="destructive"
+                                className="absolute top-1 right-1 w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={(e) => {
+                                  e.stopPropagation(); // 이미지 클릭 이벤트 방지
+                                  const updatedImages = [
+                                    ...(editingWidget.settings?.custom_images ||
+                                      []),
+                                  ];
+                                  updatedImages.splice(index, 1);
+                                  setEditingWidget({
+                                    ...editingWidget,
+                                    settings: {
+                                      ...editingWidget.settings,
+                                      custom_images: updatedImages,
+                                    },
+                                  });
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+
+                              {/* 편집 아이콘 */}
+                              <div className="absolute top-1 left-1 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Settings className="h-3 w-3" />
+                              </div>
+
+                              {/* 인덱스 표시 */}
+                              <div className="absolute bottom-1 left-1 bg-black bg-opacity-75 text-white text-xs px-1.5 py-0.5 rounded">
+                                {index + 1}
+                              </div>
+
+                              {/* 제목 표시 */}
+                              {img.title && (
+                                <div className="absolute bottom-1 right-1 bg-black bg-opacity-75 text-white text-xs px-1.5 py-0.5 rounded max-w-16 truncate">
+                                  {img.title}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        )}
+
+                        {(!editingWidget.settings?.custom_images ||
+                          editingWidget.settings.custom_images.length ===
+                            0) && (
+                          <div className="col-span-4 text-center text-gray-500 py-8 border-2 border-dashed border-gray-200 rounded-lg">
+                            <p className="text-sm">이미지를 추가해주세요</p>
+                            <p className="text-xs mt-1">
+                              위의 버튼들을 사용해서 이미지를 추가할 수 있습니다
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      <input
+                        type="file"
+                        ref={carouselFileInputRef}
+                        className="hidden"
+                        accept="image/*"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+
+                          const currentImages =
+                            editingWidget.settings?.custom_images || [];
+                          if (currentImages.length >= 8) {
+                            toast({
+                              title: "이미지 개수 제한",
+                              description: "최대 8개까지만 추가할 수 있습니다.",
+                              variant: "destructive",
+                            });
+                            return;
+                          }
+
+                          setCarouselUploading(true);
+                          try {
+                            const fileName = file.name;
+                            const filePath = `carousel-images/${Date.now()}_${fileName}`;
+                            const { error: uploadError } =
+                              await supabase.storage
+                                .from("homepage-banners")
+                                .upload(filePath, file, {
+                                  cacheControl: "3600",
+                                  upsert: true,
+                                });
+
+                            if (uploadError) throw uploadError;
+
+                            const { data: publicUrlData } = supabase.storage
+                              .from("homepage-banners")
+                              .getPublicUrl(filePath);
+
+                            const newImage = {
+                              image_url: publicUrlData.publicUrl,
+                              title: "",
+                              description: "",
+                              link_url: "",
+                            };
+
+                            setEditingWidget({
+                              ...editingWidget,
+                              settings: {
+                                ...editingWidget.settings,
+                                custom_images: [...currentImages, newImage],
+                              },
+                            });
+
+                            toast({
+                              title: "이미지 업로드 성공",
+                              description:
+                                "이미지가 성공적으로 추가되었습니다.",
+                            });
+                          } catch (err) {
+                            toast({
+                              title: "이미지 업로드 실패",
+                              description:
+                                (err as any).message || "업로드 중 오류 발생",
+                              variant: "destructive",
+                            });
+                          } finally {
+                            setCarouselUploading(false);
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* 이미지 상세 설정 모달 */}
+                  {editingWidget?.settings?.selectedImageIndex !==
+                    undefined && (
+                    <Dialog
+                      open={
+                        editingWidget.settings.selectedImageIndex !== undefined
+                      }
+                      onOpenChange={() => {
+                        setEditingWidget({
+                          ...editingWidget,
+                          settings: {
+                            ...editingWidget.settings,
+                            selectedImageIndex: undefined,
+                          },
+                        });
+                      }}
+                    >
+                      <DialogContent className="max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>
+                            이미지{" "}
+                            {(editingWidget.settings.selectedImageIndex ?? 0) +
+                              1}{" "}
+                            설정
+                          </DialogTitle>
+                        </DialogHeader>
+
+                        <div className="space-y-4">
+                          {/* 이미지 미리보기 */}
+                          <div className="flex justify-center">
+                            <img
+                              src={
+                                editingWidget.settings.custom_images[
+                                  editingWidget.settings.selectedImageIndex
+                                ]?.image_url
+                              }
+                              alt="설정할 이미지"
+                              className="w-32 h-32 object-cover rounded border"
+                            />
+                          </div>
+
+                          {/* 설정 폼 */}
+                          <div className="space-y-3">
+                            <div>
+                              <Label className="text-sm">제목</Label>
+                              <Input
+                                placeholder="이미지 제목을 입력하세요"
+                                value={
+                                  editingWidget.settings.custom_images[
+                                    editingWidget.settings.selectedImageIndex
+                                  ]?.title || ""
+                                }
+                                onChange={(e) => {
+                                  const selectedIndex =
+                                    editingWidget.settings
+                                      ?.selectedImageIndex ?? 0;
+                                  const updatedImages = [
+                                    ...(editingWidget.settings?.custom_images ||
+                                      []),
+                                  ];
+                                  updatedImages[selectedIndex] = {
+                                    ...updatedImages[selectedIndex],
+                                    title: e.target.value,
+                                  };
+                                  setEditingWidget({
+                                    ...editingWidget,
+                                    settings: {
+                                      ...editingWidget.settings,
+                                      custom_images: updatedImages,
+                                    },
+                                  });
+                                }}
+                              />
+                            </div>
+
+                            <div>
+                              <Label className="text-sm">설명</Label>
+                              <Input
+                                placeholder="이미지 설명을 입력하세요"
+                                value={
+                                  editingWidget.settings.custom_images[
+                                    editingWidget.settings.selectedImageIndex
+                                  ]?.description || ""
+                                }
+                                onChange={(e) => {
+                                  const selectedIndex =
+                                    editingWidget.settings
+                                      ?.selectedImageIndex ?? 0;
+                                  const updatedImages = [
+                                    ...(editingWidget.settings?.custom_images ||
+                                      []),
+                                  ];
+                                  updatedImages[selectedIndex] = {
+                                    ...updatedImages[selectedIndex],
+                                    description: e.target.value,
+                                  };
+                                  setEditingWidget({
+                                    ...editingWidget,
+                                    settings: {
+                                      ...editingWidget.settings,
+                                      custom_images: updatedImages,
+                                    },
+                                  });
+                                }}
+                              />
+                            </div>
+
+                            <div>
+                              <Label className="text-sm">
+                                링크 URL (선택사항)
+                              </Label>
+                              <Input
+                                placeholder="클릭 시 이동할 URL을 입력하세요"
+                                value={
+                                  editingWidget.settings.custom_images[
+                                    editingWidget.settings.selectedImageIndex
+                                  ]?.link_url || ""
+                                }
+                                onChange={(e) => {
+                                  const selectedIndex =
+                                    editingWidget.settings
+                                      ?.selectedImageIndex ?? 0;
+                                  const updatedImages = [
+                                    ...(editingWidget.settings?.custom_images ||
+                                      []),
+                                  ];
+                                  updatedImages[selectedIndex] = {
+                                    ...updatedImages[selectedIndex],
+                                    link_url: e.target.value,
+                                  };
+                                  setEditingWidget({
+                                    ...editingWidget,
+                                    settings: {
+                                      ...editingWidget.settings,
+                                      custom_images: updatedImages,
+                                    },
+                                  });
+                                }}
+                              />
+                            </div>
+
+                            <div>
+                              <Label className="text-sm">이미지 URL</Label>
+                              <Input
+                                className="text-xs font-mono"
+                                value={
+                                  editingWidget.settings.custom_images[
+                                    editingWidget.settings.selectedImageIndex
+                                  ]?.image_url || ""
+                                }
+                                onChange={(e) => {
+                                  const selectedIndex =
+                                    editingWidget.settings
+                                      ?.selectedImageIndex ?? 0;
+                                  const updatedImages = [
+                                    ...(editingWidget.settings?.custom_images ||
+                                      []),
+                                  ];
+                                  updatedImages[selectedIndex] = {
+                                    ...updatedImages[selectedIndex],
+                                    image_url: e.target.value,
+                                  };
+                                  setEditingWidget({
+                                    ...editingWidget,
+                                    settings: {
+                                      ...editingWidget.settings,
+                                      custom_images: updatedImages,
+                                    },
+                                  });
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <DialogFooter>
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setEditingWidget({
+                                ...editingWidget,
+                                settings: {
+                                  ...editingWidget.settings,
+                                  selectedImageIndex: undefined,
+                                },
+                              });
+                            }}
+                          >
+                            닫기
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  )}
+
+                  {/* 샘플 데이터 안내 */}
+                  {editingWidget.settings?.data_source === "sample" && (
+                    <div className="text-center py-8 text-gray-500">
+                      <p className="text-sm">
+                        기본 샘플 이미지 3개가 표시됩니다.
+                      </p>
+                      <p className="text-xs mt-2">
+                        다른 데이터 소스를 선택하여 실제 콘텐츠를 표시할 수
+                        있습니다.
+                      </p>
+                    </div>
+                  )}
+                </TabsContent>
+
+                {/* 표시 옵션 탭 */}
+                <TabsContent value="display" className="space-y-4 pt-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="carousel-show-title"
+                          checked={editingWidget.settings?.show_title ?? true}
+                          onCheckedChange={(checked) =>
+                            setEditingWidget({
+                              ...editingWidget,
+                              settings: {
+                                ...editingWidget.settings,
+                                show_title: checked === true,
+                              },
+                            })
+                          }
+                        />
+                        <Label htmlFor="carousel-show-title">제목 표시</Label>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="carousel-auto-play"
+                          checked={editingWidget.settings?.auto_play ?? true}
+                          onCheckedChange={(checked) =>
+                            setEditingWidget({
+                              ...editingWidget,
+                              settings: {
+                                ...editingWidget.settings,
+                                auto_play: checked === true,
+                              },
+                            })
+                          }
+                        />
+                        <Label htmlFor="carousel-auto-play">자동 재생</Label>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="carousel-show-dots"
+                          checked={editingWidget.settings?.show_dots ?? true}
+                          onCheckedChange={(checked) =>
+                            setEditingWidget({
+                              ...editingWidget,
+                              settings: {
+                                ...editingWidget.settings,
+                                show_dots: checked === true,
+                              },
+                            })
+                          }
+                        />
+                        <Label htmlFor="carousel-show-dots">도트 표시</Label>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="carousel-show-arrows"
+                          checked={editingWidget.settings?.show_arrows ?? true}
+                          onCheckedChange={(checked) =>
+                            setEditingWidget({
+                              ...editingWidget,
+                              settings: {
+                                ...editingWidget.settings,
+                                show_arrows: checked === true,
+                              },
+                            })
+                          }
+                        />
+                        <Label htmlFor="carousel-show-arrows">
+                          화살표 표시
+                        </Label>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="carousel-transparent-background"
+                          checked={
+                            editingWidget.settings?.transparent_background ??
+                            false
+                          }
+                          onCheckedChange={(checked) =>
+                            setEditingWidget({
+                              ...editingWidget,
+                              settings: {
+                                ...editingWidget.settings,
+                                transparent_background: checked === true,
+                              },
+                            })
+                          }
+                        />
+                        <Label htmlFor="carousel-transparent-background">
+                          투명 배경 사용
+                        </Label>
+                      </div>
+                      <p className="text-xs text-gray-500 ml-6">
+                        갤러리형에서 카드 배경을 투명하게 만듭니다
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="carousel-auto-play-delay">
+                        자동 재생 간격 (초)
+                      </Label>
+                      <Input
+                        id="carousel-auto-play-delay"
+                        type="number"
+                        min="1"
+                        max="30"
+                        value={
+                          (editingWidget.settings?.auto_play_delay || 5000) /
+                          1000
+                        }
+                        onChange={(e) => {
+                          const seconds = parseInt(e.target.value) || 5;
+                          setEditingWidget({
+                            ...editingWidget,
+                            settings: {
+                              ...editingWidget.settings,
+                              auto_play_delay: seconds * 1000,
+                            },
+                          });
+                        }}
+                        disabled={!editingWidget.settings?.auto_play}
+                      />
+                      <p className="text-xs text-gray-500">
+                        자동 재생이 활성화된 경우 슬라이드 전환 간격을
+                        설정합니다.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t">
+                    <h5 className="font-medium text-sm mb-3">추가 설정</h5>
+                    <div className="space-y-2 text-sm text-gray-600">
+                      <p>• 캐러셀 타입에 따라 표시 방식이 달라집니다</p>
+                      <p>
+                        • 자동 재생은 사용자가 마우스를 올리면 일시 정지됩니다
+                      </p>
+                      <p>
+                        • 풀스크린 모드에서는 썸네일 클릭 시 전체 화면으로
+                        확대됩니다
+                      </p>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
             </div>
           )}
 
@@ -2060,6 +2915,34 @@ export default function LayoutManager(): React.ReactNode {
       case "strip":
         return <StripWidget widget={widget} />;
 
+      case "carousel":
+        return previewMode ? (
+          <CarouselWidget widget={widget} />
+        ) : (
+          <div className="bg-orange-50 p-4 rounded">
+            <div className="font-medium">
+              {widget.title || "캐러셀 슬라이드"}
+            </div>
+            <div className="text-sm text-gray-500 mt-1">
+              타입:{" "}
+              {widget.settings?.carousel_type === CAROUSEL_TYPES.BASIC
+                ? "기본 슬라이드"
+                : widget.settings?.carousel_type === CAROUSEL_TYPES.GALLERY
+                  ? "갤러리 카드"
+                  : widget.settings?.carousel_type === CAROUSEL_TYPES.FULLSCREEN
+                    ? "풀스크린 모드"
+                    : "기본 슬라이드"}
+            </div>
+            {widget.display_options?.page_id && (
+              <div className="text-xs text-blue-500 mt-1">
+                선택된 페이지:{" "}
+                {pages.find((p) => p.id === widget.display_options?.page_id)
+                  ?.title || "없음"}
+              </div>
+            )}
+          </div>
+        );
+
       default:
         return <div className="bg-gray-100 p-4 rounded">알 수 없는 위젯</div>;
     }
@@ -2290,6 +3173,21 @@ export default function LayoutManager(): React.ReactNode {
                     <Plus className="h-4 w-4 mr-2" />
                     스트립(띠 배너) 추가
                   </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      addNewWidget("carousel", addingWidgetToArea, {
+                        title: "캐러셀 슬라이드",
+                      });
+                      setAddingWidgetToArea(null);
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    캐러셀 슬라이드 추가
+                  </Button>
                 </div>
               </div>
             </div>
@@ -2463,6 +3361,48 @@ export default function LayoutManager(): React.ReactNode {
           })}
         </div>
       </DragDropContext>
+
+      {/* 이미지 브라우저 컴포넌트 */}
+      <ImageBrowser
+        isOpen={showImageBrowser}
+        onClose={() => setShowImageBrowser(false)}
+        onImageSelect={(imageUrl: string, imageName?: string) => {
+          if (!editingWidget) return;
+
+          const currentImages = editingWidget.settings?.custom_images || [];
+
+          if (currentImages.length >= 8) {
+            toast({
+              title: "이미지 개수 제한",
+              description: "최대 8개까지만 추가할 수 있습니다.",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          const newImage = {
+            image_url: imageUrl,
+            title: "",
+            description: "",
+            link_url: "",
+          };
+
+          setEditingWidget({
+            ...editingWidget,
+            settings: {
+              ...editingWidget.settings,
+              custom_images: [...currentImages, newImage],
+            },
+          });
+
+          toast({
+            title: "이미지 추가 성공",
+            description: `${imageName || "이미지"}가 캐러셀에 추가되었습니다.`,
+          });
+        }}
+        buckets={["homepage-banners", "images", "admin"]}
+        title="캐러셀용 이미지 선택"
+      />
     </div>
   );
 }

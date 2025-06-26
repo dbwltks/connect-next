@@ -3,6 +3,7 @@
 import "@/app/globals.css";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import BoardWrite from "./board-write";
+import BoardDetail from "./board-detail";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -47,7 +48,7 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/db";
 import { useAuth } from "@/contexts/auth-context";
 import useSWR from "swr";
@@ -67,6 +68,7 @@ interface BoardPost {
   is_notice?: boolean;
   is_pinned?: boolean;
   thumbnail_image?: string;
+  published_at?: string | null; // 게시일 필드 추가
 }
 
 // 사용자 정보 인터페이스
@@ -121,10 +123,11 @@ async function fetchBoardData({
   const totalPages = Math.max(1, Math.ceil((totalCount || 0) / pageSize));
 
   // 2. 실제 게시글 목록 쿼리 (페이지네이션 적용)
+  // 데이터베이스에서 기본 정렬 후 클라이언트에서 published_at 우선 정렬
   let query = supabase
     .from("board_posts")
     .select(
-      `id, title, content, user_id, created_at, views, category_id, page_id, is_notice, is_pinned, comment_count:board_comments(count), thumbnail_image, status`
+      `id, title, content, user_id, created_at, views, category_id, page_id, is_notice, is_pinned, comment_count:board_comments(count), thumbnail_image, status, published_at`
     )
     .eq("status", "published")
     .order("is_pinned", { ascending: false })
@@ -186,6 +189,7 @@ export default function BoardSection({
   const [showDropdown, setShowDropdown] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const isAdmin = user?.role?.toLowerCase() === "admin";
 
@@ -231,6 +235,7 @@ export default function BoardSection({
 
   // 검색 관련 상태
   const [searchType, setSearchType] = useState<string>("title");
+  const [searchInput, setSearchInput] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
 
   // Pagination state
@@ -521,7 +526,8 @@ export default function BoardSection({
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     setPage(1); // 검색 시 첫 페이지로 이동
-    mutate();
+    setSearchTerm(searchInput);
+    // mutate(); // searchTerm이 바뀌면 SWR이 자동으로 갱신됨
   };
 
   // 대신 SWR 사용
@@ -545,19 +551,52 @@ export default function BoardSection({
 
   // 공지/고정글/일반글 분리
   const now = Date.now();
+
+  // sortedPosts 먼저 정의
+  const sortedPosts = [...(data?.posts || [])].sort((a, b) => {
+    // 1. 고정글 우선
+    const aPinned = a.is_pinned ? 1 : 0;
+    const bPinned = b.is_pinned ? 1 : 0;
+    if (aPinned !== bPinned) {
+      return bPinned - aPinned; // 고정글이 위로
+    }
+
+    // 2. 공지사항 우선 (고정글이 아닌 경우)
+    const aNotice = a.is_notice ? 1 : 0;
+    const bNotice = b.is_notice ? 1 : 0;
+    if (aNotice !== bNotice) {
+      return bNotice - aNotice; // 공지사항이 위로
+    }
+
+    // 3. 날짜 정렬: published_at 우선, 없으면 created_at
+    const aDate = new Date(a.published_at || a.created_at);
+    const bDate = new Date(b.published_at || b.created_at);
+
+    const timeDiff = bDate.getTime() - aDate.getTime();
+
+    // 4. 날짜가 같으면 ID로 정렬 (안정성 보장)
+    if (timeDiff === 0) {
+      return a.id.localeCompare(b.id);
+    }
+
+    return timeDiff; // 최신순
+  });
+
   const notices =
-    data?.posts.filter((p: BoardPost) => p.is_notice || p.is_pinned) || [];
+    sortedPosts.filter((p: BoardPost) => p.is_notice || p.is_pinned) || [];
   const normals =
-    data?.posts.filter((p: BoardPost) => !p.is_notice && !p.is_pinned) || [];
+    sortedPosts.filter((p: BoardPost) => !p.is_notice && !p.is_pinned) || [];
 
-  // 실제 테이블에 표시할 posts
-  const sortedNotices = getSortedPosts(notices);
-  const sortedNormals = getSortedPosts(normals);
+  // 실제 테이블에 표시할 posts (이미 정렬된 상태이므로 추가 정렬 불필요)
+  const sortedNotices = notices;
+  const sortedNormals = normals;
 
-  // 새 글 표시 (3일 이내)
-  function isNew(created_at: string) {
+  // 새 글 표시 (3일 이내) - published_at 우선, 없으면 created_at
+  function isNew(post: BoardPost) {
     try {
-      const postDate = new Date(created_at);
+      // published_at이 있으면 우선 사용, 없으면 created_at 사용
+      const dateString = post.published_at || post.created_at;
+      const postDate = new Date(dateString);
       const diffMs = now - postDate.getTime();
       return diffMs < 3 * 24 * 60 * 60 * 1000; // 3일 이내
     } catch (e) {
@@ -572,9 +611,11 @@ export default function BoardSection({
     return plainText.substring(0, maxLength) + "...";
   }
 
-  // 시간 형식 변환 - mm. dd. yy 형식
-  function formatTime(dateString: string) {
+  // 시간 형식 변환 - mm. dd. yy 형식 (published_at 우선, 없으면 created_at)
+  function formatTime(post: BoardPost) {
     try {
+      // published_at이 있으면 우선 사용, 없으면 created_at 사용
+      const dateString = post.published_at || post.created_at;
       const date = new Date(dateString);
       if (isNaN(date.getTime())) return "날짜 오류";
 
@@ -599,38 +640,33 @@ export default function BoardSection({
     }
   }
 
-  // 게시글 클릭 시 조회수 증가 및 페이지 이동
+  // 인라인 상세보기용 상태
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+
+  // 인라인 상세보기용 게시글 클릭 핸들러
   async function handlePostClick(postId: string) {
     try {
-      // 먼저 현재 조회수 가져오기
+      // 조회수 증가
       const { data, error: fetchError } = await supabase
         .from("board_posts")
         .select("views")
         .eq("id", postId)
         .single();
-
-      if (fetchError) {
-        console.error("조회수 조회 실패:", fetchError);
-        return router.push(`${pathname.replace(/\/$/, "")}/${postId}`);
-      }
-
-      // 조회수 증가시키기
-      const currentViews = data?.views || 0;
-      const newViews = currentViews + 1;
-
-      const { error: updateError } = await supabase
-        .from("board_posts")
-        .update({ views: newViews })
-        .eq("id", postId);
-
-      if (updateError) {
-        console.error("조회수 증가 실패:", updateError);
+      if (!fetchError) {
+        const currentViews = data?.views || 0;
+        await supabase
+          .from("board_posts")
+          .update({ views: currentViews + 1 })
+          .eq("id", postId);
       }
     } catch (error) {
-      console.error("조회수 증가 중 오류:", error);
+      // 무시
     } finally {
-      // 오류가 발생해도 페이지 이동은 진행
-      router.push(`${pathname.replace(/\/$/, "")}/${postId}`);
+      setSelectedPostId(postId);
+      // 쿼리스트링에 post=postId 추가
+      const params = new URLSearchParams(window.location.search);
+      params.set("post", postId);
+      router.push(`${pathname}?${params.toString()}`, { scroll: false });
     }
   }
 
@@ -638,6 +674,17 @@ export default function BoardSection({
   const handleWriteSuccess = () => {
     mutate(); // 최신 글 목록 반영
   };
+
+  // 상세에서 목록으로 돌아가기 (쿼리스트링에서 post 제거)
+  function handleBackToList() {
+    setSelectedPostId(null);
+    const params = new URLSearchParams(window.location.search);
+    params.delete("post");
+    router.push(
+      `${pathname}${params.toString() ? "?" + params.toString() : ""}`,
+      { scroll: false }
+    );
+  }
 
   // 컬럼 헤더 렌더링 함수 (리사이저는 마지막 컬럼 제외, handleResizeStart만 사용)
   const renderColumnHeader = (
@@ -760,6 +807,29 @@ export default function BoardSection({
     }
   }, []);
 
+  // 마운트 시 쿼리스트링에 post가 있으면 바로 상세로 진입
+  useEffect(() => {
+    if (!selectedPostId && typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const postId = params.get("post");
+      if (postId) setSelectedPostId(postId);
+    }
+  }, []);
+
+  const posts: BoardPost[] = data?.posts || [];
+  const totalCount: number = data?.totalCount || 0;
+  const totalPages: number = data?.totalPages || 1;
+  const authorInfoMap: Record<string, UserInfo> = data?.authorInfoMap || {};
+
+  if (selectedPostId) {
+    // 인라인 상세보기
+    return (
+      <div className={`board-section mb-8 ${className} ${containerClass}`}>
+        <BoardDetail postId={selectedPostId} onBack={handleBackToList} />
+      </div>
+    );
+  }
+
   // 로딩 상태 UI
   if (isLoading) {
     return (
@@ -775,7 +845,7 @@ export default function BoardSection({
           </div>
         </div>
         <div className="rounded-lg border bg-white">
-          <div className="p-4">
+          <div className="p-2">
             {Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="flex items-center space-x-4 py-3">
                 <Skeleton className="h-4 w-12" />
@@ -804,11 +874,6 @@ export default function BoardSection({
       </div>
     );
   }
-
-  const posts: BoardPost[] = data?.posts || [];
-  const totalCount: number = data?.totalCount || 0;
-  const totalPages: number = data?.totalPages || 1;
-  const authorInfoMap: Record<string, UserInfo> = data?.authorInfoMap || {};
 
   return (
     <div className={`board-section mb-8 ${className} ${containerClass}`}>
@@ -917,9 +982,16 @@ export default function BoardSection({
             {isAdmin && (
               <Button
                 variant="outline"
-                onClick={() =>
-                  router.push(`${pathname.replace(/\/$/, "")}/write`)
-                }
+                onClick={() => {
+                  const writeUrl = new URL(
+                    `${pathname.replace(/\/$/, "")}/write`,
+                    window.location.origin
+                  );
+                  if (pageId) writeUrl.searchParams.set("pageId", pageId);
+                  if (categoryId)
+                    writeUrl.searchParams.set("categoryId", categoryId);
+                  router.push(writeUrl.pathname + writeUrl.search);
+                }}
                 className="ml-2 border-gray-100"
               >
                 글쓰기
@@ -951,7 +1023,7 @@ export default function BoardSection({
                       >
                         {post.title}
                       </div>
-                      {isNew(post.created_at) && (
+                      {isNew(post) && (
                         <Badge
                           className="bg-blue-100 text-blue-700 font-bold text-[11px] rounded-full border border-blue-200 px-2 py-0.5 min-w-[22px] h-5 flex items-center justify-center shadow-sm tracking-wide ml-0.5 shrink-0 mt-0.5"
                           style={{
@@ -974,7 +1046,7 @@ export default function BoardSection({
                         {authorInfoMap[post.user_id]?.username || "익명"}
                       </span>
                       <span className="mx-1.5">·</span>
-                      <span>{formatTime(post.created_at)}</span>
+                      <span>{formatTime(post)}</span>
                       <span className="mx-1.5">·</span>
                       <span>조회 {post.view_count ?? 0}</span>
                     </div>
@@ -1020,7 +1092,7 @@ export default function BoardSection({
                         >
                           {post.title}
                         </div>
-                        {isNew(post.created_at) && (
+                        {isNew(post) && (
                           <Badge
                             className="bg-blue-100 text-blue-700 font-bold text-[11px] rounded-full border border-blue-200 px-2 py-0.5 min-w-[22px] h-5 flex items-center justify-center shadow-sm tracking-wide ml-0.5 shrink-0 mt-0.5"
                             style={{
@@ -1045,7 +1117,7 @@ export default function BoardSection({
                           {authorInfoMap[post.user_id]?.username || "익명"}
                         </span>
                         <span className="mx-1.5">·</span>
-                        <span>{formatTime(post.created_at)}</span>
+                        <span>{formatTime(post)}</span>
                         <span className="mx-1.5">·</span>
                         <span>조회 {post.view_count ?? 0}</span>
                       </div>
@@ -1191,8 +1263,9 @@ export default function BoardSection({
                             {/* 각 컬럼별 내용 렌더링 */}
                             {key === "number" && "공지"}
                             {key === "title" && (
-                              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                                <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-1 overflow-hidden max-w-full">
+                                {/* 뱃지들 - flex-shrink-0으로 고정 크기 */}
+                                <div className="flex items-center gap-1 flex-shrink-0">
                                   {post.is_notice && (
                                     <Badge className="bg-yellow-400 dark:bg-yellow-600 text-black dark:text-white font-bold px-1.5 py-0.5 text-xs rounded">
                                       공지
@@ -1203,9 +1276,9 @@ export default function BoardSection({
                                       고정
                                     </Badge>
                                   )}
-                                  {isNew(post.created_at) && (
+                                  {isNew(post) && (
                                     <Badge
-                                      className="bg-blue-100 text-blue-700 font-bold text-[11px] rounded-full border border-blue-200 px-2 py-0.5 min-w-[22px] h-5 flex items-center justify-center shadow-sm tracking-wide ml-0.5"
+                                      className="bg-blue-100 text-blue-700 font-bold text-[11px] rounded-full border border-blue-200 px-2 py-0.5 min-w-[22px] h-5 flex items-center justify-center shadow-sm tracking-wide"
                                       style={{
                                         lineHeight: "1.1",
                                         fontWeight: 700,
@@ -1215,20 +1288,25 @@ export default function BoardSection({
                                       N
                                     </Badge>
                                   )}
+                                </div>
+                                {/* 제목 - 남은 공간에서 truncate */}
+                                <div className="flex-1 min-w-0 overflow-hidden">
                                   <Button
                                     variant="link"
-                                    className="text-xs sm:text-sm text-blue-700 dark:text-gray-300 font-medium transition-colors p-0 h-auto text-left"
+                                    className="text-xs sm:text-sm text-black font-medium hover:no-underline transition-colors p-0 h-auto text-left w-full justify-start"
                                     onClick={() => handlePostClick(post.id)}
+                                    title={post.title}
                                   >
-                                    {post.title}
+                                    <span className="truncate block w-full text-left">
+                                      {post.title}
+                                    </span>
                                   </Button>
                                 </div>
                               </div>
                             )}
                             {key === "author" &&
                               (authorInfoMap[post.user_id]?.username || "익명")}
-                            {key === "created_at" &&
-                              formatTime(post.created_at)}
+                            {key === "created_at" && formatTime(post)}
                             {key === "view_count" && (post.view_count ?? 0)}
                             {key === "comment_count" &&
                               (post.comment_count ?? 0)}
@@ -1281,8 +1359,9 @@ export default function BoardSection({
                                 ? totalCount - ((page - 1) * itemCount + rowIdx)
                                 : rowIdx + 1)}
                             {key === "title" && (
-                              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                                <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-1 overflow-hidden max-w-full">
+                                {/* 뱃지들 - flex-shrink-0으로 고정 크기 */}
+                                <div className="flex items-center gap-1 flex-shrink-0">
                                   {post.is_notice && (
                                     <Badge className="bg-yellow-400 dark:bg-yellow-600 text-black dark:text-white font-bold px-1.5 py-0.5 text-xs rounded">
                                       공지
@@ -1293,9 +1372,9 @@ export default function BoardSection({
                                       고정
                                     </Badge>
                                   )}
-                                  {isNew(post.created_at) && (
+                                  {isNew(post) && (
                                     <Badge
-                                      className="bg-blue-100 text-blue-700 font-bold text-[11px] rounded-full border border-blue-200 px-2 py-0.5 min-w-[22px] h-5 flex items-center justify-center shadow-sm tracking-wide ml-0.5"
+                                      className="bg-blue-100 text-blue-700 font-bold text-[11px] rounded-full border border-blue-200 px-2 py-0.5 min-w-[22px] h-5 flex items-center justify-center shadow-sm tracking-wide"
                                       style={{
                                         lineHeight: "1.1",
                                         fontWeight: 700,
@@ -1305,20 +1384,25 @@ export default function BoardSection({
                                       N
                                     </Badge>
                                   )}
+                                </div>
+                                {/* 제목 - 남은 공간에서 truncate */}
+                                <div className="flex-1 min-w-0 overflow-hidden">
                                   <Button
                                     variant="link"
-                                    className="text-xs sm:text-sm text-black font-medium hover:no-underline transition-colors p-0 h-auto text-left"
+                                    className="text-xs sm:text-sm text-black font-medium hover:no-underline transition-colors p-0 h-auto text-left w-full justify-start"
                                     onClick={() => handlePostClick(post.id)}
+                                    title={post.title}
                                   >
-                                    {post.title}
+                                    <span className="truncate block w-full text-left">
+                                      {post.title}
+                                    </span>
                                   </Button>
                                 </div>
                               </div>
                             )}
                             {key === "author" &&
                               (authorInfoMap[post.user_id]?.username || "익명")}
-                            {key === "created_at" &&
-                              formatTime(post.created_at)}
+                            {key === "created_at" && formatTime(post)}
                             {key === "view_count" && (post.view_count ?? 0)}
                             {key === "comment_count" &&
                               (post.comment_count ?? 0)}
@@ -1370,7 +1454,7 @@ export default function BoardSection({
                       </div>
                       <div className="flex items-center gap-1 font-bold text-base line-clamp-2">
                         {/* N 새글 뱃지 제목 앞에 */}
-                        {isNew(post.created_at) && (
+                        {isNew(post) && (
                           <Badge
                             className="bg-blue-100 text-blue-700 font-bold text-[11px] rounded-full border border-blue-200 px-2 py-0.5 min-w-[22px] h-5 flex items-center justify-center shadow-sm tracking-wide ml-0.5"
                             style={{
@@ -1393,7 +1477,7 @@ export default function BoardSection({
                         <span>
                           {authorInfoMap[post.user_id]?.username || "익명"}
                         </span>
-                        <span>{formatTime(post.created_at)}</span>
+                        <span>{formatTime(post)}</span>
                       </div>
                       <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
                         <span>조회 {post.view_count ?? 0}</span>
@@ -1491,8 +1575,8 @@ export default function BoardSection({
             </select>
             <input
               type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               placeholder="검색어를 입력하세요"
               className="flex-1 px-3 py-2 border border-gray-100 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 min-w-0"
             />

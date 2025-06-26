@@ -43,14 +43,16 @@ export async function fetchDrafts({
   pageId: string;
   categoryId?: string;
 }) {
-  const { data, error } = await supabase
+  let query = supabase
     .from("board_posts")
     .select("*")
     .eq("user_id", userId)
     .eq("page_id", pageId)
-    .eq("category_id", categoryId)
-    .eq("status", "draft")
-    .order("updated_at", { ascending: false });
+    .eq("status", "draft");
+  if (categoryId) {
+    query = query.eq("category_id", categoryId);
+  }
+  const { data, error } = await query.order("updated_at", { ascending: false });
   if (error) throw error;
   return data || [];
 }
@@ -81,6 +83,8 @@ export async function saveBoardPost({
   status,
   number,
   description,
+  isNotice,
+  publishedAt,
 }: {
   postId?: string;
   isEditMode?: boolean;
@@ -95,6 +99,8 @@ export async function saveBoardPost({
   status: BoardPostStatus;
   number?: number;
   description?: string;
+  isNotice?: boolean;
+  publishedAt?: string | null;
 }) {
   console.log("[boardService] saveBoardPost 호출됨. userId:", userId);
   console.log("[boardService] 저장할 데이터:", {
@@ -106,6 +112,8 @@ export async function saveBoardPost({
     pageId,
     categoryId,
     status,
+    isNotice,
+    publishedAt,
   });
   const filesJson = JSON.stringify(uploadedFiles);
   let result;
@@ -125,6 +133,8 @@ export async function saveBoardPost({
         user_id: userId, // 사용자 ID 업데이트
         status,
         description, // 상세 설명 필드 추가
+        is_notice: isNotice, // 공지사항 필드 추가
+        published_at: publishedAt, // 게시일 필드 추가
       })
       .eq("id", postId);
     console.log("[boardService] 수정 결과:", result);
@@ -143,6 +153,8 @@ export async function saveBoardPost({
         user_id: userId, // 사용자 ID 업데이트
         status,
         description, // 상세 설명 필드 추가
+        is_notice: isNotice, // 공지사항 필드 추가
+        published_at: publishedAt, // 게시일 필드 추가
       })
       .eq("id", postId);
     console.log("[boardService] 임시저장 업데이트 결과:", result);
@@ -161,6 +173,8 @@ export async function saveBoardPost({
       number: number,
       status,
       description, // 상세 설명 필드 추가
+      is_notice: isNotice, // 공지사항 필드 추가
+      published_at: publishedAt, // 게시일 필드 추가
     };
     console.log("[boardService] 삽입할 데이터:", {
       ...insertData,

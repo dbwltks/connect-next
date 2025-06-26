@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import useSWR from "swr";
+import { fetchCategories } from "@/services/adminService";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -147,6 +149,14 @@ export default function CategoryManager({
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [sections, setSections] = useState<Section[]>([]);
+
+  // 카테고리 목록 패칭 SWR 적용
+  const {
+    data: swrCategories,
+    error,
+    isLoading: swrIsLoading,
+    mutate,
+  } = useSWR("categories", fetchCategories, { revalidateOnFocus: true });
 
   // 데이터 로드 함수
   const loadCategories = async () => {

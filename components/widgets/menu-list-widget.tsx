@@ -83,7 +83,14 @@ function useMenuList(widget: IWidget, pathname: string) {
       }
       return { parentMenu: tempParentMenu, childMenus };
     },
-    { revalidateOnFocus: true }
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      dedupingInterval: 300000, // 5분간 중복 요청 방지 (메뉴는 자주 바뀌지 않음)
+      errorRetryCount: 3,
+      errorRetryInterval: 5000,
+      shouldRetryOnError: true,
+    }
   );
 }
 

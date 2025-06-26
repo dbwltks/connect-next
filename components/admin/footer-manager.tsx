@@ -15,6 +15,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/toaster";
 import { supabase } from "@/db";
 import { Loader2, Save, Plus, Trash2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface ServiceTime {
   id: string;
@@ -46,6 +53,10 @@ interface IFooterSettings {
   youtube_url: string;
   service_times: ServiceTime[];
   copyright_text: string;
+  logo_url?: string;
+  logo_or_name?: "logo" | "name";
+  logo_fit?: "contain" | "cover";
+  logo_height?: number;
 }
 
 export default function FooterManager() {
@@ -63,7 +74,12 @@ export default function FooterManager() {
     youtube_url: "",
     service_times: [],
     copyright_text: "",
+    logo_url: "",
+    logo_or_name: "name",
+    logo_fit: "contain",
+    logo_height: 40,
   });
+  const [showLogoDialog, setShowLogoDialog] = useState(false);
 
   // 푸터 설정 불러오기
   useEffect(() => {
@@ -79,64 +95,13 @@ export default function FooterManager() {
         if (error) throw error;
 
         if (data) {
-          // 데이터 구조 업데이트
-          const updatedData = { ...data };
-
-          // 서비스 시간이 없으면 기본값 설정
-          if (
-            !updatedData.service_times ||
-            !Array.isArray(updatedData.service_times) ||
-            updatedData.service_times.length === 0
-          ) {
-            updatedData.service_times = [
-              {
-                id: crypto.randomUUID(),
-                name: "주일 1부 예배",
-                time: "오전 9:00",
-              },
-              {
-                id: crypto.randomUUID(),
-                name: "주일 2부 예배",
-                time: "오전 11:00",
-              },
-              { id: crypto.randomUUID(), name: "수요 예배", time: "오후 7:30" },
-              {
-                id: crypto.randomUUID(),
-                name: "금요 기도회",
-                time: "오후 8:00",
-              },
-            ];
-          }
-
-          // 주소 배열 변환
-          if (!updatedData.addresses || !Array.isArray(updatedData.addresses)) {
-            // 기존 주소가 있으면 배열로 변환
-            if (data.address) {
-              updatedData.addresses = [
-                { id: crypto.randomUUID(), value: data.address },
-              ];
-            } else {
-              updatedData.addresses = [];
-            }
-          }
-
-          // 전화번호 배열 변환
-          if (!updatedData.phones || !Array.isArray(updatedData.phones)) {
-            // 기존 전화번호가 있으면 배열로 변환
-            if (data.phone) {
-              updatedData.phones = [
-                {
-                  id: crypto.randomUUID(),
-                  name: "대표번호",
-                  value: data.phone,
-                },
-              ];
-            } else {
-              updatedData.phones = [];
-            }
-          }
-
-          setSettings(updatedData);
+          setSettings({
+            ...data,
+            logo_url: data.settings?.logo_url || "",
+            logo_or_name: data.settings?.logo_or_name || "name",
+            logo_fit: data.settings?.logo_fit || "contain",
+            logo_height: data.settings?.logo_height || 40,
+          });
         }
       } catch (error) {
         console.error("푸터 설정을 불러오는 중 오류가 발생했습니다:", error);
@@ -263,6 +228,35 @@ export default function FooterManager() {
     }));
   };
 
+  // 로고 업로드 핸들러
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Supabase Storage 업로드 예시
+    const fileExt = file.name.split(".").pop();
+    const fileName = `footer-logo-${Date.now()}.${fileExt}`;
+    const { data, error } = await supabase.storage
+      .from("admin")
+      .upload(`footer/${fileName}`, file, { upsert: true });
+    if (error) {
+      toast({
+        title: "로고 업로드 실패",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+    // public URL 생성
+    const { data: urlData } = supabase.storage
+      .from("admin")
+      .getPublicUrl(`footer/${fileName}`);
+    setSettings((prev) => ({ ...prev, logo_url: urlData?.publicUrl || "" }));
+    toast({
+      title: "로고 업로드 완료",
+      description: "로고가 업로드되었습니다.",
+    });
+  };
+
   // 푸터 설정 저장
   const handleSave = async () => {
     try {
@@ -311,6 +305,12 @@ export default function FooterManager() {
         youtube_url: settings.youtube_url,
         service_times: validServiceTimes,
         copyright_text: settings.copyright_text,
+        settings: {
+          logo_url: settings.logo_url,
+          logo_or_name: settings.logo_or_name,
+          logo_fit: settings.logo_fit,
+          logo_height: settings.logo_height,
+        },
       };
 
       let result;
@@ -393,8 +393,121 @@ export default function FooterManager() {
               />
             </div>
           </div>
+          <div className="mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowLogoDialog(true)}
+            >
+              로고 설정
+            </Button>
+          </div>
         </CardContent>
       </Card>
+
+      {/* 로고 설정 팝업 */}
+      <Dialog open={showLogoDialog} onOpenChange={setShowLogoDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>로고 설정</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="logo_upload">로고 이미지</Label>
+              <Input
+                id="logo_upload"
+                type="file"
+                accept="image/*"
+                onChange={handleLogoChange}
+              />
+            </div>
+            {settings.logo_url && (
+              <div className="mt-2">
+                <img
+                  src={settings.logo_url}
+                  alt="로고 미리보기"
+                  style={{
+                    height: settings.logo_height
+                      ? `${settings.logo_height}px`
+                      : "40px",
+                    width: "auto",
+                    display: "block",
+                    margin: "0 auto",
+                  }}
+                />
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label>로고/사이트명 표시</Label>
+              <div className="flex gap-4 mt-1">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="logo_or_name"
+                    value="logo"
+                    checked={settings.logo_or_name === "logo"}
+                    onChange={() =>
+                      setSettings((prev) => ({ ...prev, logo_or_name: "logo" }))
+                    }
+                  />
+                  로고로 표시
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="logo_or_name"
+                    value="name"
+                    checked={settings.logo_or_name === "name"}
+                    onChange={() =>
+                      setSettings((prev) => ({ ...prev, logo_or_name: "name" }))
+                    }
+                  />
+                  사이트명으로 표시
+                </label>
+              </div>
+            </div>
+            <div className="flex gap-4 mt-2 items-center">
+              <Label className="text-xs">로고 비율</Label>
+              <select
+                value={settings.logo_fit}
+                onChange={(e) =>
+                  setSettings((prev) => ({
+                    ...prev,
+                    logo_fit: e.target.value as "contain" | "cover",
+                  }))
+                }
+                className="border rounded px-2 py-1 text-xs"
+              >
+                <option value="contain">원본 비율(Contain)</option>
+                <option value="cover">꽉 채우기(Cover)</option>
+              </select>
+              <Label className="text-xs ml-4">로고 높이(px)</Label>
+              <Input
+                type="number"
+                min={20}
+                max={200}
+                value={settings.logo_height}
+                onChange={(e) =>
+                  setSettings((prev) => ({
+                    ...prev,
+                    logo_height: Number(e.target.value),
+                  }))
+                }
+                className="w-20 text-xs"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setShowLogoDialog(false)}
+            >
+              닫기
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Card>
         <CardHeader>
