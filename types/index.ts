@@ -52,6 +52,8 @@ export interface IWidget {
   height?: number;
   display_options?: any;
   is_active: boolean;
+  page_id?: string | null; // 위젯이 속한 페이지 ID
+  created_at?: string; // 생성일
 }
 
 // 미디어 위젯 옵션 인터페이스

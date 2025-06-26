@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/db";
+import { mutate } from "swr";
 import {
   Card,
   CardHeader,
@@ -815,6 +816,35 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
       if (error) {
         alert("삭제 중 오류가 발생했습니다: " + error.message);
         return;
+      }
+
+      // 3. SWR 캐시 무효화
+      try {
+        // 게시글 목록 캐시 무효화 (page_id가 있는 경우)
+        if (post.page_id) {
+          await mutate(`/api/board/posts/${post.page_id}`);
+          await mutate(
+            (key: any) =>
+              key &&
+              typeof key === "string" &&
+              key.includes(`/api/board/posts/${post.page_id}`)
+          );
+        }
+
+        // 전체 게시글 목록 캐시 무효화
+        await mutate(
+          (key: any) =>
+            key && typeof key === "string" && key.includes("/api/board/posts")
+        );
+
+        // 위젯 관련 캐시도 무효화
+        await mutate(
+          (key: any) => key && typeof key === "string" && key.includes("widget")
+        );
+
+        console.log("캐시 무효화 완료");
+      } catch (cacheError) {
+        console.warn("캐시 무효화 중 오류:", cacheError);
       }
 
       alert("게시글과 첨부파일이 모두 삭제되었습니다.");
