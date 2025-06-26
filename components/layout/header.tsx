@@ -152,8 +152,6 @@ function HeaderClient({ user, menuItems }: { user: any; menuItems: any[] }) {
   const [openSubmenus, setOpenSubmenus] = useState<{ [key: string]: boolean }>(
     {}
   );
-  // 데스크톱 드롭다운 상태
-  const [openedDropdownId, setOpenedDropdownId] = useState<string | null>(null);
 
   // 모바일 메뉴 열릴 때 body 스크롤 잠금
   useBodyScrollLock(isMenuOpen);
@@ -163,52 +161,39 @@ function HeaderClient({ user, menuItems }: { user: any; menuItems: any[] }) {
     return (
       <ul className="flex gap-4 xl:gap-8 items-center">
         {items.map((item: any, idx: number) => (
-          <li
-            key={item.id}
-            className="relative"
-            style={{ minWidth: 80 }}
-            onMouseEnter={() => setOpenedDropdownId(item.id)}
-            onMouseLeave={() => setOpenedDropdownId(null)}
-          >
+          <li key={item.id} className="relative group" style={{ minWidth: 80 }}>
             {item.url ? (
               <Link
                 href={item.url}
-                onClick={() => setOpenedDropdownId(null)}
-                className="px-2 py-1 text-sm font-medium xl:text-base text-gray-800 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-150"
+                className="px-2 py-1 text-sm font-medium xl:text-base text-gray-800 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-150 block"
               >
                 {item.title}
               </Link>
             ) : (
-              <span className="px-2 py-1 text-base  text-gray-800 dark:text-gray-100">
+              <span className="px-2 py-1 text-base text-gray-800 dark:text-gray-100 block">
                 {item.title}
               </span>
             )}
             {item.submenu && item.submenu.length > 0 && (
-              <ul
-                className={
-                  `absolute left-0 top-full mt-0 bg-white dark:bg-gray-900 shadow-lg rounded-lg py-2 min-w-[180px] border border-gray-100 dark:border-gray-800 z-50 pointer-events-auto transition-all` +
-                  (openedDropdownId === item.id ? " block" : " hidden")
-                }
-                onMouseEnter={() => setOpenedDropdownId(item.id)}
-                onMouseLeave={() => setOpenedDropdownId(null)}
-              >
-                {item.submenu.map((child: any, subIdx: number) => (
-                  <li key={child.id + subIdx}>
-                    {child.url ? (
-                      <Link
-                        href={child.url}
-                        onClick={() => setOpenedDropdownId(null)}
-                        className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-150"
-                      >
-                        {child.title}
-                      </Link>
-                    ) : (
-                      <span className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200">
-                        {child.title}
-                      </span>
-                    )}
-                  </li>
-                ))}
+              <ul className="absolute left-0 top-full pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                <div className="bg-white dark:bg-gray-900 shadow-lg rounded-lg py-2 min-w-[180px] border border-gray-100 dark:border-gray-800">
+                  {item.submenu.map((child: any, subIdx: number) => (
+                    <li key={child.id + subIdx}>
+                      {child.url ? (
+                        <Link
+                          href={child.url}
+                          className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-150"
+                        >
+                          {child.title}
+                        </Link>
+                      ) : (
+                        <span className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200">
+                          {child.title}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </div>
               </ul>
             )}
           </li>

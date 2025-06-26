@@ -584,6 +584,12 @@ const MenuBar = ({
   category = "unknown",
   pageId = "unknown",
   uploadedFiles,
+  onImageUpload,
+  onFileUpload,
+  isUploadingImage,
+  isUploadingFile,
+  uploadProgress,
+  uploadingFileName,
 }: {
   editor: Editor | null;
   onThumbnailSelect?: (url: string) => void;
@@ -598,6 +604,12 @@ const MenuBar = ({
   category?: string;
   pageId?: string | number;
   uploadedFiles: IFileInfo[];
+  onImageUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  isUploadingImage: boolean;
+  isUploadingFile: boolean;
+  uploadProgress: number;
+  uploadingFileName: string;
 }) => {
   const [isLinkInputVisible, setIsLinkInputVisible] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
@@ -607,8 +619,7 @@ const MenuBar = ({
   }>({ type: null, data: null });
   const [isFontFamilyMenuOpen, setIsFontFamilyMenuOpen] = useState(false);
   const [isColorMenuOpen, setIsColorMenuOpen] = useState(false);
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const [isUploadingFile, setIsUploadingFile] = useState(false);
+
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -811,188 +822,6 @@ const MenuBar = ({
     }
   }, [editor, linkUrl, linkPreview]);
 
-  // 이미지 업로드 핸들러
-  const handleImageUpload = useCallback(
-    async (event: React.ChangeEvent<HTMLInputElement>) => {
-      const files = event.target.files;
-      if (!files || files.length === 0 || !editor) return;
-      setIsUploadingImage(true);
-      const now = new Date();
-      const yyyy = now.getFullYear();
-      const mm = String(now.getMonth() + 1).padStart(2, "0");
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const fileExt = file.name.split(".").pop()?.toLowerCase() || "";
-        const isImage = ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(
-          fileExt
-        );
-        if (!isImage) continue;
-
-        // 파일명에 타임스탬프 추가하여 유니크하게 생성
-        const timestamp = Date.now();
-        const fileName = `${timestamp}-${Math.random().toString(36).substring(2, 11)}.${fileExt}`;
-
-        const filePath = `${category}/${pageId}/${yyyy}/${mm}/${fileName}`;
-
-        try {
-          const { data, error } = await supabase.storage
-            .from("images")
-            .upload(filePath, file, {
-              cacheControl: "3600",
-              upsert: true,
-              metadata: {
-                originalName: file.name,
-                fileSize: file.size,
-                uploadTime: timestamp,
-                status: "",
-                category: category,
-                pageId: pageId,
-              },
-            });
-          if (error) {
-            showToast({
-              title: "이미지 업로드 실패",
-              description: `${file.name}: ${error.message}`,
-              variant: "destructive",
-            });
-            continue;
-          }
-          const { data: publicUrlData } = supabase.storage
-            .from("images")
-            .getPublicUrl(filePath);
-          const publicUrl = publicUrlData.publicUrl;
-          if (!publicUrl) {
-            showToast({
-              title: "URL 생성 실패",
-              description: "이미지 URL을 가져오지 못했습니다.",
-              variant: "destructive",
-            });
-            continue;
-          }
-          // 에디터에 삽입
-          editor
-            .chain()
-            .focus()
-            .insertContent({ type: "image", attrs: { src: publicUrl } })
-            .run();
-          // 파일관리에도 추가 (구조 통일)
-          const fileInfo = {
-            url: publicUrl,
-            name: file.name, // 원본 파일명
-            size: `${(file.size / 1024).toFixed(1)}KB`,
-            type: fileExt,
-            uploadedAt: new Date().toISOString(),
-          };
-          if (typeof setUploadedFiles === "function")
-            setUploadedFiles(
-              uploadedFiles.filter((file) => file.url !== publicUrl)
-            );
-          if (typeof onImageUploaded === "function")
-            onImageUploaded(
-              publicUrl,
-              file.name,
-              `${(file.size / 1024).toFixed(1)}KB`,
-              fileExt
-            );
-          showToast({
-            title: "이미지 업로드 완료",
-            description: `${file.name} 이미지가 업로드되었습니다.`,
-            variant: "default",
-          });
-        } catch (uploadError) {
-          showToast({
-            title: "이미지 업로드 예외 발생",
-            description: `${file.name}: ${uploadError instanceof Error ? uploadError.message : "알 수 없는 오류"}`,
-            variant: "destructive",
-          });
-        }
-      }
-      setIsUploadingImage(false);
-      event.target.value = "";
-    },
-    [editor, onImageUploaded, setUploadedFiles, category, pageId, uploadedFiles]
-  );
-
-  // 파일 업로드 핸들러 (문서/파일만)
-  const handleFileUpload = useCallback(
-    async (event: React.ChangeEvent<HTMLInputElement>) => {
-      const files = event.target.files;
-      if (!files || files.length === 0) return;
-      setIsUploadingFile(true);
-      const now = new Date();
-      const yyyy = now.getFullYear();
-      const mm = String(now.getMonth() + 1).padStart(2, "0");
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const fileExt = file.name.split(".").pop()?.toLowerCase() || "";
-        const isImage = ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(
-          fileExt
-        );
-        if (isImage) continue; // 이미지는 무시
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}.${fileExt}`;
-        const filePath = `${category}/${pageId}/${yyyy}/${mm}/${fileName}`;
-        try {
-          const { data, error } = await supabase.storage
-            .from("docs")
-            .upload(filePath, file, { cacheControl: "3600", upsert: true });
-          if (error) {
-            showToast({
-              title: "파일 업로드 실패",
-              description: `${file.name}: ${error.message}`,
-              variant: "destructive",
-            });
-            continue;
-          }
-          const { data: publicUrlData } = supabase.storage
-            .from("docs")
-            .getPublicUrl(filePath);
-          const publicUrl = publicUrlData.publicUrl;
-          if (!publicUrl) {
-            showToast({
-              title: "URL 생성 실패",
-              description: "파일 URL을 가져오지 못했습니다.",
-              variant: "destructive",
-            });
-            continue;
-          }
-          // 파일관리(사이드바)에만 추가 (구조 통일)
-          const fileInfo = {
-            url: publicUrl,
-            name: file.name, // 원본 파일명
-            size: `${(file.size / 1024).toFixed(1)}KB`,
-            type: fileExt,
-            uploadedAt: new Date().toISOString(),
-          };
-          if (typeof setUploadedFiles === "function")
-            setUploadedFiles(
-              uploadedFiles.filter((file) => file.url !== publicUrl)
-            );
-          if (typeof onImageUploaded === "function")
-            onImageUploaded(
-              publicUrl,
-              file.name,
-              `${(file.size / 1024).toFixed(1)}KB`,
-              fileExt
-            );
-          showToast({
-            title: "파일 업로드 완료",
-            description: `${file.name} 파일이 업로드되었습니다.`,
-            variant: "default",
-          });
-        } catch (uploadError) {
-          showToast({
-            title: "파일 업로드 예외 발생",
-            description: `${file.name}: ${uploadError instanceof Error ? uploadError.message : "알 수 없는 오류"}`,
-            variant: "destructive",
-          });
-        }
-      }
-      setIsUploadingFile(false);
-      event.target.value = "";
-    },
-    [onImageUploaded, setUploadedFiles, category, pageId, uploadedFiles]
-  );
-
   useEffect(() => {
     const timer = setTimeout(() => {
       if (linkUrl.trim()) {
@@ -1117,7 +946,7 @@ const MenuBar = ({
           <input
             type="file"
             ref={imageInputRef}
-            onChange={handleImageUpload}
+            onChange={onImageUpload}
             accept="image/*"
             multiple
             className="hidden"
@@ -1131,7 +960,11 @@ const MenuBar = ({
             disabled={isUploadingImage}
             title="이미지 업로드"
           >
-            <ImageIcon className="h-4 w-4" />
+            {isUploadingImage ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <ImageIcon className="h-4 w-4" />
+            )}
           </Button>
         </div>
 
@@ -1139,7 +972,7 @@ const MenuBar = ({
           <input
             type="file"
             ref={fileInputRef}
-            onChange={handleFileUpload}
+            onChange={onFileUpload}
             accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
             multiple
             className="hidden"
@@ -1153,7 +986,11 @@ const MenuBar = ({
             disabled={isUploadingFile}
             title="파일 업로드"
           >
-            <Upload className="h-4 w-4" />
+            {isUploadingFile ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Upload className="h-4 w-4" />
+            )}
           </Button>
         </div>
 
@@ -1426,6 +1263,26 @@ const MenuBar = ({
           <AlignJustify className="h-4 w-4" />
         </Button>
       </div>
+
+      {/* 업로드 진행률 표시 */}
+      {(isUploadingImage || isUploadingFile) && (
+        <div className="px-2 py-1 bg-blue-50 border-t border-blue-200">
+          <div className="flex items-center justify-between text-xs text-blue-700 mb-1">
+            <span className="truncate max-w-[200px]">
+              {uploadingFileName
+                ? `업로드 중: ${uploadingFileName}`
+                : "업로드 중..."}
+            </span>
+            <span className="font-medium">{uploadProgress}%</span>
+          </div>
+          <div className="w-full bg-blue-200 rounded-full h-1.5">
+            <div
+              className="bg-blue-600 h-1.5 rounded-full transition-all duration-300 ease-out"
+              style={{ width: `${uploadProgress}%` }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -1633,6 +1490,10 @@ const TipTapEditor = forwardRef(function TipTapEditor(
     string | undefined
   >(thumbnailUrl);
   const [initialContentProcessed, setInitialContentProcessed] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadingFileName, setUploadingFileName] = useState("");
   const [toastState, setToastState] = useState<{
     open: boolean;
     title?: string;
@@ -1902,6 +1763,245 @@ const TipTapEditor = forwardRef(function TipTapEditor(
     }
   }, [content, editor]);
 
+  // 이미지 업로드 핸들러
+  const handleImageUpload = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const files = event.target.files;
+      if (!files || files.length === 0 || !editor) return;
+
+      setIsUploadingImage(true);
+      setUploadProgress(0);
+
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, "0");
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileExt = file.name.split(".").pop()?.toLowerCase() || "";
+        const isImage = ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(
+          fileExt
+        );
+        if (!isImage) continue;
+
+        setUploadingFileName(file.name);
+
+        // 파일명에 타임스탬프 추가하여 유니크하게 생성
+        const timestamp = Date.now();
+        const fileName = `${timestamp}-${Math.random().toString(36).substring(2, 11)}.${fileExt}`;
+        const filePath = `temp/images/${yyyy}/${mm}/${fileName}`;
+
+        try {
+          setUploadProgress(10);
+
+          const { data, error } = await supabase.storage
+            .from("board")
+            .upload(filePath, file, {
+              cacheControl: "3600",
+              upsert: true,
+              metadata: {
+                originalName: file.name,
+                fileSize: file.size,
+                uploadTime: timestamp,
+                status: "",
+                category: category,
+                pageId: pageId,
+              },
+            });
+
+          setUploadProgress(70);
+
+          if (error) {
+            showToast({
+              title: "이미지 업로드 실패",
+              description: `${file.name}: ${error.message}`,
+              variant: "destructive",
+            });
+            setUploadProgress(0);
+            setUploadingFileName("");
+            continue;
+          }
+
+          setUploadProgress(85);
+          const { data: publicUrlData } = supabase.storage
+            .from("board")
+            .getPublicUrl(filePath);
+          const publicUrl = publicUrlData.publicUrl;
+
+          if (!publicUrl) {
+            showToast({
+              title: "URL 생성 실패",
+              description: "이미지 URL을 가져오지 못했습니다.",
+              variant: "destructive",
+            });
+            setUploadProgress(0);
+            setUploadingFileName("");
+            continue;
+          }
+
+          setUploadProgress(95);
+          // 에디터에 삽입
+          editor
+            .chain()
+            .focus()
+            .insertContent({ type: "image", attrs: { src: publicUrl } })
+            .run();
+
+          // 파일관리에도 추가
+          const fileInfo = {
+            url: publicUrl,
+            name: file.name,
+            size: `${(file.size / 1024).toFixed(1)}KB`,
+            type: fileExt,
+            uploadedAt: new Date().toISOString(),
+          };
+
+          if (typeof setUploadedFiles === "function") {
+            setUploadedFiles([...uploadedFiles, fileInfo]);
+          }
+
+          if (typeof handleImageUploaded === "function") {
+            handleImageUploaded(
+              publicUrl,
+              file.name,
+              `${(file.size / 1024).toFixed(1)}KB`,
+              fileExt
+            );
+          }
+
+          setUploadProgress(100);
+          showToast({
+            title: "이미지 업로드 완료",
+            description: `${file.name} 이미지가 업로드되었습니다.`,
+            variant: "default",
+          });
+        } catch (uploadError) {
+          showToast({
+            title: "이미지 업로드 예외 발생",
+            description: `${file.name}: ${uploadError instanceof Error ? uploadError.message : "알 수 없는 오류"}`,
+            variant: "destructive",
+          });
+          setUploadProgress(0);
+          setUploadingFileName("");
+        }
+      }
+
+      setIsUploadingImage(false);
+      setUploadProgress(0);
+      setUploadingFileName("");
+      event.target.value = "";
+    },
+    [
+      editor,
+      handleImageUploaded,
+      setUploadedFiles,
+      category,
+      pageId,
+      uploadedFiles,
+    ]
+  );
+
+  // 파일 업로드 핸들러
+  const handleFileUpload = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const files = event.target.files;
+      if (!files || files.length === 0) return;
+
+      setIsUploadingFile(true);
+      setUploadProgress(0);
+
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, "0");
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileExt = file.name.split(".").pop()?.toLowerCase() || "";
+        const isImage = ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(
+          fileExt
+        );
+        if (isImage) continue; // 이미지는 무시
+
+        setUploadingFileName(file.name);
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}.${fileExt}`;
+        const filePath = `temp/documents/${yyyy}/${mm}/${fileName}`;
+
+        try {
+          setUploadProgress(10);
+
+          const { data, error } = await supabase.storage
+            .from("board")
+            .upload(filePath, file, { cacheControl: "3600", upsert: true });
+
+          setUploadProgress(70);
+
+          if (error) {
+            showToast({
+              title: "파일 업로드 실패",
+              description: `${file.name}: ${error.message}`,
+              variant: "destructive",
+            });
+            setUploadProgress(0);
+            setUploadingFileName("");
+            continue;
+          }
+
+          setUploadProgress(85);
+          const { data: publicUrlData } = supabase.storage
+            .from("board")
+            .getPublicUrl(filePath);
+          const publicUrl = publicUrlData.publicUrl;
+
+          if (!publicUrl) {
+            showToast({
+              title: "URL 생성 실패",
+              description: "파일 URL을 가져오지 못했습니다.",
+              variant: "destructive",
+            });
+            setUploadProgress(0);
+            setUploadingFileName("");
+            continue;
+          }
+
+          setUploadProgress(95);
+          // 파일관리에 추가
+          const fileInfo = {
+            url: publicUrl,
+            name: file.name,
+            size: `${(file.size / 1024).toFixed(1)}KB`,
+            type: fileExt,
+            uploadedAt: new Date().toISOString(),
+          };
+
+          if (typeof setUploadedFiles === "function") {
+            setUploadedFiles([...uploadedFiles, fileInfo]);
+          }
+
+          setUploadProgress(100);
+          showToast({
+            title: "파일 업로드 완료",
+            description: `${file.name} 파일이 업로드되었습니다.`,
+            variant: "default",
+          });
+        } catch (uploadError) {
+          showToast({
+            title: "파일 업로드 예외 발생",
+            description: `${file.name}: ${uploadError instanceof Error ? uploadError.message : "알 수 없는 오류"}`,
+            variant: "destructive",
+          });
+          setUploadProgress(0);
+          setUploadingFileName("");
+        }
+      }
+
+      setIsUploadingFile(false);
+      setUploadProgress(0);
+      setUploadingFileName("");
+      event.target.value = "";
+    },
+    [setUploadedFiles, category, pageId, uploadedFiles]
+  );
+
   // 사이드바 파일 업로드 핸들러 (문서, PDF 등만)
   const handleSidebarFileUpload = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1921,10 +2021,10 @@ const TipTapEditor = forwardRef(function TipTapEditor(
         );
         if (isImage) continue; // 이미지는 무시
 
-        // Supabase Storage에 업로드 (board-files 버킷)
+        // Supabase Storage에 업로드 (board 버킷)
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}.${fileExt}`;
-        const bucketName = "docs";
-        const filePath = `${category}/${pageId}/${yyyy}/${mm}/${fileName}`;
+        const bucketName = "board";
+        const filePath = `temp/documents/${yyyy}/${mm}/${fileName}`;
         try {
           const { data, error } = await supabase.storage
             .from(bucketName)
@@ -2014,6 +2114,12 @@ const TipTapEditor = forwardRef(function TipTapEditor(
               category={category}
               pageId={pageId}
               uploadedFiles={uploadedFiles}
+              onImageUpload={handleImageUpload}
+              onFileUpload={handleFileUpload}
+              isUploadingImage={isUploadingImage}
+              isUploadingFile={isUploadingFile}
+              uploadProgress={uploadProgress}
+              uploadingFileName={uploadingFileName}
             />
           </div>
           <div className="relative" onClick={() => editor?.commands.focus()}>

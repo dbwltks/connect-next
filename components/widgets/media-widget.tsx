@@ -13,9 +13,9 @@ interface MediaWidgetProps {
 }
 
 // SWR 키와 페처 함수
-const fetchMediaData = async (pageId: string) => {
+const fetchMediaData = async (pageId: string, maxItems: number = 5) => {
   // 1. 게시글 데이터
-  const posts = await fetchMediaWidgetPosts(pageId);
+  const posts = await fetchMediaWidgetPosts(pageId, maxItems);
   if (!posts || posts.length === 0) return { posts: [] };
 
   // 2. 좋아요 수 집계
@@ -50,10 +50,20 @@ const fetchMediaData = async (pageId: string) => {
 
 export function MediaWidget({ widget }: MediaWidgetProps) {
   const pageId = widget.display_options?.page_id;
+  // 표시할 항목 개수 (기본값: 5개, 최대: 10개)
+  const itemCount = widget.display_options?.item_count;
+  console.log("미디어 위젯 설정값:", {
+    item_count: itemCount,
+    display_options: widget.display_options,
+  });
+
+  const maxItems = Math.min(parseInt(itemCount?.toString() || "5"), 10);
+
+  console.log("계산된 maxItems:", maxItems);
 
   const { data, error, isLoading } = useSWR(
-    pageId ? ["mediaWidgetPosts", pageId] : null,
-    () => fetchMediaData(pageId!),
+    pageId ? ["mediaWidgetPosts", pageId, maxItems] : null,
+    () => fetchMediaData(pageId!, maxItems),
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
@@ -109,7 +119,7 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
 
           {/* Video List Skeleton */}
           <div className="space-y-3">
-            {[...Array(3)].map((_, index) => (
+            {[...Array(Math.max(maxItems - 1, 0))].map((_, index) => (
               <div
                 key={index}
                 className="border border-gray-100 rounded-lg overflow-hidden"
@@ -193,9 +203,9 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4">
           {/* Featured Video */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-3 col-span-2">
             <div className="border border-gray-100 hover:shadow-lg transition-all duration-500 transform hover:-translate-y-1 rounded-lg overflow-hidden">
               <Link
                 href={`${widget.display_options?.page_slug}/${data.posts[0].id}`}
@@ -239,14 +249,14 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
                       {data.posts[0].title}
                     </h4>
                   </div>
-                  <div className="h-5 flex items-center space-x-3 truncate text-sm text-gray-700">
+                  <div className="h-5 flex items-center space-x-3 truncate text-sm text-gray-600">
                     {data.posts[0].description && (
-                      <span>{data.posts[0].description}</span>
+                      <span> {data.posts[0].description}</span>
                     )}
                   </div>
-                  <div className="pt-1 flex items-center justify-between">
+                  <div className="pt-1 flex items-center justify-end space-x-3">
                     <span className="text-xs text-gray-500">
-                      {data.posts[0].author || "익명"} ·{" "}
+                      {data.posts[0].author || "관리자"} ·{" "}
                       {new Date(data.posts[0].created_at).toLocaleDateString()}
                     </span>
                     <div className="flex items-center space-x-3 text-xs text-gray-500">
@@ -268,13 +278,23 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
           </div>
 
           {/* Video List */}
-          <div className="space-y-3">
+          <div className="space-y-3 col-span-2">
+            {(() => {
+              console.log("전체 posts 개수:", data.posts.length);
+              console.log("slice(1) 후 개수:", data.posts.slice(1).length);
+              console.log("실제 posts 데이터:", data.posts);
+              return null;
+            })()}
             {data.posts.length > 1 &&
-              data.posts.slice(1).map((post) => (
+              data.posts.slice(1).map((post: any, index: number) => (
                 <div
                   key={post.id}
                   className="overflow-hidden border border-gray-100 hover:shadow-md transition-all duration-500 transform hover:-translate-y-1 rounded-lg w-full"
                 >
+                  {(() => {
+                    console.log(`렌더링 중인 post ${index + 1}:`, post.title);
+                    return null;
+                  })()}
                   <Link
                     href={`${widget.display_options?.page_slug}/${post.id}`}
                     className="flex flex-row w-full group"
@@ -319,7 +339,7 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
                       </div>
                       <div className="pt-1 flex items-center justify-between">
                         <span className="text-[10px] text-gray-500">
-                          {post.author || "익명"} ·{" "}
+                          {post.author || "관리자"} ·{" "}
                           {new Date(post.created_at).toLocaleDateString()}
                         </span>
                         <div className="flex items-center space-x-2 text-[10px] text-gray-500">

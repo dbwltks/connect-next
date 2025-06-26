@@ -87,11 +87,23 @@ interface BoardWriteProps {
 // 본문 내용이 실제로 비었는지 검사하는 함수
 function isContentEmpty(html: string) {
   if (!html) return true;
+
+  // 더 엄격한 정리: 모든 HTML 태그와 공백 제거
   const cleaned = html
-    .replace(/<p><br><\/p>/gi, "")
-    .replace(/<p><\/p>/gi, "")
-    .replace(/<br\s*\/?>(\s*)/gi, "")
-    .replace(/\s+/g, "");
+    .replace(/<p><br\s*\/?><\/p>/gi, "") // <p><br></p> 또는 <p><br/></p>
+    .replace(/<p><\/p>/gi, "") // 빈 <p></p>
+    .replace(/<br\s*\/?>/gi, "") // 모든 <br> 태그
+    .replace(/<[^>]*>/g, "") // 모든 HTML 태그 제거
+    .replace(/&nbsp;/g, "") // &nbsp; 제거
+    .replace(/\s+/g, "") // 모든 공백 제거
+    .trim();
+
+  console.log("isContentEmpty 체크:", {
+    original: html,
+    cleaned: cleaned,
+    isEmpty: cleaned.length === 0,
+  });
+
   return cleaned.length === 0;
 }
 
@@ -811,6 +823,66 @@ export default function BoardWrite({
   }, [propIsEditMode, propPostId, propInitialData]);
 
   // status를 인자로 받아 저장하는 함수
+  // 임시 폴더의 파일들을 정식 폴더로 이동
+  const moveFilesFromTemp = async (files: IFileInfo[]) => {
+    const movedFiles: IFileInfo[] = [];
+
+    for (const file of files) {
+      if (file.url.includes("/temp/")) {
+        try {
+          // temp 경로에서 정식 경로로 변경
+          const tempPath = file.url.split(
+            "/storage/v1/object/public/board/"
+          )[1];
+          const newPath = tempPath.replace("temp/", "");
+
+          // 파일 복사
+          const { data: downloadData, error: downloadError } =
+            await supabase.storage.from("board").download(tempPath);
+
+          if (downloadError) {
+            console.error("파일 다운로드 실패:", downloadError);
+            movedFiles.push(file); // 실패시 원본 유지
+            continue;
+          }
+
+          // 새 위치에 업로드
+          const { error: uploadError } = await supabase.storage
+            .from("board")
+            .upload(newPath, downloadData, { upsert: true });
+
+          if (uploadError) {
+            console.error("파일 업로드 실패:", uploadError);
+            movedFiles.push(file); // 실패시 원본 유지
+            continue;
+          }
+
+          // 새 URL 생성
+          const { data: publicUrlData } = supabase.storage
+            .from("board")
+            .getPublicUrl(newPath);
+
+          // 임시 파일 삭제
+          await supabase.storage.from("board").remove([tempPath]);
+
+          // 새 파일 정보로 추가
+          movedFiles.push({
+            ...file,
+            url: publicUrlData.publicUrl,
+          });
+        } catch (error) {
+          console.error("파일 이동 중 오류:", error);
+          movedFiles.push(file); // 실패시 원본 유지
+        }
+      } else {
+        // 이미 정식 경로인 파일은 그대로 유지
+        movedFiles.push(file);
+      }
+    }
+
+    return movedFiles;
+  };
+
   const savePost = async (statusArg: "draft" | "published") => {
     const html = editorRef.current?.editor?.getHTML() || "";
 
@@ -860,6 +932,13 @@ export default function BoardWrite({
     console.log("[BoardWrite] 사용할 userId:", userId);
     let newId = postId;
     try {
+      // 게시글이 정식 발행되는 경우 임시 파일들을 정식 폴더로 이동
+      let finalUploadedFiles = uploadedFiles;
+      if (statusArg === "published") {
+        finalUploadedFiles = await moveFilesFromTemp(uploadedFiles);
+        setUploadedFiles(finalUploadedFiles);
+      }
+
       // 게시글 저장(등록) 시 number 자동 할당
       let nextNumber = 1;
       if (!isEditMode && !postId) {
@@ -901,7 +980,7 @@ export default function BoardWrite({
         content: html,
         allowComments,
         thumbnailImage,
-        uploadedFiles,
+        uploadedFiles: finalUploadedFiles,
         userId,
         pageId: selectedPageId,
         categoryId,
@@ -999,6 +1078,181 @@ export default function BoardWrite({
   useEffect(() => {
     loadDrafts();
   }, [selectedPageId]);
+
+  // 임시 파일 정리 함수
+  const cleanupTempFiles = async () => {
+    const tempFiles = uploadedFiles.filter((file) =>
+      file.url.includes("/temp/")
+    );
+
+    if (tempFiles.length > 0) {
+      for (const file of tempFiles) {
+        try {
+          const tempPath = file.url.split(
+            "/storage/v1/object/public/board/"
+          )[1];
+          await supabase.storage.from("board").remove([tempPath]);
+        } catch (error) {
+          console.error("임시 파일 삭제 실패:", error);
+        }
+      }
+    }
+  };
+
+  // 작성 중인 내용이 있는지 확인하는 함수
+  const hasContent = useCallback(() => {
+    const html = editorRef.current?.editor?.getHTML() || "";
+    const hasTitle = title.trim().length > 0;
+    const hasContentText = !isContentEmpty(html);
+    const hasFiles = uploadedFiles.length > 0;
+
+    // 디버깅용 로그
+    console.log("hasContent 체크:", {
+      title: `"${title}"`,
+      hasTitle,
+      html: `"${html}"`,
+      hasContentText,
+      hasFiles,
+      uploadedFilesLength: uploadedFiles.length,
+      result: hasTitle || hasContentText || hasFiles,
+    });
+
+    return hasTitle || hasContentText || hasFiles;
+  }, [title, uploadedFiles]);
+
+  // 취소 버튼 클릭 핸들러
+  const handleCancel = async () => {
+    if (hasContent()) {
+      const confirmed = window.confirm(
+        "작성 중인 내용이 있습니다. 정말로 취소하시겠습니까?\n작성된 내용과 업로드된 파일이 모두 삭제됩니다."
+      );
+      if (!confirmed) return;
+    }
+
+    await cleanupTempFiles();
+    router.back();
+  };
+
+  // beforeunload 이벤트로 임시 파일 정리 및 작성 중 확인
+  useEffect(() => {
+    const handleBeforeUnload = async (event: BeforeUnloadEvent) => {
+      // hasContent 함수를 사용하여 일관된 검사
+      if (hasContent()) {
+        // 임시 파일들 삭제 시도
+        const tempFiles = uploadedFiles.filter((file) =>
+          file.url.includes("/temp/")
+        );
+
+        if (tempFiles.length > 0) {
+          for (const file of tempFiles) {
+            try {
+              const tempPath = file.url.split(
+                "/storage/v1/object/public/board/"
+              )[1];
+              await supabase.storage.from("board").remove([tempPath]);
+            } catch (error) {
+              console.error("임시 파일 삭제 실패:", error);
+            }
+          }
+        }
+
+        // 브라우저에 확인 메시지 표시
+        event.preventDefault();
+        event.returnValue =
+          "작성 중인 내용이 있습니다. 페이지를 나가면 작성된 내용과 업로드된 파일이 모두 삭제됩니다.";
+        return event.returnValue;
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [uploadedFiles, title, hasContent]);
+
+  // 전역 링크 클릭 가로채기
+  useEffect(() => {
+    const handleLinkClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+
+      // 링크 요소 찾기 (a 태그, button with onclick, 또는 클릭 가능한 요소)
+      const linkElement = target.closest('a, button[onclick], [role="button"]');
+      if (!linkElement) return;
+
+      // 현재 게시글 작성 폼 내부의 버튼들은 제외
+      const currentForm = document.querySelector("form");
+      if (currentForm && currentForm.contains(linkElement)) return;
+
+      // 모달 내부 버튼들은 제외
+      const isModalButton = target.closest(
+        '[role="dialog"], .modal, [data-modal]'
+      );
+      if (isModalButton) return;
+
+      // a 태그인 경우 href 확인
+      if (linkElement.tagName === "A") {
+        const href = linkElement.getAttribute("href");
+        if (
+          !href ||
+          href.startsWith("#") ||
+          href.startsWith("mailto:") ||
+          href.startsWith("tel:")
+        )
+          return;
+
+        // 외부 링크는 제외
+        if (href.startsWith("http") && !href.includes(window.location.hostname))
+          return;
+
+        // 같은 페이지로의 이동은 제외
+        if (href === window.location.pathname + window.location.search) return;
+      }
+
+      // 작성 중인 내용이 있는지 확인
+      if (hasContent()) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const confirmed = window.confirm(
+          "작성 중인 내용이 있습니다. 정말로 이 페이지를 나가시겠습니까?\n작성된 내용과 업로드된 파일이 모두 삭제됩니다."
+        );
+
+        if (confirmed) {
+          // 임시 파일 정리
+          cleanupTempFiles().then(() => {
+            // 이벤트 리스너를 일시적으로 제거하고 원래 클릭 실행
+            document.removeEventListener("click", handleLinkClick, true);
+
+            // a 태그인 경우 href로 이동
+            if (linkElement.tagName === "A") {
+              const hrefAttr = linkElement.getAttribute("href");
+              if (hrefAttr) {
+                window.location.href = hrefAttr;
+              }
+            } else {
+              // 버튼이나 다른 요소인 경우 클릭 이벤트 재실행
+              const clonedEvent = new MouseEvent("click", {
+                bubbles: true,
+                cancelable: true,
+                ctrlKey: event.ctrlKey,
+                metaKey: event.metaKey,
+                shiftKey: event.shiftKey,
+              });
+              linkElement.dispatchEvent(clonedEvent);
+            }
+          });
+        }
+      }
+    };
+
+    // 캡처 단계에서 이벤트 리스너 등록 (모든 클릭을 먼저 감지)
+    document.addEventListener("click", handleLinkClick, true);
+
+    return () => {
+      document.removeEventListener("click", handleLinkClick, true);
+    };
+  }, [hasContent, cleanupTempFiles]);
 
   // 관리자 설정 다이얼로그 컴포넌트
   const AdminSettingsDialog = () => {
@@ -1146,7 +1400,7 @@ export default function BoardWrite({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => router.back()}
+                onClick={handleCancel}
                 disabled={loading}
                 className="col-span-2 sm:col-auto h-9 sm:h-10 px-3 sm:px-4"
               >

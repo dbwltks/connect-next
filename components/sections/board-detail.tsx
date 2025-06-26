@@ -717,23 +717,116 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
     );
   }
 
+  // 게시글 내용에서 이미지 URL들을 추출하는 함수
+  function extractImagesFromContent(content: string): string[] {
+    const imageUrls: string[] = [];
+
+    // HTML에서 img 태그의 src 속성 추출
+    const imgRegex = /<img[^>]+src="([^"]+)"/g;
+    let match;
+
+    while ((match = imgRegex.exec(content)) !== null) {
+      const imgUrl = match[1];
+      // Supabase Storage URL인 경우만 추출
+      if (imgUrl.includes("/storage/v1/object/public/board/")) {
+        const urlParts = imgUrl.split("/storage/v1/object/public/board/");
+        if (urlParts.length === 2) {
+          imageUrls.push(urlParts[1]);
+        }
+      }
+    }
+
+    return imageUrls;
+  }
+
+  // 게시글의 첨부파일들을 Storage에서 삭제하는 함수
+  async function deletePostFiles(files: string, content: string) {
+    try {
+      const filesToDelete: string[] = [];
+
+      // 1. 첨부파일 목록에서 파일 경로 추출
+      if (files) {
+        try {
+          const fileList = JSON.parse(files);
+          if (Array.isArray(fileList)) {
+            for (const file of fileList) {
+              if (file.url && typeof file.url === "string") {
+                const urlParts = file.url.split(
+                  "/storage/v1/object/public/board/"
+                );
+                if (urlParts.length === 2) {
+                  filesToDelete.push(urlParts[1]);
+                }
+              }
+            }
+          }
+        } catch (parseError) {
+          console.error("첨부파일 정보 파싱 오류:", parseError);
+        }
+      }
+
+      // 2. 게시글 내용에서 이미지 URL 추출
+      const contentImages = extractImagesFromContent(content);
+      filesToDelete.push(...contentImages);
+
+      // 중복 제거
+      const uniqueFiles = filesToDelete.filter(
+        (file, index) => filesToDelete.indexOf(file) === index
+      );
+
+      if (uniqueFiles.length > 0) {
+        const { error } = await supabase.storage
+          .from("board")
+          .remove(uniqueFiles);
+
+        if (error) {
+          console.error("파일 삭제 중 오류:", error);
+        } else {
+          console.log(`${uniqueFiles.length}개 파일이 삭제되었습니다.`);
+        }
+      }
+    } catch (error) {
+      console.error("파일 정보 파싱 또는 삭제 중 오류:", error);
+    }
+  }
+
   // 삭제 핸들러
   async function handleDelete() {
     if (!post) return;
-    if (!window.confirm("정말로 이 글을 삭제하시겠습니까?")) return;
-    const { error } = await supabase
-      .from("board_posts")
-      .delete()
-      .eq("id", post.id);
-    if (error) {
-      alert("삭제 중 오류가 발생했습니다: " + error.message);
+    if (
+      !window.confirm(
+        "정말로 이 글을 삭제하시겠습니까?\n(첨부된 파일들도 함께 삭제됩니다)"
+      )
+    )
       return;
-    }
-    alert("삭제되었습니다.");
-    if (onBack) {
-      onBack();
-    } else {
-      router.back(); // 또는 router.push("/board") 등 원하는 경로로 이동
+
+    try {
+      // 1. 첨부파일 및 게시글 내 이미지 삭제 (게시글 삭제 전에 수행)
+      if (post.files || post.content) {
+        await deletePostFiles(post.files || "", post.content || "");
+      }
+
+      // 2. 게시글 삭제
+      const { error } = await supabase
+        .from("board_posts")
+        .delete()
+        .eq("id", post.id);
+
+      if (error) {
+        alert("삭제 중 오류가 발생했습니다: " + error.message);
+        return;
+      }
+
+      alert("게시글과 첨부파일이 모두 삭제되었습니다.");
+
+      if (onBack) {
+        onBack();
+      } else {
+        router.back();
+      }
+    } catch (error) {
+      console.error("삭제 처리 중 오류:", error);
+      alert("삭제 중 오류가 발생했습니다. 다시 시도해 주세요.");
     }
   }
 

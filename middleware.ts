@@ -51,6 +51,6 @@ export const config = {
     // '/admin/:path*',
     // '/mypage/:path*',
     "/login",
-    "/register",
+    // "/register",
   ],
 };

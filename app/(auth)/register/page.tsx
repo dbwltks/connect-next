@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Check, X, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/db";
@@ -21,31 +21,176 @@ import {
 export default function RegisterPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [duplicateCheck, setDuplicateCheck] = useState({
+    username: { status: "", message: "", isChecking: false },
+    nickname: { status: "", message: "", isChecking: false },
+    email: { status: "", message: "", isChecking: false },
+  });
   const [formData, setFormData] = useState({
     username: "",
+    nickname: "",
     email: "",
     password: "",
     confirmPassword: "",
     terms: false,
   });
+  const [passwordMatch, setPasswordMatch] = useState<boolean | null>(null);
 
   // 로그인 상태 확인
   useEffect(() => {
-    // 로컬 스토리지나 세션 스토리지에서 사용자 정보 확인
-    const user = localStorage.getItem("user") || sessionStorage.getItem("user");
+    const checkAuthStatus = async () => {
+      try {
+        // Supabase 세션 확인
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
-    // 이미 로그인된 상태면 홈페이지로 리다이렉트
-    if (user) {
-      router.push("/");
-    }
+        // 이미 로그인된 상태면 홈페이지로 리다이렉트
+        if (session?.user) {
+          router.push("/");
+        }
+      } catch (error) {
+        console.error("인증 상태 확인 오류:", error);
+      }
+    };
+
+    checkAuthStatus();
   }, [router]);
+
+  // 입력 유효성 검사
+  const validateInput = (field: string, value: string) => {
+    switch (field) {
+      case "username":
+        if (value.length < 4) return "아이디는 4자 이상이어야 합니다";
+        if (value.length > 20) return "아이디는 20자 이하여야 합니다";
+        if (!/^[a-zA-Z0-9_]+$/.test(value))
+          return "영문, 숫자, 언더바(_)만 사용 가능합니다";
+        break;
+      case "nickname":
+        if (value.length < 2) return "닉네임은 2자 이상이어야 합니다";
+        if (value.length > 10) return "닉네임은 10자 이하여야 합니다";
+        break;
+      case "email":
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
+          return "올바른 이메일 형식이 아닙니다";
+        break;
+    }
+    return null;
+  };
+
+  // 중복 체크 함수
+  const checkDuplicate = async (field: string, value: string) => {
+    // 빈 값이면 초기화
+    if (!value.trim()) {
+      setDuplicateCheck((prev) => ({
+        ...prev,
+        [field]: { status: "", message: "", isChecking: false },
+      }));
+      return;
+    }
+
+    // 유효성 검사 먼저 실행
+    const validationError = validateInput(field, value);
+    if (validationError) {
+      setDuplicateCheck((prev) => ({
+        ...prev,
+        [field]: {
+          status: "error",
+          message: validationError,
+          isChecking: false,
+        },
+      }));
+      return;
+    }
+
+    // 체크 중 상태로 변경
+    setDuplicateCheck((prev) => ({
+      ...prev,
+      [field]: { status: "checking", message: "확인 중...", isChecking: true },
+    }));
+
+    try {
+      // 중복 체크
+      const { data } = await supabase
+        .from("users")
+        .select("id")
+        .eq(field, value)
+        .single();
+
+      if (data) {
+        setDuplicateCheck((prev) => ({
+          ...prev,
+          [field]: {
+            status: "error",
+            message:
+              field === "username"
+                ? "이미 사용 중인 아이디입니다"
+                : field === "nickname"
+                  ? "이미 사용 중인 닉네임입니다"
+                  : "이미 사용 중인 이메일입니다",
+            isChecking: false,
+          },
+        }));
+      } else {
+        setDuplicateCheck((prev) => ({
+          ...prev,
+          [field]: {
+            status: "success",
+            message: "사용 가능합니다",
+            isChecking: false,
+          },
+        }));
+      }
+    } catch (error) {
+      // 데이터가 없으면 사용 가능
+      setDuplicateCheck((prev) => ({
+        ...prev,
+        [field]: {
+          status: "success",
+          message: "사용 가능합니다",
+          isChecking: false,
+        },
+      }));
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
+    const newFormData = {
+      ...formData,
       [name]: type === "checkbox" ? checked : value,
-    }));
+    };
+    setFormData(newFormData);
+
+    // 비밀번호 확인 검증
+    if (name === "password" || name === "confirmPassword") {
+      const password = name === "password" ? value : newFormData.password;
+      const confirmPassword =
+        name === "confirmPassword" ? value : newFormData.confirmPassword;
+
+      if (confirmPassword.length > 0) {
+        setPasswordMatch(password === confirmPassword);
+      } else {
+        setPasswordMatch(null);
+      }
+    }
+
+    // 실시간 중복 체크 (디바운싱 적용)
+    if (
+      (name === "username" || name === "nickname" || name === "email") &&
+      type !== "checkbox"
+    ) {
+      // 먼저 상태 초기화 (타이핑 중임을 표시)
+      setDuplicateCheck((prev) => ({
+        ...prev,
+        [name]: { status: "", message: "", isChecking: false },
+      }));
+
+      clearTimeout((window as any)[`${name}Timer`]);
+      (window as any)[`${name}Timer`] = setTimeout(() => {
+        checkDuplicate(name, value);
+      }, 600); // 600ms 후 실행
+    }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -53,28 +198,47 @@ export default function RegisterPage() {
     setIsLoading(true);
     try {
       if (!formData.username.trim()) throw new Error("아이디를 입력하세요");
+      if (!formData.nickname.trim()) throw new Error("닉네임을 입력하세요");
       if (formData.password !== formData.confirmPassword) {
         throw new Error("비밀번호가 일치하지 않습니다");
       }
       if (!formData.terms) {
         throw new Error("이용약관에 동의해주세요");
       }
-      // 아이디 중복 체크
-      const { data: existUser, error: existError } = await supabase
+
+      // 실시간 중복 체크 결과 확인
+      if (duplicateCheck.username.status === "error") {
+        throw new Error("사용할 수 없는 아이디입니다");
+      }
+      if (duplicateCheck.nickname.status === "error") {
+        throw new Error("사용할 수 없는 닉네임입니다");
+      }
+      if (duplicateCheck.email.status === "error") {
+        throw new Error("사용할 수 없는 이메일입니다");
+      }
+
+      // 최종 중복 체크 (보안을 위한 이중 체크)
+      const { data: existUser } = await supabase
         .from("users")
         .select("id")
         .eq("username", formData.username)
         .single();
       if (existUser) throw new Error("이미 사용 중인 아이디입니다");
-      
-      // 이메일 중복 체크
-      const { data: existEmail, error: existEmailError } = await supabase
+
+      const { data: existNickname } = await supabase
+        .from("users")
+        .select("id")
+        .eq("nickname", formData.nickname)
+        .single();
+      if (existNickname) throw new Error("이미 사용 중인 닉네임입니다");
+
+      const { data: existEmail } = await supabase
         .from("users")
         .select("id")
         .eq("email", formData.email)
         .single();
       if (existEmail) throw new Error("이미 사용 중인 이메일입니다");
-      
+
       // Supabase Auth 회원가입
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
@@ -82,13 +246,16 @@ export default function RegisterPage() {
       });
       if (error || !data.user)
         throw new Error(error?.message || "회원가입에 실패했습니다");
-      // users 테이블에 username, email 저장
+
+      // users 테이블에 username, nickname, email 저장
       const { error: userError } = await supabase.from("users").insert({
         id: data.user.id,
         username: formData.username,
+        nickname: formData.nickname,
         email: formData.email,
       });
       if (userError) throw new Error(userError.message);
+
       toast({
         title: "회원가입 성공",
         description: "이메일 인증 후 로그인하세요",
@@ -133,79 +300,237 @@ export default function RegisterPage() {
             <div className="grid gap-5">
               <div className="grid gap-2">
                 <Label htmlFor="username" className="text-sm font-medium">
-                  아이디
+                  아이디{" "}
                 </Label>
-                <Input
-                  id="username"
-                  placeholder="아이디"
-                  type="text"
-                  name="username"
-                  value={formData.username}
-                  onChange={handleChange}
-                  autoCapitalize="none"
-                  autoComplete="username"
-                  autoCorrect="off"
-                  className="h-11"
-                  required
-                />
+                <div className="relative">
+                  <Input
+                    id="username"
+                    placeholder="4-20자 영문, 숫자, 언더바(_)"
+                    type="text"
+                    name="username"
+                    value={formData.username}
+                    onChange={handleChange}
+                    autoCapitalize="none"
+                    autoComplete="username"
+                    autoCorrect="off"
+                    className={`h-11 pr-10 ${
+                      duplicateCheck.username.status === "error"
+                        ? "border-red-500 focus:border-red-500"
+                        : duplicateCheck.username.status === "success"
+                          ? "border-green-500 focus:border-green-500"
+                          : duplicateCheck.username.status === "checking"
+                            ? "border-blue-500 focus:border-blue-500"
+                            : ""
+                    }`}
+                    required
+                  />
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    {duplicateCheck.username.status === "checking" && (
+                      <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />
+                    )}
+                    {duplicateCheck.username.status === "success" && (
+                      <Check className="h-4 w-4 text-green-500" />
+                    )}
+                    {duplicateCheck.username.status === "error" && (
+                      <X className="h-4 w-4 text-red-500" />
+                    )}
+                  </div>
+                </div>
+                {duplicateCheck.username.message && (
+                  <p
+                    className={`text-xs mt-1 flex items-center gap-1 ${
+                      duplicateCheck.username.status === "error"
+                        ? "text-red-500"
+                        : duplicateCheck.username.status === "success"
+                          ? "text-green-600"
+                          : "text-blue-500"
+                    }`}
+                  >
+                    {duplicateCheck.username.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="nickname" className="text-sm font-medium">
+                  닉네임 <span className="text-xs text-gray-500">(2-10자)</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="nickname"
+                    placeholder="2-10자 닉네임"
+                    type="text"
+                    name="nickname"
+                    value={formData.nickname}
+                    onChange={handleChange}
+                    autoCapitalize="none"
+                    autoComplete="nickname"
+                    autoCorrect="off"
+                    className={`h-11 pr-10 ${
+                      duplicateCheck.nickname.status === "error"
+                        ? "border-red-500 focus:border-red-500"
+                        : duplicateCheck.nickname.status === "success"
+                          ? "border-green-500 focus:border-green-500"
+                          : duplicateCheck.nickname.status === "checking"
+                            ? "border-blue-500 focus:border-blue-500"
+                            : ""
+                    }`}
+                    required
+                  />
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    {duplicateCheck.nickname.status === "checking" && (
+                      <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />
+                    )}
+                    {duplicateCheck.nickname.status === "success" && (
+                      <Check className="h-4 w-4 text-green-500" />
+                    )}
+                    {duplicateCheck.nickname.status === "error" && (
+                      <X className="h-4 w-4 text-red-500" />
+                    )}
+                  </div>
+                </div>
+                {duplicateCheck.nickname.message && (
+                  <p
+                    className={`text-xs mt-1 flex items-center gap-1 ${
+                      duplicateCheck.nickname.status === "error"
+                        ? "text-red-500"
+                        : duplicateCheck.nickname.status === "success"
+                          ? "text-green-600"
+                          : "text-blue-500"
+                    }`}
+                  >
+                    {duplicateCheck.nickname.message}
+                  </p>
+                )}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="email" className="text-sm font-medium">
-                  이메일
+                  이메일{" "}
+                  <span className="text-xs text-gray-500">
+                    (로그인 및 인증용)
+                  </span>
                 </Label>
-                <Input
-                  id="email"
-                  placeholder="이메일 주소"
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  autoCapitalize="none"
-                  autoComplete="email"
-                  autoCorrect="off"
-                  className="h-11"
-                  required
-                />
-              </div>
-
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="password" className="text-sm font-medium">
-                    비밀번호
-                  </Label>
+                <div className="relative">
                   <Input
-                    id="password"
-                    placeholder="••••••••"
-                    type="password"
-                    name="password"
-                    value={formData.password}
+                    id="email"
+                    placeholder="example@domain.com"
+                    type="email"
+                    name="email"
+                    value={formData.email}
                     onChange={handleChange}
-                    autoComplete="new-password"
-                    className="h-11"
+                    autoCapitalize="none"
+                    autoComplete="email"
+                    autoCorrect="off"
+                    className={`h-11 pr-10 ${
+                      duplicateCheck.email.status === "error"
+                        ? "border-red-500 focus:border-red-500"
+                        : duplicateCheck.email.status === "success"
+                          ? "border-green-500 focus:border-green-500"
+                          : duplicateCheck.email.status === "checking"
+                            ? "border-blue-500 focus:border-blue-500"
+                            : ""
+                    }`}
                     required
                   />
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    {duplicateCheck.email.status === "checking" && (
+                      <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />
+                    )}
+                    {duplicateCheck.email.status === "success" && (
+                      <Check className="h-4 w-4 text-green-500" />
+                    )}
+                    {duplicateCheck.email.status === "error" && (
+                      <X className="h-4 w-4 text-red-500" />
+                    )}
+                  </div>
                 </div>
-
-                <div className="grid gap-2">
-                  <Label
-                    htmlFor="confirmPassword"
-                    className="text-sm font-medium"
+                {duplicateCheck.email.message && (
+                  <p
+                    className={`text-xs mt-1 flex items-center gap-1 ${
+                      duplicateCheck.email.status === "error"
+                        ? "text-red-500"
+                        : duplicateCheck.email.status === "success"
+                          ? "text-green-600"
+                          : "text-blue-500"
+                    }`}
                   >
-                    비밀번호 확인
-                  </Label>
+                    {duplicateCheck.email.message}
+                  </p>
+                )}
+              </div>
+
+              {/* <div className="grid sm:grid-cols-2 gap-4"> */}
+              <div className="grid gap-2">
+                <Label htmlFor="password" className="text-sm font-medium">
+                  비밀번호{" "}
+                  <span className="text-xs text-gray-500">(8자 이상)</span>
+                </Label>
+                <Input
+                  id="password"
+                  placeholder="8자 이상 입력하세요"
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  autoComplete="new-password"
+                  className="h-11"
+                  minLength={8}
+                  required
+                />
+                {formData.password.length > 0 &&
+                  formData.password.length < 8 && (
+                    <p className="text-xs text-red-500 mt-1">
+                      비밀번호는 8자 이상이어야 합니다
+                    </p>
+                  )}
+              </div>
+
+              <div className="grid gap-2">
+                <Label
+                  htmlFor="confirmPassword"
+                  className="text-sm font-medium"
+                >
+                  비밀번호 확인
+                </Label>
+                <div className="relative">
                   <Input
                     id="confirmPassword"
-                    placeholder="••••••••"
+                    placeholder="비밀번호를 다시 입력하세요"
                     type="password"
                     name="confirmPassword"
                     value={formData.confirmPassword}
                     onChange={handleChange}
                     autoComplete="new-password"
-                    className="h-11"
+                    className={`h-11 pr-10 ${
+                      passwordMatch === false
+                        ? "border-red-500 focus:border-red-500"
+                        : passwordMatch === true
+                          ? "border-green-500 focus:border-green-500"
+                          : ""
+                    }`}
                     required
                   />
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    {passwordMatch === true && (
+                      <Check className="h-4 w-4 text-green-500" />
+                    )}
+                    {passwordMatch === false && (
+                      <X className="h-4 w-4 text-red-500" />
+                    )}
+                  </div>
                 </div>
+                {passwordMatch === false && (
+                  <p className="text-xs text-red-500 mt-1">
+                    비밀번호가 일치하지 않습니다
+                  </p>
+                )}
+                {passwordMatch === true && (
+                  <p className="text-xs text-green-600 mt-1">
+                    비밀번호가 일치합니다
+                  </p>
+                )}
               </div>
+              {/* </div> */}
 
               <div className="flex items-start space-x-2 mt-2">
                 <Checkbox
