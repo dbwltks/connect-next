@@ -17,7 +17,20 @@ import Color from "@tiptap/extension-color";
 import FontFamily from "@tiptap/extension-font-family";
 import Typography from "@tiptap/extension-typography";
 import { Node, Extension } from "@tiptap/core";
+import Placeholder from "@tiptap/extension-placeholder";
 import Underline from "@tiptap/extension-underline";
+import Subscript from "@tiptap/extension-subscript";
+import Superscript from "@tiptap/extension-superscript";
+import Highlight from "@tiptap/extension-highlight";
+import Table from "@tiptap/extension-table";
+import TableRow from "@tiptap/extension-table-row";
+import TableHeader from "@tiptap/extension-table-header";
+import TableCell from "@tiptap/extension-table-cell";
+import BulletList from "@tiptap/extension-bullet-list";
+import OrderedList from "@tiptap/extension-ordered-list";
+import ListItem from "@tiptap/extension-list-item";
+import Dropcursor from "@tiptap/extension-dropcursor";
+import Gapcursor from "@tiptap/extension-gapcursor";
 import React, {
   useEffect,
   useState,
@@ -60,6 +73,16 @@ import {
   PlusCircle,
   RotateCcw,
   Minimize,
+  Highlighter,
+  Subscript as SubscriptIcon,
+  Superscript as SuperscriptIcon,
+  Table as TableIcon,
+  TableProperties,
+  Trash2,
+  Eraser,
+  Heading,
+  Minus as HorizontalRule,
+  CornerDownLeft,
 } from "lucide-react";
 import { Button } from "./button";
 import { Input } from "./input";
@@ -261,33 +284,13 @@ const ImageResizeComponent = (props: NodeViewProps) => {
     updateAttributes({ align: "right" });
   };
 
-  const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
-    const img = e.currentTarget.querySelector("img");
-    if (!img) return;
-
-    const clone = img.cloneNode(true) as HTMLImageElement;
-    clone.style.cssText = `
-      position: fixed;
-      top: -1000px;
-      left: -1000px;
-      width: 100px;
-      height: auto;
-      opacity: 0.6;
-      pointer-events: none;
-      z-index: 9999;
-    `;
-    document.body.appendChild(clone);
-    e.dataTransfer.setDragImage(clone, 50, 50);
-    requestAnimationFrame(() => {
-      document.body.removeChild(clone);
-    });
-  };
-
   return (
     <NodeViewWrapper
       as="div"
       className={`image-component ${selected ? "ring-2 ring-blue-500" : ""}`}
       style={{ position: "static" }}
+      draggable
+      data-drag-handle
     >
       <div
         style={{
@@ -303,9 +306,6 @@ const ImageResizeComponent = (props: NodeViewProps) => {
             relative
           `}
           contentEditable={false}
-          draggable="true"
-          onDragStart={handleDragStart}
-          data-drag-handle
         >
           <img
             src={node.attrs.src}
@@ -319,11 +319,10 @@ const ImageResizeComponent = (props: NodeViewProps) => {
               width: node.attrs.width || "auto",
               maxWidth: "100%",
               height: node.attrs.height || "auto",
-              cursor: "grab",
+              cursor: "pointer",
               ...parseStyleString(node.attrs.style || ""),
             }}
             onClick={() => setShowResizeOptions(!showResizeOptions)}
-            draggable={false}
           />
           {showResizeOptions && (
             <div
@@ -619,6 +618,9 @@ const MenuBar = ({
   }>({ type: null, data: null });
   const [isFontFamilyMenuOpen, setIsFontFamilyMenuOpen] = useState(false);
   const [isColorMenuOpen, setIsColorMenuOpen] = useState(false);
+  const [isHighlightMenuOpen, setIsHighlightMenuOpen] = useState(false);
+  const [isTableMenuOpen, setIsTableMenuOpen] = useState(false);
+  const [isHeadingMenuOpen, setIsHeadingMenuOpen] = useState(false);
 
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1020,249 +1022,585 @@ const MenuBar = ({
 
       {/* 하단 영역: 서식 관련 기능 */}
       <div className="p-1 flex flex-wrap gap-1 items-center">
-        {/* 폰트 선택 */}
-        <div className="relative">
+        {/* 텍스트 서식 그룹 */}
+        <div className="flex items-center gap-1">
           <Button
             type="button"
-            variant="ghost"
+            onClick={() => editor.chain().focus().toggleBold().run()}
+            variant={editor.isActive("bold") ? "secondary" : "ghost"}
             size="sm"
-            className="h-8 px-2 flex items-center gap-1"
-            onClick={() => setIsFontFamilyMenuOpen(!isFontFamilyMenuOpen)}
+            className="h-8 px-2"
           >
-            <Type className="h-4 w-4" />
-            <span className="text-xs">폰트</span>
+            <Bold className="h-4 w-4" />
           </Button>
-          {isFontFamilyMenuOpen && (
-            <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-md shadow-md p-2 z-10 w-48">
-              {[
-                { name: "기본", value: "sans-serif" },
-                { name: "고딕", value: "Arial, sans-serif" },
-                { name: "명조", value: "Georgia, serif" },
-                { name: "필기체", value: "cursive" },
-                { name: "모노스페이스", value: "monospace" },
-                { name: "나눔고딕", value: "Nanum Gothic, sans-serif" },
-                { name: "나눔명조", value: "Nanum Myeongjo, serif" },
-                { name: "나눔펜", value: "Nanum Pen Script, cursive" },
-              ].map((font) => (
-                <Button
-                  key={font.value}
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-full text-left justify-start"
-                  style={{ fontFamily: font.value }}
-                  onClick={() => {
-                    // FontFamily 확장을 사용하여 fontFamily 설정
-                    editor.chain().focus().setFontFamily(font.value).run();
-                    setIsFontFamilyMenuOpen(false);
-                  }}
-                >
-                  {font.name}
-                </Button>
-              ))}
-            </div>
-          )}
+          <Button
+            type="button"
+            onClick={() => editor.chain().focus().toggleItalic().run()}
+            variant={editor.isActive("italic") ? "secondary" : "ghost"}
+            size="sm"
+            className="h-8 px-2"
+          >
+            <Italic className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            onClick={() => editor.chain().focus().toggleStrike().run()}
+            variant={editor.isActive("strike") ? "secondary" : "ghost"}
+            size="sm"
+            className="h-8 px-2"
+          >
+            <Strikethrough className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            onClick={() => editor.chain().focus().toggleUnderline().run()}
+            variant={editor.isActive("underline") ? "secondary" : "ghost"}
+            size="sm"
+            className="h-8 px-2"
+          >
+            <span className="text-sm font-bold underline">U</span>
+          </Button>
         </div>
 
-        {/* 색상 선택 */}
-        <div className="relative">
+        {/* 위/아래 첨자 그룹 */}
+        <div className="flex items-center gap-1">
           <Button
             type="button"
-            variant="ghost"
+            onClick={() => editor.chain().focus().toggleSubscript().run()}
+            variant={editor.isActive("subscript") ? "secondary" : "ghost"}
             size="sm"
-            className="h-8 px-2 flex items-center gap-1"
-            onClick={() => setIsColorMenuOpen(!isColorMenuOpen)}
+            className="h-8 px-2"
           >
-            <Palette className="h-4 w-4" />
-            <span className="text-xs">색상</span>
+            <span className="text-sm">X₂</span>
           </Button>
-          {isColorMenuOpen && (
-            <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-md shadow-md p-2 z-10 w-48">
-              <div className="grid grid-cols-4 gap-1">
+          <Button
+            type="button"
+            onClick={() => editor.chain().focus().toggleSuperscript().run()}
+            variant={editor.isActive("superscript") ? "secondary" : "ghost"}
+            size="sm"
+            className="h-8 px-2"
+          >
+            <span className="text-sm">X²</span>
+          </Button>
+        </div>
+
+        {/* 폰트 및 색상 그룹 */}
+        <div className="flex items-center gap-1">
+          {/* 폰트 선택 */}
+          <div className="relative">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2"
+              onClick={() => setIsFontFamilyMenuOpen(!isFontFamilyMenuOpen)}
+            >
+              <Type className="h-4 w-4" />
+            </Button>
+            {isFontFamilyMenuOpen && (
+              <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-md shadow-md p-2 z-10 w-48">
                 {[
-                  "#000000",
-                  "#434343",
-                  "#666666",
-                  "#999999",
-                  "#b7b7b7",
-                  "#cccccc",
-                  "#d9d9d9",
-                  "#efefef",
-                  "#f3f3f3",
-                  "#ffffff",
-                  "#980000",
-                  "#ff0000",
-                  "#ff9900",
-                  "#ffff00",
-                  "#00ff00",
-                  "#00ffff",
-                  "#4a86e8",
-                  "#0000ff",
-                  "#9900ff",
-                  "#ff00ff",
-                  "#e6b8af",
-                  "#f4cccc",
-                  "#fce5cd",
-                  "#fff2cc",
-                  "#d9ead3",
-                  "#d0e0e3",
-                  "#c9daf8",
-                  "#cfe2f3",
-                  "#d9d2e9",
-                  "#ead1dc",
-                ].map((color) => (
-                  <button
-                    key={color}
+                  { name: "기본", value: "sans-serif" },
+                  { name: "고딕", value: "Arial, sans-serif" },
+                  { name: "명조", value: "Georgia, serif" },
+                  { name: "필기체", value: "cursive" },
+                  { name: "모노스페이스", value: "monospace" },
+                  { name: "나눔고딕", value: "Nanum Gothic, sans-serif" },
+                  { name: "나눔명조", value: "Nanum Myeongjo, serif" },
+                  { name: "나눔펜", value: "Nanum Pen Script, cursive" },
+                ].map((font) => (
+                  <Button
+                    key={font.value}
                     type="button"
-                    className="w-8 h-8 rounded-sm border border-gray-300 cursor-pointer"
-                    style={{ backgroundColor: color }}
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-full text-left justify-start"
+                    style={{ fontFamily: font.value }}
                     onClick={() => {
-                      editor.chain().focus().setColor(color).run();
-                      setIsColorMenuOpen(false);
+                      editor.chain().focus().setFontFamily(font.value).run();
+                      setIsFontFamilyMenuOpen(false);
                     }}
-                  />
+                  >
+                    {font.name}
+                  </Button>
                 ))}
               </div>
-            </div>
-          )}
-        </div>
-        <Button
-          type="button"
-          onClick={() => editor.chain().focus().toggleBold().run()}
-          variant={editor.isActive("bold") ? "secondary" : "ghost"}
-          size="sm"
-          className="h-8 px-2"
-        >
-          <Bold className="h-4 w-4" />
-        </Button>
-        <Button
-          type="button"
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-          variant={editor.isActive("italic") ? "secondary" : "ghost"}
-          size="sm"
-          className="h-8 px-2"
-        >
-          <Italic className="h-4 w-4" />
-        </Button>
-        <Button
-          type="button"
-          onClick={() => editor.chain().focus().toggleStrike().run()}
-          variant={editor.isActive("strike") ? "secondary" : "ghost"}
-          size="sm"
-          className="h-8 px-2"
-        >
-          <Strikethrough className="h-4 w-4" />
-        </Button>
-        <Button
-          type="button"
-          onClick={() =>
-            editor.chain().focus().toggleHeading({ level: 1 }).run()
-          }
-          variant={
-            editor.isActive("heading", { level: 1 }) ? "secondary" : "ghost"
-          }
-          size="sm"
-          className="h-8 px-2"
-        >
-          <Heading1 className="h-4 w-4" />
-        </Button>
-        <Button
-          type="button"
-          onClick={() =>
-            editor.chain().focus().toggleHeading({ level: 2 }).run()
-          }
-          variant={
-            editor.isActive("heading", { level: 2 }) ? "secondary" : "ghost"
-          }
-          size="sm"
-          className="h-8 px-2"
-        >
-          <Heading2 className="h-4 w-4" />
-        </Button>
-        <Button
-          type="button"
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
-          variant={editor.isActive("bulletList") ? "secondary" : "ghost"}
-          size="sm"
-          className="h-8 px-2"
-        >
-          <List className="h-4 w-4" />
-        </Button>
-        <Button
-          type="button"
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          variant={editor.isActive("orderedList") ? "secondary" : "ghost"}
-          size="sm"
-          className="h-8 px-2"
-        >
-          <ListOrdered className="h-4 w-4" />
-        </Button>
-        <Button
-          type="button"
-          onClick={() => editor.chain().focus().toggleCode().run()}
-          disabled={!editor.can().chain().focus().toggleCode().run()}
-          variant={editor.isActive("code") ? "secondary" : "ghost"}
-          size="sm"
-          className="h-8 px-2"
-        >
-          <Code className="h-4 w-4" />
-        </Button>
-        <Button
-          type="button"
-          onClick={() => editor.chain().focus().toggleBlockquote().run()}
-          variant={editor.isActive("blockquote") ? "secondary" : "ghost"}
-          size="sm"
-          className="h-8 px-2"
-        >
-          <Quote className="h-4 w-4" />
-        </Button>
+            )}
+          </div>
 
-        {/* 정렬 버튼 */}
-        <Button
-          type="button"
-          onClick={() => editor.chain().focus().setTextAlign("left").run()}
-          variant={
-            editor.isActive({ textAlign: "left" }) ? "secondary" : "ghost"
-          }
-          size="sm"
-          className="h-8 px-2"
-        >
-          <AlignLeft className="h-4 w-4" />
-        </Button>
-        <Button
-          type="button"
-          onClick={() => editor.chain().focus().setTextAlign("center").run()}
-          variant={
-            editor.isActive({ textAlign: "center" }) ? "secondary" : "ghost"
-          }
-          size="sm"
-          className="h-8 px-2"
-        >
-          <AlignCenter className="h-4 w-4" />
-        </Button>
-        <Button
-          type="button"
-          onClick={() => editor.chain().focus().setTextAlign("right").run()}
-          variant={
-            editor.isActive({ textAlign: "right" }) ? "secondary" : "ghost"
-          }
-          size="sm"
-          className="h-8 px-2"
-        >
-          <AlignRight className="h-4 w-4" />
-        </Button>
-        <Button
-          type="button"
-          onClick={() => editor.chain().focus().setTextAlign("justify").run()}
-          variant={
-            editor.isActive({ textAlign: "justify" }) ? "secondary" : "ghost"
-          }
-          size="sm"
-          className="h-8 px-2"
-        >
-          <AlignJustify className="h-4 w-4" />
-        </Button>
+          {/* 색상 선택 */}
+          <div className="relative">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2"
+              onClick={() => setIsColorMenuOpen(!isColorMenuOpen)}
+            >
+              <Palette className="h-4 w-4" />
+            </Button>
+            {isColorMenuOpen && (
+              <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-md shadow-md p-2 z-10 w-48">
+                <div className="grid grid-cols-4 gap-1">
+                  {[
+                    "#000000",
+                    "#434343",
+                    "#666666",
+                    "#999999",
+                    "#b7b7b7",
+                    "#cccccc",
+                    "#d9d9d9",
+                    "#efefef",
+                    "#f3f3f3",
+                    "#ffffff",
+                    "#980000",
+                    "#ff0000",
+                    "#ff9900",
+                    "#ffff00",
+                    "#00ff00",
+                    "#00ffff",
+                    "#4a86e8",
+                    "#0000ff",
+                    "#9900ff",
+                    "#ff00ff",
+                    "#e6b8af",
+                    "#f4cccc",
+                    "#fce5cd",
+                    "#fff2cc",
+                    "#d9ead3",
+                    "#d0e0e3",
+                    "#c9daf8",
+                    "#cfe2f3",
+                    "#d9d2e9",
+                    "#ead1dc",
+                  ].map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      className="w-8 h-8 rounded-sm border border-gray-300 cursor-pointer"
+                      style={{ backgroundColor: color }}
+                      onClick={() => {
+                        editor.chain().focus().setColor(color).run();
+                        setIsColorMenuOpen(false);
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 형광펜 메뉴 */}
+          <div className="relative">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2"
+              onClick={() => setIsHighlightMenuOpen(!isHighlightMenuOpen)}
+            >
+              <Highlighter className="h-4 w-4" />
+            </Button>
+            {isHighlightMenuOpen && (
+              <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-md shadow-md p-2 z-10 w-48">
+                <div className="grid grid-cols-4 gap-1">
+                  {[
+                    "#fef3c7", // 노란색
+                    "#dcfce7", // 연두색
+                    "#dbeafe", // 하늘색
+                    "#fce7f3", // 분홍색
+                    "#f3e8ff", // 보라색
+                    "#fed7d7", // 빨간색
+                    "#fff3cd", // 주황색
+                    "#e2e8f0", // 회색
+                  ].map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      className="w-8 h-8 rounded-sm border border-gray-300 cursor-pointer"
+                      style={{ backgroundColor: color }}
+                      onClick={() => {
+                        editor.chain().focus().toggleHighlight({ color }).run();
+                        setIsHighlightMenuOpen(false);
+                      }}
+                    />
+                  ))}
+                </div>
+                <div className="border-t border-gray-200 mt-2 pt-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-full text-left justify-start text-red-600"
+                    onClick={() => {
+                      editor.chain().focus().unsetHighlight().run();
+                      setIsHighlightMenuOpen(false);
+                    }}
+                  >
+                    <Eraser className="h-4 w-4 mr-2" />
+                    제거
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Clear marks 버튼 */}
+          <Button
+            type="button"
+            onClick={() => editor.chain().focus().unsetAllMarks().run()}
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2"
+            title="모든 서식 제거"
+          >
+            <Eraser className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* 제목 및 단락 그룹 */}
+        <div className="flex items-center gap-1">
+          {/* 제목 메뉴 */}
+          <div className="relative">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2"
+              onClick={() => setIsHeadingMenuOpen(!isHeadingMenuOpen)}
+            >
+              <Heading className="h-4 w-4" />
+            </Button>
+            {isHeadingMenuOpen && (
+              <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-md shadow-md p-2 z-10 w-32">
+                <div className="flex flex-col space-y-1">
+                  <Button
+                    type="button"
+                    variant={
+                      editor.isActive("paragraph") ? "secondary" : "ghost"
+                    }
+                    size="sm"
+                    className="h-8 w-full text-left justify-start"
+                    onClick={() => {
+                      editor.chain().focus().setParagraph().run();
+                      setIsHeadingMenuOpen(false);
+                    }}
+                  >
+                    본문
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={
+                      editor.isActive("heading", { level: 1 })
+                        ? "secondary"
+                        : "ghost"
+                    }
+                    size="sm"
+                    className="h-8 w-full text-left justify-start"
+                    onClick={() => {
+                      editor.chain().focus().toggleHeading({ level: 1 }).run();
+                      setIsHeadingMenuOpen(false);
+                    }}
+                  >
+                    H1
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={
+                      editor.isActive("heading", { level: 2 })
+                        ? "secondary"
+                        : "ghost"
+                    }
+                    size="sm"
+                    className="h-8 w-full text-left justify-start"
+                    onClick={() => {
+                      editor.chain().focus().toggleHeading({ level: 2 }).run();
+                      setIsHeadingMenuOpen(false);
+                    }}
+                  >
+                    H2
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={
+                      editor.isActive("heading", { level: 3 })
+                        ? "secondary"
+                        : "ghost"
+                    }
+                    size="sm"
+                    className="h-8 w-full text-left justify-start"
+                    onClick={() => {
+                      editor.chain().focus().toggleHeading({ level: 3 }).run();
+                      setIsHeadingMenuOpen(false);
+                    }}
+                  >
+                    H3
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={
+                      editor.isActive("heading", { level: 4 })
+                        ? "secondary"
+                        : "ghost"
+                    }
+                    size="sm"
+                    className="h-8 w-full text-left justify-start"
+                    onClick={() => {
+                      editor.chain().focus().toggleHeading({ level: 4 }).run();
+                      setIsHeadingMenuOpen(false);
+                    }}
+                  >
+                    H4
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={
+                      editor.isActive("heading", { level: 5 })
+                        ? "secondary"
+                        : "ghost"
+                    }
+                    size="sm"
+                    className="h-8 w-full text-left justify-start"
+                    onClick={() => {
+                      editor.chain().focus().toggleHeading({ level: 5 }).run();
+                      setIsHeadingMenuOpen(false);
+                    }}
+                  >
+                    H5
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={
+                      editor.isActive("heading", { level: 6 })
+                        ? "secondary"
+                        : "ghost"
+                    }
+                    size="sm"
+                    className="h-8 w-full text-left justify-start"
+                    onClick={() => {
+                      editor.chain().focus().toggleHeading({ level: 6 }).run();
+                      setIsHeadingMenuOpen(false);
+                    }}
+                  >
+                    H6
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 리스트 및 구조 그룹 */}
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            onClick={() => editor.chain().focus().toggleBulletList().run()}
+            variant={editor.isActive("bulletList") ? "secondary" : "ghost"}
+            size="sm"
+            className="h-8 px-2"
+          >
+            <List className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            onClick={() => editor.chain().focus().toggleOrderedList().run()}
+            variant={editor.isActive("orderedList") ? "secondary" : "ghost"}
+            size="sm"
+            className="h-8 px-2"
+          >
+            <ListOrdered className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            onClick={() => editor.chain().focus().toggleBlockquote().run()}
+            variant={editor.isActive("blockquote") ? "secondary" : "ghost"}
+            size="sm"
+            className="h-8 px-2"
+          >
+            <Quote className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* 코드 그룹 */}
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            onClick={() => editor.chain().focus().toggleCode().run()}
+            disabled={!editor.can().chain().focus().toggleCode().run()}
+            variant={editor.isActive("code") ? "secondary" : "ghost"}
+            size="sm"
+            className="h-8 px-2"
+            title="인라인 코드"
+          >
+            <Code className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+            variant={editor.isActive("codeBlock") ? "secondary" : "ghost"}
+            size="sm"
+            className="h-8 px-2"
+            title="코드 블록"
+          >
+            <span className="text-xs font-mono">{`{}`}</span>
+          </Button>
+        </div>
+
+        {/* 테이블 및 요소 그룹 */}
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            onClick={() =>
+              editor
+                .chain()
+                .focus()
+                .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+                .run()
+            }
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2"
+          >
+            <TableIcon className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            onClick={() => editor.chain().focus().setHorizontalRule().run()}
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2"
+            title="가로선"
+          >
+            <HorizontalRule className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* 정렬 그룹 */}
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            onClick={() => editor.chain().focus().setTextAlign("left").run()}
+            variant={
+              editor.isActive({ textAlign: "left" }) ? "secondary" : "ghost"
+            }
+            size="sm"
+            className="h-8 px-2"
+          >
+            <AlignLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            onClick={() => editor.chain().focus().setTextAlign("center").run()}
+            variant={
+              editor.isActive({ textAlign: "center" }) ? "secondary" : "ghost"
+            }
+            size="sm"
+            className="h-8 px-2"
+          >
+            <AlignCenter className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            onClick={() => editor.chain().focus().setTextAlign("right").run()}
+            variant={
+              editor.isActive({ textAlign: "right" }) ? "secondary" : "ghost"
+            }
+            size="sm"
+            className="h-8 px-2"
+          >
+            <AlignRight className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            onClick={() => editor.chain().focus().setTextAlign("justify").run()}
+            variant={
+              editor.isActive({ textAlign: "justify" }) ? "secondary" : "ghost"
+            }
+            size="sm"
+            className="h-8 px-2"
+          >
+            <AlignJustify className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
+
+      {/* 테이블 컨텍스트 툴바 */}
+      {editor.isActive("table") && (
+        <div className="border-t border-gray-200 bg-gray-50 p-1">
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2"
+              onClick={() => editor.chain().focus().addColumnBefore().run()}
+              title="열 추가(앞)"
+            >
+              <Plus className="h-4 w-4 mr-1" />열 추가(앞)
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2"
+              onClick={() => editor.chain().focus().addColumnAfter().run()}
+              title="열 추가(뒤)"
+            >
+              <Plus className="h-4 w-4 mr-1" />열 추가(뒤)
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2"
+              onClick={() => editor.chain().focus().addRowBefore().run()}
+              title="행 추가(위)"
+            >
+              <Plus className="h-4 w-4 mr-1" />행 추가(위)
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2"
+              onClick={() => editor.chain().focus().addRowAfter().run()}
+              title="행 추가(아래)"
+            >
+              <Plus className="h-4 w-4 mr-1" />행 추가(아래)
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-red-600 hover:text-red-700"
+              onClick={() => editor.chain().focus().deleteColumn().run()}
+              title="열 삭제"
+            >
+              <Trash2 className="h-4 w-4 mr-1" />열 삭제
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-red-600 hover:text-red-700"
+              onClick={() => editor.chain().focus().deleteRow().run()}
+              title="행 삭제"
+            >
+              <Trash2 className="h-4 w-4 mr-1" />행 삭제
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-red-600 hover:text-red-700"
+              onClick={() => editor.chain().focus().deleteTable().run()}
+              title="표 삭제"
+            >
+              <Trash2 className="h-4 w-4 mr-1" />표 삭제
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* 업로드 진행률 표시 */}
       {(isUploadingImage || isUploadingFile) && (
@@ -1524,8 +1862,40 @@ const TipTapEditor = forwardRef(function TipTapEditor(
   // TipTap 에디터 초기화
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        // StarterKit에서 기본 리스트들을 비활성화하고 따로 설정
+        bulletList: false,
+        orderedList: false,
+        listItem: false,
+      }),
       Underline,
+      Subscript,
+      Superscript,
+      Highlight.configure({
+        multicolor: true,
+      }),
+      Table.configure({
+        resizable: true,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
+      BulletList.configure({
+        HTMLAttributes: {
+          class: "tiptap-bullet-list",
+        },
+      }),
+      OrderedList.configure({
+        HTMLAttributes: {
+          class: "tiptap-ordered-list",
+        },
+      }),
+      ListItem,
+      Dropcursor.configure({
+        color: "#3b82f6",
+        width: 2,
+      }),
+      Gapcursor,
       Link.configure({
         openOnClick: false,
         linkOnPaste: true,
@@ -1540,8 +1910,23 @@ const TipTapEditor = forwardRef(function TipTapEditor(
       TextStyle,
       Color,
       FontFamily,
-      Typography,
+      Typography.configure({
+        // 마크다운 단축키 활성화
+        // ** text ** -> <strong>text</strong>
+        // * text * -> <em>text</em>
+        // ` text ` -> <code>text</code>
+        // ~ text ~ -> <s>text</s>
+        // # text -> h1
+        // ## text -> h2
+        // ### text -> h3
+      }),
       FontSize,
+      Placeholder.configure({
+        placeholder: placeholder || "내용을 입력하세요...",
+        showOnlyWhenEditable: true,
+        showOnlyCurrent: false,
+        includeChildren: true,
+      }),
       Image.extend({
         addAttributes() {
           return {
@@ -1589,6 +1974,7 @@ const TipTapEditor = forwardRef(function TipTapEditor(
         selectable: true,
         allowGapCursor: true,
         priority: 50,
+        atom: true,
         addKeyboardShortcuts() {
           return {
             Backspace: () => {
@@ -1655,49 +2041,14 @@ const TipTapEditor = forwardRef(function TipTapEditor(
     content: content || "",
     editorProps: {
       attributes: {
-        class: "focus:outline-none p-4",
-        ...(placeholder ? { "data-placeholder": placeholder } : {}),
+        class: "focus:outline-none p-4 max-w-none",
+        style: "min-height: 300px;",
       },
-      handleDrop: (view, event, slice, moved) => {
-        if (!moved) return true;
-
-        const coordinates = view.posAtCoords({
-          left: event.clientX,
-          top: event.clientY,
-        });
-
-        if (!coordinates) return true;
-
-        // 이미지 노드인 경우에만 처리
-        if (slice.content.firstChild?.type.name === "image") {
-          const tr = view.state.tr;
-
-          // 원본 이미지 찾기
-          let sourcePos: number | null = null;
-          view.state.doc.descendants((node, pos) => {
-            if (
-              node.type.name === "image" &&
-              node.attrs.src === slice.content.firstChild?.attrs.src
-            ) {
-              sourcePos = pos;
-              return false;
-            }
-          });
-
-          if (sourcePos !== null) {
-            // 원본 삭제
-            tr.delete(sourcePos, sourcePos + slice.content.size);
-
-            // 새 위치에 삽입
-            tr.insert(coordinates.pos, slice.content);
-
-            view.dispatch(tr);
-            return true;
-          }
-        }
-
-        return true;
-      },
+    },
+    onUpdate: ({ editor }) => {
+      if (onChange) {
+        onChange(editor.getHTML());
+      }
     },
   });
 
@@ -2104,7 +2455,7 @@ const TipTapEditor = forwardRef(function TipTapEditor(
         {/* 에디터 영역 */}
         <div className="flex-1 min-w-0 border border-gray-200 rounded-md overflow-hidden">
           {/* 에디터 내부에서만 sticky */}
-          <div className="sticky top-0 z-20 bg-gray-50">
+          <div className="bg-gray-50">
             <MenuBar
               editor={editor}
               onThumbnailSelect={onThumbnailChange}
@@ -2126,7 +2477,7 @@ const TipTapEditor = forwardRef(function TipTapEditor(
             {editor ? (
               <EditorContent
                 editor={editor}
-                className="min-h-[300px] lg:min-h-[500px]"
+                className="min-h-[300px] lg:min-h-[500px] tiptap-editor"
                 tabIndex={0}
               />
             ) : (
@@ -2135,6 +2486,242 @@ const TipTapEditor = forwardRef(function TipTapEditor(
               </div>
             )}
           </div>
+          <style jsx global>{`
+            .tiptap-editor .ProseMirror {
+              outline: none;
+            }
+
+            .tiptap-editor .ProseMirror p.is-editor-empty:first-child::before {
+              content: attr(data-placeholder);
+              float: left;
+              color: #adb5bd;
+              pointer-events: none;
+              height: 0;
+            }
+
+            .tiptap-editor .ProseMirror mark {
+              background-color: #fef3c7;
+              border-radius: 0.25rem;
+              padding: 0.125rem 0.25rem;
+            }
+
+            .tiptap-editor .ProseMirror mark[data-color] {
+              background-color: attr(data-color);
+            }
+
+            .tiptap-editor .ProseMirror sub {
+              vertical-align: sub;
+              font-size: smaller;
+            }
+
+            .tiptap-editor .ProseMirror sup {
+              vertical-align: super;
+              font-size: smaller;
+            }
+
+            .tiptap-editor .ProseMirror u {
+              text-decoration: underline;
+            }
+
+            .tiptap-editor .ProseMirror strong {
+              font-weight: bold;
+            }
+
+            .tiptap-editor .ProseMirror em {
+              font-style: italic;
+            }
+
+            .tiptap-editor .ProseMirror s {
+              text-decoration: line-through;
+            }
+
+            .tiptap-editor .ProseMirror code {
+              background-color: #f1f5f9;
+              color: #e11d48;
+              padding: 0.125rem 0.25rem;
+              border-radius: 0.25rem;
+              font-family:
+                "JetBrains Mono", "Fira Code", Consolas, "Liberation Mono",
+                Menlo, Courier, monospace;
+              font-size: 0.875em;
+            }
+
+            .tiptap-editor .ProseMirror blockquote {
+              border-left: 4px solid #e5e7eb;
+              padding-left: 1rem;
+              margin: 1rem 0;
+              font-style: italic;
+              color: #6b7280;
+            }
+
+            .tiptap-editor .ProseMirror ul,
+            .tiptap-editor .ProseMirror ol {
+              padding-left: 0;
+              margin-left: 1.5rem;
+            }
+
+            .tiptap-editor .ProseMirror .tiptap-bullet-list {
+              list-style-type: disc;
+              padding-left: 0;
+              margin-left: 1.5rem;
+            }
+
+            .tiptap-editor .ProseMirror .tiptap-ordered-list {
+              list-style-type: decimal;
+              padding-left: 0;
+              margin-left: 1.5rem;
+            }
+
+            .tiptap-editor .ProseMirror li {
+              margin: 0.25rem 0;
+            }
+
+            .tiptap-editor .ProseMirror h1 {
+              font-size: 2rem;
+              font-weight: bold;
+              margin: 1.5rem 0 1rem 0;
+              line-height: 1.2;
+            }
+
+            .tiptap-editor .ProseMirror h2 {
+              font-size: 1.5rem;
+              font-weight: bold;
+              margin: 1.25rem 0 0.75rem 0;
+              line-height: 1.3;
+            }
+
+            .tiptap-editor .ProseMirror h3 {
+              font-size: 1.25rem;
+              font-weight: bold;
+              margin: 1rem 0 0.5rem 0;
+              line-height: 1.4;
+            }
+
+            .tiptap-editor .ProseMirror p {
+              margin: 0.5rem 0;
+              line-height: 1.6;
+            }
+
+            .tiptap-editor .ProseMirror a {
+              color: #2563eb;
+              text-decoration: underline;
+            }
+
+            .tiptap-editor .ProseMirror a:hover {
+              color: #1d4ed8;
+            }
+
+            /* 테이블 스타일 */
+            .tiptap-editor .ProseMirror table {
+              border-collapse: collapse;
+              table-layout: fixed;
+              width: 100%;
+              margin: 1rem 0;
+              overflow: hidden;
+            }
+
+            .tiptap-editor .ProseMirror table td,
+            .tiptap-editor .ProseMirror table th {
+              min-width: 1em;
+              border: 1px solid #d1d5db;
+              padding: 0.5rem;
+              vertical-align: top;
+              box-sizing: border-box;
+              position: relative;
+            }
+
+            .tiptap-editor .ProseMirror table th {
+              font-weight: bold;
+              text-align: left;
+              background-color: #f9fafb;
+            }
+
+            .tiptap-editor .ProseMirror table .selectedCell:after {
+              z-index: 2;
+              position: absolute;
+              content: "";
+              left: 0;
+              right: 0;
+              top: 0;
+              bottom: 0;
+              background: rgba(200, 200, 255, 0.4);
+              pointer-events: none;
+            }
+
+            .tiptap-editor .ProseMirror table .column-resize-handle {
+              position: absolute;
+              right: -2px;
+              top: 0;
+              bottom: -2px;
+              width: 4px;
+              background-color: #3b82f6;
+              pointer-events: none;
+            }
+
+            .tiptap-editor .ProseMirror table p {
+              margin: 0;
+            }
+
+            .tiptap-editor .ProseMirror .tableWrapper {
+              padding: 1rem 0;
+              overflow-x: auto;
+            }
+
+            .tiptap-editor .ProseMirror .resize-cursor {
+              cursor: ew-resize;
+              cursor: col-resize;
+            }
+
+            /* 코드 블록 스타일 */
+            .tiptap-editor .ProseMirror pre {
+              background: #1f2937;
+              color: #f9fafb;
+              font-family:
+                "JetBrains Mono", "Fira Code", Consolas, "Liberation Mono",
+                Menlo, Courier, monospace;
+              padding: 1rem;
+              border-radius: 0.5rem;
+              overflow-x: auto;
+              margin: 1rem 0;
+            }
+
+            .tiptap-editor .ProseMirror pre code {
+              color: inherit;
+              padding: 0;
+              background: none;
+              font-size: inherit;
+            }
+
+            /* 가로선 스타일 */
+            .tiptap-editor .ProseMirror hr {
+              border: none;
+              border-top: 2px solid #e5e7eb;
+              margin: 2rem 0;
+            }
+
+            /* H4, H5, H6 스타일 */
+            .tiptap-editor .ProseMirror h4 {
+              font-size: 1.125rem;
+              font-weight: bold;
+              margin: 0.75rem 0 0.5rem 0;
+              line-height: 1.4;
+            }
+
+            .tiptap-editor .ProseMirror h5 {
+              font-size: 1rem;
+              font-weight: bold;
+              margin: 0.75rem 0 0.25rem 0;
+              line-height: 1.5;
+            }
+
+            .tiptap-editor .ProseMirror h6 {
+              font-size: 0.875rem;
+              font-weight: bold;
+              margin: 0.5rem 0 0.25rem 0;
+              line-height: 1.5;
+              color: #6b7280;
+            }
+          `}</style>
         </div>
         {/* 사이드바는 board-write.tsx로 이동됨 */}
       </div>

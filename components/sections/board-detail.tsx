@@ -52,6 +52,7 @@ import {
 } from "@/components/ui/dialog";
 import GlassContainer from "@/components/ui/glass-container";
 import { useAuth } from "@/contexts/auth-context";
+import TipTapViewer from "@/components/ui/tiptap-viewer";
 
 interface BoardPost {
   id: string;
@@ -1622,7 +1623,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
           </div>
         </CardHeader>
 
-        <CardContent className="px-4 sm:px-8">
+        <CardContent className="px-2 sm:px-8">
           {/* 첨부파일 버튼/리스트: 본문 위에, 오른쪽 정렬 */}
           <div className="mb-2 flex justify-end">
             {attachments.length > 0 && (
@@ -1671,22 +1672,11 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
           </div>
           <div
             ref={contentRef}
-            className={`min-h-[120px] mb-4 sm:mb-6 board-content prose prose-sm sm:prose max-w-none overflow-x-hidden font-size-${fontSizeLevel} font-bold-${fontBoldLevel} font-family-${fontFamily}`}
-            dangerouslySetInnerHTML={{
-              __html: renderContentWithYoutube(post.content),
-            }}
-          />
+            className={`min-h-[120px] mb-4 sm:mb-6 font-size-${fontSizeLevel} font-bold-${fontBoldLevel} font-family-${fontFamily}`}
+          >
+            <TipTapViewer content={renderContentWithYoutube(post.content)} />
+          </div>
           <style jsx global>{`
-            .board-content img {
-              max-width: 100%;
-              height: auto;
-              margin: 1rem 0;
-            }
-            .board-content iframe {
-              max-width: 100%;
-              margin: 1rem 0;
-            }
-
             /* 글꼴 크기 설정 */
             .font-size--2 {
               font-size: 0.75rem !important;
@@ -1739,83 +1729,6 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
             }
             .font-family-spoqa {
               font-family: "Spoqa Han Sans", sans-serif !important;
-            }
-
-            .board-content p {
-              margin-bottom: 1rem;
-              line-height: 1.6;
-            }
-            .board-content h1,
-            .board-content h2,
-            .board-content h3 {
-              margin-top: 1.5rem;
-              margin-bottom: 1rem;
-              font-weight: 600;
-              line-height: 1.3;
-            }
-            .board-content h1 {
-              font-size: 1.5rem;
-            }
-            .board-content h2 {
-              font-size: 1.25rem;
-            }
-            .board-content h3 {
-              font-size: 1.125rem;
-            }
-            .board-content ul,
-            .board-content ol {
-              margin-left: 1.5rem;
-              margin-bottom: 1rem;
-            }
-            .board-content li {
-              margin-bottom: 0.5rem;
-            }
-            .board-content blockquote {
-              border-left: 4px solid #e5e7eb;
-              padding-left: 1rem;
-              margin: 1.5rem 0;
-              color: #4b5563;
-              font-style: italic;
-            }
-            .board-content pre {
-              background-color: #f3f4f6;
-              padding: 1rem;
-              border-radius: 0.375rem;
-              overflow-x: auto;
-              margin: 1.5rem 0;
-              font-size: 0.875rem;
-            }
-            .board-content code {
-              background-color: #f3f4f6;
-              padding: 0.2rem 0.4rem;
-              border-radius: 0.25rem;
-              font-size: 0.875em;
-            }
-            .board-content a {
-              color: #2563eb;
-              text-decoration: underline;
-              text-underline-offset: 2px;
-            }
-            .board-content a:hover {
-              text-decoration: none;
-            }
-            .board-content table {
-              width: 100%;
-              border-collapse: collapse;
-              margin: 1.5rem 0;
-            }
-            .board-content th,
-            .board-content td {
-              border: 1px solid #e5e7eb;
-              padding: 0.5rem 0.75rem;
-              text-align: left;
-            }
-            .board-content th {
-              background-color: #f9fafb;
-              font-weight: 600;
-            }
-            .board-content .youtube-embed iframe {
-              pointer-events: auto !important;
             }
           `}</style>
 
