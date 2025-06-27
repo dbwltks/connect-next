@@ -375,6 +375,12 @@ export default function BoardWrite({
   const [availableVerses, setAvailableVerses] = useState<number>(1);
   const [bibleLoading, setBibleLoading] = useState<boolean>(false);
 
+  // 다른 장 포함 관련 상태
+  const [includeOtherChapter, setIncludeOtherChapter] =
+    useState<boolean>(false);
+  const [selectedEndChapter, setSelectedEndChapter] = useState<number>(1);
+  const [endChapterVerses, setEndChapterVerses] = useState<number>(1);
+
   // useAuth 훅 사용
   const { user } = useAuth();
   const isAdmin = user?.role?.toLowerCase() === "admin";
@@ -1284,19 +1290,103 @@ export default function BoardWrite({
     setBibleLoading(true);
 
     try {
-      // 본문 구절 가져오기
-      const mainVerses = await getBibleVerses({
-        version: selectedBibleVersion,
-        book: selectedBibleBook,
-        chapter: selectedBibleChapter,
-        startVerse: selectedStartVerse,
-        endVerse:
-          selectedEndVerse !== selectedStartVerse
-            ? selectedEndVerse
-            : undefined,
-      });
+      let allMainVerses: any[] = [];
+      let allSubVerses: any[] = [];
 
-      if (!mainVerses || mainVerses.length === 0) {
+      if (includeOtherChapter && selectedEndChapter !== selectedBibleChapter) {
+        // 다른 장 포함인 경우: 여러 장에 걸친 구절들을 가져오기
+        for (
+          let chapter = selectedBibleChapter;
+          chapter <= selectedEndChapter;
+          chapter++
+        ) {
+          let startVerse: number;
+          let endVerse: number | undefined;
+
+          if (chapter === selectedBibleChapter) {
+            // 시작 장: 선택한 시작절부터 해당 장의 끝까지
+            startVerse = selectedStartVerse;
+            endVerse = undefined; // 해당 장의 모든 절
+          } else if (chapter === selectedEndChapter) {
+            // 끝 장: 1절부터 선택한 끝절까지
+            startVerse = 1;
+            endVerse = selectedEndVerse;
+          } else {
+            // 중간 장들: 1절부터 해당 장의 끝까지 모든 절
+            startVerse = 1;
+            endVerse = undefined;
+          }
+
+          const mainVerses = await getBibleVerses({
+            version: selectedBibleVersion,
+            book: selectedBibleBook,
+            chapter: chapter,
+            startVerse: startVerse,
+            endVerse: endVerse,
+          });
+
+          if (mainVerses && mainVerses.length > 0) {
+            allMainVerses.push(...mainVerses);
+          }
+
+          // 대역이 선택된 경우
+          if (showBothVersions && selectedBibleSubVersion) {
+            try {
+              const subVerses = await getBibleVerses({
+                version: selectedBibleSubVersion,
+                book: selectedBibleBook,
+                chapter: chapter,
+                startVerse: startVerse,
+                endVerse: endVerse,
+              });
+              if (subVerses && subVerses.length > 0) {
+                allSubVerses.push(...subVerses);
+              }
+            } catch (error) {
+              console.error(`대역 구절 가져오기 실패 (${chapter}장):`, error);
+            }
+          }
+        }
+      } else {
+        // 같은 장 내에서의 절 범위인 경우
+        const mainVerses = await getBibleVerses({
+          version: selectedBibleVersion,
+          book: selectedBibleBook,
+          chapter: selectedBibleChapter,
+          startVerse: selectedStartVerse,
+          endVerse:
+            selectedEndVerse !== selectedStartVerse
+              ? selectedEndVerse
+              : undefined,
+        });
+
+        if (mainVerses && mainVerses.length > 0) {
+          allMainVerses = mainVerses as any[];
+        }
+
+        // 대역이 선택된 경우
+        if (showBothVersions && selectedBibleSubVersion) {
+          try {
+            const subVerses = await getBibleVerses({
+              version: selectedBibleSubVersion,
+              book: selectedBibleBook,
+              chapter: selectedBibleChapter,
+              startVerse: selectedStartVerse,
+              endVerse:
+                selectedEndVerse !== selectedStartVerse
+                  ? selectedEndVerse
+                  : undefined,
+            });
+            if (subVerses && subVerses.length > 0) {
+              allSubVerses = subVerses as any[];
+            }
+          } catch (error) {
+            console.error("대역 구절 가져오기 실패:", error);
+          }
+        }
+      }
+
+      if (!allMainVerses || allMainVerses.length === 0) {
         showToast({
           title: "성경 구절 없음",
           description: "선택한 성경 구절을 찾을 수 없습니다.",
@@ -1305,44 +1395,81 @@ export default function BoardWrite({
         return;
       }
 
-      let subVerses = null;
-
-      // 대역이 선택된 경우 대역 구절도 가져오기
-      if (showBothVersions && selectedBibleSubVersion) {
-        try {
-          subVerses = await getBibleVerses({
-            version: selectedBibleSubVersion,
-            book: selectedBibleBook,
-            chapter: selectedBibleChapter,
-            startVerse: selectedStartVerse,
-            endVerse:
-              selectedEndVerse !== selectedStartVerse
-                ? selectedEndVerse
-                : undefined,
-          });
-        } catch (error) {
-          console.error("대역 구절 가져오기 실패:", error);
-          // 대역 가져오기 실패해도 본문은 삽입
-        }
-      }
-
       // 본문만 또는 본문-대역 포맷팅
-      const formattedHtml =
-        showBothVersions && subVerses
-          ? formatBibleVersesWithSub(
-              mainVerses,
-              subVerses,
-              selectedBibleBook,
-              selectedBibleChapter,
-              selectedBibleVersion,
-              selectedBibleSubVersion!
-            )
-          : formatBibleVerses(
-              mainVerses,
-              selectedBibleBook,
-              selectedBibleChapter,
-              selectedBibleVersion
-            );
+      let formattedHtml;
+
+      if (includeOtherChapter && selectedEndChapter !== selectedBibleChapter) {
+        // 다른 장 포함인 경우: 각 장별로 포맷팅
+        let htmlContent = "";
+        let currentChapter = selectedBibleChapter;
+        let verseIndex = 0;
+
+        while (
+          currentChapter <= selectedEndChapter &&
+          verseIndex < allMainVerses.length
+        ) {
+          const chapterVerses = [];
+          const chapterSubVerses = [];
+
+          // 현재 장의 구절들만 추출
+          while (
+            verseIndex < allMainVerses.length &&
+            allMainVerses[verseIndex].chapter === currentChapter
+          ) {
+            chapterVerses.push(allMainVerses[verseIndex]);
+            if (allSubVerses.length > verseIndex) {
+              chapterSubVerses.push(allSubVerses[verseIndex]);
+            }
+            verseIndex++;
+          }
+
+          if (chapterVerses.length > 0) {
+            const chapterHtml =
+              showBothVersions && chapterSubVerses.length > 0
+                ? formatBibleVersesWithSub(
+                    chapterVerses,
+                    chapterSubVerses,
+                    selectedBibleBook,
+                    currentChapter,
+                    selectedBibleVersion,
+                    selectedBibleSubVersion!
+                  )
+                : formatBibleVerses(
+                    chapterVerses,
+                    selectedBibleBook,
+                    currentChapter,
+                    selectedBibleVersion
+                  );
+
+            htmlContent += chapterHtml;
+            if (currentChapter < selectedEndChapter) {
+              htmlContent += "<br>";
+            }
+          }
+
+          currentChapter++;
+        }
+
+        formattedHtml = htmlContent;
+      } else {
+        // 같은 장 내에서의 절 범위인 경우
+        formattedHtml =
+          showBothVersions && allSubVerses.length > 0
+            ? formatBibleVersesWithSub(
+                allMainVerses,
+                allSubVerses,
+                selectedBibleBook,
+                selectedBibleChapter,
+                selectedBibleVersion,
+                selectedBibleSubVersion!
+              )
+            : formatBibleVerses(
+                allMainVerses,
+                selectedBibleBook,
+                selectedBibleChapter,
+                selectedBibleVersion
+              );
+      }
 
       editorRef.current.editor.commands.insertContent(formattedHtml);
       setShowBibleInsert(false);
@@ -1352,9 +1479,14 @@ export default function BoardWrite({
           ? `${BIBLE_VERSIONS[selectedBibleVersion].name} + ${BIBLE_VERSIONS[selectedBibleSubVersion].name}`
           : BIBLE_VERSIONS[selectedBibleVersion].name;
 
+      const rangeText =
+        includeOtherChapter && selectedEndChapter !== selectedBibleChapter
+          ? `${selectedBibleChapter}:${selectedStartVerse} - ${selectedEndChapter}:${selectedEndVerse}`
+          : `${selectedBibleChapter}:${selectedStartVerse}${selectedEndVerse !== selectedStartVerse ? `-${selectedEndVerse}` : ""}`;
+
       showToast({
         title: "성경 구절 삽입 완료",
-        description: `${getBibleBookName(selectedBibleBook, selectedBibleVersion)} ${selectedBibleChapter}:${selectedStartVerse}${selectedEndVerse !== selectedStartVerse ? `-${selectedEndVerse}` : ""} (${versionText}) 삽입됨`,
+        description: `${getBibleBookName(selectedBibleBook, selectedBibleVersion)} ${rangeText} (${versionText}) 삽입됨`,
         variant: "default",
       });
     } catch (error) {
@@ -1392,6 +1524,7 @@ export default function BoardWrite({
       ).then((verseCount) => {
         setAvailableVerses(verseCount);
         setSelectedStartVerse(1);
+        // 끝절을 시작절과 동일하게 설정 (단일 절 선택)
         setSelectedEndVerse(1);
       });
     }
@@ -1401,6 +1534,40 @@ export default function BoardWrite({
     selectedBibleVersion,
     showBibleInsert,
   ]);
+
+  // 끝 장 선택 시 해당 장의 절 개수 조회
+  useEffect(() => {
+    if (
+      showBibleInsert &&
+      includeOtherChapter &&
+      selectedEndChapter &&
+      selectedBibleBook
+    ) {
+      getBibleVerseCount(
+        selectedBibleBook,
+        selectedEndChapter,
+        selectedBibleVersion
+      ).then((verseCount) => {
+        setEndChapterVerses(verseCount);
+        // 끝 장이 변경되면 끝절을 해당 장의 마지막 절로 설정
+        setSelectedEndVerse(verseCount);
+      });
+    }
+  }, [
+    selectedEndChapter,
+    selectedBibleBook,
+    selectedBibleVersion,
+    showBibleInsert,
+    includeOtherChapter,
+  ]);
+
+  // 다른 장 포함 옵션이 해제되면 끝 장을 시작 장과 동일하게 설정
+  useEffect(() => {
+    if (!includeOtherChapter) {
+      setSelectedEndChapter(selectedBibleChapter);
+      setSelectedEndVerse(selectedStartVerse);
+    }
+  }, [includeOtherChapter, selectedBibleChapter, selectedStartVerse]);
 
   // 전역 링크 클릭 가로채기
   useEffect(() => {
@@ -1795,15 +1962,53 @@ export default function BoardWrite({
                   </Select>
                 </div>
 
-                {/* 장과 절 선택 */}
+                {/* 다른 장 포함 옵션 */}
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="include-other-chapter"
+                      checked={includeOtherChapter}
+                      onCheckedChange={(checked) => {
+                        setIncludeOtherChapter(checked === true);
+                        if (checked === false) {
+                          // 다른 장 포함을 해제하면 끝 장을 시작 장과 동일하게 설정
+                          setSelectedEndChapter(selectedBibleChapter);
+                          setSelectedEndVerse(selectedStartVerse);
+                        } else {
+                          // 다른 장 포함을 활성화하면 끝 장을 시작 장 + 1로 설정
+                          const nextChapter = selectedBibleChapter + 1;
+                          if (
+                            nextChapter <=
+                            availableChapters[availableChapters.length - 1]
+                          ) {
+                            setSelectedEndChapter(nextChapter);
+                          }
+                        }
+                      }}
+                    />
+                    <Label
+                      htmlFor="include-other-chapter"
+                      className="text-sm font-medium"
+                    >
+                      다른 장 포함 (여러 장에 걸친 구절 선택)
+                    </Label>
+                  </div>
+                </div>
+
+                {/* 시작 장과 절 선택 */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium">장</Label>
+                    <Label className="text-sm font-medium">시작 장</Label>
                     <Select
                       value={selectedBibleChapter.toString()}
-                      onValueChange={(value) =>
-                        setSelectedBibleChapter(parseInt(value))
-                      }
+                      onValueChange={(value) => {
+                        const newChapter = parseInt(value);
+                        setSelectedBibleChapter(newChapter);
+                        // 다른 장 포함이 비활성화된 경우 끝 장도 함께 변경
+                        if (!includeOtherChapter) {
+                          setSelectedEndChapter(newChapter);
+                        }
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -1820,49 +2025,133 @@ export default function BoardWrite({
 
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">
-                      절 (총 {availableVerses}절)
+                      시작 절 (총 {availableVerses}절)
                     </Label>
-                    <div className="flex gap-2 items-center">
+                    <Input
+                      type="number"
+                      min="1"
+                      max={availableVerses}
+                      value={selectedStartVerse}
+                      onChange={(e) => {
+                        const newStartVerse = parseInt(e.target.value) || 1;
+                        setSelectedStartVerse(newStartVerse);
+                        // 다른 장 포함이 비활성화된 경우 끝절도 함께 변경
+                        if (!includeOtherChapter) {
+                          setSelectedEndVerse(newStartVerse);
+                        }
+                      }}
+                      className="w-full"
+                      placeholder="시작 절"
+                    />
+                  </div>
+                </div>
+
+                {/* 끝 장과 절 선택 (다른 장 포함이 활성화된 경우만 표시) */}
+                {includeOtherChapter && (
+                  <div className="grid grid-cols-2 gap-4 border-t pt-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">끝 장</Label>
+                      <Select
+                        value={selectedEndChapter.toString()}
+                        onValueChange={(value) =>
+                          setSelectedEndChapter(parseInt(value))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-60 overflow-y-auto">
+                          {availableChapters
+                            .filter(
+                              (chapter) => chapter >= selectedBibleChapter
+                            )
+                            .map((chapter) => (
+                              <SelectItem
+                                key={chapter}
+                                value={chapter.toString()}
+                              >
+                                {chapter}장
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">
+                        끝 절 (총 {endChapterVerses}절)
+                      </Label>
                       <Input
                         type="number"
                         min="1"
-                        max={availableVerses}
-                        value={selectedStartVerse}
+                        max={endChapterVerses}
+                        value={selectedEndVerse}
                         onChange={(e) =>
-                          setSelectedStartVerse(parseInt(e.target.value) || 1)
+                          setSelectedEndVerse(parseInt(e.target.value) || 1)
                         }
-                        className="flex-1"
-                        placeholder="시작 절"
+                        className="w-full"
+                        placeholder="끝 절"
                       />
+                    </div>
+                  </div>
+                )}
+
+                {/* 단일 장 내에서의 절 범위 선택 (다른 장 포함이 비활성화된 경우) */}
+                {!includeOtherChapter && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">
+                      끝 절 (같은 장 내에서 범위 선택)
+                    </Label>
+                    <div className="flex gap-2 items-center">
+                      <span className="text-sm text-gray-600 min-w-fit">
+                        {selectedStartVerse}절
+                      </span>
                       <span className="text-sm text-gray-500">~</span>
                       <Input
                         type="number"
                         min={selectedStartVerse}
                         max={availableVerses}
                         value={selectedEndVerse}
-                        onChange={(e) =>
+                        onChange={(e) => {
+                          const newEndVerse =
+                            parseInt(e.target.value) || selectedStartVerse;
                           setSelectedEndVerse(
-                            parseInt(e.target.value) || selectedStartVerse
-                          )
-                        }
+                            Math.max(newEndVerse, selectedStartVerse)
+                          );
+                        }}
                         className="flex-1"
                         placeholder="끝 절"
                       />
+                      <span className="text-xs text-gray-500 min-w-fit">
+                        (최대 {availableVerses}절)
+                      </span>
                     </div>
                     <p className="text-xs text-gray-500">
-                      단일 절은 시작 절만 입력하세요.
+                      단일 절을 선택하려면 시작 절과 동일한 번호를 입력하세요.
                     </p>
                   </div>
-                </div>
+                )}
 
                 {/* 미리보기 영역 */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">선택 구절</Label>
                   <div className="p-3 border rounded-md bg-gray-50 text-sm">
                     {getBibleBookName(selectedBibleBook, selectedBibleVersion)}{" "}
-                    {selectedBibleChapter}:{selectedStartVerse}
-                    {selectedEndVerse !== selectedStartVerse &&
-                      `-${selectedEndVerse}`}{" "}
+                    {includeOtherChapter &&
+                    selectedEndChapter !== selectedBibleChapter ? (
+                      // 다른 장 포함인 경우
+                      <>
+                        {selectedBibleChapter}:{selectedStartVerse} -{" "}
+                        {selectedEndChapter}:{selectedEndVerse}
+                      </>
+                    ) : (
+                      // 같은 장 내에서 절 범위인 경우
+                      <>
+                        {selectedBibleChapter}:{selectedStartVerse}
+                        {selectedEndVerse !== selectedStartVerse &&
+                          `-${selectedEndVerse}`}
+                      </>
+                    )}{" "}
                     {showBothVersions && selectedBibleSubVersion ? (
                       <span>
                         ({BIBLE_VERSIONS[selectedBibleVersion].name} +{" "}

@@ -2577,6 +2577,60 @@ export default function LayoutManager(): JSX.Element {
                       <p className="text-xs text-gray-500 ml-6">
                         갤러리형에서 카드 배경을 투명하게 만듭니다
                       </p>
+
+                      {/* 카드 표시 옵션 */}
+                      <div className="pt-2 border-t border-gray-200">
+                        <Label className="text-sm font-medium mb-2 block">
+                          카드 표시 옵션
+                        </Label>
+
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="carousel-show-card-title"
+                            checked={
+                              editingWidget.settings?.show_card_title ?? true
+                            }
+                            onCheckedChange={(checked) =>
+                              setEditingWidget({
+                                ...editingWidget,
+                                settings: {
+                                  ...editingWidget.settings,
+                                  show_card_title: checked === true,
+                                },
+                              })
+                            }
+                          />
+                          <Label htmlFor="carousel-show-card-title">
+                            카드 제목 표시
+                          </Label>
+                        </div>
+
+                        <div className="flex items-center space-x-2 mt-2">
+                          <Checkbox
+                            id="carousel-show-card-description"
+                            checked={
+                              editingWidget.settings?.show_card_description ??
+                              true
+                            }
+                            onCheckedChange={(checked) =>
+                              setEditingWidget({
+                                ...editingWidget,
+                                settings: {
+                                  ...editingWidget.settings,
+                                  show_card_description: checked === true,
+                                },
+                              })
+                            }
+                          />
+                          <Label htmlFor="carousel-show-card-description">
+                            카드 설명 표시
+                          </Label>
+                        </div>
+
+                        <p className="text-xs text-gray-500 mt-2">
+                          개별 카드의 제목과 설명 표시를 제어합니다
+                        </p>
+                      </div>
                     </div>
 
                     <div className="space-y-2">

@@ -45,10 +45,10 @@ const fetchCarouselData = async (widget: IWidget): Promise<CarouselItem[]> => {
   if (dataSource === "page" && widget.display_options?.page_id) {
     try {
       const { data, error } = await supabase
-        .from("cms_posts")
-        .select("id, title, content, thumbnail_url, created_at")
+        .from("board_posts")
+        .select("id, title, content, thumbnail_image, created_at")
         .eq("page_id", widget.display_options.page_id)
-        .not("thumbnail_url", "is", null)
+        .not("thumbnail_image", "is", null)
         .order("created_at", { ascending: false })
         .limit(10);
 
@@ -57,10 +57,17 @@ const fetchCarouselData = async (widget: IWidget): Promise<CarouselItem[]> => {
       return (data || []).map((post) => ({
         id: post.id,
         image_url:
-          post.thumbnail_url ||
+          post.thumbnail_image ||
           "https://via.placeholder.com/800x400/6B7280/ffffff?text=이미지+없음",
         title: post.title,
-        description: post.content?.substring(0, 100) + "...",
+        description: post.content
+          ? post.content
+              .replace(/<[^>]*>/g, "") // HTML 태그 제거
+              .replace(/https?:\/\/[^\s]+/g, "") // URL 제거
+              .replace(/\s+/g, " ") // 연속된 공백을 하나로
+              .trim()
+              .substring(0, 100) + "..."
+          : "",
         link_url: `#`,
       }));
     } catch (error) {
@@ -107,6 +114,8 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
   const showDots = widget.settings?.show_dots ?? true;
   const showArrows = widget.settings?.show_arrows ?? true;
   const showTitle = widget.settings?.show_title ?? true;
+  const showCardTitle = widget.settings?.show_card_title ?? true;
+  const showCardDescription = widget.settings?.show_card_description ?? true;
   const transparentBackground =
     widget.settings?.transparent_background ?? false;
 
@@ -204,14 +213,15 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
                     window.open(item.link_url, "_blank")
                   }
                 />
-                {(item.title || item.description) && (
+                {((showCardTitle && item.title) ||
+                  (showCardDescription && item.description)) && (
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
-                    {item.title && (
+                    {showCardTitle && item.title && (
                       <h4 className="text-white font-semibold mb-1">
                         {item.title}
                       </h4>
                     )}
-                    {item.description && (
+                    {showCardDescription && item.description && (
                       <p className="text-white/90 text-sm">
                         {item.description}
                       </p>
@@ -303,14 +313,15 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
                     window.open(item.link_url, "_blank")
                   }
                 />
-                {(item.title || item.description) && (
+                {((showCardTitle && item.title) ||
+                  (showCardDescription && item.description)) && (
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-6">
-                    {item.title && (
+                    {showCardTitle && item.title && (
                       <h4 className="text-white font-semibold mb-2 text-xl">
                         {item.title}
                       </h4>
                     )}
-                    {item.description && (
+                    {showCardDescription && item.description && (
                       <p className="text-white/90 text-base">
                         {item.description}
                       </p>
@@ -417,25 +428,27 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  {(item.title || item.description) && (
+                  {((showCardTitle && item.title) ||
+                    (showCardDescription && item.description)) && (
                     <div
-                      className={`p-4 ${
-                        transparentBackground
-                          ? "bg-black/50 text-white"
-                          : "bg-white text-gray-900"
-                      }`}
+                      className="p-4 text-white"
+                      style={{
+                        backgroundColor: transparentBackground
+                          ? "rgba(0, 0, 0, 0.5)"
+                          : "#2E333E",
+                      }}
                     >
-                      {item.title && (
+                      {showCardTitle && item.title && (
                         <h4 className="font-semibold mb-2 line-clamp-1">
                           {item.title}
                         </h4>
                       )}
-                      {item.description && (
+                      {showCardDescription && item.description && (
                         <p
                           className={`text-sm line-clamp-2 ${
                             transparentBackground
                               ? "text-white/90"
-                              : "text-gray-600"
+                              : "text-white/90"
                           }`}
                         >
                           {item.description}
@@ -475,7 +488,7 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
 
         {/* 도트 인디케이터 */}
         {showDots && carouselItems.length > 1 && (
-          <div className="flex justify-center space-x-2 p-4">
+          <div className="flex justify-center space-x-2 pt-4">
             {carouselItems.map((_, index) => (
               <button
                 key={index}
