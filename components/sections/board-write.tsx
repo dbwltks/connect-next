@@ -1306,7 +1306,13 @@ export default function BoardWrite({
           if (chapter === selectedBibleChapter) {
             // 시작 장: 선택한 시작절부터 해당 장의 끝까지
             startVerse = selectedStartVerse;
-            endVerse = undefined; // 해당 장의 모든 절
+            // 해당 장의 마지막 절 번호를 구해서 명시적으로 설정
+            const chapterVerseCount = await getBibleVerseCount(
+              selectedBibleBook,
+              chapter,
+              selectedBibleVersion
+            );
+            endVerse = chapterVerseCount;
           } else if (chapter === selectedEndChapter) {
             // 끝 장: 1절부터 선택한 끝절까지
             startVerse = 1;
@@ -1314,7 +1320,13 @@ export default function BoardWrite({
           } else {
             // 중간 장들: 1절부터 해당 장의 끝까지 모든 절
             startVerse = 1;
-            endVerse = undefined;
+            // 해당 장의 마지막 절 번호를 구해서 명시적으로 설정
+            const chapterVerseCount = await getBibleVerseCount(
+              selectedBibleBook,
+              chapter,
+              selectedBibleVersion
+            );
+            endVerse = chapterVerseCount;
           }
 
           const mainVerses = await getBibleVerses({

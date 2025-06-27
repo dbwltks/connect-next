@@ -808,13 +808,14 @@ export default function BoardSection({
   }, []);
 
   // 마운트 시 쿼리스트링에 post가 있으면 바로 상세로 진입
+  // URL 변경을 감지하여 selectedPostId 업데이트
   useEffect(() => {
-    if (!selectedPostId && typeof window !== "undefined") {
+    if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const postId = params.get("post");
-      if (postId) setSelectedPostId(postId);
+      setSelectedPostId(postId);
     }
-  }, []);
+  }, [searchParams]); // searchParams 의존성 추가
 
   const posts: BoardPost[] = data?.posts || [];
   const totalCount: number = data?.totalCount || 0;
