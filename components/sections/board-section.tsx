@@ -1074,7 +1074,7 @@ export default function BoardSection({
                 sortedNormals.map((post) => (
                   <div
                     key={post.id}
-                    className="flex cursor-pointer px-2 py-3 overflow-hidden border-t items-start border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 min-h-[80px]"
+                    className="flex cursor-pointer p-2 overflow-hidden border-t items-start border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 min-h-[80px]"
                     onClick={() => handlePostClick(post.id)}
                   >
                     <div className="flex-1 min-w-0 pr-3">
