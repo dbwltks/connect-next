@@ -1088,28 +1088,29 @@ export default function BoardSection({
                             고정
                           </Badge>
                         )}
-                        <div
-                          className="text-md line-clamp-2"
-                          style={{ wordBreak: "break-word" }}
-                        >
-                          {post.title}
+                        <div className="flex-1 items-center gap-1">
+                          <div
+                            className="text-md line-clamp-2"
+                            style={{ wordBreak: "break-word" }}
+                          >
+                            {post.title}
+                          </div>
+                          {/* 작성자, 날짜, 조회수 영역 */}
+                          <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            <span
+                              className="truncate max-w-[80px]"
+                              title={
+                                authorInfoMap[post.user_id]?.username || "익명"
+                              }
+                            >
+                              {authorInfoMap[post.user_id]?.username || "익명"}
+                            </span>
+                            <span className="mx-1.5">·</span>
+                            <span>{formatTime(post)}</span>
+                            <span className="mx-1.5">·</span>
+                            <span>조회 {post.view_count ?? 0}</span>
+                          </div>
                         </div>
-                      </div>
-
-                      {/* 작성자, 날짜, 조회수 영역 */}
-                      <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-2">
-                        <span
-                          className="truncate max-w-[80px]"
-                          title={
-                            authorInfoMap[post.user_id]?.username || "익명"
-                          }
-                        >
-                          {authorInfoMap[post.user_id]?.username || "익명"}
-                        </span>
-                        <span className="mx-1.5">·</span>
-                        <span>{formatTime(post)}</span>
-                        <span className="mx-1.5">·</span>
-                        <span>조회 {post.view_count ?? 0}</span>
                       </div>
                     </div>
 
