@@ -35,7 +35,7 @@ export default function ScrollToTop() {
   return (
     <>
       {isVisible && (
-        <div className="fixed bottom-16 right-4 sm:bottom-14 sm:right-4 z-10">
+        <div className="fixed bottom-32 right-4 sm:bottom-14 sm:right-4 z-10">
           <GlassContainer
             size="small"
             onClick={scrollToTop}

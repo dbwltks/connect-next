@@ -302,6 +302,8 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
   const [showFontMenu, setShowFontMenu] = useState(false);
   // 모바일 글꼴 설정 메뉴 표시 상태
   const [showMobileFontMenu, setShowMobileFontMenu] = useState(false);
+  // 플로팅 버튼 표시 상태
+  const [showFloatingButtons, setShowFloatingButtons] = useState(true);
   // 작성자 여부 상태 추가
   const [isAuthor, setIsAuthor] = useState(false);
   // 작성자 아바타 상태 추가
@@ -352,6 +354,48 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
     setFontSizeLevel(settings.size);
     setFontBoldLevel(settings.bold);
     setFontFamily(settings.family);
+  }, []);
+
+  // 플로팅 버튼 자동 숨김/표시 기능
+  useEffect(() => {
+    let hideTimeout: NodeJS.Timeout;
+
+    const showButtons = () => {
+      setShowFloatingButtons(true);
+      // 기존 타이머가 있으면 클리어
+      if (hideTimeout) {
+        clearTimeout(hideTimeout);
+      }
+      // 3초 후 버튼 숨김
+      hideTimeout = setTimeout(() => {
+        setShowFloatingButtons(false);
+      }, 3000);
+    };
+
+    const handleUserActivity = () => {
+      showButtons();
+    };
+
+    // 사용자 활동 감지 이벤트들
+    const events = ["touchstart", "touchmove", "scroll", "click"];
+
+    events.forEach((event) => {
+      document.addEventListener(event, handleUserActivity);
+    });
+
+    // 초기 3초 후 숨김
+    hideTimeout = setTimeout(() => {
+      setShowFloatingButtons(false);
+    }, 3000);
+
+    return () => {
+      if (hideTimeout) {
+        clearTimeout(hideTimeout);
+      }
+      events.forEach((event) => {
+        document.removeEventListener(event, handleUserActivity);
+      });
+    };
   }, []);
 
   // 더보기 메뉴 및 모바일 글꼴 메뉴 외부 클릭 감지
@@ -1529,7 +1573,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
 
       <Card className="py-4 sm:py-0 sm:shadow-md border-0 sm:border sm:border-gray-200 mx-0 sm:mx-auto w-full max-w-full overflow-hidden shadow-none bg-transparent bg-white relative sm:pb-0">
         {/* 수정, 삭제 버튼과 이전글, 다음글, 목록 버튼 한 줄에 배치 - 모바일에서는 숨김 */}
-        <div className="hidden sm:flex justify-between items-center px-4 sm:px-6 py-4 sm:py-6 border-b border-gray-100 space-x-2">
+        <div className="hidden sm:flex justify-between items-center p-4 border-b border-gray-100 space-x-2">
           {/* 수정, 삭제 버튼 - 작성자인 경우에만 표시 */}
           <div className="flex gap-2">
             {isAdmin && (
@@ -1807,29 +1851,149 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
           </div>
         </div>
 
-        {/* 모바일 하단 고정 네비게이션 */}
-        <div className="fixed bottom-0 left-0 right-0 sm:hidden z-50">
-          {/* 왼쪽: 목록으로 버튼 */}
-          <GlassContainer className="mx-4 my-2 justify-between items-center">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleGoList}
-              className=" hover:text-gray-900 flex items-center gap-1"
+        {/* 모바일 이전/다음 플로팅 버튼 */}
+        <div
+          className={`fixed bottom-20 left-0 right-0 sm:hidden z-40 flex justify-between px-4 pointer-events-none transition-all duration-500 ease-in-out ${
+            showFloatingButtons
+              ? "opacity-100 translate-y-0"
+              : "opacity-0 translate-y-4"
+          }`}
+        >
+          {/* 이전글 플로팅 버튼 */}
+          {prevPost && (
+            <button
+              onClick={() => {
+                if (prevPost && post?.page_id) {
+                  const currentUrl = new URL(window.location.href);
+                  currentUrl.searchParams.set("post", prevPost.id);
+                  router.push(currentUrl.pathname + currentUrl.search);
+                }
+              }}
+              className="bg-white/90 backdrop-blur-sm border border-gray-200 rounded-full p-3 shadow-lg pointer-events-auto hover:bg-white transition-colors"
             >
-              <ChevronLeft className="h-4 w-4" />
-              <span>목록으로</span>
-            </Button>
+              <ChevronLeft className="h-5 w-5 text-gray-700" />
+            </button>
+          )}
 
-            {/* 오른쪽: 글꼴 설정, 좋아요, 댓글, 더보기 버튼 */}
-            <div className="flex items-center gap-4">
-              {/* 글꼴 설정 버튼 */}
+          <div className="flex-1"></div>
+
+          {/* 다음글 플로팅 버튼 */}
+          {nextPost && (
+            <button
+              onClick={() => {
+                if (nextPost && post?.page_id) {
+                  const currentUrl = new URL(window.location.href);
+                  currentUrl.searchParams.set("post", nextPost.id);
+                  router.push(currentUrl.pathname + currentUrl.search);
+                }
+              }}
+              className="bg-white/90 backdrop-blur-sm border border-gray-200 rounded-full p-3 shadow-lg pointer-events-auto hover:bg-white transition-colors"
+            >
+              <ChevronRight className="h-5 w-5 text-gray-700" />
+            </button>
+          )}
+        </div>
+
+        {/* 모바일 하단 고정 네비게이션 */}
+        <div className="fixed bottom-0 left-0 right-0 sm:hidden z-50 bg-white border-t border-gray-200">
+          {/* 통합된 하단 메뉴바 */}
+          <div className="flex items-center justify-between px-4 py-3">
+            {/* 목록으로 버튼 */}
+            <button
+              onClick={handleGoList}
+              className="flex flex-col items-center text-gray-700 hover:text-gray-900"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-5 w-5"
+              >
+                <line x1="8" y1="6" x2="21" y2="6"></line>
+                <line x1="8" y1="12" x2="21" y2="12"></line>
+                <line x1="8" y1="18" x2="21" y2="18"></line>
+                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+              </svg>
+              <span className="text-xs mt-0.5">목록</span>
+            </button>
+
+            {/* 글꼴 설정 버튼 */}
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setShowMobileFontMenu(!showMobileFontMenu);
+                }}
+                className="flex flex-col items-center text-gray-700 hover:text-gray-900"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-5 w-5"
+                >
+                  <polyline points="4 7 4 4 20 4 20 7"></polyline>
+                  <line x1="9" y1="20" x2="15" y2="20"></line>
+                  <line x1="12" y1="4" x2="12" y2="20"></line>
+                </svg>
+                <span className="text-xs mt-0.5">글꼴</span>
+              </button>
+
+              {/* 모바일 글꼴 설정 메뉴 */}
+              {showMobileFontMenu &&
+                renderFontSettingsMenu("bottom-full", "border border-gray-200")}
+            </div>
+
+            {/* 좋아요 버튼 */}
+            <button
+              onClick={toggleLike}
+              disabled={likeLoading}
+              className="flex flex-col items-center text-gray-700 hover:text-gray-900"
+            >
+              <Heart
+                className={`h-5 w-5 ${liked ? "fill-red-600 text-red-600" : "text-gray-600"}`}
+              />
+              <span className="text-xs mt-0.5">{likeCount}</span>
+            </button>
+
+            {/* 댓글 버튼 */}
+            <button
+              onClick={() => {
+                const commentSection =
+                  document.getElementById("comments-section");
+                if (commentSection) {
+                  const y =
+                    commentSection.getBoundingClientRect().top +
+                    window.scrollY -
+                    100;
+                  window.scrollTo({ top: y, behavior: "smooth" });
+                }
+              }}
+              className="flex flex-col items-center text-gray-700 hover:text-gray-900"
+            >
+              <MessageSquare className="h-5 w-5" />
+              <span className="text-xs mt-0.5">{commentCount}</span>
+            </button>
+
+            {/* 작성자인 경우에만 더보기 메뉴 표시 */}
+            {isAdmin && (
               <div className="relative">
                 <button
-                  onClick={() => {
-                    setShowMobileFontMenu(!showMobileFontMenu);
-                  }}
-                  className="flex flex-col items-center"
+                  onClick={() => setShowMobileMenu(!showMobileMenu)}
+                  className="flex flex-col items-center text-gray-700 hover:text-gray-900"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -1841,96 +2005,39 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    className="h-5 w-5 text-gray-600"
+                    className="h-5 w-5"
                   >
-                    <polyline points="4 7 4 4 20 4 20 7"></polyline>
-                    <line x1="9" y1="20" x2="15" y2="20"></line>
-                    <line x1="12" y1="4" x2="12" y2="20"></line>
+                    <circle cx="12" cy="12" r="1"></circle>
+                    <circle cx="12" cy="5" r="1"></circle>
+                    <circle cx="12" cy="19" r="1"></circle>
                   </svg>
+                  <span className="text-xs mt-0.5">더보기</span>
                 </button>
-
-                {/* 모바일 글꼴 설정 메뉴 */}
-                {showMobileFontMenu &&
-                  renderFontSettingsMenu(
-                    "bottom-full",
-                    "border border-gray-200"
-                  )}
+                {showMobileMenu && (
+                  <div className="absolute bottom-full w-16 right-0 mb-2 bg-white rounded-lg shadow-lg border border-gray-200">
+                    <button
+                      onClick={() => {
+                        setShowMobileMenu(false);
+                        router.push(`${pathname}/edit`);
+                      }}
+                      className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-t-lg"
+                    >
+                      수정
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMobileMenu(false);
+                        handleDelete();
+                      }}
+                      className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 rounded-b-lg"
+                    >
+                      삭제
+                    </button>
+                  </div>
+                )}
               </div>
-
-              {/* 좋아요 버튼 */}
-              <button
-                onClick={toggleLike}
-                disabled={likeLoading}
-                className="flex flex-col items-center"
-              >
-                <Heart
-                  className={`h-5 w-5 ${liked ? "fill-red-600 text-red-600" : "text-gray-600"}`}
-                />
-                <span className="text-xs mt-0.5">{likeCount}</span>
-              </button>
-
-              {/* 댓글 버튼 */}
-              <button
-                onClick={() => {
-                  const commentSection =
-                    document.getElementById("comments-section");
-                  if (commentSection) {
-                    const y =
-                      commentSection.getBoundingClientRect().top +
-                      window.scrollY -
-                      100;
-                    window.scrollTo({ top: y, behavior: "smooth" });
-                  }
-                }}
-                className="flex flex-col items-center"
-              >
-                <MessageSquare className="h-5 w-5 text-gray-600" />
-                <span className="text-xs mt-0.5">{commentCount}</span>
-              </button>
-
-              {/* 작성자인 경우에만 더보기 메뉴 표시, 아닌 경우 여백 */}
-              {isAdmin ? (
-                <div className="relative">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="p-2"
-                    onClick={() => setShowMobileMenu(!showMobileMenu)}
-                  >
-                    <span className="text-xl">⋮</span>
-                  </Button>
-                  {showMobileMenu && (
-                    <div className="absolute bottom-full right-0 mb-2 bg-white rounded-lg shadow-lg border border-gray-200">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setShowMobileMenu(false);
-                          router.push(`${pathname}/edit`);
-                        }}
-                        className="w-full justify-start px-4 py-2 text-gray-700 hover:bg-gray-50"
-                      >
-                        수정
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setShowMobileMenu(false);
-                          handleDelete();
-                        }}
-                        className="w-full justify-start px-4 py-2 text-red-600 hover:bg-red-50"
-                      >
-                        삭제
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="w-10"></div>
-              )}
-            </div>
-          </GlassContainer>
+            )}
+          </div>
         </div>
       </Card>
     </>
