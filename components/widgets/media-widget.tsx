@@ -75,19 +75,34 @@ const fetchMediaData = async (pageId: string, maxItems: number = 5) => {
     likes_count: likeCounts[post.id] || 0,
   }));
 
+  // 5. 클라이언트에서 published_at 우선 정렬
+  const sortedPosts = [...postsWithLikes].sort((a: any, b: any) => {
+    // 날짜 정렬: published_at 우선, 없으면 created_at
+    const aDate = new Date(a.published_at || a.created_at);
+    const bDate = new Date(b.published_at || b.created_at);
+    const timeDiff = bDate.getTime() - aDate.getTime();
+
+    // 날짜가 같으면 ID로 정렬
+    if (timeDiff === 0) {
+      return a.id.localeCompare(b.id);
+    }
+
+    return timeDiff;
+  });
+
   console.log("fetchMediaData - 최종 데이터:", {
-    postsCount: postsWithLikes.length,
+    postsCount: sortedPosts.length,
     menuUrlMap,
     uniquePageIds,
-    firstPostPageId: postsWithLikes[0]?.page_id,
-    posts: postsWithLikes.map((p: any) => ({
+    firstPostPageId: sortedPosts[0]?.page_id,
+    posts: sortedPosts.map((p: any) => ({
       id: p.id,
       title: p.title,
       page_id: p.page_id,
     })),
   });
 
-  return { posts: postsWithLikes, menuUrlMap };
+  return { posts: sortedPosts, menuUrlMap };
 };
 
 export function MediaWidget({ widget }: MediaWidgetProps) {
@@ -198,7 +213,7 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
     );
   }
 
-  // 게시글별 메뉴 URL 매핑을 함수로 처리
+  // 게시글별 메뉴 URL 매핑을 함수로 처리 - 쿼리스트링 방식으로 변경
   const getPostUrl = (post: any) => {
     const menuUrl = data?.menuUrlMap?.[post.page_id];
     console.log("🔗 링크 생성:", {
@@ -206,9 +221,9 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
       page_id: post.page_id,
       menuUrlMap: data?.menuUrlMap,
       menuUrl,
-      finalUrl: menuUrl ? `${menuUrl}/${post.id}` : `/${post.id}`,
+      finalUrl: menuUrl ? `${menuUrl}?post=${post.id}` : `/?post=${post.id}`,
     });
-    return menuUrl ? `${menuUrl}/${post.id}` : `/${post.id}`;
+    return menuUrl ? `${menuUrl}?post=${post.id}` : `/?post=${post.id}`;
   };
 
   // 데이터가 없는 경우

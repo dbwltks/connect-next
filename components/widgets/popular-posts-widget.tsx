@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { supabase } from "@/db";
-import { IWidget } from "@/types";
+import { IWidget, IPage } from "@/types";
 import { Heart } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import useSWR from "swr";
@@ -13,17 +13,19 @@ interface Post {
   views: number;
   like_count: number;
   comment_count: number;
+  page_id: string;
 }
 
 interface PopularPostsWidgetProps {
   widget: IWidget;
+  page?: IPage;
 }
 
-// SWR 페처 함수 분리
+// SWR 페처 함수 분리 - 메뉴 URL 매핑과 함께 반환
 async function fetchPopularPosts(
   itemCount: number,
   sortBy: string
-): Promise<Post[]> {
+): Promise<{ posts: Post[]; menuUrlMap: Record<string, string> }> {
   let finalPosts: Post[] = [];
 
   if (sortBy === "likes") {
@@ -48,7 +50,7 @@ async function fetchPopularPosts(
     if (sortedPostIds.length > 0) {
       const { data: postData, error: postError } = await supabase
         .from("board_posts")
-        .select("id, title, views")
+        .select("id, title, views, page_id")
         .in("id", sortedPostIds)
         .eq("status", "published");
       if (postError) throw postError;
@@ -85,7 +87,7 @@ async function fetchPopularPosts(
     if (sortedPostIds.length > 0) {
       const { data: postData, error: postError } = await supabase
         .from("board_posts")
-        .select("id, title, views")
+        .select("id, title, views, page_id")
         .in("id", sortedPostIds)
         .eq("status", "published");
       if (postError) throw postError;
@@ -102,8 +104,9 @@ async function fetchPopularPosts(
   } else {
     const { data: postData, error: postError } = await supabase
       .from("board_posts")
-      .select("id, title, views")
+      .select("id, title, views, page_id")
       .eq("status", "published")
+      .order("status", { ascending: false })
       .order("views", { ascending: false })
       .limit(itemCount);
     if (postError) throw postError;
@@ -117,20 +120,37 @@ async function fetchPopularPosts(
     }
   }
 
-  return finalPosts;
+  // 메뉴 URL 매핑 생성
+  const uniquePageIds = Array.from(
+    new Set(finalPosts.map((post) => post.page_id))
+  );
+  const menuUrlMap: Record<string, string> = {};
+
+  for (const pId of uniquePageIds) {
+    const { data: menuData, error: menuError } = await supabase
+      .from("cms_menus")
+      .select("*")
+      .eq("page_id", pId);
+
+    if (!menuError && menuData && menuData.length > 0) {
+      menuUrlMap[pId] = (menuData[0] as any).url;
+    }
+  }
+
+  return { posts: finalPosts, menuUrlMap };
 }
 
 export default function PopularPostsWidget({
   widget,
+  page,
 }: PopularPostsWidgetProps) {
   const itemCount = widget.display_options?.item_count || 5;
   const sortBy = widget.display_options?.sort_by || "views";
 
-  const {
-    data: posts,
-    error,
-    isLoading,
-  } = useSWR(
+  // 메뉴 URL 계산 (boardlist-widget.tsx와 동일한 방식)
+  const menuUrl = page?.slug || widget.display_options?.menu_url || "/";
+
+  const { data, error, isLoading } = useSWR(
     ["popularPosts", itemCount, sortBy],
     () => fetchPopularPosts(itemCount, sortBy),
     {
@@ -142,6 +162,15 @@ export default function PopularPostsWidget({
       shouldRetryOnError: true,
     }
   );
+
+  const posts = data?.posts || [];
+  const menuUrlMap = data?.menuUrlMap || {};
+
+  // 게시글별 메뉴 URL 매핑을 함수로 처리 - 쿼리스트링 방식으로 변경
+  const getPostUrl = (post: Post) => {
+    const menuUrl = menuUrlMap[post.page_id];
+    return menuUrl ? `${menuUrl}?post=${post.id}` : `/?post=${post.id}`;
+  };
 
   // 로딩 상태
   if (isLoading) {
@@ -191,7 +220,7 @@ export default function PopularPostsWidget({
         </h3>
       </div>
       {posts && posts.length > 0 ? (
-        <ul className="px-4 py-2 space-y-3">
+        <ul className="p-2 space-y-3">
           {posts.map((post, index) => {
             const rank = index + 1;
             let rankStyle = "text-gray-400 font-semibold";
@@ -213,7 +242,7 @@ export default function PopularPostsWidget({
                   {rank}
                 </span>
                 <Link
-                  href={`/${post.id}`}
+                  href={getPostUrl(post)}
                   className="flex-1 truncate hover:underline text-xs text-gray-700"
                 >
                   {post.title}

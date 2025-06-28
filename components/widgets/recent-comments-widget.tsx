@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { supabase } from "@/db";
-import { IWidget } from "@/types";
+import { IWidget, IPage } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import useSWR from "swr";
 
@@ -16,33 +16,66 @@ interface Comment {
 
 interface RecentCommentsWidgetProps {
   widget: IWidget;
+  page?: IPage;
 }
 
-// SWR 페처 함수 분리
-async function fetchRecentComments(itemCount: number): Promise<Comment[]> {
+// SWR 페처 함수 분리 - 메뉴 URL 매핑과 함께 반환
+async function fetchRecentComments(
+  itemCount: number
+): Promise<{ comments: Comment[]; menuUrlMap: Record<string, string> }> {
   const { data, error } = await supabase
     .from("board_comments")
     .select(
-      "id, content, created_at, post_id, board_posts!inner( title, status )"
+      "id, content, created_at, post_id, board_posts!inner( title, status, page_id )"
     )
     .eq("board_posts.status", "published")
     .order("created_at", { ascending: false })
     .limit(itemCount);
 
   if (error) throw error;
-  return (data || []) as Comment[];
+
+  const comments = (data || []) as Comment[];
+
+  // 메뉴 URL 매핑 생성
+  const uniquePageIds = Array.from(
+    new Set(
+      comments
+        .map((comment) => {
+          const post = Array.isArray(comment.board_posts)
+            ? comment.board_posts[0]
+            : comment.board_posts;
+          return post?.page_id;
+        })
+        .filter(Boolean)
+    )
+  );
+
+  const menuUrlMap: Record<string, string> = {};
+
+  for (const pId of uniquePageIds) {
+    const { data: menuData, error: menuError } = await supabase
+      .from("cms_menus")
+      .select("*")
+      .eq("page_id", pId);
+
+    if (!menuError && menuData && menuData.length > 0) {
+      menuUrlMap[pId] = (menuData[0] as any).url;
+    }
+  }
+
+  return { comments, menuUrlMap };
 }
 
 export default function RecentCommentsWidget({
   widget,
+  page,
 }: RecentCommentsWidgetProps) {
   const itemCount = widget.display_options?.item_count || 5;
 
-  const {
-    data: comments,
-    error,
-    isLoading,
-  } = useSWR(
+  // 메뉴 URL 계산 (boardlist-widget.tsx와 동일한 방식)
+  const menuUrl = page?.slug || widget.display_options?.menu_url || "/";
+
+  const { data, error, isLoading } = useSWR(
     ["recentComments", itemCount],
     () => fetchRecentComments(itemCount),
     {
@@ -54,6 +87,20 @@ export default function RecentCommentsWidget({
       shouldRetryOnError: true,
     }
   );
+
+  const comments = data?.comments || [];
+  const menuUrlMap = data?.menuUrlMap || {};
+
+  // 댓글별 메뉴 URL 매핑을 함수로 처리 - 쿼리스트링 방식으로 변경
+  const getCommentUrl = (comment: Comment) => {
+    const post = Array.isArray(comment.board_posts)
+      ? comment.board_posts[0]
+      : comment.board_posts;
+    const menuUrl = menuUrlMap[post?.page_id];
+    return menuUrl
+      ? `${menuUrl}?post=${comment.post_id}`
+      : `/?post=${comment.post_id}`;
+  };
 
   // 로딩 상태
   if (isLoading) {
@@ -96,7 +143,7 @@ export default function RecentCommentsWidget({
 
   return (
     <div className="bg-white shadow rounded-lg overflow-hidden border-gray-100 border">
-      <div className="px-4 py-3 border-b">
+      <div className="p-2 border-b">
         <h3 className="text-base font-semibold">
           {widget.title || "최신 댓글"}
         </h3>
@@ -105,7 +152,7 @@ export default function RecentCommentsWidget({
         <ul className="px-4 py-2 space-y-2">
           {comments.map((comment) => (
             <li key={comment.id} className="text-sm">
-              <Link href={`/${comment.post_id}`} className="hover:underline">
+              <Link href={getCommentUrl(comment)} className="hover:underline">
                 <p className="truncate">{comment.content}</p>
                 <span className="block truncate text-xs text-gray-500">
                   -{" "}

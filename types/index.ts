@@ -37,6 +37,9 @@ export interface IBoardPost {
   thumbnail_image?: string; // 실제 DB 필드명
   user_id?: string; // 작성자 ID
   status?: BoardPostStatus; // 게시물 상태(published, draft, hidden)
+  is_notice?: boolean; // 공지사항 여부
+  is_pinned?: boolean; // 고정글 여부
+  published_at?: string | null; // 게시일
 }
 
 // 위젯 기본 인터페이스

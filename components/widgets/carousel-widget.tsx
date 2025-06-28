@@ -46,15 +46,33 @@ const fetchCarouselData = async (widget: IWidget): Promise<CarouselItem[]> => {
     try {
       const { data, error } = await supabase
         .from("board_posts")
-        .select("id, title, content, thumbnail_image, created_at")
+        .select(
+          "id, title, content, thumbnail_image, created_at, status, published_at, is_pinned, is_notice"
+        )
         .eq("page_id", widget.display_options.page_id)
+        .eq("status", "published")
         .not("thumbnail_image", "is", null)
         .order("created_at", { ascending: false })
         .limit(10);
 
       if (error) throw error;
 
-      return (data || []).map((post) => ({
+      // 클라이언트에서 published_at 우선 정렬
+      const sortedPosts = [...(data || [])].sort((a: any, b: any) => {
+        // 날짜 정렬: published_at 우선, 없으면 created_at
+        const aDate = new Date(a.published_at || a.created_at);
+        const bDate = new Date(b.published_at || b.created_at);
+        const timeDiff = bDate.getTime() - aDate.getTime();
+
+        // 날짜가 같으면 ID로 정렬
+        if (timeDiff === 0) {
+          return a.id.localeCompare(b.id);
+        }
+
+        return timeDiff;
+      });
+
+      return sortedPosts.map((post) => ({
         id: post.id,
         image_url:
           post.thumbnail_image ||

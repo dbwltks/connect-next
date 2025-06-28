@@ -62,7 +62,7 @@ const templateInfo = {
 async function fetchBoardWidgetPosts(
   pageId: string,
   limit: number = 10
-): Promise<IBoardPost[]> {
+): Promise<{ posts: IBoardPost[]; menuUrlMap: Record<string, string> }> {
   const { data, error } = await supabase
     .from("board_posts")
     .select("*")
@@ -75,7 +75,43 @@ async function fetchBoardWidgetPosts(
     throw new Error(`게시판 데이터 로드 실패: ${error.message}`);
   }
 
-  return (data as IBoardPost[]) || [];
+  const posts = (data as IBoardPost[]) || [];
+
+  // 클라이언트에서 published_at 우선 정렬
+  const sortedPosts = [...posts].sort((a, b) => {
+    // 날짜 정렬: published_at 우선, 없으면 created_at
+    const aDate = new Date(a.published_at || a.created_at);
+    const bDate = new Date(b.published_at || b.created_at);
+    const timeDiff = bDate.getTime() - aDate.getTime();
+
+    // 날짜가 같으면 ID로 정렬
+    if (timeDiff === 0) {
+      return a.id.localeCompare(b.id);
+    }
+
+    return timeDiff;
+  });
+
+  // 메뉴 URL 매핑 생성
+  const uniquePageIds = Array.from(
+    new Set(posts.map((post) => post.page_id).filter(Boolean))
+  );
+  const menuUrlMap: Record<string, string> = {};
+
+  for (const pId of uniquePageIds) {
+    if (pId) {
+      const { data: menuData, error: menuError } = await supabase
+        .from("cms_menus")
+        .select("*")
+        .eq("page_id", pId);
+
+      if (!menuError && menuData && menuData.length > 0) {
+        menuUrlMap[pId] = (menuData[0] as any).url;
+      }
+    }
+  }
+
+  return { posts: sortedPosts, menuUrlMap };
 }
 
 export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
@@ -92,11 +128,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
   }
 
   // SWR을 사용해서 게시판 데이터 관리
-  const {
-    data: posts,
-    error,
-    isLoading,
-  } = useSWR(
+  const { data, error, isLoading } = useSWR(
     pageId ? ["boardWidgetPosts", pageId, limit] : null,
     () => fetchBoardWidgetPosts(pageId!, limit),
     {
@@ -108,6 +140,9 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
       shouldRetryOnError: true,
     }
   );
+
+  const posts = data?.posts || [];
+  const menuUrlMap = data?.menuUrlMap || {};
 
   // 템플릿 번호 가져오기 (문자열 또는 숫자 처리)
   const getTemplateNumber = (template: string | number | undefined): number => {
@@ -248,7 +283,11 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
       );
     }
 
-    const menuUrl = page?.slug || widget.display_options?.menu_url || "/board";
+    // 게시글별 메뉴 URL 매핑을 함수로 처리 - 쿼리스트링 방식으로 변경
+    const getPostUrl = (post: IBoardPost) => {
+      const menuUrl = post.page_id ? menuUrlMap[post.page_id] : null;
+      return menuUrl ? `${menuUrl}?post=${post.id}` : `/?post=${post.id}`;
+    };
 
     switch (templateNumber) {
       case BOARD_TEMPLATE.COMPACT:
@@ -260,10 +299,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
                 className="py-2 truncate last:border-b-0 transition-transform duration-150 hover:scale-105"
               >
                 <div className="flex items-center justify-between">
-                  <Link
-                    href={`${menuUrl}/${post.id}`}
-                    className="hover:text-blue-600"
-                  >
+                  <Link href={getPostUrl(post)} className="hover:text-blue-600">
                     <h4 className="text-xs text-gray-500 font-medium truncate flex-1">
                       {post.title}
                     </h4>
@@ -304,7 +340,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
                 )}
                 <div className="p-3">
                   <Link
-                    href={`${menuUrl}/${post.id}`}
+                    href={getPostUrl(post)}
                     className="block transition-transform duration-150 hover:scale-105 hover:text-blue-600"
                   >
                     <h4 className="font-medium truncate">{post.title}</h4>
@@ -330,7 +366,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
                 key={post.id}
                 className="rounded overflow-hidden border-gray-50 border"
               >
-                <Link href={`${menuUrl}/${post.id}`}>
+                <Link href={getPostUrl(post)}>
                   {showThumbnail && post.thumbnail_image ? (
                     <img
                       src={post.thumbnail_image}
@@ -369,7 +405,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
                   <div className="flex-1 min-w-0 mr-2">
                     <div className="flex items-center space-x-3 overflow-hidden">
                       <Link
-                        href={`${menuUrl}/${post.id}`}
+                        href={getPostUrl(post)}
                         className="block transition-transform duration-150 hover:scale-105 hover:text-blue-600"
                       >
                         <h4 className="font-medium group-hover:text-blue-600 transition-colors truncate flex-1">
@@ -405,9 +441,12 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
       // 기본 클래식 템플릿
       default:
         return (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {posts.map((post) => (
-              <div key={post.id} className="flex items-start space-x-4">
+              <div
+                key={post.id}
+                className="flex items-start space-x-4 transition-transform duration-150 hover:scale-105"
+              >
                 {showThumbnail && post.thumbnail_image ? (
                   <div className="w-20 h-20 flex-shrink-0">
                     <img
@@ -423,26 +462,26 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
                 ) : null}
                 <div className="flex-1 min-w-0">
                   <Link
-                    href={`${menuUrl}/${post.id}`}
-                    className="block transition-transform duration-150 hover:scale-105 hover:text-blue-600"
+                    href={getPostUrl(post)}
+                    className="block  hover:text-blue-600"
                   >
                     <h4 className="text-sm font-medium truncate">
                       {post.title}
                     </h4>
                   </Link>
-                  {showDate && (
-                    <div className="text-xs text-gray-500 mt-1 mb-2 flex items-center space-x-1">
-                      <span className="truncate">
-                        {formatRelativeTime(post.created_at)}
-                      </span>
-                    </div>
-                  )}
                   {showExcerpt && (
                     <p className="text-sm text-gray-600 truncate">
                       {post.content
                         ?.replace(/<[^>]*>/g, "")
                         .substring(0, 120) || ""}
                     </p>
+                  )}
+                  {showDate && (
+                    <div className="text-xs text-gray-500 mt-1 mb-2 flex items-center space-x-1">
+                      <span className="truncate">
+                        {formatRelativeTime(post.created_at)}
+                      </span>
+                    </div>
                   )}
                 </div>
               </div>

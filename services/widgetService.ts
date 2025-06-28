@@ -31,7 +31,23 @@ export async function fetchBoardWidgetPosts(
     .limit(limit);
 
   if (error) throw error;
-  return posts;
+
+  // 클라이언트에서 published_at 우선 정렬
+  const sortedPosts = [...(posts || [])].sort((a: any, b: any) => {
+    // 날짜 정렬: published_at 우선, 없으면 created_at
+    const aDate = new Date(a.published_at || a.created_at);
+    const bDate = new Date(b.published_at || b.created_at);
+    const timeDiff = bDate.getTime() - aDate.getTime();
+
+    // 날짜가 같으면 ID로 정렬
+    if (timeDiff === 0) {
+      return a.id.localeCompare(b.id);
+    }
+
+    return timeDiff;
+  });
+
+  return sortedPosts;
 }
 
 // 미디어 위젯용 게시글 조회
