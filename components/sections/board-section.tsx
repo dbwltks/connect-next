@@ -880,7 +880,7 @@ export default function BoardSection({
     <div className={`board-section mb-8 ${className} ${containerClass}`}>
       {/* 타이틀/설명 헤더를 최상단에 분리 */}
       <div className="mb-4">
-        <div className="flex items-center gap-3 px-2 sm:px-0">
+        <div className="flex items-center gap-3 px-2 sm:px-0 pt-4 sm:pt-0">
           <h2 className="text-xl sm:text-2xl font-bold">{title}</h2>
           <div className="text-xs text-blue-500 bg-white px-2 py-1 rounded-xl">
             {totalCount}
