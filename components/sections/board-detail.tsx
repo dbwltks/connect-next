@@ -560,60 +560,147 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
           }
 
           // 해당 게시글의 cms_pages 정보를 통해 메뉴 정보 가져오기
-          if (post && post.page_id) {
+          if (data && data.page_id) {
             try {
+              console.log("메뉴 찾기 시작, page_id:", data.page_id);
+
               // 1. 게시글의 page_id로 cms_pages 정보 가져오기
               const { data: pageData, error: pageError } = await supabase
                 .from("cms_pages")
                 .select("title, slug, section_id, category_id")
-                .eq("id", post.page_id)
+                .eq("id", data.page_id)
                 .single();
 
-              if (pageError) throw pageError;
+              console.log("페이지 데이터:", pageData, "오류:", pageError);
+
+              if (pageError) {
+                console.error("페이지 데이터 가져오기 오류:", pageError);
+                throw pageError;
+              }
 
               if (pageData) {
-                // 2. cms_pages 정보를 바탕으로 cms_menus에서 메뉴 찾기
-                const { data: menuData, error: menuError } = await supabase
+                // 2. 여러 방법으로 메뉴 찾기 시도
+                let foundMenu = null;
+
+                // 방법 1: page_id로 직접 찾기
+                const { data: menuData1, error: menuError1 } = await supabase
                   .from("cms_menus")
                   .select("title, url, parent_id")
-                  .eq("page_id", post.page_id)
+                  .eq("page_id", data.page_id)
                   .eq("is_active", true)
                   .order("order_num")
                   .limit(1);
 
-                if (menuError) throw menuError;
+                console.log(
+                  "방법 1 - page_id로 찾기:",
+                  menuData1,
+                  "오류:",
+                  menuError1
+                );
 
-                if (menuData && menuData.length > 0) {
-                  // 게시글에 직접 연결된 메뉴 정보 사용
-                  setMenuInfo(menuData[0]);
+                if (menuData1 && menuData1.length > 0) {
+                  foundMenu = menuData1[0];
                 } else {
-                  // 메뉴를 찾지 못한 경우 cms_pages 정보로 대체
+                  // 방법 2: URL 패턴으로 찾기 (현재 pathname 기반)
+                  const segments = pathname.split("/").filter(Boolean);
+                  console.log("URL 세그먼트:", segments);
+
+                  if (segments.length > 0) {
+                    // 정확한 URL 매칭 시도
+                    const currentPath = "/" + segments.join("/");
+                    const { data: menuData2, error: menuError2 } =
+                      await supabase
+                        .from("cms_menus")
+                        .select("title, url, parent_id")
+                        .eq("url", currentPath)
+                        .eq("is_active", true)
+                        .order("order_num")
+                        .limit(1);
+
+                    console.log(
+                      "방법 2 - 정확한 URL 매칭:",
+                      menuData2,
+                      "오류:",
+                      menuError2
+                    );
+
+                    if (menuData2 && menuData2.length > 0) {
+                      foundMenu = menuData2[0];
+                    } else {
+                      // 방법 3: 부분 URL 매칭 (like 패턴)
+                      const boardType = segments[0];
+                      const { data: menuData3, error: menuError3 } =
+                        await supabase
+                          .from("cms_menus")
+                          .select("title, url, parent_id")
+                          .ilike("url", `/${boardType}%`)
+                          .eq("is_active", true)
+                          .order("order_num")
+                          .limit(1);
+
+                      console.log(
+                        "방법 3 - 부분 URL 매칭:",
+                        menuData3,
+                        "오류:",
+                        menuError3
+                      );
+
+                      if (menuData3 && menuData3.length > 0) {
+                        foundMenu = menuData3[0];
+                      }
+                    }
+                  }
+                }
+
+                // 메뉴를 찾았으면 설정, 못 찾았으면 페이지 정보로 대체
+                if (foundMenu) {
+                  console.log("메뉴 찾기 성공:", foundMenu);
+                  setMenuInfo(foundMenu);
+                } else {
+                  console.log(
+                    "메뉴 찾기 실패, 페이지 정보 사용:",
+                    pageData.title
+                  );
                   setMenuInfo({
                     title: pageData.title,
-                    url: `/page/${post.page_id}`,
+                    url: `/page/${data.page_id}`,
                   });
                 }
               }
             } catch (err) {
-              console.error("메뉴 정보 가져오기 오류:", err);
+              console.error("메뉴 정보 가져오기 전체 오류:", err);
 
-              // 오류 발생 시 URL 경로를 통해 메뉴 추정
+              // 최종 fallback: URL 기반으로 추정
               const segments = pathname.split("/").filter(Boolean);
               if (segments.length > 0) {
-                const boardType = segments[0]; // board, notice 등
-                const { data: menuData } = await supabase
-                  .from("cms_menus")
-                  .select("title, url")
-                  .eq("is_active", true)
-                  .ilike("url", `/${boardType}%`)
-                  .order("order_num")
-                  .limit(1);
+                const boardType = segments[0];
+                try {
+                  const { data: fallbackMenuData } = await supabase
+                    .from("cms_menus")
+                    .select("title, url")
+                    .eq("is_active", true)
+                    .ilike("url", `/${boardType}%`)
+                    .order("order_num")
+                    .limit(1);
 
-                if (menuData && menuData.length > 0) {
-                  setMenuInfo(menuData[0]);
+                  if (fallbackMenuData && fallbackMenuData.length > 0) {
+                    console.log("Fallback 메뉴 사용:", fallbackMenuData[0]);
+                    setMenuInfo(fallbackMenuData[0]);
+                  } else {
+                    console.log("모든 메뉴 찾기 실패");
+                    setMenuInfo(null);
+                  }
+                } catch (fallbackErr) {
+                  console.error("Fallback 메뉴 찾기 오류:", fallbackErr);
+                  setMenuInfo(null);
                 }
+              } else {
+                setMenuInfo(null);
               }
             }
+          } else {
+            console.log("page_id가 없음");
+            setMenuInfo(null);
           }
         } catch (err) {
           console.error("좋아요/댓글 정보 가져오기 오류:", err);
@@ -1503,7 +1590,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
           <div className="">
             {menuInfo ? (
               <Link
-                href={menuInfo.url}
+                href={menuInfo.url.split("?")[0]}
                 className="text-sm text-green-600 hover:text-green-700 transition-colors font-medium flex items-center"
               >
                 {menuInfo.title} <ChevronRight className="h-3 w-3 ml-0.5" />
@@ -1670,67 +1757,14 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
               </div>
             )}
           </div>
-          <div
-            ref={contentRef}
-            className={`min-h-[120px] mb-4 sm:mb-6 font-size-${fontSizeLevel} font-bold-${fontBoldLevel} font-family-${fontFamily}`}
-          >
-            <TipTapViewer content={renderContentWithYoutube(post.content)} />
+          <div ref={contentRef} className="min-h-[120px] mb-4 sm:mb-6">
+            <TipTapViewer
+              content={renderContentWithYoutube(post.content)}
+              fontSizeLevel={fontSizeLevel}
+              fontBoldLevel={fontBoldLevel}
+              fontFamily={fontFamily}
+            />
           </div>
-          <style jsx global>{`
-            /* 글꼴 크기 설정 */
-            .font-size--2 {
-              font-size: 0.75rem !important;
-            }
-            .font-size--1 {
-              font-size: 0.875rem !important;
-            }
-            .font-size-0 {
-              font-size: 1rem !important;
-            }
-            .font-size-1 {
-              font-size: 1.125rem !important;
-            }
-            .font-size-2 {
-              font-size: 1.25rem !important;
-            }
-
-            /* 글꼴 굵기 설정 */
-            .font-bold--1 {
-              font-weight: 300 !important;
-            }
-            .font-bold-0 {
-              font-weight: 400 !important;
-            }
-            .font-bold-1 {
-              font-weight: 500 !important;
-            }
-            .font-bold-2 {
-              font-weight: 600 !important;
-            }
-            .font-bold-3 {
-              font-weight: 700 !important;
-            }
-
-            /* 글꼴 패밀리 설정 */
-            .font-family-default {
-              font-family:
-                system-ui,
-                -apple-system,
-                sans-serif !important;
-            }
-            .font-family-notoSans {
-              font-family: "Noto Sans KR", sans-serif !important;
-            }
-            .font-family-nanumGothic {
-              font-family: "Nanum Gothic", sans-serif !important;
-            }
-            .font-family-nanumMyeongjo {
-              font-family: "Nanum Myeongjo", serif !important;
-            }
-            .font-family-spoqa {
-              font-family: "Spoqa Han Sans", sans-serif !important;
-            }
-          `}</style>
 
           {/* 좋아요 및 댓글 카운트 UI */}
           <div className="flex items-center gap-4 mt-6 pt-6 border-t border-gray-100">
@@ -1805,7 +1839,6 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                     <line x1="9" y1="20" x2="15" y2="20"></line>
                     <line x1="12" y1="4" x2="12" y2="20"></line>
                   </svg>
-                  <span className="text-xs mt-0.5">글꼴</span>
                 </button>
 
                 {/* 모바일 글꼴 설정 메뉴 */}
@@ -1820,7 +1853,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
               <button
                 onClick={toggleLike}
                 disabled={likeLoading}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-colors ${liked ? "bg-red-50 text-red-600" : "hover:bg-gray-100 text-gray-600"}`}
+                className="flex flex-col items-center"
               >
                 <Heart
                   className={`h-5 w-5 ${liked ? "fill-red-600 text-red-600" : "text-gray-600"}`}
@@ -1847,8 +1880,8 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                 <span className="text-xs mt-0.5">{commentCount}</span>
               </button>
 
-              {/* 작성자인 경우에만 더보기 메뉴 표시 */}
-              {isAdmin && (
+              {/* 작성자인 경우에만 더보기 메뉴 표시, 아닌 경우 여백 */}
+              {isAdmin ? (
                 <div className="relative">
                   <Button
                     variant="ghost"
@@ -1885,6 +1918,8 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                     </div>
                   )}
                 </div>
+              ) : (
+                <div className="w-10"></div>
               )}
             </div>
           </GlassContainer>

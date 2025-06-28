@@ -267,8 +267,8 @@ export default function BoardSection({
         return saved as LayoutType;
       }
     }
-    // 기본값 설정 - 기본은 테이블형
-    return "table";
+    // 기본값 설정 - 기본은 리스트형
+    return "list";
   });
 
   // 레이아웃 변경 시 localStorage에 저장
@@ -282,7 +282,7 @@ export default function BoardSection({
     if (isMobile && layout !== "list") {
       setLayout("list");
     }
-  }, [isMobile]);
+  }, [isMobile, layout]);
 
   // 컬럼 정렬 및 표시 상태 관리
   const [columnStates, setColumnStates] = useState<{
@@ -911,19 +911,19 @@ export default function BoardSection({
             <div className="flex gap-1 ml-2">
               <button
                 type="button"
-                className={`p-2 rounded border ${layout === "table" ? "bg-blue-100 border-blue-400 text-blue-700" : "bg-white border-gray-100 text-gray-400"} ${isMobile ? "hidden" : ""}`}
-                onClick={() => setLayout("table")}
-                title="테이블형 보기"
-              >
-                <TableIcon className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
                 className={`p-2 rounded border ${layout === "list" ? "bg-blue-100 border-blue-400 text-blue-700" : "bg-white border-gray-100 text-gray-400"}`}
                 onClick={() => setLayout("list")}
                 title="목록형 보기"
               >
                 <List className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                className={`p-2 rounded border ${layout === "table" ? "bg-blue-100 border-blue-400 text-blue-700" : "bg-white border-gray-100 text-gray-400"} ${isMobile ? "hidden" : ""}`}
+                onClick={() => setLayout("table")}
+                title="테이블형 보기"
+              >
+                <TableIcon className="w-4 h-4" />
               </button>
               <button
                 type="button"
@@ -1021,7 +1021,10 @@ export default function BoardSection({
                 >
                   <div className="flex-1 min-w-0 pr-3">
                     {/* 제목 영역 - 최대 2줄, 넘치면 ... 처리 */}
-                    <div className="flex items-start gap-1 mb-1">
+                    <div className="flex items-start gap-1">
+                      {isNew(post) && (
+                        <div className="w-1 h-1 bg-red-500 rounded-full shrink-0 self-center animate-pulse" />
+                      )}
                       <Badge className="bg-yellow-400 dark:bg-yellow-600 text-black dark:text-white font-bold px-1.5 py-0.5 text-xs rounded mt-0.5 shrink-0">
                         공지
                       </Badge>
@@ -1031,18 +1034,6 @@ export default function BoardSection({
                       >
                         {post.title}
                       </div>
-                      {isNew(post) && (
-                        <Badge
-                          className="bg-blue-100 text-blue-700 font-bold text-[11px] rounded-full border border-blue-200 px-2 py-0.5 min-w-[22px] h-5 flex items-center justify-center shadow-sm tracking-wide ml-0.5 shrink-0 mt-0.5"
-                          style={{
-                            lineHeight: "1.1",
-                            fontWeight: 700,
-                            letterSpacing: "0.04em",
-                          }}
-                        >
-                          N
-                        </Badge>
-                      )}
                     </div>
 
                     {/* 작성자, 날짜, 조회수 영역 */}
@@ -1088,7 +1079,10 @@ export default function BoardSection({
                   >
                     <div className="flex-1 min-w-0 pr-3">
                       {/* 제목 영역 - 최대 2줄, 넘치면 ... 처리 */}
-                      <div className="flex items-start gap-1 mb-1">
+                      <div className="flex items-start gap-1">
+                        {isNew(post) && (
+                          <div className="w-1 h-1 bg-red-500 rounded-full shrink-0 self-center animate-pulse" />
+                        )}
                         {post.is_pinned && (
                           <Badge className="bg-green-500 dark:bg-green-600 text-white rounded-full px-1.5 py-0.5 text-xs mt-0.5 shrink-0">
                             고정
@@ -1100,18 +1094,6 @@ export default function BoardSection({
                         >
                           {post.title}
                         </div>
-                        {isNew(post) && (
-                          <Badge
-                            className="bg-blue-100 text-blue-700 font-bold text-[11px] rounded-full border border-blue-200 px-2 py-0.5 min-w-[22px] h-5 flex items-center justify-center shadow-sm tracking-wide ml-0.5 shrink-0 mt-0.5"
-                            style={{
-                              lineHeight: "1.1",
-                              fontWeight: 700,
-                              letterSpacing: "0.04em",
-                            }}
-                          >
-                            N
-                          </Badge>
-                        )}
                       </div>
 
                       {/* 작성자, 날짜, 조회수 영역 */}

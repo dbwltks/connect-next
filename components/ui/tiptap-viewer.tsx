@@ -116,11 +116,17 @@ const FontSize = TextStyle.extend({
 interface TipTapViewerProps {
   content: string;
   className?: string;
+  fontSizeLevel?: number;
+  fontBoldLevel?: number;
+  fontFamily?: string;
 }
 
 export default function TipTapViewer({
   content,
   className = "",
+  fontSizeLevel = 0,
+  fontBoldLevel = 0,
+  fontFamily = "default",
 }: TipTapViewerProps) {
   const editor = useEditor({
     extensions: [
@@ -207,6 +213,44 @@ export default function TipTapViewer({
     return <div>로딩 중...</div>;
   }
 
+  // 글꼴 크기 계산
+  const getFontSize = (baseSize: string) => {
+    const sizes = {
+      "-2": "0.75",
+      "-1": "0.875",
+      "0": "1",
+      "1": "1.125",
+      "2": "1.25",
+    };
+    const multiplier =
+      sizes[fontSizeLevel.toString() as keyof typeof sizes] || "1";
+    return `calc(${baseSize} * ${multiplier})`;
+  };
+
+  // 글꼴 굵기 계산
+  const getFontWeight = () => {
+    const weights = {
+      "-1": "300",
+      "0": "400",
+      "1": "500",
+      "2": "600",
+      "3": "700",
+    };
+    return weights[fontBoldLevel.toString() as keyof typeof weights] || "400";
+  };
+
+  // 글꼴 패밀리 계산
+  const getFontFamily = () => {
+    const families = {
+      default: "system-ui, -apple-system, sans-serif",
+      notoSans: '"Noto Sans KR", sans-serif',
+      nanumGothic: '"Nanum Gothic", "나눔고딕", sans-serif',
+      nanumMyeongjo: '"Nanum Myeongjo", "나눔명조", serif',
+      spoqa: '"Spoqa Han Sans", "스포카 한 산스", sans-serif',
+    };
+    return families[fontFamily as keyof typeof families] || families.default;
+  };
+
   return (
     <div className={`tiptap-viewer ${className}`}>
       <EditorContent editor={editor} />
@@ -215,10 +259,13 @@ export default function TipTapViewer({
         .tiptap-viewer .ProseMirror {
           outline: none;
           padding: 0;
+          font-family: ${getFontFamily()};
+          font-weight: ${getFontWeight()};
         }
 
         .tiptap-viewer .ProseMirror p {
           line-height: 1.3;
+          font-size: ${getFontSize("1rem")};
         }
         {/* margin-top: 1.5rem;
         margin-bottom: 1rem; */}
@@ -234,22 +281,22 @@ export default function TipTapViewer({
         }
 
         .tiptap-viewer .ProseMirror h1 {
-          font-size: 1.75rem;
+          font-size: ${getFontSize("1.75rem")};
         }
         .tiptap-viewer .ProseMirror h2 {
-          font-size: 1.5rem;
+          font-size: ${getFontSize("1.5rem")};
         }
         .tiptap-viewer .ProseMirror h3 {
-          font-size: 1.25rem;
+          font-size: ${getFontSize("1.25rem")};
         }
         .tiptap-viewer .ProseMirror h4 {
-          font-size: 1.125rem;
+          font-size: ${getFontSize("1.125rem")};
         }
         .tiptap-viewer .ProseMirror h5 {
-          font-size: 1rem;
+          font-size: ${getFontSize("1rem")};
         }
         .tiptap-viewer .ProseMirror h6 {
-          font-size: 0.875rem;
+          font-size: ${getFontSize("0.875rem")};
         }
 
         .tiptap-viewer .ProseMirror ul,

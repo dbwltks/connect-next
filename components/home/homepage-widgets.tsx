@@ -343,11 +343,11 @@ export default function HomepageWidgets({
           )}
           {layoutStructure === "3-col" && (
             <>
-              <div className="hidden xl:block col-span-12 xl:col-span-2 sticky top-24 self-start">
+              <div className="hidden xl:block col-span-2 sticky top-24 self-start">
                 {leftSidebar}
               </div>
               <div className="col-span-12 xl:col-span-8">{mainContent}</div>
-              <div className="hidden xl:block col-span-12 xl:col-span-2 sticky top-24 self-start">
+              <div className="hidden xl:block col-span-2 sticky top-24 self-start">
                 {rightSidebar}
               </div>
             </>
