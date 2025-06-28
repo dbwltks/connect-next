@@ -409,6 +409,14 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
         return;
       }
 
+      // 모바일 글꼴 다이얼로그 내부 클릭은 무시
+      const isMobileFontDialog = target.closest(
+        '[class*="fixed inset-0 z-50 sm:hidden"]'
+      );
+      const isMobileFontDialogContent = target.closest(
+        '[class*="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl"]'
+      );
+
       // 글꼴 버튼 클릭은 무시 (토글 기능을 위해)
       const isFontButton = target.closest(
         '.relative button[class*="flex flex-col items-center"]'
@@ -419,9 +427,12 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
         setShowMoreMenu(false);
       }
 
-      // 모바일 글꼴 설정 메뉴 닫기 (버튼 클릭이 아닌 경우만)
-      if (showMobileFontMenu && !isFontButton) {
-        setShowMobileFontMenu(false);
+      // 모바일 글꼴 설정 메뉴 닫기 (다이얼로그 내부 클릭이 아닌 경우만)
+      if (showMobileFontMenu && !isFontButton && !isMobileFontDialogContent) {
+        // 배경 오버레이 클릭인 경우에만 닫기
+        if (target.classList.contains("bg-black/50")) {
+          setShowMobileFontMenu(false);
+        }
       }
     };
 
@@ -1303,8 +1314,11 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
 
   // 글꼴 크기 증가 함수
   const increaseFontSize = (e?: React.MouseEvent) => {
-    // 클릭 이벤트의 기본 동작 방지
-    if (e) e.preventDefault();
+    // 클릭 이벤트의 기본 동작 방지 및 전파 중단
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
 
     if (fontSizeLevel < 2) {
       const newSize = fontSizeLevel + 1;
@@ -1314,7 +1328,12 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
   };
 
   // 글꼴 크기 감소 함수
-  const decreaseFontSize = () => {
+  const decreaseFontSize = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
     const newSize = Math.max(fontSizeLevel - 1, -2);
     setFontSizeLevel(newSize);
     saveFontSettings(newSize, fontBoldLevel, fontFamily);
@@ -1322,8 +1341,11 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
 
   // 글꼴 굵기 증가 함수
   const increaseFontBold = (e?: React.MouseEvent) => {
-    // 클릭 이벤트의 기본 동작 방지
-    if (e) e.preventDefault();
+    // 클릭 이벤트의 기본 동작 방지 및 전파 중단
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
 
     if (fontBoldLevel < 3) {
       const newBold = fontBoldLevel + 1;
@@ -1333,7 +1355,12 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
   };
 
   // 글꼴 굵기 감소 함수
-  const decreaseFontBold = () => {
+  const decreaseFontBold = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
     const newBold = Math.max(fontBoldLevel - 1, -1);
     setFontBoldLevel(newBold);
     saveFontSettings(fontSizeLevel, newBold, fontFamily);
@@ -1341,8 +1368,11 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
 
   // 글꼴 굵기 초기화 함수
   const resetFontBold = (e?: React.MouseEvent) => {
-    // 클릭 이벤트의 기본 동작 방지
-    if (e) e.preventDefault();
+    // 클릭 이벤트의 기본 동작 방지 및 전파 중단
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
 
     setFontBoldLevel(0);
     saveFontSettings(fontSizeLevel, 0, fontFamily);
@@ -1350,8 +1380,11 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
 
   // 글꼴 크기 초기화 함수
   const resetFontSize = (e?: React.MouseEvent) => {
-    // 클릭 이벤트의 기본 동작 방지
-    if (e) e.preventDefault();
+    // 클릭 이벤트의 기본 동작 방지 및 전파 중단
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
 
     setFontSizeLevel(0);
     saveFontSettings(0, fontBoldLevel, fontFamily);
@@ -1359,8 +1392,11 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
 
   // 글꼴 변경 함수
   const changeFontFamily = (family: string, e?: React.MouseEvent) => {
-    // 클릭 이벤트의 기본 동작 방지
-    if (e) e.preventDefault();
+    // 클릭 이벤트의 기본 동작 방지 및 전파 중단
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
 
     setFontFamily(family);
     saveFontSettings(fontSizeLevel, fontBoldLevel, family);
@@ -1952,9 +1988,189 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                 <span className="text-xs mt-0.5">글꼴</span>
               </button>
 
-              {/* 모바일 글꼴 설정 메뉴 */}
-              {showMobileFontMenu &&
-                renderFontSettingsMenu("bottom-full", "border border-gray-200")}
+              {/* 모바일 글꼴 설정 다이얼로그 */}
+              {showMobileFontMenu && (
+                <div className="fixed inset-0 z-50 sm:hidden">
+                  {/* 배경 오버레이 */}
+                  <div
+                    className="absolute inset-0 bg-black/50"
+                    onClick={() => setShowMobileFontMenu(false)}
+                  />
+
+                  {/* 하단 다이얼로그 */}
+                  <div
+                    className={`absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl transition-transform duration-300 ease-out ${
+                      showMobileFontMenu ? "translate-y-0" : "translate-y-full"
+                    }`}
+                  >
+                    {/* 드래그 핸들 */}
+                    <div className="flex justify-center pt-3 pb-2">
+                      <div className="w-10 h-1 bg-gray-300 rounded-full" />
+                    </div>
+
+                    {/* 헤더 */}
+                    <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        글꼴 설정
+                      </h3>
+                      <button
+                        onClick={() => setShowMobileFontMenu(false)}
+                        className="p-2 hover:bg-gray-100 rounded-full"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+
+                    {/* 글꼴 설정 내용 */}
+                    <div className="p-4 pb-6">
+                      {/* 글꼴 크기 */}
+                      <div className="mb-4">
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">
+                          글꼴 크기
+                        </h4>
+                        <div className="flex items-center justify-between bg-gray-50 rounded-lg p-2">
+                          <button
+                            onClick={(e) => decreaseFontSize(e)}
+                            className="w-8 h-8 bg-white rounded-full shadow-sm flex items-center justify-center hover:bg-gray-50"
+                          >
+                            <span className="text-base font-bold text-gray-600">
+                              -
+                            </span>
+                          </button>
+                          <span className="text-base font-medium">
+                            {fontSizeLevel === 0
+                              ? "기본"
+                              : fontSizeLevel > 0
+                                ? `+${fontSizeLevel}`
+                                : fontSizeLevel}
+                          </span>
+                          <button
+                            onClick={(e) => increaseFontSize(e)}
+                            className="w-8 h-8 bg-white rounded-full shadow-sm flex items-center justify-center hover:bg-gray-50"
+                          >
+                            <span className="text-base font-bold text-gray-600">
+                              +
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 글꼴 굵기 */}
+                      <div className="mb-4">
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">
+                          글꼴 굵기
+                        </h4>
+                        <div className="flex items-center justify-between bg-gray-50 rounded-lg p-2">
+                          <button
+                            onClick={(e) => decreaseFontBold(e)}
+                            className="w-8 h-8 bg-white rounded-full shadow-sm flex items-center justify-center hover:bg-gray-50"
+                          >
+                            <span className="text-base font-bold text-gray-600">
+                              -
+                            </span>
+                          </button>
+                          <span className="text-base font-medium">
+                            {fontBoldLevel === 0
+                              ? "기본"
+                              : fontBoldLevel > 0
+                                ? `+${fontBoldLevel}`
+                                : fontBoldLevel}
+                          </span>
+                          <button
+                            onClick={(e) => increaseFontBold(e)}
+                            className="w-8 h-8 bg-white rounded-full shadow-sm flex items-center justify-center hover:bg-gray-50"
+                          >
+                            <span className="text-base font-bold text-gray-600">
+                              +
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 글꼴 패밀리 */}
+                      <div className="mb-4">
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">
+                          글꼴 종류
+                        </h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          {[
+                            {
+                              value: "default",
+                              label: "기본",
+                              fontStyle:
+                                "font-family: system-ui, -apple-system, sans-serif",
+                            },
+                            {
+                              value: "spoqa",
+                              label: "스포카한산스",
+                              fontStyle:
+                                "font-family: 'Spoqa Han Sans', '스포카 한 산스', sans-serif",
+                            },
+                            {
+                              value: "nanumGothic",
+                              label: "나눔고딕",
+                              fontStyle:
+                                "font-family: 'Nanum Gothic', '나눔고딕', sans-serif",
+                            },
+                            {
+                              value: "nanumMyeongjo",
+                              label: "나눔명조",
+                              fontStyle:
+                                "font-family: 'Nanum Myeongjo', '나눔명조', serif",
+                            },
+                          ].map((font) => (
+                            <button
+                              key={font.value}
+                              onClick={(e) => changeFontFamily(font.value, e)}
+                              style={{
+                                fontFamily: font.fontStyle.replace(
+                                  "font-family: ",
+                                  ""
+                                ),
+                              }}
+                              className={`p-2 rounded-lg border text-center transition-colors text-sm ${
+                                fontFamily === font.value
+                                  ? "bg-blue-50 border-blue-200 text-blue-700 ring-2 ring-blue-300"
+                                  : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
+                              }`}
+                            >
+                              {font.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* 초기화 버튼 */}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={(e) => resetFontSize(e)}
+                          className="flex-1 py-2 px-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+                        >
+                          크기 초기화
+                        </button>
+                        <button
+                          onClick={(e) => resetFontBold(e)}
+                          className="flex-1 py-2 px-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+                        >
+                          굵기 초기화
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* 좋아요 버튼 */}
