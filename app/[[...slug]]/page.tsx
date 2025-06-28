@@ -195,7 +195,7 @@ export default async function DynamicPage(props: { params: any }) {
       return (
         <>
           <MainBanner menuId={menuForBanner?.id} />
-          <main className="container mx-auto py-8 px-0 sm:px-4">
+          <main className="container mx-auto py-0 sm:py-8 px-0 sm:px-4">
             <BoardDetail postId={lastSegment} />
           </main>
         </>

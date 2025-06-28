@@ -1933,7 +1933,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
         {/* 모바일 하단 고정 네비게이션 */}
         <div className="fixed bottom-0 left-0 right-0 sm:hidden z-50 bg-white border-t border-gray-200">
           {/* 통합된 하단 메뉴바 */}
-          <div className="flex items-center justify-between px-10 py-3">
+          <div className="flex items-center justify-between px-8 py-3">
             {/* 목록으로 버튼 */}
             <button
               onClick={handleGoList}
