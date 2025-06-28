@@ -292,15 +292,15 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
     switch (templateNumber) {
       case BOARD_TEMPLATE.COMPACT:
         return (
-          <div className="space-y-1">
+          <div className="space-y-3">
             {posts.map((post) => (
               <div
                 key={post.id}
-                className="py-2 truncate last:border-b-0 transition-transform duration-150 hover:scale-105"
+                className="cursor-pointer last:border-b-0 widget-scale"
               >
                 <div className="flex items-center justify-between">
                   <Link href={getPostUrl(post)} className="hover:text-blue-600">
-                    <h4 className="text-xs text-gray-500 font-medium truncate flex-1">
+                    <h4 className="text-xs text-gray-700 truncate flex-1">
                       {post.title}
                     </h4>
                   </Link>
@@ -323,7 +323,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
             {posts.map((post) => (
               <div
                 key={post.id}
-                className="border-gray-100 border rounded-lg overflow-hidden hover:shadow-md transition-shadow"
+                className="cursor-pointer overflow-hidden border-gray-100 widget-scale border rounded-lg hover:shadow-md"
               >
                 {showThumbnail && post.thumbnail_image ? (
                   <div className="aspect-video w-full overflow-hidden">
@@ -339,10 +339,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
                   </div>
                 )}
                 <div className="p-3">
-                  <Link
-                    href={getPostUrl(post)}
-                    className="block transition-transform duration-150 hover:scale-105 hover:text-blue-600"
-                  >
+                  <Link href={getPostUrl(post)} className="">
                     <h4 className="font-medium truncate">{post.title}</h4>
                   </Link>
                   {showDate && (
@@ -364,14 +361,14 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
             {posts.map((post) => (
               <div
                 key={post.id}
-                className="rounded overflow-hidden border-gray-50 border"
+                className="rounded overflow-hidden border-gray-50 border widget-scale"
               >
                 <Link href={getPostUrl(post)}>
                   {showThumbnail && post.thumbnail_image ? (
                     <img
                       src={post.thumbnail_image}
                       alt={post.title}
-                      className="w-full h-32 sm:h-40 object-cover transition-transform hover:scale-105"
+                      className="w-full h-32 sm:h-40 object-cover"
                     />
                   ) : (
                     <div className="w-full h-32 sm:h-40 bg-gray-100 flex items-center justify-center">
@@ -400,15 +397,12 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
               return (
                 <div
                   key={post.id}
-                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer group"
+                  className="cursor-pointer flex items-center widget-scale justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
                 >
                   <div className="flex-1 min-w-0 mr-2">
                     <div className="flex items-center space-x-3 overflow-hidden">
-                      <Link
-                        href={getPostUrl(post)}
-                        className="block transition-transform duration-150 hover:scale-105 hover:text-blue-600"
-                      >
-                        <h4 className="font-medium group-hover:text-blue-600 transition-colors truncate flex-1">
+                      <Link href={getPostUrl(post)} className="block ">
+                        <h4 className="font-medium truncate flex-1">
                           {post.title}
                         </h4>
                       </Link>
@@ -431,7 +425,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
                       </div>
                     </div>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors flex-shrink-0" />
+                  <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
                 </div>
               );
             })}
@@ -441,11 +435,11 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
       // 기본 클래식 템플릿
       default:
         return (
-          <div className="space-y-3">
+          <div className="space-y-4 py-4">
             {posts.map((post) => (
               <div
                 key={post.id}
-                className="flex items-start space-x-4 transition-transform duration-150 hover:scale-105"
+                className="cursor-pointer flex items-start space-x-4 widget-scale"
               >
                 {showThumbnail && post.thumbnail_image ? (
                   <div className="w-20 h-20 flex-shrink-0">
@@ -461,10 +455,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
                   </div>
                 ) : null}
                 <div className="flex-1 min-w-0">
-                  <Link
-                    href={getPostUrl(post)}
-                    className="block  hover:text-blue-600"
-                  >
+                  <Link href={getPostUrl(post)} className="block">
                     <h4 className="text-sm font-medium truncate">
                       {post.title}
                     </h4>

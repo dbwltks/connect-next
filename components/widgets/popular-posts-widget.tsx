@@ -220,7 +220,7 @@ export default function PopularPostsWidget({
         </h3>
       </div>
       {posts && posts.length > 0 ? (
-        <ul className="p-2 space-y-3">
+        <ul className="px-4 py-3 space-y-3">
           {posts.map((post, index) => {
             const rank = index + 1;
             let rankStyle = "text-gray-400 font-semibold";
@@ -235,7 +235,10 @@ export default function PopularPostsWidget({
                 "px-1 py-0.5 rounded-sm bg-amber-25 text-amber-300 dark:bg-amber-500/10 dark:text-amber-500/80 font-bold";
 
             return (
-              <li key={post.id} className="flex items-center text-sm">
+              <li
+                key={post.id}
+                className="flex items-center text-sm widget-scale"
+              >
                 <span
                   className={`inline-flex items-center justify-center w-4 h-4 rounded-sm text-xs mr-1 ${rankStyle}`}
                 >
@@ -243,7 +246,7 @@ export default function PopularPostsWidget({
                 </span>
                 <Link
                   href={getPostUrl(post)}
-                  className="flex-1 truncate hover:underline text-xs text-gray-700"
+                  className="flex-1 truncate text-xs text-gray-700"
                 >
                   {post.title}
                 </Link>

@@ -92,6 +92,18 @@ body {
   background-color: #f1f5f9b3 !important;
 }
 
+@layer utilities {
+  .widget-scale {
+    transition-property: all;
+    transition-duration: 0.3s;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .widget-scale:hover {
+    transform: scale(1.02);
+  }
+}
+
 /* ========== GLASS CONTAINER ========== */
 .glass-container {
   position: relative;

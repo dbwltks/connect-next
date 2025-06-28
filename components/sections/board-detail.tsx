@@ -1607,7 +1607,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
         <ToastViewport />
       </ToastProvider>
 
-      <Card className="py-4 sm:py-0 sm:shadow-md border-0 sm:border sm:border-gray-200 mx-0 sm:mx-auto w-full max-w-full overflow-hidden shadow-none bg-transparent bg-white relative sm:pb-0">
+      <div className="curs py-4 sm:py-0 mx-0 sm:mx-auto w-full max-w-full overflow-hidden bg-white relative sm:pb-0 border border-slate-100 sm:rounded-xl sm:mt-4">
         {/* 수정, 삭제 버튼과 이전글, 다음글, 목록 버튼 한 줄에 배치 - 모바일에서는 숨김 */}
         <div className="hidden sm:flex justify-between items-center p-4 border-b border-gray-100 space-x-2">
           {/* 수정, 삭제 버튼 - 작성자인 경우에만 표시 */}
@@ -1679,14 +1679,14 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
             {menuInfo ? (
               <Link
                 href={menuInfo.url.split("?")[0]}
-                className="text-sm text-green-600 hover:text-green-700 transition-colors font-medium flex items-center"
+                className="text-sm text-blue-500 hover:text-blue-700 transition-colors font-medium flex items-center"
               >
                 {menuInfo.title} <ChevronRight className="h-3 w-3 ml-0.5" />
               </Link>
             ) : (
               <Link
                 href={getListInfo().path}
-                className="text-sm text-green-600 hover:text-green-700 transition-colors font-medium flex items-center"
+                className="text-sm text-blue-600 hover:text-blue-700 transition-colors font-medium flex items-center"
               >
                 {getListInfo().name} <ChevronRight className="h-3 w-3 ml-0.5" />
               </Link>
@@ -2245,7 +2245,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
             )}
           </div>
         </div>
-      </Card>
+      </div>
     </>
   );
 }

@@ -253,33 +253,33 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
           {/* 화살표 버튼 */}
           {showArrows && carouselItems.length > 1 && (
             <>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white"
+              <button
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 focus:outline-none"
                 onClick={goToPrev}
+                aria-label="Previous slide"
               >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white"
+                <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
+              </button>
+              <button
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 focus:outline-none"
                 onClick={goToNext}
+                aria-label="Next slide"
               >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+                <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
+              </button>
             </>
           )}
 
           {/* 도트 인디케이터 - 이미지 위에 오버레이 */}
           {showDots && carouselItems.length > 1 && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">
+            <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex space-x-1.5">
               {carouselItems.map((_, index) => (
                 <button
                   key={index}
-                  className={`w-2 h-2 rounded-full transition-colors ${
-                    index === currentIndex ? "bg-white" : "bg-white/50"
+                  className={`rounded-full transition-all duration-300 ${
+                    index === currentIndex
+                      ? "w-2.5 h-2.5 bg-white/90"
+                      : "w-2 h-2 bg-white/50"
                   }`}
                   onClick={() => goToSlide(index)}
                 />
@@ -353,33 +353,33 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
           {/* 화살표 버튼 */}
           {showArrows && carouselItems.length > 1 && (
             <>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white"
+              <button
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 focus:outline-none"
                 onClick={goToPrev}
+                aria-label="Previous slide"
               >
-                <ChevronLeft className="h-6 w-6" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white"
+                <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
+              </button>
+              <button
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 focus:outline-none"
                 onClick={goToNext}
+                aria-label="Next slide"
               >
-                <ChevronRight className="h-6 w-6" />
-              </Button>
+                <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
+              </button>
             </>
           )}
 
           {/* 도트 인디케이터 - 이미지 위에 오버레이 */}
           {showDots && carouselItems.length > 1 && (
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex space-x-2">
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex space-x-1.5">
               {carouselItems.map((_, index) => (
                 <button
                   key={index}
-                  className={`w-3 h-3 rounded-full transition-colors ${
-                    index === currentIndex ? "bg-white" : "bg-white/50"
+                  className={`rounded-full transition-all duration-300 ${
+                    index === currentIndex
+                      ? "w-2.5 h-2.5 bg-white/90"
+                      : "w-2 h-2 bg-white/50"
                   }`}
                   onClick={() => goToSlide(index)}
                 />
@@ -482,36 +482,36 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
           {/* 화살표 버튼 */}
           {showArrows && carouselItems.length > 1 && (
             <>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white"
+              <button
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 focus:outline-none disabled:opacity-50"
                 onClick={goToPrev}
                 disabled={currentIndex === 0}
+                aria-label="Previous slide"
               >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white"
+                <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
+              </button>
+              <button
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 focus:outline-none disabled:opacity-50"
                 onClick={goToNext}
                 disabled={currentIndex >= carouselItems.length - 1}
+                aria-label="Next slide"
               >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+                <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
+              </button>
             </>
           )}
         </div>
 
         {/* 도트 인디케이터 */}
         {showDots && carouselItems.length > 1 && (
-          <div className="flex justify-center space-x-2 py-4">
+          <div className="flex justify-center space-x-1.5 py-4">
             {carouselItems.map((_, index) => (
               <button
                 key={index}
-                className={`w-2 h-2 rounded-full transition-colors ${
-                  index === currentIndex ? "bg-blue-600" : "bg-gray-300"
+                className={`rounded-full transition-all duration-300 ${
+                  index === currentIndex
+                    ? "w-2.5 h-2.5 bg-blue-600"
+                    : "w-2 h-2 bg-gray-300"
                 }`}
                 onClick={() => goToSlide(index)}
               />

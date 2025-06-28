@@ -185,7 +185,7 @@ export default function HomepageWidgets({
       {isLoading
         ? Array.from({ length: 2 }).map((_, index) => (
             <div key={index} className="flex flex-col">
-              <div className="relative h-64 w-full flex-1 overflow-hidden rounded-xl border border-gray-100">
+              <div className="relative h-64 w-full flex-1 overflow-hidden rounded-xl border border-slate-100">
                 {renderWidgetSkeleton()}
               </div>
             </div>
@@ -196,7 +196,7 @@ export default function HomepageWidgets({
               className="flex flex-col"
               style={widget.height ? { height: `${widget.height}px` } : {}}
             >
-              <div className="relative h-full w-full flex-1 overflow-hidden rounded-xl border border-gray-100">
+              <div className="relative h-full w-full flex-1 overflow-hidden rounded-xl border border-slate-100">
                 {renderWidget(widget)}
               </div>
             </div>

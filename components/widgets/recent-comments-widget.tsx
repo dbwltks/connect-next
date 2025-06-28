@@ -142,17 +142,17 @@ export default function RecentCommentsWidget({
   }
 
   return (
-    <div className="bg-white shadow rounded-lg overflow-hidden border-gray-100 border">
-      <div className="p-2 border-b">
+    <div className="bg-white rounded-xl overflow-hidden">
+      <div className="px-4 py-3 border-b">
         <h3 className="text-base font-semibold">
           {widget.title || "최신 댓글"}
         </h3>
       </div>
       {comments && comments.length > 0 ? (
-        <ul className="px-4 py-2 space-y-2">
+        <ul className="px-4 py-2 space-y-2 widget-scale">
           {comments.map((comment) => (
             <li key={comment.id} className="text-sm">
-              <Link href={getCommentUrl(comment)} className="hover:underline">
+              <Link href={getCommentUrl(comment)} className="">
                 <p className="truncate">{comment.content}</p>
                 <span className="block truncate text-xs text-gray-500">
                   -{" "}
