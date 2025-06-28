@@ -879,7 +879,7 @@ export default function BoardSection({
   return (
     <div className={`board-section mb-8 ${className} ${containerClass}`}>
       {/* 타이틀/설명 헤더를 최상단에 분리 */}
-      <div className="mb-4">
+      <div className="my-4">
         <div className="flex items-center gap-3 px-2 sm:px-0">
           <h2 className="text-xl sm:text-2xl font-bold">{title}</h2>
           <div className="text-xs text-blue-500 bg-white px-2 py-1 rounded-xl">
@@ -1023,7 +1023,7 @@ export default function BoardSection({
                     {/* 제목 영역 - 최대 2줄, 넘치면 ... 처리 */}
                     <div className="flex items-start gap-1">
                       {isNew(post) && (
-                        <div className="w-1 h-1 bg-red-500 rounded-full shrink-0 self-center animate-pulse" />
+                        <div className="w-1 h-1 bg-red-500 rounded-full shrink-0 mt-2.5 animate-pulse" />
                       )}
                       <Badge className="bg-yellow-400 dark:bg-yellow-600 text-black dark:text-white font-bold px-1.5 py-0.5 text-xs rounded mt-0.5 shrink-0">
                         공지
@@ -1074,14 +1074,14 @@ export default function BoardSection({
                 sortedNormals.map((post) => (
                   <div
                     key={post.id}
-                    className="flex cursor-pointer px-4 py-3 overflow-hidden border-t items-start border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 min-h-[80px]"
+                    className="flex cursor-pointer px-2 py-3 overflow-hidden border-t items-start border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 min-h-[80px]"
                     onClick={() => handlePostClick(post.id)}
                   >
                     <div className="flex-1 min-w-0 pr-3">
                       {/* 제목 영역 - 최대 2줄, 넘치면 ... 처리 */}
                       <div className="flex items-start gap-1">
                         {isNew(post) && (
-                          <div className="w-1 h-1 bg-red-500 rounded-full shrink-0 self-center animate-pulse" />
+                          <div className="w-1 h-1 bg-red-500 rounded-full shrink-0 mt-2 animate-pulse" />
                         )}
                         {post.is_pinned && (
                           <Badge className="bg-green-500 dark:bg-green-600 text-white rounded-full px-1.5 py-0.5 text-xs mt-0.5 shrink-0">
