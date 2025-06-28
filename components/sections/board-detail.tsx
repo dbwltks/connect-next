@@ -1558,9 +1558,13 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
               size="sm"
               className="p-3 text-gray-500 bg-gray-200 hover:text-gray-700 disabled:opacity-50"
               disabled={!prevPost}
-              onClick={() =>
-                prevPost && router.push(`${getListInfo().path}/${prevPost.id}`)
-              }
+              onClick={() => {
+                if (prevPost && post?.page_id) {
+                  const currentUrl = new URL(window.location.href);
+                  currentUrl.searchParams.set("post", prevPost.id);
+                  router.push(currentUrl.pathname + currentUrl.search);
+                }
+              }}
             >
               이전글
             </Button>
@@ -1569,9 +1573,13 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
               size="sm"
               className="p-3 text-gray-500 bg-gray-200 hover:text-gray-700 disabled:opacity-50"
               disabled={!nextPost}
-              onClick={() =>
-                nextPost && router.push(`${getListInfo().path}/${nextPost.id}`)
-              }
+              onClick={() => {
+                if (nextPost && post?.page_id) {
+                  const currentUrl = new URL(window.location.href);
+                  currentUrl.searchParams.set("post", nextPost.id);
+                  router.push(currentUrl.pathname + currentUrl.search);
+                }
+              }}
             >
               다음글
             </Button>
