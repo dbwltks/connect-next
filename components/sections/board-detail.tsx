@@ -70,7 +70,6 @@ interface BoardPost {
   thumbnail_image?: string | null;
   files?: string; // 첨부파일 정보(문자열로 저장된 JSON)
   status?: string;
-  published_at?: string | null; // 게시일 필드 추가
 }
 
 // 첨부파일 정보 인터페이스
@@ -1189,24 +1188,16 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
     }
   }
 
-  // 날짜 포맷팅 함수 - board-section.tsx와 일관성 유지
-  function formatDate(post: BoardPost) {
-    try {
-      // published_at이 있으면 우선 사용, 없으면 created_at 사용
-      const dateString = post.published_at || post.created_at;
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return "날짜 오류";
+  // 날짜 포맷팅 함수
+  function formatDate(dateString: string) {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
 
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const day = String(date.getDate()).padStart(2, "0");
-      const hours = String(date.getHours()).padStart(2, "0");
-      const minutes = String(date.getMinutes()).padStart(2, "0");
-
-      return `${year}-${month}-${day} ${hours}:${minutes}`;
-    } catch (e) {
-      return "날짜 오류";
-    }
+    return `${year}-${month}-${day} ${hours}:${minutes}`;
   }
 
   // 파일 확장자에 따른 아이콘 가져오기
@@ -1730,7 +1721,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                   {authorInfo?.username || "익명"}
                 </span>
                 <div className="flex text-xs text-gray-500">
-                  <span>{formatDate(post)}</span>
+                  <span>{formatDate(post.created_at)}</span>
                   <span className="mx-2">·</span>
                   <span>조회 {post.views || post.view_count || 0}</span>
                 </div>
@@ -1914,7 +1905,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                   router.push(currentUrl.pathname + currentUrl.search);
                 }
               }}
-              className="bg-white/90 backdrop-blur-sm border border-gray-200 rounded-full p-3 shadow-lg pointer-events-auto hover:bg-white transition-colors"
+              className="bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg pointer-events-auto hover:bg-white transition-colors"
             >
               <ChevronLeft className="h-5 w-5 text-gray-700" />
             </button>
@@ -1932,7 +1923,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                   router.push(currentUrl.pathname + currentUrl.search);
                 }
               }}
-              className="bg-white/90 backdrop-blur-sm border border-gray-200 rounded-full p-3 shadow-lg pointer-events-auto hover:bg-white transition-colors"
+              className="bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg pointer-events-auto hover:bg-white transition-colors"
             >
               <ChevronRight className="h-5 w-5 text-gray-700" />
             </button>
@@ -1942,7 +1933,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
         {/* 모바일 하단 고정 네비게이션 */}
         <div className="fixed bottom-0 left-0 right-0 sm:hidden z-50 bg-white border-t border-gray-200">
           {/* 통합된 하단 메뉴바 */}
-          <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center justify-between px-10 py-3">
             {/* 목록으로 버튼 */}
             <button
               onClick={handleGoList}
@@ -2118,40 +2109,30 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                             {
                               value: "default",
                               label: "기본",
-                              fontStyle:
-                                "font-family: system-ui, -apple-system, sans-serif",
+                              style: "font-sans",
                             },
                             {
-                              value: "spoqa",
-                              label: "스포카한산스",
-                              fontStyle:
-                                "font-family: 'Spoqa Han Sans', '스포카 한 산스', sans-serif",
-                            },
-                            {
-                              value: "nanumGothic",
-                              label: "나눔고딕",
-                              fontStyle:
-                                "font-family: 'Nanum Gothic', '나눔고딕', sans-serif",
-                            },
-                            {
-                              value: "nanumMyeongjo",
+                              value: "nanum-myeongjo",
                               label: "나눔명조",
-                              fontStyle:
-                                "font-family: 'Nanum Myeongjo', '나눔명조', serif",
+                              style: "font-serif",
+                            },
+                            {
+                              value: "noto-sans",
+                              label: "노토산스",
+                              style: "font-sans",
+                            },
+                            {
+                              value: "nanum-gothic",
+                              label: "나눔고딕",
+                              style: "font-sans",
                             },
                           ].map((font) => (
                             <button
                               key={font.value}
                               onClick={(e) => changeFontFamily(font.value, e)}
-                              style={{
-                                fontFamily: font.fontStyle.replace(
-                                  "font-family: ",
-                                  ""
-                                ),
-                              }}
-                              className={`p-2 rounded-lg border text-center transition-colors text-sm ${
+                              className={`p-2 rounded-lg border text-center transition-colors text-sm ${font.style} ${
                                 fontFamily === font.value
-                                  ? "bg-blue-50 border-blue-200 text-blue-700 ring-2 ring-blue-300"
+                                  ? "bg-blue-50 border-blue-200 text-blue-700"
                                   : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
                               }`}
                             >
@@ -2164,13 +2145,13 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                       {/* 초기화 버튼 */}
                       <div className="flex gap-2">
                         <button
-                          onClick={(e) => resetFontSize(e)}
+                          onClick={resetFontSize}
                           className="flex-1 py-2 px-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
                         >
                           크기 초기화
                         </button>
                         <button
-                          onClick={(e) => resetFontBold(e)}
+                          onClick={resetFontBold}
                           className="flex-1 py-2 px-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
                         >
                           굵기 초기화
