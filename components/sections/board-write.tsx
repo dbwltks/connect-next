@@ -627,11 +627,29 @@ export default function BoardWrite({
         setDescription(data.description || ""); // 상세 설명 로드
         setIsHidden(data.status === "hidden"); // 숨김 상태 반영
         setIsNotice(data.is_notice === true); // 공지사항 상태 반영
+        // 게시일 반영 - published_at 우선, 없으면 created_at 사용
         setPublishDate(
-          data.published_at
-            ? new Date(data.published_at).toISOString().slice(0, 16)
-            : ""
-        ); // 게시일 반영
+          (() => {
+            const dateString = data.published_at || data.created_at;
+            if (!dateString) return "";
+
+            try {
+              const date = new Date(dateString);
+              if (isNaN(date.getTime())) return "";
+
+              const year = date.getFullYear();
+              const month = String(date.getMonth() + 1).padStart(2, "0");
+              const day = String(date.getDate()).padStart(2, "0");
+              const hours = String(date.getHours()).padStart(2, "0");
+              const minutes = String(date.getMinutes()).padStart(2, "0");
+
+              return `${year}-${month}-${day}T${hours}:${minutes}`;
+            } catch (error) {
+              console.error("게시일 변환 오류:", error);
+              return "";
+            }
+          })()
+        );
         let parsedFiles: any[] = [];
         if (data.files) {
           try {
@@ -1093,7 +1111,21 @@ export default function BoardWrite({
         number: nextNumber,
         description: description.trim(), // 상세 설명 추가
         isNotice, // 공지사항 설정 추가
-        publishedAt: publishDate ? new Date(publishDate).toISOString() : null, // 게시일 추가
+        // 게시일 추가 - board-section.tsx와 board-detail.tsx와 일관성 유지
+        publishedAt: publishDate
+          ? (() => {
+              try {
+                // datetime-local 값을 Date 객체로 변환 후 ISO 문자열로 저장
+                const date = new Date(publishDate);
+                return isNaN(date.getTime()) ? null : date.toISOString();
+              } catch (error) {
+                console.error("게시일 저장 오류:", error);
+                return null;
+              }
+            })()
+          : !isEditMode
+            ? new Date().toISOString() // 새 글인 경우 현재 시간 자동 설정
+            : null, // 수정 모드에서 게시일 미설정 시 기존 값 유지
       });
 
       console.log("[BoardWrite] serviceSaveBoardPost 결과:", result);

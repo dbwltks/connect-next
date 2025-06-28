@@ -488,7 +488,7 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
 
         {/* 도트 인디케이터 */}
         {showDots && carouselItems.length > 1 && (
-          <div className="flex justify-center space-x-2 pt-4">
+          <div className="flex justify-center space-x-2 py-4">
             {carouselItems.map((_, index) => (
               <button
                 key={index}

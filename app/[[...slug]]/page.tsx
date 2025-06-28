@@ -135,7 +135,7 @@ export default async function DynamicPage(props: { params: any }) {
               <Breadcrumb currentTitle={menu.title} />
             </div> */}
             <main className="flex-1 flex flex-col gap-12">
-              <div className="mb-2">
+              <div className="mt-2">
                 <HomepageWidgets widgets={widgets} />
               </div>
             </main>

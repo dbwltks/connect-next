@@ -70,6 +70,7 @@ interface BoardPost {
   thumbnail_image?: string | null;
   files?: string; // 첨부파일 정보(문자열로 저장된 JSON)
   status?: string;
+  published_at?: string | null; // 게시일 필드 추가
 }
 
 // 첨부파일 정보 인터페이스
@@ -1188,16 +1189,24 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
     }
   }
 
-  // 날짜 포맷팅 함수
-  function formatDate(dateString: string) {
-    const date = new Date(dateString);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const hours = String(date.getHours()).padStart(2, "0");
-    const minutes = String(date.getMinutes()).padStart(2, "0");
+  // 날짜 포맷팅 함수 - board-section.tsx와 일관성 유지
+  function formatDate(post: BoardPost) {
+    try {
+      // published_at이 있으면 우선 사용, 없으면 created_at 사용
+      const dateString = post.published_at || post.created_at;
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "날짜 오류";
 
-    return `${year}-${month}-${day} ${hours}:${minutes}`;
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      const hours = String(date.getHours()).padStart(2, "0");
+      const minutes = String(date.getMinutes()).padStart(2, "0");
+
+      return `${year}-${month}-${day} ${hours}:${minutes}`;
+    } catch (e) {
+      return "날짜 오류";
+    }
   }
 
   // 파일 확장자에 따른 아이콘 가져오기
@@ -1721,7 +1730,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                   {authorInfo?.username || "익명"}
                 </span>
                 <div className="flex text-xs text-gray-500">
-                  <span>{formatDate(post.created_at)}</span>
+                  <span>{formatDate(post)}</span>
                   <span className="mx-2">·</span>
                   <span>조회 {post.views || post.view_count || 0}</span>
                 </div>
