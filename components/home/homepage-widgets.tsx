@@ -318,7 +318,7 @@ export default function HomepageWidgets({
       ))}
 
       {/* 기존 메인 레이아웃 */}
-      <div className="2xl:container mx-auto sm:px-8 md:px-12 lg:px-16 py-4 2xl:px-0">
+      <div className="xl:container mx-auto sm:px-8 md:px-12 lg:px-16 py-4 xl:px-0">
         <div className="grid grid-cols-12 gap-6">
           {layoutStructure === "1-col" && (
             <div className="col-span-12 flex justify-center">
@@ -327,7 +327,7 @@ export default function HomepageWidgets({
           )}
           {layoutStructure === "2-col-left" && (
             <>
-              <div className="hidden lg:block col-span-12 lg:col-span-3 w-full sticky top-24 self-start">
+              <div className="hidden xl:block col-span-12 lg:col-span-3 w-full sticky top-24 self-start">
                 {leftSidebar}
               </div>
               <div className="col-span-12 lg:col-span-9">{mainContent}</div>
@@ -343,11 +343,11 @@ export default function HomepageWidgets({
           )}
           {layoutStructure === "3-col" && (
             <>
-              <div className="hidden 2xl:block col-span-12 2xl:col-span-2 sticky top-24 self-start">
+              <div className="hidden xl:block col-span-12 xl:col-span-2 sticky top-24 self-start">
                 {leftSidebar}
               </div>
-              <div className="col-span-12 2xl:col-span-8">{mainContent}</div>
-              <div className="hidden 2xl:block col-span-12 2xl:col-span-2 sticky top-24 self-start">
+              <div className="col-span-12 xl:col-span-8">{mainContent}</div>
+              <div className="hidden xl:block col-span-12 xl:col-span-2 sticky top-24 self-start">
                 {rightSidebar}
               </div>
             </>
