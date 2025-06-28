@@ -243,7 +243,7 @@ export default function HomepageWidgets({
     if (isLoading) {
       // 로딩 중일 때 스켈레톤 표시
       return (
-        <div className="2xl:container mx-auto sm:px-8 md:px-12 lg:px-16 py-8 2xl:px-0">
+        <div className="xl:container mx-auto sm:px-8 md:px-12 lg:px-16 py-0 sm:py-4 xl:px-0">
           <div className="grid grid-cols-12 gap-6">
             <div className="col-span-12">
               <div className="grid grid-cols-12 gap-6">
@@ -265,7 +265,7 @@ export default function HomepageWidgets({
     }
 
     return (
-      <div className="2xl:container mx-auto sm:px-8 md:px-12 lg:px-16 py-8 2xl:px-0">
+      <div className="xl:container mx-auto sm:px-8 md:px-12 lg:px-16 py-8 2xl:px-0">
         <Card>
           <CardContent className="pt-6">
             <div className="text-gray-500 text-center p-8">
@@ -318,7 +318,7 @@ export default function HomepageWidgets({
       ))}
 
       {/* 기존 메인 레이아웃 */}
-      <div className="xl:container mx-auto sm:px-8 md:px-12 lg:px-16 py-4 xl:px-0">
+      <div className="xl:container mx-auto sm:px-8 md:px-12 lg:px-16 py-0 sm:py-4 xl:px-0">
         <div className="grid grid-cols-12 gap-6">
           {layoutStructure === "1-col" && (
             <div className="col-span-12 flex justify-center">
