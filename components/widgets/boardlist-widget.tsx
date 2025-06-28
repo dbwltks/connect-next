@@ -299,13 +299,13 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
                 className="cursor-pointer last:border-b-0 widget-scale"
               >
                 <div className="flex items-center justify-between">
-                  <Link href={getPostUrl(post)} className="hover:text-blue-600">
-                    <h4 className="text-xs text-gray-700 truncate flex-1">
+                  <Link href={getPostUrl(post)} className="flex-1 min-w-0">
+                    <div className="text-xs text-gray-700 truncate">
                       {post.title}
-                    </h4>
+                    </div>
                   </Link>
                   {showDate && (
-                    <div className="block text-xs text-gray-400 flex items-center space-x-1 ml-2 flex-shrink-0">
+                    <div className="block text-xs text-gray-400 flex items-center space-x-1 ml-1 flex-shrink-0">
                       <span className="truncate max-w-[80px]">
                         {formatRelativeTime(post.created_at)}
                       </span>
@@ -435,7 +435,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
       // 기본 클래식 템플릿
       default:
         return (
-          <div className="space-y-4 py-4">
+          <div className="space-y-5 py-2">
             {posts.map((post) => (
               <div
                 key={post.id}
@@ -499,7 +499,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
   }
 
   return (
-    <div className="h-full bg-white rounded-xl border border-gray-100 p-4">
+    <div className="h-full bg-white rounded-xl border border-slate-100 overflow-hidden p-4">
       <div className="pb-2">
         <div className="text-base font-semibold">
           {widget.title || page?.title || "게시판"}

@@ -213,7 +213,7 @@ export default function PopularPostsWidget({
   }
 
   return (
-    <div className="bg-white shadow rounded-lg overflow-hidden border-gray-100 border">
+    <div className="bg-white rounded-lg overflow-hidden border border-slate-100">
       <div className="px-4 py-3 border-b">
         <h3 className="text-base text-gray-800 font-semibold">
           {widget.title || "인기 게시글"}
