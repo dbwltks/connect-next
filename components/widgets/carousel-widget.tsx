@@ -182,7 +182,7 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
     const imageHeight = showTitle && widget.title ? "h-64" : "h-80";
 
     return (
-      <div className="relative w-full bg-white rounded-lg overflow-hidden shadow-sm">
+      <div className="relative w-full bg-white rounded-lg overflow-hidden shadow-sm m-4 pr-4 sm:pr-0 sm:m-0">
         {showTitle && widget.title && (
           <div className="p-4 border-b">
             <h3 className="text-lg font-semibold">{widget.title}</h3>
