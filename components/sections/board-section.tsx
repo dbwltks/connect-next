@@ -276,13 +276,13 @@ export default function BoardSection({
     localStorage.setItem("board_layout", layout);
   }, [layout]);
 
-  // 모바일 상태 변경 시 레이아웃 자동 전환
-  useEffect(() => {
-    // 모바일에서는 목록형을 기본으로 사용
-    if (isMobile && layout !== "list") {
-      setLayout("list");
-    }
-  }, [isMobile, layout]);
+  // 모바일 상태 변경 시 레이아웃 자동 전환 (제거 - 사용자가 직접 선택할 수 있도록)
+  // useEffect(() => {
+  //   // 모바일에서는 목록형을 기본으로 사용
+  //   if (isMobile && layout !== "list") {
+  //     setLayout("list");
+  //   }
+  // }, [isMobile, layout]);
 
   // 컬럼 정렬 및 표시 상태 관리
   const [columnStates, setColumnStates] = useState<{

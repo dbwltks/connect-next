@@ -137,7 +137,7 @@ export default function Header({ menuItems }: { menuItems: any[] }) {
   const { user } = useAuth();
 
   return (
-    <header className="sticky top-0 z-[9] w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-[100] w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="xl:container px-4 xl:px-0 flex h-16 items-center">
         <HeaderClient user={user} menuItems={menuItems} />
       </div>
@@ -238,7 +238,7 @@ function HeaderClient({ user, menuItems }: { user: any; menuItems: any[] }) {
   return (
     <>
       {/* 데스크톱 헤더 - md 이상에서 표시 */}
-      <div className="hidden md:flex items-center">
+      <div className="hidden md:flex items-center ">
         <div className="flex items-center">
           <Link href="/" className="flex items-center">
             <div className="relative h-16 overflow-hidden flex items-center justify-center">
