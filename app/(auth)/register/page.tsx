@@ -17,6 +17,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { validateDisplayName } from "@/lib/forbidden-words";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -67,8 +68,10 @@ export default function RegisterPage() {
           return "영문, 숫자, 언더바(_)만 사용 가능합니다";
         break;
       case "nickname":
-        if (value.length < 2) return "닉네임은 2자 이상이어야 합니다";
-        if (value.length > 10) return "닉네임은 10자 이하여야 합니다";
+        const validation = validateDisplayName(value);
+        if (!validation.isValid) {
+          return validation.message;
+        }
         break;
       case "email":
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
@@ -110,11 +113,12 @@ export default function RegisterPage() {
     }));
 
     try {
-      // 중복 체크
+      // 중복 체크 - nickname의 경우 display_name 필드로 체크
+      const checkField = field === "nickname" ? "display_name" : field;
       const { data } = await supabase
         .from("users")
         .select("id")
-        .eq(field, value)
+        .eq(checkField, value)
         .single();
 
       if (data) {
@@ -228,7 +232,7 @@ export default function RegisterPage() {
       const { data: existNickname } = await supabase
         .from("users")
         .select("id")
-        .eq("nickname", formData.nickname)
+        .eq("display_name", formData.nickname)
         .single();
       if (existNickname) throw new Error("이미 사용 중인 닉네임입니다");
 
@@ -243,15 +247,20 @@ export default function RegisterPage() {
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
+        options: {
+          data: {
+            display_name: formData.nickname,
+          },
+        },
       });
       if (error || !data.user)
         throw new Error(error?.message || "회원가입에 실패했습니다");
 
-      // users 테이블에 username, nickname, email 저장
+      // users 테이블에 username, display_name, email 저장
       const { error: userError } = await supabase.from("users").insert({
         id: data.user.id,
         username: formData.username,
-        nickname: formData.nickname,
+        display_name: formData.nickname,
         email: formData.email,
       });
       if (userError) throw new Error(userError.message);
@@ -300,7 +309,7 @@ export default function RegisterPage() {
             <div className="grid gap-5">
               <div className="grid gap-2">
                 <Label htmlFor="username" className="text-sm font-medium">
-                  아이디{" "}
+                  아이디{"로그인용"}
                 </Label>
                 <div className="relative">
                   <Input
@@ -405,10 +414,7 @@ export default function RegisterPage() {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="email" className="text-sm font-medium">
-                  이메일{" "}
-                  <span className="text-xs text-gray-500">
-                    (로그인 및 인증용)
-                  </span>
+                  이메일 <span className="text-xs text-gray-500">(인증용)</span>
                 </Label>
                 <div className="relative">
                   <Input

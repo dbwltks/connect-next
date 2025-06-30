@@ -57,6 +57,8 @@ import { GripVertical, Trash2 as Trash, Edit, Plus } from "lucide-react";
 import { supabase } from "@/db";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import ImageBrowser from "@/components/ui/image-browser";
+import useSWR from "swr";
+import { fetchMenus, fetchBanners } from "@/services/adminService";
 
 // 메뉴 타입
 export type Menu = {
@@ -422,99 +424,92 @@ export default function BannerManager() {
     })
   );
 
-  // 메뉴 목록 불러오기
-  const loadMenus = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("cms_menus")
-        .select("id, title, url")
-        .order("title", { ascending: true });
+  // SWR로 메뉴와 배너 데이터 가져오기
+  const {
+    data: menusData,
+    error: menusError,
+    isLoading: isMenusLoading,
+    mutate: mutateMenus,
+  } = useSWR("admin-menus", fetchMenus, {
+    revalidateOnFocus: false,
+    shouldRetryOnError: true,
+    errorRetryCount: 3,
+    onError: (err) => console.error("메뉴 로딩 에러:", err),
+  });
+  const {
+    data: bannersData,
+    error: bannersError,
+    isLoading: isBannersLoading,
+    mutate: mutateBanners,
+  } = useSWR(`admin-banners-${selectedMenuId || "all"}`, fetchBanners, {
+    revalidateOnFocus: false,
+    shouldRetryOnError: true,
+    errorRetryCount: 3,
+    onError: (err) => console.error("배너 로딩 에러:", err),
+  });
 
-      if (error) throw error;
+  // SWR 데이터가 바뀔 때마다 상태 업데이트
+  useEffect(() => {
+    console.log(
+      "메뉴 로딩 상태:",
+      isMenusLoading,
+      "데이터:",
+      menusData,
+      "에러:",
+      menusError
+    );
 
-      if (data && data.length > 0) {
-        setMenus(
-          data.map((menu) => ({
-            id: menu.id,
-            name: menu.title, // cms_menus 테이블은 name 대신 title 필드를 사용함
-            url: menu.url,
-          }))
+    if (isMenusLoading) return;
+
+    if (menusError) {
+      console.error("메뉴 로딩 실패:", menusError);
+      setMenus([]);
+      return;
+    }
+
+    if (menusData && Array.isArray(menusData)) {
+      setMenus(
+        menusData.map((menu) => ({
+          id: menu.id,
+          name: menu.title,
+          url: menu.url,
+        }))
+      );
+    }
+  }, [menusData, menusError, isMenusLoading]);
+
+  useEffect(() => {
+    console.log(
+      "배너 로딩 상태:",
+      isBannersLoading,
+      "데이터:",
+      bannersData,
+      "에러:",
+      bannersError
+    );
+
+    if (isBannersLoading) return;
+
+    if (bannersError) {
+      console.error("배너 로딩 실패:", bannersError);
+      setAllBanners([]);
+      setBanners([]);
+      return;
+    }
+
+    if (bannersData && Array.isArray(bannersData)) {
+      setAllBanners(bannersData);
+
+      // 선택된 메뉴에 따라 배너 필터링
+      if (selectedMenuId) {
+        setBanners(
+          bannersData.filter((banner) => banner.menu_id === selectedMenuId)
         );
       } else {
-        setMenus([]);
+        setBanners(bannersData.filter((banner) => banner.menu_id === null));
       }
-    } catch (error) {
-      console.error("Error loading menus:", error);
-      toast({
-        title: "오류",
-        description: "메뉴를 불러오는 중 오류가 발생했습니다.",
-        variant: "destructive",
-      });
     }
-  };
-
-  // 배너 목록 불러오기
-  const loadBanners = async () => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("cms_banners")
-        .select("*")
-        .order("order_num", { ascending: true });
-
-      if (error) throw error;
-
-      if (data && data.length > 0) {
-        const formattedBanners = data.map((item: any) => ({
-          id: item.id,
-          title: item.title,
-          subtitle: item.subtitle || "",
-          imageUrl: item.image_url,
-          isActive: item.is_active,
-          order_num: item.order_num ?? 0,
-          button_text: item.button_text ?? "",
-          button_url: item.button_url ?? "",
-          has_button: item.has_button ?? false,
-          full_width: item.full_width ?? false,
-          menu_id: item.menu_id,
-          html_content: item.html_content || "",
-          use_html: item.use_html ?? false,
-          image_height: item.image_height || "100%", // 기본값 100%
-          overlay_opacity: item.overlay_opacity || "0.4", // 오버레이 투명도
-        }));
-
-        // 디버깅용 로그
-        console.log("Loaded banners:", data);
-
-        setAllBanners(formattedBanners);
-
-        // 선택된 메뉴에 따라 배너 필터링
-        if (selectedMenuId) {
-          setBanners(
-            formattedBanners.filter(
-              (banner) => banner.menu_id === selectedMenuId
-            )
-          );
-        } else {
-          setBanners(
-            formattedBanners.filter((banner) => banner.menu_id === null)
-          );
-        }
-      } else {
-        setAllBanners([]);
-        setBanners([]);
-      }
-    } catch (error) {
-      console.error("Error loading banners:", error);
-      toast({
-        title: "오류",
-        description: "배너를 불러오는 중 오류가 발생했습니다.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [bannersData, bannersError, selectedMenuId, isBannersLoading]);
 
   // 메뉴 선택 변경 시 배너 필터링
   const handleMenuChange = (menuId: string | null) => {
@@ -526,18 +521,6 @@ export default function BannerManager() {
       setBanners(allBanners.filter((banner) => banner.menu_id === null));
     }
   };
-
-  useEffect(() => {
-    loadMenus();
-    loadBanners();
-  }, []);
-
-  useEffect(() => {
-    // 선택된 메뉴가 변경될 때 배너 필터링
-    if (allBanners.length > 0) {
-      handleMenuChange(selectedMenuId);
-    }
-  }, [selectedMenuId, allBanners]);
 
   // 드래그 종료 핸들러
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -630,7 +613,7 @@ export default function BannerManager() {
         description: "배너가 저장되었습니다.",
       });
       // 배너 다시 로드
-      await loadBanners();
+      await mutateBanners();
     } catch (error) {
       console.error("Error saving banners:", error);
       toast({
@@ -751,34 +734,49 @@ export default function BannerManager() {
             </p>
           </div>
 
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext
-              items={banners.map((b) => b.id)}
-              strategy={verticalListSortingStrategy}
+          {isBannersLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-500">배너 데이터를 불러오는 중...</p>
+            </div>
+          ) : bannersError ? (
+            <div className="text-center py-8 text-red-500">
+              <p className="mb-2">
+                배너 데이터를 불러오는 중 오류가 발생했습니다.
+              </p>
+              <p className="text-sm text-gray-500 mb-4">
+                {bannersError.message}
+              </p>
+              <Button onClick={() => mutateBanners()}>다시 시도</Button>
+            </div>
+          ) : (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
             >
-              {banners.length > 0 ? (
-                banners.map((banner) => (
-                  <SortableBannerItem
-                    key={banner.id}
-                    banner={banner}
-                    onToggle={handleToggleBanner}
-                    onEdit={handleEditBanner}
-                    onDelete={handleDeleteBanner}
-                  />
-                ))
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  {isLoading
-                    ? "배너 로딩 중..."
-                    : "배너가 없습니다. 새 배너를 추가해보세요."}
-                </div>
-              )}
-            </SortableContext>
-          </DndContext>
+              <SortableContext
+                items={banners.map((b) => b.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {banners.length > 0 ? (
+                  banners.map((banner) => (
+                    <SortableBannerItem
+                      key={banner.id}
+                      banner={banner}
+                      onToggle={handleToggleBanner}
+                      onEdit={handleEditBanner}
+                      onDelete={handleDeleteBanner}
+                    />
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    배너가 없습니다. 새 배너를 추가해보세요.
+                  </div>
+                )}
+              </SortableContext>
+            </DndContext>
+          )}
         </CardContent>
         <CardFooter>
           <Button onClick={handleSaveBanners} disabled={isLoading}>
@@ -1290,7 +1288,7 @@ export default function BannerManager() {
                       );
 
                   // 4. 배너 목록 새로고침
-                  await loadBanners();
+                  await mutateBanners();
 
                   toast({
                     title: "성공",

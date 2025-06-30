@@ -1,0 +1,44 @@
+# Update these with your Supabase details from your project settings > API
+# https://app.supabase.com/project/_/settings/api
+NEXT_PUBLIC_SUPABASE_URL=https://tgmxfgxkqmzjvydhrglg.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRnbXhmZ3hrcW16anZ5ZGhyZ2xnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM1MjMwMjgsImV4cCI6MjA1OTA5OTAyOH0.HRU7T-4RwUzd4pT8OLAUKiyoyZrTSr8CHo4YeBcQoRg
+# 서비스 역할 키 (Supabase Dashboard → Settings → API에서 복사)
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRnbXhmZ3hrcW16anZ5ZGhyZ2xnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0MzUyMzAyOCwiZXhwIjoyMDU5MDk5MDI4fQ.uUJQB75foCfJlNYlP4tU2B0omOx23RD_UYuZdUX8h84
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=AIzaSyDNRfbPXKsoqTpBOZnfD8DuVx0DTBemeeE
+VERCEL_URL=connect-next-eight.vercel.app
+
+
+# ===========================================
+# 로그 시스템 환경 설정
+# ===========================================
+
+# 로그 레벨 (0=DEBUG, 1=INFO, 2=WARN, 3=ERROR, 4=OFF)
+LOG_LEVEL=1
+
+# 배치 처리 설정
+LOG_BATCH_ENABLED=true
+LOG_BATCH_SIZE=50
+LOG_BATCH_INTERVAL=10000
+
+# 로그 보관 기간 (일)
+LOG_ARCHIVE_DAYS=30
+
+# 실시간 로그 스트림 활성화
+LOG_REALTIME_ENABLED=true
+
+# 보안 로그 활성화
+LOG_SECURITY_ENABLED=true
+
+# 성능 로그 활성화
+LOG_PERFORMANCE_ENABLED=true
+
+# 민감 데이터 마스킹 활성화
+LOG_SENSITIVE_MASK=true
+
+# 오류 추적 활성화
+LOG_ERROR_TRACKING=true
+
+# ===========================================
+# 기존 환경 변수들
+# ===========================================
+

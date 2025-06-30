@@ -11,7 +11,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Users, Calendar, MessageSquare, FileText } from "lucide-react";
+import {
+  Users,
+  Calendar,
+  MessageSquare,
+  FileText,
+  Activity,
+} from "lucide-react";
 import Link from "next/link";
 
 export default function AdminDashboard() {
@@ -59,6 +65,13 @@ export default function AdminDashboard() {
       href: "/admin/prayers",
       color: "bg-orange-500",
     },
+    {
+      title: "활동 로그",
+      description: "시스템 활동 로그 및 통계 분석",
+      icon: Activity,
+      href: "/admin/activity-logs",
+      color: "bg-red-500",
+    },
   ];
 
   return (
@@ -72,7 +85,7 @@ export default function AdminDashboard() {
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {stats.map((stat) => (
             <Link key={stat.href} href={stat.href}>
               <Card className="cursor-pointer hover:shadow-md transition-shadow">

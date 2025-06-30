@@ -137,7 +137,7 @@ export default function Header({ menuItems }: { menuItems: any[] }) {
   const { user } = useAuth();
 
   return (
-    <header className="sticky top-0 z-[100] w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-[10] w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="xl:container px-4 xl:px-0 flex h-16 items-center">
         <HeaderClient user={user} menuItems={menuItems} />
       </div>

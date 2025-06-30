@@ -48,6 +48,7 @@ import {
   saveBoardPost as serviceSaveBoardPost,
   getBoardPost as serviceGetBoardPost,
 } from "@/services/boardService";
+import { logDraftDelete } from "@/services/activityLogService";
 import {
   BIBLE_VERSIONS,
   BIBLE_BOOKS,
@@ -529,7 +530,20 @@ export default function BoardWrite({
   // 임시등록 삭제 (DB 기반)
   const deleteDraft = async (draftKey: string) => {
     try {
+      // 삭제할 draft 정보 먼저 가져오기 (로그용)
+      const draftToDelete = drafts.find((d) => d.key === draftKey);
+      const draftTitle = draftToDelete?.data?.title || "제목 없음";
+
+      // 현재 사용자 정보 가져오기
+      const user = await getHeaderUser();
+
       await serviceDeleteDraft({ draftId: draftKey });
+
+      // 삭제 로그 기록 (사용자 정보가 있는 경우)
+      if (user?.id) {
+        await logDraftDelete(user.id, draftKey, draftTitle);
+      }
+
       setDrafts((prev) => prev.filter((d) => d.key !== draftKey));
       showToast({
         title: "삭제 완료",

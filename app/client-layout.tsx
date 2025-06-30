@@ -6,6 +6,7 @@ import Footer from "@/components/layout/footer";
 import { Toaster } from "@/components/ui/toaster";
 import ScrollToTop from "@/components/scroll-to-top";
 import { AuthProvider } from "@/contexts/auth-context";
+import { SWRConfig } from "swr";
 
 export default function ClientLayout({
   children,
@@ -23,21 +24,37 @@ export default function ClientLayout({
   widgets: any[];
 }) {
   return (
-    <AuthProvider>
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="light"
-        enableSystem
-        disableTransitionOnChange
-      >
-        <div className="min-h-screen flex flex-col">
-          <Header menuItems={menuItems} />
-          <main className="flex-1">{children}</main>
-          <Footer menus={footerMenus} settings={footerSettings} />
-          <Toaster />
-          <ScrollToTop />
-        </div>
-      </ThemeProvider>
-    </AuthProvider>
+    <SWRConfig
+      value={{
+        revalidateOnFocus: false,
+        revalidateOnReconnect: true,
+        dedupingInterval: 60000, // 1분간 중복 요청 방지
+        errorRetryCount: 3,
+        errorRetryInterval: 5000,
+        loadingTimeout: 3000,
+        refreshInterval: 0, // 자동 새로고침 비활성화
+        shouldRetryOnError: true,
+        onError: (error, key) => {
+          console.error("SWR Error:", error, "Key:", key);
+        },
+      }}
+    >
+      <AuthProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <div className="min-h-screen flex flex-col">
+            <Header menuItems={menuItems} />
+            <main className="flex-1">{children}</main>
+            <Footer menus={footerMenus} settings={footerSettings} />
+            <Toaster />
+            <ScrollToTop />
+          </div>
+        </ThemeProvider>
+      </AuthProvider>
+    </SWRConfig>
   );
 }

@@ -254,14 +254,14 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
           {showArrows && carouselItems.length > 1 && (
             <>
               <button
-                className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 focus:outline-none"
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 z-1 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 focus:outline-none"
                 onClick={goToPrev}
                 aria-label="Previous slide"
               >
                 <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
               </button>
               <button
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 focus:outline-none"
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 z-1 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 focus:outline-none"
                 onClick={goToNext}
                 aria-label="Next slide"
               >
@@ -354,14 +354,14 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
           {showArrows && carouselItems.length > 1 && (
             <>
               <button
-                className="absolute left-4 top-1/2 transform -translate-y-1/2 z-5 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 focus:outline-none"
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 z-1 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 focus:outline-none"
                 onClick={goToPrev}
                 aria-label="Previous slide"
               >
                 <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
               </button>
               <button
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 z-5 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 focus:outline-none"
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 z-1 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 focus:outline-none"
                 onClick={goToNext}
                 aria-label="Next slide"
               >
@@ -483,7 +483,7 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
           {showArrows && carouselItems.length > 1 && (
             <>
               <button
-                className="absolute left-4 top-1/2 transform -translate-y-1/2 z-5 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 focus:outline-none disabled:opacity-50"
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 z-1 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 focus:outline-none disabled:opacity-50"
                 onClick={goToPrev}
                 disabled={currentIndex === 0}
                 aria-label="Previous slide"
@@ -491,7 +491,7 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
                 <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
               </button>
               <button
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 z-5 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 focus:outline-none disabled:opacity-50"
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 z-1 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 focus:outline-none disabled:opacity-50"
                 onClick={goToNext}
                 disabled={currentIndex >= carouselItems.length - 1}
                 aria-label="Next slide"

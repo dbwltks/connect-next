@@ -11,6 +11,7 @@ import {
   Home,
   UserPlus,
   Layout,
+  Activity,
 } from "lucide-react";
 import AdminHeader from "@/components/layout/admin-header";
 import HideHeader from "@/components/layout/hide-header";
@@ -39,6 +40,7 @@ export default function AdminLayout({
     { name: "일정 관리", href: "/admin/events", icon: Calendar },
     { name: "공지사항", href: "/admin/announcements", icon: FileText },
     { name: "기도 요청", href: "/admin/prayers", icon: MessageSquare },
+    { name: "활동 로그", href: "/admin/activity-logs", icon: Activity },
     { name: "시스템 설정", href: "/admin/settings", icon: Settings },
   ];
 
