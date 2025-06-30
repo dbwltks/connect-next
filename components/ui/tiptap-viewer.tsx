@@ -264,7 +264,7 @@ export default function TipTapViewer({
         }
 
         .tiptap-viewer .ProseMirror p {
-          line-height: 1.3;
+          line-height: 1.5;
           font-size: ${getFontSize("1rem")};
         }
         {/* margin-top: 1.5rem;

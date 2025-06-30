@@ -321,3 +321,18 @@ export const fetchWidgets = async (pageId?: string) => {
 
   return widgets || [];
 };
+
+// 캘린더 이벤트 가져오기
+export const fetchCalendarEvents = async () => {
+  const { data: events, error } = await supabase
+    .from("calendar_events")
+    .select("*")
+    .order("start_date", { ascending: true });
+
+  if (error) {
+    console.error("캘린더 이벤트 조회 실패:", error);
+    throw error;
+  }
+
+  return events || [];
+};

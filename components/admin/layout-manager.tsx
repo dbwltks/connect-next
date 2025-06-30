@@ -36,6 +36,7 @@ import {
   OrganizationChartWidget,
   CHART_STYLES,
 } from "../widgets/organization-chart-widget";
+import CalendarWidget from "../widgets/calendar-widget";
 import { supabase } from "@/db";
 import { toast } from "@/hooks/use-toast";
 import { Plus, Trash2, MoveVertical, Settings, Eye } from "lucide-react";
@@ -110,6 +111,7 @@ const WIDGET_TYPES = [
   { id: "strip", name: "스트립(띠 배너)" },
   { id: "carousel", name: "캐러셀 슬라이드" },
   { id: "organization-chart", name: "조직도" },
+  { id: "calendar", name: "캘린더" },
 ];
 
 export default function LayoutManager(): JSX.Element {
@@ -3359,6 +3361,1182 @@ export default function LayoutManager(): JSX.Element {
             </div>
           )}
 
+          {/* 캘린더 위젯 전용 설정 */}
+          {editingWidget.type === "calendar" && (
+            <div className="space-y-4">
+              <h4 className="font-medium text-sm">캘린더 설정</h4>
+
+              <Tabs defaultValue="basic" className="w-full">
+                <TabsList className="grid w-full grid-cols-4">
+                  <TabsTrigger value="basic">기본 설정</TabsTrigger>
+                  <TabsTrigger value="categories">카테고리 관리</TabsTrigger>
+                  <TabsTrigger value="departments">부서 관리</TabsTrigger>
+                  <TabsTrigger value="display">표시 옵션</TabsTrigger>
+                </TabsList>
+
+                {/* 기본 설정 탭 */}
+                <TabsContent value="basic" className="space-y-4 pt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="calendar-title">캘린더 제목</Label>
+                    <Input
+                      id="calendar-title"
+                      value={
+                        editingWidget.settings?.calendar_title || "일정관리"
+                      }
+                      placeholder="일정관리"
+                      onChange={(e) =>
+                        setEditingWidget({
+                          ...editingWidget,
+                          settings: {
+                            ...editingWidget.settings,
+                            calendar_title: e.target.value,
+                          },
+                        })
+                      }
+                    />
+                    <p className="text-xs text-gray-500">
+                      캘린더 위젯 상단에 표시될 제목을 설정합니다.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="calendar-height">캘린더 높이 (px)</Label>
+                    <Input
+                      id="calendar-height"
+                      type="number"
+                      min={400}
+                      max={800}
+                      value={editingWidget.settings?.calendar_height || 600}
+                      onChange={(e) =>
+                        setEditingWidget({
+                          ...editingWidget,
+                          settings: {
+                            ...editingWidget.settings,
+                            calendar_height: parseInt(e.target.value) || 600,
+                          },
+                        })
+                      }
+                    />
+                    <p className="text-xs text-gray-500">
+                      캘린더의 높이를 설정합니다. (기본값: 600px)
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="default-view">기본 보기 모드</Label>
+                    <Select
+                      value={editingWidget.settings?.default_view || "month"}
+                      onValueChange={(value) =>
+                        setEditingWidget({
+                          ...editingWidget,
+                          settings: {
+                            ...editingWidget.settings,
+                            default_view: value,
+                          },
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="week">주간 보기</SelectItem>
+                        <SelectItem value="month">월간 보기</SelectItem>
+                        <SelectItem value="year">연간 보기</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500">
+                      캘린더가 처음 로드될 때의 기본 보기 모드를 설정합니다.
+                    </p>
+                  </div>
+                </TabsContent>
+
+                {/* 카테고리 관리 탭 */}
+                <TabsContent value="categories" className="space-y-4 pt-4">
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <div className="flex items-center justify-between mb-3">
+                      <h5 className="font-medium text-sm">
+                        카테고리 관리 (
+                        {
+                          (editingWidget.settings?.custom_categories || [])
+                            .length
+                        }
+                        개)
+                      </h5>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          const newCategory = {
+                            id: Date.now().toString(),
+                            name: "",
+                            color: "#6B7280",
+                            description: "",
+                          };
+                          setEditingWidget({
+                            ...editingWidget,
+                            settings: {
+                              ...editingWidget.settings,
+                              custom_categories: [
+                                ...(editingWidget.settings?.custom_categories ||
+                                  []),
+                                newCategory,
+                              ],
+                            },
+                          });
+                        }}
+                        className="h-7"
+                      >
+                        + 카테고리 추가
+                      </Button>
+                    </div>
+
+                    <div className="space-y-3 max-h-60 overflow-y-auto">
+                      {/* 기본 카테고리들 - 이제 편집 가능 */}
+                      <div className="text-xs font-medium text-gray-600 mb-2">
+                        기본 카테고리
+                      </div>
+                      {(
+                        editingWidget.settings?.base_categories || [
+                          { id: "worship", name: "예배", color: "#3B82F6" },
+                          { id: "meeting", name: "모임", color: "#10B981" },
+                          { id: "education", name: "교육", color: "#F59E0B" },
+                          { id: "event", name: "행사", color: "#EF4444" },
+                          { id: "service", name: "봉사", color: "#8B5CF6" },
+                          { id: "fellowship", name: "친교", color: "#EC4899" },
+                          { id: "mission", name: "선교", color: "#06B6D4" },
+                          { id: "other", name: "기타", color: "#6B7280" },
+                        ]
+                      ).map((category: any, index: number) => (
+                        <div
+                          key={category.id}
+                          className="flex items-center gap-2 bg-white p-3 rounded border"
+                        >
+                          <input
+                            type="color"
+                            value={category.color}
+                            onChange={(e) => {
+                              const baseCategories = editingWidget.settings
+                                ?.base_categories || [
+                                {
+                                  id: "worship",
+                                  name: "예배",
+                                  color: "#3B82F6",
+                                },
+                                {
+                                  id: "meeting",
+                                  name: "모임",
+                                  color: "#10B981",
+                                },
+                                {
+                                  id: "education",
+                                  name: "교육",
+                                  color: "#F59E0B",
+                                },
+                                { id: "event", name: "행사", color: "#EF4444" },
+                                {
+                                  id: "service",
+                                  name: "봉사",
+                                  color: "#8B5CF6",
+                                },
+                                {
+                                  id: "fellowship",
+                                  name: "친교",
+                                  color: "#EC4899",
+                                },
+                                {
+                                  id: "mission",
+                                  name: "선교",
+                                  color: "#06B6D4",
+                                },
+                                { id: "other", name: "기타", color: "#6B7280" },
+                              ];
+                              const updatedCategories = [...baseCategories];
+                              updatedCategories[index] = {
+                                ...category,
+                                color: e.target.value,
+                              };
+                              setEditingWidget({
+                                ...editingWidget,
+                                settings: {
+                                  ...editingWidget.settings,
+                                  base_categories: updatedCategories,
+                                },
+                              });
+                            }}
+                            className="w-8 h-8 rounded border-0 cursor-pointer"
+                          />
+                          <Input
+                            placeholder="카테고리 이름"
+                            value={category.name}
+                            onChange={(e) => {
+                              const baseCategories = editingWidget.settings
+                                ?.base_categories || [
+                                {
+                                  id: "worship",
+                                  name: "예배",
+                                  color: "#3B82F6",
+                                },
+                                {
+                                  id: "meeting",
+                                  name: "모임",
+                                  color: "#10B981",
+                                },
+                                {
+                                  id: "education",
+                                  name: "교육",
+                                  color: "#F59E0B",
+                                },
+                                { id: "event", name: "행사", color: "#EF4444" },
+                                {
+                                  id: "service",
+                                  name: "봉사",
+                                  color: "#8B5CF6",
+                                },
+                                {
+                                  id: "fellowship",
+                                  name: "친교",
+                                  color: "#EC4899",
+                                },
+                                {
+                                  id: "mission",
+                                  name: "선교",
+                                  color: "#06B6D4",
+                                },
+                                { id: "other", name: "기타", color: "#6B7280" },
+                              ];
+                              const updatedCategories = [...baseCategories];
+                              updatedCategories[index] = {
+                                ...category,
+                                name: e.target.value,
+                              };
+                              setEditingWidget({
+                                ...editingWidget,
+                                settings: {
+                                  ...editingWidget.settings,
+                                  base_categories: updatedCategories,
+                                },
+                              });
+                            }}
+                            className="flex-1"
+                          />
+                          <Input
+                            placeholder="설명 (선택사항)"
+                            value={category.description || ""}
+                            onChange={(e) => {
+                              const baseCategories = editingWidget.settings
+                                ?.base_categories || [
+                                {
+                                  id: "worship",
+                                  name: "예배",
+                                  color: "#3B82F6",
+                                },
+                                {
+                                  id: "meeting",
+                                  name: "모임",
+                                  color: "#10B981",
+                                },
+                                {
+                                  id: "education",
+                                  name: "교육",
+                                  color: "#F59E0B",
+                                },
+                                { id: "event", name: "행사", color: "#EF4444" },
+                                {
+                                  id: "service",
+                                  name: "봉사",
+                                  color: "#8B5CF6",
+                                },
+                                {
+                                  id: "fellowship",
+                                  name: "친교",
+                                  color: "#EC4899",
+                                },
+                                {
+                                  id: "mission",
+                                  name: "선교",
+                                  color: "#06B6D4",
+                                },
+                                { id: "other", name: "기타", color: "#6B7280" },
+                              ];
+                              const updatedCategories = [...baseCategories];
+                              updatedCategories[index] = {
+                                ...category,
+                                description: e.target.value,
+                              };
+                              setEditingWidget({
+                                ...editingWidget,
+                                settings: {
+                                  ...editingWidget.settings,
+                                  base_categories: updatedCategories,
+                                },
+                              });
+                            }}
+                            className="flex-1"
+                          />
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => {
+                              const baseCategories = editingWidget.settings
+                                ?.base_categories || [
+                                {
+                                  id: "worship",
+                                  name: "예배",
+                                  color: "#3B82F6",
+                                },
+                                {
+                                  id: "meeting",
+                                  name: "모임",
+                                  color: "#10B981",
+                                },
+                                {
+                                  id: "education",
+                                  name: "교육",
+                                  color: "#F59E0B",
+                                },
+                                { id: "event", name: "행사", color: "#EF4444" },
+                                {
+                                  id: "service",
+                                  name: "봉사",
+                                  color: "#8B5CF6",
+                                },
+                                {
+                                  id: "fellowship",
+                                  name: "친교",
+                                  color: "#EC4899",
+                                },
+                                {
+                                  id: "mission",
+                                  name: "선교",
+                                  color: "#06B6D4",
+                                },
+                                { id: "other", name: "기타", color: "#6B7280" },
+                              ];
+                              const updatedCategories = baseCategories.filter(
+                                (_: any, i: number) => i !== index
+                              );
+                              setEditingWidget({
+                                ...editingWidget,
+                                settings: {
+                                  ...editingWidget.settings,
+                                  base_categories: updatedCategories,
+                                },
+                              });
+                            }}
+                            className="h-8 w-8 p-0"
+                          >
+                            ✕
+                          </Button>
+                        </div>
+                      ))}
+
+                      {/* 커스텀 카테고리들 */}
+                      {(editingWidget.settings?.custom_categories || [])
+                        .length > 0 && (
+                        <>
+                          <div className="text-xs font-medium text-gray-600 mb-2 mt-4">
+                            추가 카테고리
+                          </div>
+                          {(
+                            editingWidget.settings?.custom_categories || []
+                          ).map((category: any, index: number) => (
+                            <div
+                              key={category.id}
+                              className="flex items-center gap-2 bg-white p-3 rounded border"
+                            >
+                              <input
+                                type="color"
+                                value={category.color}
+                                onChange={(e) => {
+                                  const updatedCategories = [
+                                    ...(editingWidget.settings
+                                      ?.custom_categories || []),
+                                  ];
+                                  updatedCategories[index] = {
+                                    ...category,
+                                    color: e.target.value,
+                                  };
+                                  setEditingWidget({
+                                    ...editingWidget,
+                                    settings: {
+                                      ...editingWidget.settings,
+                                      custom_categories: updatedCategories,
+                                    },
+                                  });
+                                }}
+                                className="w-8 h-8 rounded border-0 cursor-pointer"
+                              />
+                              <Input
+                                placeholder="카테고리 이름"
+                                value={category.name}
+                                onChange={(e) => {
+                                  const updatedCategories = [
+                                    ...(editingWidget.settings
+                                      ?.custom_categories || []),
+                                  ];
+                                  updatedCategories[index] = {
+                                    ...category,
+                                    name: e.target.value,
+                                  };
+                                  setEditingWidget({
+                                    ...editingWidget,
+                                    settings: {
+                                      ...editingWidget.settings,
+                                      custom_categories: updatedCategories,
+                                    },
+                                  });
+                                }}
+                                className="flex-1"
+                              />
+                              <Input
+                                placeholder="설명 (선택사항)"
+                                value={category.description || ""}
+                                onChange={(e) => {
+                                  const updatedCategories = [
+                                    ...(editingWidget.settings
+                                      ?.custom_categories || []),
+                                  ];
+                                  updatedCategories[index] = {
+                                    ...category,
+                                    description: e.target.value,
+                                  };
+                                  setEditingWidget({
+                                    ...editingWidget,
+                                    settings: {
+                                      ...editingWidget.settings,
+                                      custom_categories: updatedCategories,
+                                    },
+                                  });
+                                }}
+                                className="flex-1"
+                              />
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => {
+                                  const updatedCategories = (
+                                    editingWidget.settings?.custom_categories ||
+                                    []
+                                  ).filter((_: any, i: number) => i !== index);
+                                  setEditingWidget({
+                                    ...editingWidget,
+                                    settings: {
+                                      ...editingWidget.settings,
+                                      custom_categories: updatedCategories,
+                                    },
+                                  });
+                                }}
+                                className="h-8 w-8 p-0"
+                              >
+                                ✕
+                              </Button>
+                            </div>
+                          ))}
+                        </>
+                      )}
+
+                      {(editingWidget.settings?.custom_categories || [])
+                        .length === 0 && (
+                        <div className="text-center py-4 text-gray-500">
+                          <p className="text-sm">커스텀 카테고리가 없습니다.</p>
+                          <p className="text-xs mt-1">
+                            위의 '카테고리 추가' 버튼을 클릭해서 새 카테고리를
+                            추가해보세요.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </TabsContent>
+
+                {/* 부서 관리 탭 */}
+                <TabsContent value="departments" className="space-y-4 pt-4">
+                  <div className="bg-green-50 p-4 rounded-lg">
+                    <div className="flex items-center justify-between mb-3">
+                      <h5 className="font-medium text-sm">
+                        부서 관리 (
+                        {
+                          (editingWidget.settings?.custom_departments || [])
+                            .length
+                        }
+                        개)
+                      </h5>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          const newDepartment = {
+                            id: Date.now().toString(),
+                            name: "",
+                            description: "",
+                            manager: "",
+                          };
+                          setEditingWidget({
+                            ...editingWidget,
+                            settings: {
+                              ...editingWidget.settings,
+                              custom_departments: [
+                                ...(editingWidget.settings
+                                  ?.custom_departments || []),
+                                newDepartment,
+                              ],
+                            },
+                          });
+                        }}
+                        className="h-7"
+                      >
+                        + 부서 추가
+                      </Button>
+                    </div>
+
+                    <div className="space-y-3 max-h-60 overflow-y-auto">
+                      {/* 기본 부서들 - 이제 편집 가능 */}
+                      <div className="text-xs font-medium text-gray-600 mb-2">
+                        기본 부서
+                      </div>
+                      {(
+                        editingWidget.settings?.base_departments || [
+                          {
+                            id: "all",
+                            name: "전체",
+                            manager: "",
+                            description: "",
+                          },
+                          {
+                            id: "ministry",
+                            name: "목회부",
+                            manager: "",
+                            description: "",
+                          },
+                          {
+                            id: "education",
+                            name: "교육부",
+                            manager: "",
+                            description: "",
+                          },
+                          {
+                            id: "worship",
+                            name: "찬양부",
+                            manager: "",
+                            description: "",
+                          },
+                          {
+                            id: "mission",
+                            name: "선교부",
+                            manager: "",
+                            description: "",
+                          },
+                          {
+                            id: "service",
+                            name: "봉사부",
+                            manager: "",
+                            description: "",
+                          },
+                          {
+                            id: "youth",
+                            name: "청년부",
+                            manager: "",
+                            description: "",
+                          },
+                          {
+                            id: "adult",
+                            name: "장년부",
+                            manager: "",
+                            description: "",
+                          },
+                          {
+                            id: "children",
+                            name: "유년부",
+                            manager: "",
+                            description: "",
+                          },
+                          {
+                            id: "other",
+                            name: "기타",
+                            manager: "",
+                            description: "",
+                          },
+                        ]
+                      ).map((department: any, index: number) => (
+                        <div
+                          key={department.id}
+                          className="flex items-center gap-2 bg-white p-3 rounded border"
+                        >
+                          <Input
+                            placeholder="부서 이름"
+                            value={department.name}
+                            onChange={(e) => {
+                              const baseDepartments = editingWidget.settings
+                                ?.base_departments || [
+                                {
+                                  id: "all",
+                                  name: "전체",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "ministry",
+                                  name: "목회부",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "education",
+                                  name: "교육부",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "worship",
+                                  name: "찬양부",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "mission",
+                                  name: "선교부",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "service",
+                                  name: "봉사부",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "youth",
+                                  name: "청년부",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "adult",
+                                  name: "장년부",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "children",
+                                  name: "유년부",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "other",
+                                  name: "기타",
+                                  manager: "",
+                                  description: "",
+                                },
+                              ];
+                              const updatedDepartments = [...baseDepartments];
+                              updatedDepartments[index] = {
+                                ...department,
+                                name: e.target.value,
+                              };
+                              setEditingWidget({
+                                ...editingWidget,
+                                settings: {
+                                  ...editingWidget.settings,
+                                  base_departments: updatedDepartments,
+                                },
+                              });
+                            }}
+                            className="flex-1"
+                          />
+                          <Input
+                            placeholder="담당자 (선택사항)"
+                            value={department.manager || ""}
+                            onChange={(e) => {
+                              const baseDepartments = editingWidget.settings
+                                ?.base_departments || [
+                                {
+                                  id: "all",
+                                  name: "전체",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "ministry",
+                                  name: "목회부",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "education",
+                                  name: "교육부",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "worship",
+                                  name: "찬양부",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "mission",
+                                  name: "선교부",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "service",
+                                  name: "봉사부",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "youth",
+                                  name: "청년부",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "adult",
+                                  name: "장년부",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "children",
+                                  name: "유년부",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "other",
+                                  name: "기타",
+                                  manager: "",
+                                  description: "",
+                                },
+                              ];
+                              const updatedDepartments = [...baseDepartments];
+                              updatedDepartments[index] = {
+                                ...department,
+                                manager: e.target.value,
+                              };
+                              setEditingWidget({
+                                ...editingWidget,
+                                settings: {
+                                  ...editingWidget.settings,
+                                  base_departments: updatedDepartments,
+                                },
+                              });
+                            }}
+                            className="flex-1"
+                          />
+                          <Input
+                            placeholder="설명 (선택사항)"
+                            value={department.description || ""}
+                            onChange={(e) => {
+                              const baseDepartments = editingWidget.settings
+                                ?.base_departments || [
+                                {
+                                  id: "all",
+                                  name: "전체",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "ministry",
+                                  name: "목회부",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "education",
+                                  name: "교육부",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "worship",
+                                  name: "찬양부",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "mission",
+                                  name: "선교부",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "service",
+                                  name: "봉사부",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "youth",
+                                  name: "청년부",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "adult",
+                                  name: "장년부",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "children",
+                                  name: "유년부",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "other",
+                                  name: "기타",
+                                  manager: "",
+                                  description: "",
+                                },
+                              ];
+                              const updatedDepartments = [...baseDepartments];
+                              updatedDepartments[index] = {
+                                ...department,
+                                description: e.target.value,
+                              };
+                              setEditingWidget({
+                                ...editingWidget,
+                                settings: {
+                                  ...editingWidget.settings,
+                                  base_departments: updatedDepartments,
+                                },
+                              });
+                            }}
+                            className="flex-1"
+                          />
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => {
+                              const baseDepartments = editingWidget.settings
+                                ?.base_departments || [
+                                {
+                                  id: "all",
+                                  name: "전체",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "ministry",
+                                  name: "목회부",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "education",
+                                  name: "교육부",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "worship",
+                                  name: "찬양부",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "mission",
+                                  name: "선교부",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "service",
+                                  name: "봉사부",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "youth",
+                                  name: "청년부",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "adult",
+                                  name: "장년부",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "children",
+                                  name: "유년부",
+                                  manager: "",
+                                  description: "",
+                                },
+                                {
+                                  id: "other",
+                                  name: "기타",
+                                  manager: "",
+                                  description: "",
+                                },
+                              ];
+                              const updatedDepartments = baseDepartments.filter(
+                                (_: any, i: number) => i !== index
+                              );
+                              setEditingWidget({
+                                ...editingWidget,
+                                settings: {
+                                  ...editingWidget.settings,
+                                  base_departments: updatedDepartments,
+                                },
+                              });
+                            }}
+                            className="h-8 w-8 p-0"
+                          >
+                            ✕
+                          </Button>
+                        </div>
+                      ))}
+
+                      {/* 커스텀 부서들 */}
+                      {(editingWidget.settings?.custom_departments || [])
+                        .length > 0 && (
+                        <>
+                          <div className="text-xs font-medium text-gray-600 mb-2 mt-4">
+                            추가 부서
+                          </div>
+                          {(
+                            editingWidget.settings?.custom_departments || []
+                          ).map((department: any, index: number) => (
+                            <div
+                              key={department.id}
+                              className="flex items-center gap-2 bg-white p-3 rounded border"
+                            >
+                              <Input
+                                placeholder="부서 이름"
+                                value={department.name}
+                                onChange={(e) => {
+                                  const updatedDepartments = [
+                                    ...(editingWidget.settings
+                                      ?.custom_departments || []),
+                                  ];
+                                  updatedDepartments[index] = {
+                                    ...department,
+                                    name: e.target.value,
+                                  };
+                                  setEditingWidget({
+                                    ...editingWidget,
+                                    settings: {
+                                      ...editingWidget.settings,
+                                      custom_departments: updatedDepartments,
+                                    },
+                                  });
+                                }}
+                                className="flex-1"
+                              />
+                              <Input
+                                placeholder="담당자 (선택사항)"
+                                value={department.manager || ""}
+                                onChange={(e) => {
+                                  const updatedDepartments = [
+                                    ...(editingWidget.settings
+                                      ?.custom_departments || []),
+                                  ];
+                                  updatedDepartments[index] = {
+                                    ...department,
+                                    manager: e.target.value,
+                                  };
+                                  setEditingWidget({
+                                    ...editingWidget,
+                                    settings: {
+                                      ...editingWidget.settings,
+                                      custom_departments: updatedDepartments,
+                                    },
+                                  });
+                                }}
+                                className="flex-1"
+                              />
+                              <Input
+                                placeholder="설명 (선택사항)"
+                                value={department.description || ""}
+                                onChange={(e) => {
+                                  const updatedDepartments = [
+                                    ...(editingWidget.settings
+                                      ?.custom_departments || []),
+                                  ];
+                                  updatedDepartments[index] = {
+                                    ...department,
+                                    description: e.target.value,
+                                  };
+                                  setEditingWidget({
+                                    ...editingWidget,
+                                    settings: {
+                                      ...editingWidget.settings,
+                                      custom_departments: updatedDepartments,
+                                    },
+                                  });
+                                }}
+                                className="flex-1"
+                              />
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => {
+                                  const updatedDepartments = (
+                                    editingWidget.settings
+                                      ?.custom_departments || []
+                                  ).filter((_: any, i: number) => i !== index);
+                                  setEditingWidget({
+                                    ...editingWidget,
+                                    settings: {
+                                      ...editingWidget.settings,
+                                      custom_departments: updatedDepartments,
+                                    },
+                                  });
+                                }}
+                                className="h-8 w-8 p-0"
+                              >
+                                ✕
+                              </Button>
+                            </div>
+                          ))}
+                        </>
+                      )}
+
+                      {(editingWidget.settings?.custom_departments || [])
+                        .length === 0 && (
+                        <div className="text-center py-4 text-gray-500">
+                          <p className="text-sm">커스텀 부서가 없습니다.</p>
+                          <p className="text-xs mt-1">
+                            위의 '부서 추가' 버튼을 클릭해서 새 부서를
+                            추가해보세요.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </TabsContent>
+
+                {/* 표시 옵션 탭 */}
+                <TabsContent value="display" className="space-y-4 pt-4">
+                  <div className="space-y-3">
+                    <h5 className="font-medium text-sm">UI 표시 옵션</h5>
+
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="show-add-button"
+                        checked={
+                          editingWidget.settings?.show_add_button ?? true
+                        }
+                        onCheckedChange={(checked) =>
+                          setEditingWidget({
+                            ...editingWidget,
+                            settings: {
+                              ...editingWidget.settings,
+                              show_add_button: checked === true,
+                            },
+                          })
+                        }
+                      />
+                      <Label htmlFor="show-add-button">
+                        일정 추가 버튼 표시
+                      </Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="show-category-filter"
+                        checked={
+                          editingWidget.settings?.show_category_filter ?? true
+                        }
+                        onCheckedChange={(checked) =>
+                          setEditingWidget({
+                            ...editingWidget,
+                            settings: {
+                              ...editingWidget.settings,
+                              show_category_filter: checked === true,
+                            },
+                          })
+                        }
+                      />
+                      <Label htmlFor="show-category-filter">
+                        카테고리 필터 표시
+                      </Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="show-department-filter"
+                        checked={
+                          editingWidget.settings?.show_department_filter ?? true
+                        }
+                        onCheckedChange={(checked) =>
+                          setEditingWidget({
+                            ...editingWidget,
+                            settings: {
+                              ...editingWidget.settings,
+                              show_department_filter: checked === true,
+                            },
+                          })
+                        }
+                      />
+                      <Label htmlFor="show-department-filter">
+                        부서 필터 표시
+                      </Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="show-view-toggle"
+                        checked={
+                          editingWidget.settings?.show_view_toggle ?? true
+                        }
+                        onCheckedChange={(checked) =>
+                          setEditingWidget({
+                            ...editingWidget,
+                            settings: {
+                              ...editingWidget.settings,
+                              show_view_toggle: checked === true,
+                            },
+                          })
+                        }
+                      />
+                      <Label htmlFor="show-view-toggle">
+                        보기 모드 토글 버튼 표시
+                      </Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="show-navigation"
+                        checked={
+                          editingWidget.settings?.show_navigation ?? true
+                        }
+                        onCheckedChange={(checked) =>
+                          setEditingWidget({
+                            ...editingWidget,
+                            settings: {
+                              ...editingWidget.settings,
+                              show_navigation: checked === true,
+                            },
+                          })
+                        }
+                      />
+                      <Label htmlFor="show-navigation">
+                        날짜 네비게이션 버튼 표시
+                      </Label>
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <h5 className="font-medium text-sm mb-3">캘린더 정보</h5>
+                    <div className="space-y-2 text-sm text-gray-600">
+                      <p>• 사용자가 일정을 추가, 편집, 삭제할 수 있습니다</p>
+                      <p>• 카테고리별로 색상을 구분하여 표시됩니다</p>
+                      <p>• 부서별 필터링이 가능합니다</p>
+                      <p>• 종일 일정과 시간 지정 일정을 모두 지원합니다</p>
+                      <p>• 기본 카테고리/부서 외에 커스텀 추가가 가능합니다</p>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
+          )}
+
           <DialogFooter>
             <Button
               variant="outline"
@@ -3788,6 +4966,27 @@ export default function LayoutManager(): JSX.Element {
           </div>
         );
 
+      case "calendar":
+        return previewMode ? (
+          <CalendarWidget
+            widgetId={widget.id}
+            settings={{
+              ...widget.settings,
+              title: widget.title,
+            }}
+          />
+        ) : (
+          <div className="bg-blue-50 p-4 rounded">
+            <div className="font-medium">{widget.title || "캘린더"}</div>
+            <div className="text-sm text-gray-500 mt-1">캘린더 위젯</div>
+            {widget.settings?.calendar_title && (
+              <div className="text-xs text-blue-500 mt-1">
+                캘린더 제목: {widget.settings.calendar_title}
+              </div>
+            )}
+          </div>
+        );
+
       default:
         return <div className="bg-gray-100 p-4 rounded">알 수 없는 위젯</div>;
     }
@@ -4047,6 +5246,21 @@ export default function LayoutManager(): JSX.Element {
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     조직도 추가
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      addNewWidget("calendar", addingWidgetToArea, {
+                        title: "캘린더",
+                      });
+                      setAddingWidgetToArea(null);
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    캘린더 추가
                   </Button>
                 </div>
               </div>

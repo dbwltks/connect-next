@@ -1021,6 +1021,8 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
     } else {
       router.push(getParentPath());
     }
+    // 페이지 맨 위로 스크롤
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   // 목록 경로와 이름 가져오기

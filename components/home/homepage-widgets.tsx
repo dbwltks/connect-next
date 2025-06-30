@@ -15,6 +15,7 @@ import LoginWidget from "@/components/widgets/login-widget";
 import { StripWidget } from "@/components/widgets/strip-widget";
 import { CarouselWidget } from "@/components/widgets/carousel-widget";
 import { OrganizationChartWidget } from "@/components/widgets/organization-chart-widget";
+import CalendarWidget from "@/components/widgets/calendar-widget";
 import { IWidget } from "@/types/index";
 import useSWR from "swr";
 import { supabase } from "@/db";
@@ -100,6 +101,16 @@ export default function HomepageWidgets({
         return <CarouselWidget widget={widget} />;
       case "organization-chart":
         return <OrganizationChartWidget widget={widget} />;
+      case "calendar":
+        return (
+          <CalendarWidget
+            widgetId={widget.id}
+            settings={{
+              ...widget.settings,
+              title: widget.title,
+            }}
+          />
+        );
       default:
         return (
           <Card className="h-full">
