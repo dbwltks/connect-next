@@ -1985,7 +1985,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                   <line x1="9" y1="20" x2="15" y2="20"></line>
                   <line x1="12" y1="4" x2="12" y2="20"></line>
                 </svg>
-                <span className="text-xs mt-0.5">글꼴</span>
+                <span className="text-xs mt-0.5">글자</span>
               </button>
 
               {/* 모바일 글꼴 설정 다이얼로그 */}
@@ -2011,7 +2011,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                     {/* 헤더 */}
                     <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200">
                       <h3 className="text-lg font-semibold text-gray-900">
-                        글꼴 설정
+                        글자 설정
                       </h3>
                       <button
                         onClick={() => setShowMobileFontMenu(false)}
@@ -2035,96 +2035,125 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
 
                     {/* 글꼴 설정 내용 */}
                     <div className="p-4 pb-6">
-                      {/* 글꼴 크기 */}
+                      {/* 글꼴 크기와 굵기를 한 줄에 배치 */}
                       <div className="mb-4">
-                        <h4 className="text-sm font-medium text-gray-700 mb-2">
-                          글꼴 크기
-                        </h4>
-                        <div className="flex items-center justify-between bg-gray-50 rounded-lg p-2">
-                          <button
-                            onClick={(e) => decreaseFontSize(e)}
-                            className="w-8 h-8 bg-white rounded-full shadow-sm flex items-center justify-center hover:bg-gray-50"
-                          >
-                            <span className="text-base font-bold text-gray-600">
-                              -
-                            </span>
-                          </button>
-                          <span className="text-base font-medium">
-                            {fontSizeLevel === 0
-                              ? "기본"
-                              : fontSizeLevel > 0
-                                ? `+${fontSizeLevel}`
-                                : fontSizeLevel}
-                          </span>
-                          <button
-                            onClick={(e) => increaseFontSize(e)}
-                            className="w-8 h-8 bg-white rounded-full shadow-sm flex items-center justify-center hover:bg-gray-50"
-                          >
-                            <span className="text-base font-bold text-gray-600">
-                              +
-                            </span>
-                          </button>
+                        <div className="grid grid-cols-2 gap-3">
+                          {/* 글꼴 크기 */}
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-700 mb-2">
+                              글자 크기
+                            </h4>
+                            <div className="flex items-center justify-between bg-gray-50 rounded-lg p-2">
+                              <button
+                                onClick={(e) => decreaseFontSize(e)}
+                                className="w-7 h-7 bg-white rounded-full shadow-sm flex items-center justify-center hover:bg-gray-50"
+                                disabled={fontSizeLevel <= -2}
+                              >
+                                <span className="text-sm font-bold text-gray-600">
+                                  -
+                                </span>
+                              </button>
+                              <span className="text-sm font-medium">
+                                {fontSizeLevel === 0
+                                  ? "기본"
+                                  : fontSizeLevel > 0
+                                    ? `+${fontSizeLevel}`
+                                    : fontSizeLevel}
+                              </span>
+                              <button
+                                onClick={(e) => increaseFontSize(e)}
+                                className="w-7 h-7 bg-white rounded-full shadow-sm flex items-center justify-center hover:bg-gray-50"
+                                disabled={fontSizeLevel >= 2}
+                              >
+                                <span className="text-sm font-bold text-gray-600">
+                                  +
+                                </span>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* 글꼴 굵기 */}
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-700 mb-2">
+                              글자 굵기
+                            </h4>
+                            <div className="flex items-center justify-between bg-gray-50 rounded-lg p-2">
+                              <button
+                                onClick={(e) => decreaseFontBold(e)}
+                                className="w-7 h-7 bg-white rounded-full shadow-sm flex items-center justify-center hover:bg-gray-50"
+                                disabled={fontBoldLevel <= -1}
+                              >
+                                <span className="text-sm font-bold text-gray-600">
+                                  -
+                                </span>
+                              </button>
+                              <span className="text-sm font-medium">
+                                {fontBoldLevel === 0
+                                  ? "기본"
+                                  : fontBoldLevel > 0
+                                    ? `+${fontBoldLevel}`
+                                    : fontBoldLevel}
+                              </span>
+                              <button
+                                onClick={(e) => increaseFontBold(e)}
+                                className="w-7 h-7 bg-white rounded-full shadow-sm flex items-center justify-center hover:bg-gray-50"
+                                disabled={fontBoldLevel >= 3}
+                              >
+                                <span className="text-sm font-bold text-gray-600">
+                                  +
+                                </span>
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       </div>
-
-                      {/* 글꼴 굵기 */}
-                      <div className="mb-4">
-                        <h4 className="text-sm font-medium text-gray-700 mb-2">
-                          글꼴 굵기
-                        </h4>
-                        <div className="flex items-center justify-between bg-gray-50 rounded-lg p-2">
-                          <button
-                            onClick={(e) => decreaseFontBold(e)}
-                            className="w-8 h-8 bg-white rounded-full shadow-sm flex items-center justify-center hover:bg-gray-50"
-                          >
-                            <span className="text-base font-bold text-gray-600">
-                              -
-                            </span>
-                          </button>
-                          <span className="text-base font-medium">
-                            {fontBoldLevel === 0
-                              ? "기본"
-                              : fontBoldLevel > 0
-                                ? `+${fontBoldLevel}`
-                                : fontBoldLevel}
-                          </span>
-                          <button
-                            onClick={(e) => increaseFontBold(e)}
-                            className="w-8 h-8 bg-white rounded-full shadow-sm flex items-center justify-center hover:bg-gray-50"
-                          >
-                            <span className="text-base font-bold text-gray-600">
-                              +
-                            </span>
-                          </button>
-                        </div>
+                      {/* 초기화 버튼 */}
+                      <div className="flex gap-2 mb-4">
+                        <button
+                          onClick={resetFontSize}
+                          className="flex-1 py-2 px-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+                        >
+                          크기 초기화
+                        </button>
+                        <button
+                          onClick={resetFontBold}
+                          className="flex-1 py-2 px-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+                        >
+                          굵기 초기화
+                        </button>
                       </div>
 
                       {/* 글꼴 패밀리 */}
-                      <div className="mb-4">
+                      <div className="mb-2">
                         <h4 className="text-sm font-medium text-gray-700 mb-2">
                           글꼴 종류
                         </h4>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-3 gap-2">
                           {[
                             {
                               value: "default",
                               label: "기본",
-                              style: "font-sans",
+                              style: "",
                             },
                             {
-                              value: "nanum-myeongjo",
-                              label: "나눔명조",
-                              style: "font-serif",
-                            },
-                            {
-                              value: "noto-sans",
+                              value: "notoSans",
                               label: "노토산스",
-                              style: "font-sans",
+                              style: "font-noto-sans",
                             },
                             {
-                              value: "nanum-gothic",
+                              value: "nanumGothic",
                               label: "나눔고딕",
-                              style: "font-sans",
+                              style: "font-nanum-gothic",
+                            },
+                            {
+                              value: "nanumMyeongjo",
+                              label: "나눔명조",
+                              style: "font-nanum-myeongjo",
+                            },
+                            {
+                              value: "spoqa",
+                              label: "스포카",
+                              style: "font-spoqa",
                             },
                           ].map((font) => (
                             <button
@@ -2140,22 +2169,6 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                             </button>
                           ))}
                         </div>
-                      </div>
-
-                      {/* 초기화 버튼 */}
-                      <div className="flex gap-2">
-                        <button
-                          onClick={resetFontSize}
-                          className="flex-1 py-2 px-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
-                        >
-                          크기 초기화
-                        </button>
-                        <button
-                          onClick={resetFontBold}
-                          className="flex-1 py-2 px-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
-                        >
-                          굵기 초기화
-                        </button>
                       </div>
                     </div>
                   </div>

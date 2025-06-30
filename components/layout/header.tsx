@@ -350,7 +350,7 @@ function HeaderClient({ user, menuItems }: { user: any; menuItems: any[] }) {
       {isClient &&
         createPortal(
           <div
-            className={`fixed top-[4rem] left-0 right-0 bottom-0 z-[8] bg-background shadow-xl rounded-b-2xl px-8 pt-4
+            className={`fixed top-[4rem] left-0 right-0 bottom-0 z-[8] bg-background px-8 pt-4
             h-auto min-h-0 max-h-full overflow-y-auto transition-all duration-700
             ${isMenuOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none"}
           `}
@@ -419,7 +419,7 @@ function HeaderClient({ user, menuItems }: { user: any; menuItems: any[] }) {
             <div className="mt-12 border-t pt-8 space-y-6 pb-8">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground text-sm">테마</span>
-                <div className="relative z-[10]">
+                <div className="relative z-[150]">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
@@ -443,7 +443,7 @@ function HeaderClient({ user, menuItems }: { user: any; menuItems: any[] }) {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
                       align="end"
-                      className="w-[200px] bg-background shadow-xl rounded-lg z-[8]"
+                      className="w-[200px] bg-background shadow-xl rounded-lg z-[208]"
                     >
                       <DropdownMenuRadioGroup
                         value={theme}
@@ -634,7 +634,7 @@ function MainMenu({ items }: { items: any[] }) {
                   <ChevronDown className="h-4 w-4" />
                 </Link>
               </Button>
-              <div className="absolute left-0 top-full z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md animate-in data-[side=bottom]:slide-in-from-top-2 hidden group-hover:block">
+              <div className="absolute left-0 top-full z-[250] min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md animate-in data-[side=bottom]:slide-in-from-top-2 hidden group-hover:block">
                 <div className="w-48 py-1">
                   {item.children.map((subItem: any, subIndex: number) => (
                     <Link
