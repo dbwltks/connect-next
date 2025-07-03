@@ -120,15 +120,8 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
 
   const { data, error, isLoading } = useSWR(
     pageId ? ["mediaWidgetPosts", pageId, maxItems] : null,
-    () => fetchMediaData(pageId!, maxItems),
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      dedupingInterval: 300000, // 5분간 중복 요청 방지
-      errorRetryCount: 3,
-      errorRetryInterval: 5000,
-      shouldRetryOnError: true,
-    }
+    () => fetchMediaData(pageId!, maxItems)
+    // 전역 설정 사용 - 필요한 경우만 오버라이드
   );
 
   // 페이지 ID가 없는 경우

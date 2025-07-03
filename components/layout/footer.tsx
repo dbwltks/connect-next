@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   Facebook,
@@ -6,8 +8,11 @@ import {
   Mail,
   Phone,
   MapPin,
+  Loader2,
 } from "lucide-react";
 import { ThemeSwitcher } from "@/components/theme-switcher";
+import useSWR from "swr";
+import { supabase } from "@/db";
 
 interface ServiceTime {
   id: string;
@@ -56,15 +61,59 @@ interface FooterSettings {
   logo_height?: number;
 }
 
+// Footer 데이터 fetcher
+const fetchFooterData = async () => {
+  const [menuRes, settingsRes] = await Promise.all([
+    supabase
+      .from("cms_menus")
+      .select("*")
+      .eq("is_active", true)
+      .order("order_num", { ascending: true }),
+    supabase.from("cms_footer").select("*").limit(1).single()
+  ]);
+
+  if (menuRes.error) throw menuRes.error;
+  if (settingsRes.error) throw settingsRes.error;
+
+  return {
+    menus: menuRes.data || [],
+    settings: settingsRes.data || null
+  };
+};
+
 export default function Footer({
-  menus,
-  settings,
+  menus: initialMenus,
+  settings: initialSettings,
 }: {
-  menus: any[];
-  settings: any;
+  menus?: any[];
+  settings?: any;
 }) {
-  // 메뉴/설정 데이터는 props로 받음
-  // ... 이하 기존 렌더링 로직에서 menus, settings를 props로 사용하도록 수정 ...
+  // SWR로 Footer 데이터 가져오기
+  const { data, error, isLoading } = useSWR(
+    "footer-data",
+    fetchFooterData,
+    {
+      fallbackData: initialMenus && initialSettings ? { menus: initialMenus, settings: initialSettings } : undefined,
+      refreshInterval: 300000, // 5분마다 갱신
+    }
+  );
+
+  const menus = data?.menus || initialMenus || [];
+  const settings = data?.settings || initialSettings || {};
+  
+  // 로딩 중이고 초기 데이터도 없을 때 스켈레톤 표시
+  if (isLoading && !initialMenus && !initialSettings) {
+    return (
+      <footer className="bg-gray-50 dark:bg-gray-900 border-t">
+        <div className="container py-8">
+          <div className="flex items-center justify-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="text-sm text-muted-foreground">푸터 로딩중...</span>
+          </div>
+        </div>
+      </footer>
+    );
+  }
 
   // 데이터 변환을 위한 객체
   const info = {

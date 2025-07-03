@@ -130,15 +130,8 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
   // SWR을 사용해서 게시판 데이터 관리
   const { data, error, isLoading } = useSWR(
     pageId ? ["boardWidgetPosts", pageId, limit] : null,
-    () => fetchBoardWidgetPosts(pageId!, limit),
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      dedupingInterval: 300000, // 5분간 중복 요청 방지
-      errorRetryCount: 3,
-      errorRetryInterval: 5000,
-      shouldRetryOnError: true,
-    }
+    () => fetchBoardWidgetPosts(pageId!, limit)
+    // 전역 설정 사용 - 필요한 경우만 오버라이드
   );
 
   const posts = data?.posts || [];

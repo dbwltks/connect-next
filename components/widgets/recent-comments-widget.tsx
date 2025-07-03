@@ -77,15 +77,8 @@ export default function RecentCommentsWidget({
 
   const { data, error, isLoading } = useSWR(
     ["recentComments", itemCount],
-    () => fetchRecentComments(itemCount),
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      dedupingInterval: 60000, // 1분간 중복 요청 방지 (댓글은 비교적 자주 업데이트됨)
-      errorRetryCount: 3,
-      errorRetryInterval: 5000,
-      shouldRetryOnError: true,
-    }
+    () => fetchRecentComments(itemCount)
+    // 전역 설정 사용 - 필요한 경우만 오버라이드
   );
 
   const comments = data?.comments || [];

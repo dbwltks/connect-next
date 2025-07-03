@@ -23,6 +23,7 @@ import {
   Sun,
   Moon,
   Laptop,
+  Loader2,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
@@ -31,6 +32,7 @@ import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/auth-context";
 import { useTheme } from "next-themes";
+import useSWR from "swr";
 
 interface User {
   id: string;
@@ -39,6 +41,34 @@ interface User {
   role?: string;
   sessionExpires?: string;
 }
+
+// 메뉴 데이터 fetcher
+const fetchMenuItems = async () => {
+  const { data, error } = await supabase
+    .from("cms_menus")
+    .select("*")
+    .eq("is_active", true)
+    .order("order_num", { ascending: true });
+
+  if (error) throw error;
+
+  // 메뉴 트리 구조 만들기
+  const menuItemsRaw = data || [];
+  const rootItems = menuItemsRaw.filter((item) => item.parent_id === null);
+  
+  function findChildren(parentId: string, items: any[]): any[] {
+    const children = items.filter((item) => item.parent_id === parentId);
+    return children.map((child) => ({
+      ...child,
+      submenu: findChildren(child.id, items),
+    }));
+  }
+
+  return rootItems.map((item) => ({
+    ...item,
+    submenu: findChildren(item.id, menuItemsRaw),
+  }));
+};
 
 const styles = `
 /* 메뉴가 헤더 아래에서 내려오고 올라가도록 수정 */
@@ -133,13 +163,37 @@ function useBodyScrollLock(isLocked: boolean) {
   }, [isLocked]);
 }
 
-export default function Header({ menuItems }: { menuItems: any[] }) {
+export default function Header({ menuItems: initialMenuItems }: { menuItems?: any[] }) {
   const { user } = useAuth();
+  
+  // SWR로 메뉴 데이터 가져오기
+  const { data: menuItems, error, isLoading } = useSWR(
+    "header-menu-items",
+    fetchMenuItems,
+    {
+      fallbackData: initialMenuItems, // 서버에서 전달받은 초기 데이터 사용
+      refreshInterval: 300000, // 5분마다 갱신
+    }
+  );
+
+  // 로딩 중일 때 스켈레톤 표시
+  if (isLoading && !menuItems) {
+    return (
+      <header className="sticky top-0 z-[100] w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="xl:container px-4 xl:px-0 flex h-16 items-center">
+          <div className="flex items-center gap-4">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="text-sm text-muted-foreground">메뉴 로딩중...</span>
+          </div>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="sticky top-0 z-[100] w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="xl:container px-4 xl:px-0 flex h-16 items-center">
-        <HeaderClient user={user} menuItems={menuItems} />
+        <HeaderClient user={user} menuItems={menuItems || []} />
       </div>
     </header>
   );

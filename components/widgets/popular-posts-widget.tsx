@@ -152,15 +152,8 @@ export default function PopularPostsWidget({
 
   const { data, error, isLoading } = useSWR(
     ["popularPosts", itemCount, sortBy],
-    () => fetchPopularPosts(itemCount, sortBy),
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      dedupingInterval: 300000, // 5분간 중복 요청 방지 (인기글은 자주 변하지 않음)
-      errorRetryCount: 3,
-      errorRetryInterval: 5000,
-      shouldRetryOnError: true,
-    }
+    () => fetchPopularPosts(itemCount, sortBy)
+    // 전역 설정 사용 - 필요한 경우만 오버라이드
   );
 
   const posts = data?.posts || [];

@@ -21,6 +21,7 @@ interface CarouselWidgetProps {
 interface CarouselItem {
   id: string;
   image_url: string;
+  mobile_image_url?: string; // 모바일 전용 이미지 URL
   title?: string;
   description?: string;
   link_url?: string;
@@ -35,6 +36,7 @@ const fetchCarouselData = async (widget: IWidget): Promise<CarouselItem[]> => {
     return widget.settings.custom_images.map((img: any, index: number) => ({
       id: `custom-${index}`,
       image_url: img.image_url,
+      mobile_image_url: img.mobile_image_url || img.image_url, // 모바일 이미지가 없으면 기본 이미지 사용
       title: img.title || "",
       description: img.description || "",
       link_url: img.link_url || "#",
@@ -100,6 +102,8 @@ const fetchCarouselData = async (widget: IWidget): Promise<CarouselItem[]> => {
       id: "1",
       image_url:
         "https://via.placeholder.com/800x400/4F46E5/ffffff?text=슬라이드+1",
+      mobile_image_url:
+        "https://via.placeholder.com/400x300/4F46E5/ffffff?text=모바일+슬라이드+1",
       title: "첫 번째 슬라이드",
       description: "캐러셀의 첫 번째 이미지입니다.",
       link_url: "#",
@@ -108,6 +112,8 @@ const fetchCarouselData = async (widget: IWidget): Promise<CarouselItem[]> => {
       id: "2",
       image_url:
         "https://via.placeholder.com/800x400/7C3AED/ffffff?text=슬라이드+2",
+      mobile_image_url:
+        "https://via.placeholder.com/400x300/7C3AED/ffffff?text=모바일+슬라이드+2",
       title: "두 번째 슬라이드",
       description: "캐러셀의 두 번째 이미지입니다.",
       link_url: "#",
@@ -116,6 +122,8 @@ const fetchCarouselData = async (widget: IWidget): Promise<CarouselItem[]> => {
       id: "3",
       image_url:
         "https://via.placeholder.com/800x400/DC2626/ffffff?text=슬라이드+3",
+      mobile_image_url:
+        "https://via.placeholder.com/400x300/DC2626/ffffff?text=모바일+슬라이드+3",
       title: "세 번째 슬라이드",
       description: "캐러셀의 세 번째 이미지입니다.",
       link_url: "#",
@@ -125,6 +133,18 @@ const fetchCarouselData = async (widget: IWidget): Promise<CarouselItem[]> => {
 
 export function CarouselWidget({ widget }: CarouselWidgetProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // 모바일 감지
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768); // md 브레이크포인트
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const carouselType = widget.settings?.carousel_type || CAROUSEL_TYPES.BASIC;
   const autoPlay = widget.settings?.auto_play ?? true;
@@ -143,14 +163,8 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
     isLoading,
   } = useSWR(
     `carousel-${widget.id}-${widget.settings?.data_source}-${widget.display_options?.page_id}-${JSON.stringify(widget.settings?.custom_images)}`,
-    () => fetchCarouselData(widget),
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      dedupingInterval: 300000,
-      errorRetryCount: 3,
-      errorRetryInterval: 5000,
-    }
+    () => fetchCarouselData(widget)
+    // 전역 설정 사용 - 필요한 경우만 오버라이드
   );
 
   // 자동 재생 효과
@@ -196,18 +210,21 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
 
   // 기본 슬라이드형
   if (carouselType === CAROUSEL_TYPES.BASIC) {
-    // 제목 유무에 따른 높이 계산 (전체 높이에서 제목 영역 제외)
-    const imageHeight = showTitle && widget.title ? "h-64" : "h-80";
+    // 위젯에 설정된 높이가 있으면 사용, 없으면 기본값
+    const widgetHeight = widget.height || 400;
+    // 제목이 있으면 제목 높이(약 60px) 제외
+    const imageHeightPx = showTitle && widget.title ? widgetHeight - 60 : widgetHeight;
+    const imageHeightStyle = { height: `${imageHeightPx}px` };
 
     return (
-      <div className="relative w-full bg-white rounded-lg overflow-hidden shadow-sm m-4 pr-4 sm:pr-0 sm:m-0">
+      <div className="relative w-full bg-white rounded-lg overflow-hidden shadow-sm">
         {showTitle && widget.title && (
           <div className="p-4 border-b">
             <h3 className="text-lg font-semibold">{widget.title}</h3>
           </div>
         )}
 
-        <div className={`relative ${imageHeight} overflow-hidden`}>
+        <div className="relative overflow-hidden" style={imageHeightStyle}>
           <div
             className="flex transition-transform duration-500 ease-in-out h-full"
             style={{ transform: `translateX(-${currentIndex * 100}%)` }}
@@ -218,7 +235,7 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
                 className="w-full h-full flex-shrink-0 relative"
               >
                 <img
-                  src={item.image_url}
+                  src={isMobile && item.mobile_image_url ? item.mobile_image_url : item.image_url}
                   alt={item.title || `슬라이드 ${index + 1}`}
                   className={`w-full h-full object-cover ${
                     item.link_url && item.link_url !== "#"
@@ -307,7 +324,7 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
           </div>
         )}
 
-        <div className={`relative ${imageHeight} overflow-hidden`}>
+        <div className={`relative overflow-hidden ${imageHeight}`}>
           <div
             className="flex transition-transform duration-500 ease-in-out h-full"
             style={{ transform: `translateX(-${currentIndex * 100}%)` }}
@@ -318,7 +335,7 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
                 className="w-full h-full flex-shrink-0 relative"
               >
                 <img
-                  src={item.image_url}
+                  src={isMobile && item.mobile_image_url ? item.mobile_image_url : item.image_url}
                   alt={item.title || `슬라이드 ${index + 1}`}
                   className={`w-full h-full object-contain ${
                     item.link_url && item.link_url !== "#"
@@ -441,7 +458,7 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
                 >
                   <div className="aspect-video relative">
                     <img
-                      src={item.image_url}
+                      src={isMobile && item.mobile_image_url ? item.mobile_image_url : item.image_url}
                       alt={item.title || `갤러리 ${index + 1}`}
                       className="w-full h-full object-cover"
                     />
