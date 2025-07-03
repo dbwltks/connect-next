@@ -75,7 +75,7 @@ const Youtube = Node.create({
       "div",
       {
         style:
-          "position:relative;width:100%;padding-bottom:56.25%;background:#000;border-radius:0.5rem;overflow:hidden;margin:1.5rem 0;",
+          "position:relative;width:100%;padding-bottom:56.25%;border-radius:0.5rem;overflow:hidden;margin:1.5rem 0;",
       },
       [
         "iframe",
@@ -124,9 +124,9 @@ interface TipTapViewerProps {
 export default function TipTapViewer({
   content,
   className = "",
-  fontSizeLevel = 0,
+  fontSizeLevel = 1,
   fontBoldLevel = 0,
-  fontFamily = "default",
+  fontFamily = "nanumMyeongjo",
 }: TipTapViewerProps) {
   const editor = useEditor({
     extensions: [

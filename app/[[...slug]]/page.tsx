@@ -136,7 +136,7 @@ export default async function DynamicPage(props: { params: any }) {
             </div> */}
             <main className="flex-1 flex flex-col gap-12">
               <div className="">
-                <HomepageWidgets widgets={widgets} />
+                <HomepageWidgets widgets={widgets} pageId={menu.page.id} />
               </div>
             </main>
           </>
@@ -254,7 +254,7 @@ export default async function DynamicPage(props: { params: any }) {
             </div> */}
             <main className="flex-1 flex flex-col gap-12">
               <div className="">
-                <HomepageWidgets widgets={widgets} />
+                <HomepageWidgets widgets={widgets} pageId={parentMenu.page.id} />
               </div>
             </main>
           </>

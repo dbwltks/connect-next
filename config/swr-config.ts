@@ -9,7 +9,7 @@ export const swrGlobalConfig: SWRConfiguration = {
   refreshInterval: 600000,            // 10분마다 자동 갱신
   
   // 캐싱 설정
-  dedupingInterval: 300000,           // 5분간 중복 요청 방지
+  dedupingInterval: 120000,           // 2분으로 단축 (기존 5분)
   keepPreviousData: true,             // 새 데이터 로딩 중 이전 데이터 유지
   
   // 에러 처리 설정

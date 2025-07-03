@@ -19,6 +19,7 @@ import CalendarWidget from "@/components/widgets/calendar-widget";
 import { IWidget } from "@/types/index";
 import useSWR from "swr";
 import { supabase } from "@/db";
+import { useRouterCache } from "@/hooks/use-router-cache";
 
 type LayoutStructure = "1-col" | "2-col-left" | "2-col-right" | "3-col";
 
@@ -30,14 +31,15 @@ interface HomepageWidgetsProps {
 // 위젯 데이터를 가져오는 fetcher 함수
 async function fetchWidgets(pageId?: string): Promise<IWidget[]> {
   let query = supabase
-    .from("cms_widgets")
+    .from("cms_layout")
     .select("*")
     .eq("is_active", true)
-    .order("column_position")
-    .order("order");
+    .order("order", { ascending: true });
 
   if (pageId) {
     query = query.eq("page_id", pageId);
+  } else {
+    query = query.is("page_id", null);
   }
 
   const { data, error } = await query;
@@ -53,19 +55,26 @@ export default function HomepageWidgets({
   widgets: initialWidgets,
   pageId,
 }: HomepageWidgetsProps) {
-  // SWR을 사용해서 위젯 데이터 관리
+  const { generateCacheKey } = useRouterCache();
+  
+  // SWR을 사용해서 위젯 데이터 관리 - 경로 정보 포함
   const {
     data: widgets,
     error,
     isLoading,
   } = useSWR(
-    pageId ? ["widgets", pageId] : initialWidgets ? null : ["widgets"],
+    // initialWidgets가 있으면 SWR 비활성화, 서버 데이터만 사용
+    initialWidgets && initialWidgets.length > 0
+      ? null
+      : pageId 
+        ? generateCacheKey(["widgets", pageId])
+        : generateCacheKey(["widgets"]),
     () => (pageId ? fetchWidgets(pageId) : fetchWidgets()),
     {
       fallbackData: initialWidgets,
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
-      dedupingInterval: 60000, // 1분간 중복 요청 방지
+      dedupingInterval: 30000, // 30초로 단축
     }
   );
 
