@@ -34,6 +34,12 @@ import {
 } from "lucide-react";
 import { supabase } from "@/db";
 import { useAuth } from "@/contexts/auth-context";
+import { toast } from "@/hooks/use-toast";
+import {
+  logCalendarEventCreate,
+  logCalendarEventUpdate,
+  logCalendarEventDelete,
+} from "@/services/activityLogService";
 
 interface CalendarEvent {
   id: string;
@@ -211,6 +217,12 @@ export default function CalendarWidget({
     return "#6B7280"; // 기본 색상
   };
 
+  // 시간 포맷팅 함수 (초 제거)
+  const formatTime = (timeString: string) => {
+    if (!timeString) return "";
+    return timeString.substring(0, 5); // HH:MM 형식으로 자르기
+  };
+
   // 필터링된 이벤트 가져오기
   const getFilteredEvents = () => {
     return events.filter((event) => {
@@ -236,8 +248,13 @@ export default function CalendarWidget({
 
       if (error) throw error;
       setEvents(data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error("일정 조회 오류:", error);
+      toast({
+        title: "조회 오류",
+        description: error.message || "일정을 불러오는 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -245,13 +262,53 @@ export default function CalendarWidget({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user) {
+      toast({
+        title: "오류",
+        description: "로그인이 필요합니다.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
+      // 필수 필드 검증
+      if (!formData.title.trim()) {
+        toast({
+          title: "오류",
+          description: "제목을 입력해주세요.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!formData.start_date) {
+        toast({
+          title: "오류",
+          description: "시작일을 선택해주세요.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const eventData = {
         ...formData,
+        // 종일 일정일 때는 시간 필드를 null로 설정
+        start_time: formData.is_all_day ? null : formData.start_time,
+        end_time: formData.is_all_day ? null : formData.end_time,
         color: getCategoryColor(formData.category),
         created_by: user.id,
+      };
+
+      // 로그에 사용할 세부 정보
+      const logDetails = {
+        start_date: formData.start_date,
+        end_date: formData.end_date,
+        category: formData.category,
+        department: formData.department,
+        is_all_day: formData.is_all_day,
+        has_location: !!formData.location,
+        has_description: !!formData.description,
       };
 
       if (isEditing && selectedEvent) {
@@ -260,18 +317,53 @@ export default function CalendarWidget({
           .update(eventData)
           .eq("id", selectedEvent.id);
         if (error) throw error;
+
+        // 수정 로그 기록
+        await logCalendarEventUpdate(
+          user.id,
+          selectedEvent.id,
+          formData.title,
+          logDetails
+        );
+
+        toast({
+          title: "성공",
+          description: "일정이 수정되었습니다.",
+        });
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from("calendar_events")
-          .insert([eventData]);
+          .insert([eventData])
+          .select()
+          .single();
         if (error) throw error;
+
+        // 생성 로그 기록
+        if (data?.id) {
+          await logCalendarEventCreate(
+            user.id,
+            data.id,
+            formData.title,
+            logDetails
+          );
+        }
+
+        toast({
+          title: "성공",
+          description: "일정이 추가되었습니다.",
+        });
       }
 
       fetchEvents();
       resetForm();
       setShowEventDialog(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("일정 저장 오류:", error);
+      toast({
+        title: "저장 오류",
+        description: error.message || "일정 저장 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -279,16 +371,42 @@ export default function CalendarWidget({
     if (!confirm("정말로 이 일정을 삭제하시겠습니까?")) return;
 
     try {
+      // 삭제할 이벤트 정보 미리 저장 (로그용)
+      const eventToDelete = events.find((event) => event.id === eventId);
+      const eventTitle = eventToDelete?.title || "제목 없음";
+      const logDetails = {
+        start_date: eventToDelete?.start_date,
+        category: eventToDelete?.category,
+        department: eventToDelete?.department,
+        was_all_day: eventToDelete?.is_all_day,
+      };
+
       const { error } = await supabase
         .from("calendar_events")
         .delete()
         .eq("id", eventId);
 
       if (error) throw error;
+
+      // 삭제 로그 기록 (사용자 정보가 있는 경우)
+      if (user?.id) {
+        await logCalendarEventDelete(user.id, eventId, eventTitle, logDetails);
+      }
+
+      toast({
+        title: "성공",
+        description: "일정이 삭제되었습니다.",
+      });
+
       fetchEvents();
       setShowEventDialog(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("일정 삭제 오류:", error);
+      toast({
+        title: "삭제 오류",
+        description: error.message || "일정 삭제 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -366,238 +484,33 @@ export default function CalendarWidget({
 
   const getEventsForDate = (date: Date) => {
     const dateString = date.toISOString().split("T")[0];
-    return getFilteredEvents().filter((event) => {
+    const dayEvents = getFilteredEvents().filter((event) => {
       return event.start_date === dateString;
     });
-  };
 
-  const renderMonthView = () => {
-    const firstDay = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth(),
-      1
-    );
-    const lastDay = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth() + 1,
-      0
-    );
-    const startDate = new Date(firstDay);
-    startDate.setDate(startDate.getDate() - firstDay.getDay());
+    // 시간순으로 정렬: 종일 일정 먼저, 그 다음 시간순
+    return dayEvents.sort((a, b) => {
+      // 종일 일정은 맨 위에
+      if (a.is_all_day && !b.is_all_day) return -1;
+      if (!a.is_all_day && b.is_all_day) return 1;
 
-    const days = [];
-    const currentDateObj = new Date(startDate);
+      // 둘 다 종일 일정이면 제목순
+      if (a.is_all_day && b.is_all_day) {
+        return a.title.localeCompare(b.title);
+      }
 
-    for (let i = 0; i < 42; i++) {
-      const dayEvents = getEventsForDate(currentDateObj);
-      const isCurrentMonth =
-        currentDateObj.getMonth() === currentDate.getMonth();
-      const isToday =
-        currentDateObj.toDateString() === new Date().toDateString();
+      // 둘 다 시간이 있는 일정이면 시간순
+      if (a.start_time && b.start_time) {
+        return a.start_time.localeCompare(b.start_time);
+      }
 
-      days.push(
-        <div
-          key={i}
-          className={`min-h-[100px] p-1 border border-gray-100 ${
-            !isCurrentMonth ? "bg-gray-50 text-gray-400" : "bg-white"
-          } ${isToday ? "bg-blue-50" : ""}`}
-        >
-          <div
-            className={`text-sm font-medium mb-1 ${isToday ? "text-blue-600" : ""}`}
-          >
-            {currentDateObj.getDate()}
-          </div>
-          <div className="space-y-1">
-            {dayEvents.slice(0, 3).map((event, idx) => (
-              <div
-                key={idx}
-                className="text-xs p-1 rounded cursor-pointer hover:opacity-80 relative group"
-                style={{
-                  backgroundColor: event.color + "20",
-                  color: event.color,
-                }}
-                onClick={() => openDetailDialog(event)}
-              >
-                <div className="font-medium truncate">{event.title}</div>
-                {event.start_time && (
-                  <div className="text-xs opacity-75">{event.start_time}</div>
-                )}
-                {isAdmin && (
-                  <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-5 w-5 p-0"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openEditDialog(event);
-                      }}
-                    >
-                      <Edit className="h-3 w-3" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            ))}
-            {dayEvents.length > 3 && (
-              <div className="text-xs text-gray-500">
-                +{dayEvents.length - 3}개 더
-              </div>
-            )}
-          </div>
-        </div>
-      );
+      // 시간이 없는 일정은 뒤로
+      if (a.start_time && !b.start_time) return -1;
+      if (!a.start_time && b.start_time) return 1;
 
-      currentDateObj.setDate(currentDateObj.getDate() + 1);
-    }
-
-    return (
-      <div className="grid grid-cols-7 gap-0 border border-gray-200">
-        {["일", "월", "화", "수", "목", "금", "토"].map((day) => (
-          <div
-            key={day}
-            className="p-2 text-center font-medium bg-gray-100 border-b border-gray-200"
-          >
-            {day}
-          </div>
-        ))}
-        {days}
-      </div>
-    );
-  };
-
-  const renderWeekView = () => {
-    const weekStart = new Date(currentDate);
-    weekStart.setDate(currentDate.getDate() - currentDate.getDay());
-
-    const days = [];
-    for (let i = 0; i < 7; i++) {
-      const day = new Date(weekStart);
-      day.setDate(weekStart.getDate() + i);
-      const dayEvents = getEventsForDate(day);
-      const isToday = day.toDateString() === new Date().toDateString();
-
-      days.push(
-        <div
-          key={i}
-          className="flex-1 border-r border-gray-200 last:border-r-0"
-        >
-          <div
-            className={`p-2 text-center border-b border-gray-200 ${
-              isToday ? "bg-blue-50 text-blue-600 font-medium" : "bg-gray-50"
-            }`}
-          >
-            <div className="text-sm">
-              {["일", "월", "화", "수", "목", "금", "토"][i]}
-            </div>
-            <div className="text-lg">{day.getDate()}</div>
-          </div>
-          <div className="p-2 space-y-1 min-h-[300px]">
-            {dayEvents.map((event, idx) => (
-              <div
-                key={idx}
-                className="p-2 rounded cursor-pointer hover:opacity-80 relative group"
-                style={{
-                  backgroundColor: event.color + "20",
-                  color: event.color,
-                }}
-                onClick={() => openDetailDialog(event)}
-              >
-                <div className="font-medium text-sm">{event.title}</div>
-                {event.start_time && (
-                  <div className="text-xs opacity-75">{event.start_time}</div>
-                )}
-                {event.location && (
-                  <div className="text-xs opacity-75 flex items-center">
-                    <MapPin className="w-3 h-3 mr-1" />
-                    {event.location}
-                  </div>
-                )}
-                {isAdmin && (
-                  <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 w-6 p-0"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openEditDialog(event);
-                      }}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    return <div className="flex border border-gray-200">{days}</div>;
-  };
-
-  const renderYearView = () => {
-    const months = [];
-    for (let month = 0; month < 12; month++) {
-      const monthDate = new Date(currentDate.getFullYear(), month, 1);
-      const monthEvents = events.filter((event) => {
-        const eventDate = new Date(event.start_date);
-        return (
-          eventDate.getFullYear() === currentDate.getFullYear() &&
-          eventDate.getMonth() === month
-        );
-      });
-
-      months.push(
-        <div key={month} className="p-2 border border-gray-200 rounded">
-          <div className="text-center font-medium mb-2">
-            {monthDate.toLocaleDateString("ko-KR", { month: "long" })}
-          </div>
-          <div className="space-y-1">
-            {monthEvents.slice(0, 3).map((event, idx) => (
-              <div
-                key={idx}
-                className="text-xs p-1 rounded cursor-pointer hover:opacity-80 relative group"
-                style={{
-                  backgroundColor: event.color + "20",
-                  color: event.color,
-                }}
-                onClick={() => openDetailDialog(event)}
-              >
-                <div className="truncate">{event.title}</div>
-                <div className="text-xs opacity-75">
-                  {new Date(event.start_date).getDate()}일
-                </div>
-                {isAdmin && (
-                  <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-5 w-5 p-0"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openEditDialog(event);
-                      }}
-                    >
-                      <Edit className="h-3 w-3" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            ))}
-            {monthEvents.length > 3 && (
-              <div className="text-xs text-gray-500">
-                +{monthEvents.length - 3}개
-              </div>
-            )}
-          </div>
-        </div>
-      );
-    }
-
-    return <div className="grid grid-cols-3 gap-4">{months}</div>;
+      // 둘 다 시간이 없으면 제목순
+      return a.title.localeCompare(b.title);
+    });
   };
 
   if (loading) {
@@ -614,7 +527,7 @@ export default function CalendarWidget({
     <Card className="w-full">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 pb-4">
             <Calendar className="w-5 h-5" />
             {settings.calendar_title || settings.title || "일정관리"}
           </CardTitle>
@@ -699,6 +612,11 @@ export default function CalendarWidget({
                         setFormData({
                           ...formData,
                           is_all_day: e.target.checked,
+                          // 종일 일정으로 변경 시 시간 필드 초기화
+                          start_time: e.target.checked
+                            ? ""
+                            : formData.start_time,
+                          end_time: e.target.checked ? "" : formData.end_time,
                         })
                       }
                     />
@@ -712,6 +630,7 @@ export default function CalendarWidget({
                         <Input
                           id="start_time"
                           type="time"
+                          step="60"
                           value={formData.start_time}
                           onChange={(e) =>
                             setFormData({
@@ -726,6 +645,7 @@ export default function CalendarWidget({
                         <Input
                           id="end_time"
                           type="time"
+                          step="60"
                           value={formData.end_time}
                           onChange={(e) =>
                             setFormData({
@@ -894,7 +814,7 @@ export default function CalendarWidget({
                               시작 시간
                             </Label>
                             <p className="text-sm text-gray-600 mt-1">
-                              {selectedEvent.start_time}
+                              {formatTime(selectedEvent.start_time)}
                             </p>
                           </div>
                         )}
@@ -904,7 +824,7 @@ export default function CalendarWidget({
                               종료 시간
                             </Label>
                             <p className="text-sm text-gray-600 mt-1">
-                              {selectedEvent.end_time}
+                              {formatTime(selectedEvent.end_time)}
                             </p>
                           </div>
                         )}
@@ -1090,20 +1010,13 @@ export default function CalendarWidget({
         </div>
       </CardHeader>
 
-      <CardContent
-        className="px-6 pb-6"
-        style={{
-          height: settings.calendar_height
-            ? `${settings.calendar_height}px`
-            : "600px",
-        }}
-      >
+      <CardContent className="px-6 pb-6">
         {loading ? (
-          <div className="flex items-center justify-center h-full">
+          <div className="flex items-center justify-center py-8">
             <div className="text-gray-500">일정을 불러오는 중...</div>
           </div>
         ) : (
-          <div className="h-full">
+          <div>
             {view === "month" && <MonthView />}
             {view === "week" && <WeekView />}
             {view === "year" && <YearView />}
@@ -1130,7 +1043,7 @@ export default function CalendarWidget({
     }
 
     return (
-      <div className="h-full flex flex-col">
+      <div className="flex flex-col">
         <div className="grid grid-cols-7 gap-1 mb-2">
           {["일", "월", "화", "수", "목", "금", "토"].map((day) => (
             <div
@@ -1141,7 +1054,7 @@ export default function CalendarWidget({
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-7 gap-1 flex-1">
+        <div className="grid grid-cols-7 gap-1">
           {days.map((day, index) => {
             const isCurrentMonth = day.getMonth() === month;
             const isToday = day.toDateString() === new Date().toDateString();
@@ -1150,7 +1063,7 @@ export default function CalendarWidget({
             return (
               <div
                 key={index}
-                className={`p-1 border rounded min-h-[80px] ${
+                className={`p-1 border rounded min-h-[120px] ${
                   isCurrentMonth ? "bg-white" : "bg-gray-50"
                 } ${isToday ? "ring-2 ring-blue-500" : ""}`}
               >
@@ -1161,11 +1074,11 @@ export default function CalendarWidget({
                 >
                   {day.getDate()}
                 </div>
-                <div className="space-y-1">
-                  {dayEvents.slice(0, 3).map((event) => (
+                <div className="space-y-0.5">
+                  {dayEvents.slice(0, 4).map((event) => (
                     <div
                       key={event.id}
-                      className="text-xs p-1 rounded cursor-pointer hover:opacity-80 relative group"
+                      className="text-xs px-1 py-0.5 rounded cursor-pointer hover:opacity-80 relative group"
                       style={{
                         backgroundColor: getCategoryColor(event.category),
                         color: "white",
@@ -1173,9 +1086,11 @@ export default function CalendarWidget({
                       onClick={() => openDetailDialog(event)}
                       title={`${event.title} ${event.department ? `(${event.department})` : ""}`}
                     >
-                      {event.title.length > 8
-                        ? event.title.substring(0, 8) + "..."
-                        : event.title}
+                      <div className="leading-tight">
+                        {event.title.length > 8
+                          ? event.title.substring(0, 8) + "..."
+                          : event.title}
+                      </div>
                       {isAdmin && (
                         <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button
@@ -1187,15 +1102,15 @@ export default function CalendarWidget({
                               openEditDialog(event);
                             }}
                           >
-                            <Edit className="h-3 w-3 text-white" />
+                            <Edit className="h-2.5 w-2.5 text-white" />
                           </Button>
                         </div>
                       )}
                     </div>
                   ))}
-                  {dayEvents.length > 3 && (
-                    <div className="text-xs text-gray-500">
-                      +{dayEvents.length - 3}개 더
+                  {dayEvents.length > 4 && (
+                    <div className="text-xs text-gray-500 px-1">
+                      +{dayEvents.length - 4}개 더
                     </div>
                   )}
                 </div>
@@ -1219,7 +1134,7 @@ export default function CalendarWidget({
     }
 
     return (
-      <div className="h-full flex flex-col">
+      <div className="flex flex-col">
         <div className="grid grid-cols-7 gap-2 mb-4">
           {days.map((day, index) => {
             const isToday = day.toDateString() === new Date().toDateString();
@@ -1228,7 +1143,7 @@ export default function CalendarWidget({
             return (
               <div
                 key={index}
-                className={`p-3 border rounded ${
+                className={`p-3 border rounded min-h-[200px] ${
                   isToday ? "ring-2 ring-blue-500 bg-blue-50" : "bg-white"
                 }`}
               >
@@ -1255,7 +1170,9 @@ export default function CalendarWidget({
                     >
                       <div className="font-medium">{event.title}</div>
                       {event.start_time && (
-                        <div className="opacity-80">{event.start_time}</div>
+                        <div className="opacity-80">
+                          {formatTime(event.start_time)}
+                        </div>
                       )}
                       {event.department && (
                         <div className="opacity-80">({event.department})</div>
@@ -1295,21 +1212,44 @@ export default function CalendarWidget({
     }
 
     return (
-      <div className="h-full">
+      <div>
         <div className="grid grid-cols-3 gap-4">
           {months.map((month, index) => {
-            const monthEvents = getFilteredEvents().filter((event) => {
-              const eventDate = new Date(event.start_date);
-              return (
-                eventDate.getFullYear() === year &&
-                eventDate.getMonth() === index
-              );
-            });
+            const monthEvents = getFilteredEvents()
+              .filter((event) => {
+                const eventDate = new Date(event.start_date);
+                return (
+                  eventDate.getFullYear() === year &&
+                  eventDate.getMonth() === index
+                );
+              })
+              .sort((a, b) => {
+                // 날짜순 먼저, 그 다음 시간순
+                const dateCompare = a.start_date.localeCompare(b.start_date);
+                if (dateCompare !== 0) return dateCompare;
+
+                // 같은 날짜 내에서 시간순 정렬
+                if (a.is_all_day && !b.is_all_day) return -1;
+                if (!a.is_all_day && b.is_all_day) return 1;
+
+                if (a.is_all_day && b.is_all_day) {
+                  return a.title.localeCompare(b.title);
+                }
+
+                if (a.start_time && b.start_time) {
+                  return a.start_time.localeCompare(b.start_time);
+                }
+
+                if (a.start_time && !b.start_time) return -1;
+                if (!a.start_time && b.start_time) return 1;
+
+                return a.title.localeCompare(b.title);
+              });
 
             return (
               <div
                 key={index}
-                className="p-3 border rounded bg-white cursor-pointer hover:bg-gray-50"
+                className="p-3 border rounded bg-white cursor-pointer hover:bg-gray-50 min-h-[150px]"
                 onClick={() => {
                   setCurrentDate(month);
                   setView("month");
@@ -1323,7 +1263,7 @@ export default function CalendarWidget({
                 </div>
                 {monthEvents.length > 0 && (
                   <div className="mt-2 space-y-1">
-                    {monthEvents.slice(0, 3).map((event) => (
+                    {monthEvents.slice(0, 10).map((event) => (
                       <div
                         key={event.id}
                         className="text-xs p-1 rounded"
@@ -1337,9 +1277,9 @@ export default function CalendarWidget({
                           : event.title}
                       </div>
                     ))}
-                    {monthEvents.length > 3 && (
+                    {monthEvents.length > 10 && (
                       <div className="text-xs text-gray-500">
-                        +{monthEvents.length - 3}개 더
+                        +{monthEvents.length - 10}개 더
                       </div>
                     )}
                   </div>

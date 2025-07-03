@@ -170,16 +170,87 @@ export default function SectionManager({
   );
 
   // SWR로 섹션 데이터 패칭
-  const { data: sectionsData, error } = useSWR("sections", fetchSections);
+  const {
+    data: sectionsData,
+    error,
+    isLoading: isSwrLoading,
+    mutate: mutateSections,
+  } = useSWR(
+    `sections-${pageId || "default"}-${templateId || "default"}`,
+    fetchSections,
+    {
+      revalidateOnFocus: false,
+      shouldRetryOnError: true,
+      errorRetryCount: 3,
+      errorRetryInterval: 2000,
+      onError: (err) => {
+        console.error("SWR 섹션 로딩 에러:", err);
+      },
+      onSuccess: (data) => {
+        console.log("SWR 섹션 로딩 성공:", data);
+      },
+    }
+  );
 
   // SWR 데이터가 바뀔 때마다 sections 상태에 반영
   useEffect(() => {
-    console.log("sectionsData:", sectionsData);
-    console.log("SWR error:", error);
-    if (sectionsData && Array.isArray(sectionsData)) {
-      setSections(sectionsData);
+    console.log(
+      "SWR 상태 - 로딩:",
+      isSwrLoading,
+      "데이터:",
+      sectionsData,
+      "에러:",
+      error
+    );
+
+    // 로딩 중이면 아무것도 하지 않음
+    if (isSwrLoading) {
+      return;
     }
-  }, [sectionsData, error]);
+
+    // 에러가 있으면 기본 섹션으로 설정
+    if (error) {
+      console.error("SWR 에러 발생, 기본 섹션 생성:", error);
+      const defaultSection: Section = {
+        id: crypto.randomUUID(),
+        title: "게시판 섹션",
+        name: "board-section",
+        description: "게시판 내용을 표시하는 섹션입니다.",
+        type: "custom",
+        isActive: true,
+        content: "",
+        order: 0,
+        settings: {},
+        dbTable: "boards",
+        pageType: "board",
+      };
+      setSections([defaultSection]);
+      return;
+    }
+
+    // 데이터가 있으면 설정
+    if (sectionsData && Array.isArray(sectionsData)) {
+      if (sectionsData.length > 0) {
+        setSections(sectionsData);
+      } else {
+        // 섹션이 없는 경우 기본 섹션 생성
+        const defaultSection: Section = {
+          id: crypto.randomUUID(),
+          title: "게시판 섹션",
+          name: "board-section",
+          description: "게시판 내용을 표시하는 섹션입니다.",
+          type: "custom",
+          isActive: true,
+          content: "",
+          order: 0,
+          settings: {},
+          dbTable: "boards",
+          pageType: "board",
+        };
+        setSections([defaultSection]);
+      }
+    }
+  }, [sectionsData, error, isSwrLoading]);
 
   // 드래그 종료 핸들러
   const handleDragEnd = (event: DragEndEvent) => {
@@ -311,70 +382,12 @@ export default function SectionManager({
       });
 
       // 성공적으로 저장한 후 섹션 다시 로드
-      await loadSections();
+      await mutateSections();
     } catch (error) {
       console.error("섹션 저장 오류:", error);
       toast({
         title: "저장 실패",
         description: "섹션을 저장하는 중 오류가 발생했습니다.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // 섹션 불러오기
-  const loadSections = async () => {
-    setIsLoading(true);
-
-    try {
-      const { data, error } = await supabase
-        .from("cms_sections")
-        .select("*")
-        .order("order");
-
-      if (error) throw error;
-
-      if (data && data.length > 0) {
-        setSections(
-          data.map((item) => ({
-            id: item.id,
-            title: item.title,
-            name: item.name,
-            description: item.description,
-            type: item.type || "custom",
-            isActive: item.is_active,
-            content: item.content,
-            order: item.order,
-            settings: item.settings,
-            dbTable: item.db_table,
-            pageType: item.page_type,
-          }))
-        );
-      } else {
-        // 섹션이 없는 경우 기본 섹션 생성
-        const defaultSection: Section = {
-          id: crypto.randomUUID(),
-          title: "게시판 섹션",
-          name: "board-section",
-          description: "게시판 내용을 표시하는 섹션입니다.",
-          type: "custom",
-          isActive: true,
-          content: "",
-          order: 0,
-          settings: {},
-          dbTable: "boards",
-          pageType: "board",
-        };
-
-        setSections([defaultSection]);
-      }
-    } catch (error) {
-      console.error("섹션 로드 오류:", error);
-      toast({
-        title: "로드 실패",
-        description: "섹션을 불러오는 중 오류가 발생했습니다.",
         variant: "destructive",
       });
     } finally {
@@ -554,33 +567,50 @@ export default function SectionManager({
             </p>
           </div>
 
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext
-              items={sections.map((s) => s.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              {sections
-                .sort((a, b) => a.order - b.order)
-                .map((section) => (
-                  <SortableItem
-                    key={section.id}
-                    section={section}
-                    onToggle={handleToggleSection}
-                    onEdit={handleEditSection}
-                    onDelete={handleDeleteSection}
-                  />
-                ))}
-            </SortableContext>
-          </DndContext>
-
-          {sections.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              <p>섹션이 없습니다. 새 섹션을 추가해보세요.</p>
+          {isSwrLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-500">섹션 데이터를 불러오는 중...</p>
             </div>
+          ) : error ? (
+            <div className="text-center py-8 text-red-500">
+              <p className="mb-2">
+                섹션 데이터를 불러오는 중 오류가 발생했습니다.
+              </p>
+              <p className="text-sm text-gray-500 mb-4">{error.message}</p>
+              <Button onClick={() => mutateSections()}>다시 시도</Button>
+            </div>
+          ) : (
+            <>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={sections.map((s) => s.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {sections
+                    .sort((a, b) => a.order - b.order)
+                    .map((section) => (
+                      <SortableItem
+                        key={section.id}
+                        section={section}
+                        onToggle={handleToggleSection}
+                        onEdit={handleEditSection}
+                        onDelete={handleDeleteSection}
+                      />
+                    ))}
+                </SortableContext>
+              </DndContext>
+
+              {sections.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <p>섹션이 없습니다. 새 섹션을 추가해보세요.</p>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
         <CardFooter className="flex justify-end">

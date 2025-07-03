@@ -75,7 +75,7 @@ export async function fetchMediaWidgetPosts(pageId: string, limit: number = 5) {
     if (userIds.length > 0) {
       const { data: users } = await supabase
         .from("users")
-        .select("id, display_name, email")
+        .select("id, email")
         .in("id", userIds);
 
       const userMap = new Map(users?.map((user) => [user.id, user]) || []);
@@ -134,7 +134,7 @@ export const fetchBoardPostsForWidget = async (
     if (userIds.length > 0) {
       const { data: users } = await supabase
         .from("users")
-        .select("id, display_name, email")
+        .select("id, email")
         .in("id", userIds);
 
       const userMap = new Map(users?.map((user) => [user.id, user]) || []);
@@ -235,7 +235,7 @@ export const fetchPopularPosts = async (
     if (userIds.length > 0) {
       const { data: users } = await supabase
         .from("users")
-        .select("id, display_name, email")
+        .select("id, email")
         .in("id", userIds);
 
       const userMap = new Map(users?.map((user) => [user.id, user]) || []);
@@ -274,7 +274,7 @@ export async function fetchPopularPostsWidget(limit: number = 10) {
     if (userIds.length > 0) {
       const { data: users } = await supabase
         .from("users")
-        .select("id, display_name, email")
+        .select("id, email")
         .in("id", userIds);
 
       const userMap = new Map(users?.map((user) => [user.id, user]) || []);

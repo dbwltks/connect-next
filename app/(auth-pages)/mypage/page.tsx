@@ -23,6 +23,10 @@ import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/toaster";
 import Cropper from "react-easy-crop";
 import {
+  validateDisplayName,
+  checkForbiddenWords,
+} from "@/lib/forbidden-words";
+import {
   Dialog as CropDialog,
   DialogContent as CropDialogContent,
   DialogHeader as CropDialogHeader,
@@ -46,6 +50,13 @@ export default function MyPage() {
     confirmPassword: "",
   });
 
+  // 프로필 수정 다이얼로그 상태 및 로직
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    displayName: "",
+  });
+
   // 아바타 업로드 상태 및 로직
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -64,6 +75,11 @@ export default function MyPage() {
   const handlePwChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setPwForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setProfileForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const handlePwSubmit = async (e: React.FormEvent) => {
@@ -111,6 +127,99 @@ export default function MyPage() {
       });
     } finally {
       setPwLoading(false);
+    }
+  };
+
+  const handleProfileSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setProfileLoading(true);
+
+    console.log("프로필 수정 시작:", {
+      user,
+      displayName: profileForm.displayName,
+    });
+
+    try {
+      if (!user?.id) {
+        console.error("사용자 정보 없음:", user);
+        throw new Error("사용자 정보를 찾을 수 없습니다.");
+      }
+
+      // 유효성 검사
+      const displayName = profileForm.displayName.trim();
+      if (!displayName) {
+        throw new Error("디스플레이 이름을 입력해주세요.");
+      }
+
+      // 금지어 및 전체 유효성 검사
+      const validation = validateDisplayName(displayName);
+      if (!validation.isValid) {
+        throw new Error(validation.message);
+      }
+
+      // 중복 체크 (현재 사용자 제외)
+      const { data: existingUser } = await supabase
+        .from("users")
+        .select("id")
+        .eq("display_name", displayName)
+        .neq("id", user.id)
+        .single();
+
+      if (existingUser) {
+        throw new Error("이미 사용 중인 디스플레이 이름입니다.");
+      }
+
+      console.log("Supabase Auth 업데이트 시작...");
+
+      // Supabase Auth의 user_metadata 업데이트
+      const { data, error: authError } = await supabase.auth.updateUser({
+        data: {
+          display_name: displayName,
+        },
+      });
+
+      console.log("Auth 업데이트 결과:", { data, error: authError });
+
+      if (authError) {
+        console.error("Auth 업데이트 에러:", authError);
+        throw authError;
+      }
+
+      // users 테이블도 업데이트
+      const { error: dbError } = await supabase
+        .from("users")
+        .update({ display_name: displayName })
+        .eq("id", user.id);
+
+      if (dbError) {
+        console.error("DB 업데이트 에러:", dbError);
+        throw dbError;
+      }
+
+      console.log("프로필 수정 성공!");
+
+      toast({
+        title: "프로필 수정 완료",
+        description: "디스플레이 이름이 성공적으로 변경되었습니다.",
+      });
+
+      setProfileDialogOpen(false);
+      setProfileLoading(false);
+
+      // 1.5초 후 새로고침
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (error: any) {
+      console.error("프로필 수정 에러:", error);
+
+      toast({
+        title: "프로필 수정 실패",
+        description: error.message || "알 수 없는 오류가 발생했습니다.",
+        variant: "destructive",
+      });
+
+      setProfileLoading(false);
     }
   };
 
@@ -298,6 +407,13 @@ export default function MyPage() {
 
         setPostCount(postCount || 0);
         setCommentCount(commentCount || 0);
+
+        // 현재 사용자의 display_name을 폼에 설정
+        const currentDisplayName =
+          (user as any)?.user_metadata?.display_name ||
+          (user as any)?.username ||
+          "";
+        setProfileForm({ displayName: currentDisplayName });
       } catch (error) {
         console.error("사용자 통계 가져오기 오류:", error);
       } finally {
@@ -349,7 +465,12 @@ export default function MyPage() {
                     alt={user.username}
                   />
                   <AvatarFallback className="text-2xl font-bold bg-muted">
-                    {user.username?.charAt(0).toUpperCase() || "U"}
+                    {(
+                      (user as any)?.user_metadata?.display_name ||
+                      user.username
+                    )
+                      ?.charAt(0)
+                      .toUpperCase() || "U"}
                   </AvatarFallback>
                 </Avatar>
                 {/* 이미지 변경/삭제 버튼 (마우스 오버 시 노출) */}
@@ -390,20 +511,27 @@ export default function MyPage() {
               </div>
               <div className="flex-1 w-full">
                 <h2 className="text-2xl font-bold leading-tight mb-1">
-                  {user.username}
+                  {(user as any)?.user_metadata?.display_name || user.username}
                 </h2>
                 <p className="text-muted-foreground text-sm mb-2">
                   {user.email}
                 </p>
                 <div className="flex gap-2 mt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-md px-3"
+                  <Dialog
+                    open={profileDialogOpen}
+                    onOpenChange={setProfileDialogOpen}
                   >
-                    <User className="mr-2 h-4 w-4" />
-                    프로필 수정
-                  </Button>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-md px-3"
+                      >
+                        <User className="mr-2 h-4 w-4" />
+                        프로필 수정
+                      </Button>
+                    </DialogTrigger>
+                  </Dialog>
                   <Button
                     variant="outline"
                     size="sm"
@@ -459,6 +587,61 @@ export default function MyPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-4 pb-6 flex flex-col gap-4">
+            {/* 프로필 수정 다이얼로그 */}
+            <Dialog
+              open={profileDialogOpen}
+              onOpenChange={setProfileDialogOpen}
+            >
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>프로필 수정</DialogTitle>
+                  <DialogDescription>
+                    디스플레이 이름을 변경하여 다른 사용자들에게 표시될 이름을
+                    설정하세요.
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleProfileSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="displayName">디스플레이 이름</Label>
+                    <Input
+                      id="displayName"
+                      name="displayName"
+                      type="text"
+                      value={profileForm.displayName}
+                      onChange={handleProfileChange}
+                      placeholder="2-10자로 입력하세요"
+                      minLength={2}
+                      maxLength={10}
+                      required
+                    />
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <p>• 2자 이상 10자 이하로 입력하세요</p>
+                      <p>
+                        • 관리자, 운영자, 종교 관련 용어, 비속어는 사용할 수
+                        없습니다
+                      </p>
+                      <p>• 다른 사용자와 중복되지 않는 이름을 입력하세요</p>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setProfileDialogOpen(false)}
+                    >
+                      취소
+                    </Button>
+                    <Button type="submit" disabled={profileLoading}>
+                      {profileLoading && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      {profileLoading ? "저장 중..." : "저장하기"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+
             {/* 비밀번호 변경 다이얼로그 */}
             <Dialog open={pwDialogOpen} onOpenChange={setPwDialogOpen}>
               <DialogTrigger asChild>

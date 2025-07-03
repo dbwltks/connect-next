@@ -53,6 +53,7 @@ import {
 import GlassContainer from "@/components/ui/glass-container";
 import { useAuth } from "@/contexts/auth-context";
 import TipTapViewer from "@/components/ui/tiptap-viewer";
+import { logBoardPostDelete } from "@/services/activityLogService";
 
 interface BoardPost {
   id: string;
@@ -70,6 +71,7 @@ interface BoardPost {
   thumbnail_image?: string | null;
   files?: string; // 첨부파일 정보(문자열로 저장된 JSON)
   status?: string;
+  is_notice?: boolean;
 }
 
 // 첨부파일 정보 인터페이스
@@ -945,6 +947,18 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
       return;
 
     try {
+      // 로그에 사용할 정보 미리 저장 (삭제 전)
+      const postTitle = post.title;
+      const postFiles = post.files;
+      const postContent = post.content;
+      const logDetails = {
+        page_id: post.page_id,
+        category_id: post.category_id,
+        had_files: !!(postFiles && postFiles.length > 0),
+        content_length: postContent ? postContent.length : 0,
+        was_notice: post.is_notice,
+      };
+
       // 1. 첨부파일 및 게시글 내 이미지 삭제 (게시글 삭제 전에 수행)
       if (post.files || post.content) {
         await deletePostFiles(post.files || "", post.content || "");
@@ -961,7 +975,12 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
         return;
       }
 
-      // 3. SWR 캐시 무효화
+      // 3. 삭제 로그 기록 (사용자 정보가 있는 경우)
+      if (user?.id) {
+        await logBoardPostDelete(user.id, post.id, postTitle, logDetails);
+      }
+
+      // 4. SWR 캐시 무효화
       try {
         // 게시글 목록 캐시 무효화 (page_id가 있는 경우)
         if (post.page_id) {
