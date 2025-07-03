@@ -1,5 +1,5 @@
 import { createClient } from "@/utils/supabase/client";
-import { format, parseISO, isValid } from "date-fns";
+import { format as formatDate, parseISO, isValid } from "date-fns";
 
 interface SearchQuery {
   // 기본 필터
@@ -343,7 +343,7 @@ class LogSearchService {
     const timelineMap = new Map<string, { count: number; errors: number }>();
 
     logs.forEach((log) => {
-      const date = format(parseISO(log.created_at), "yyyy-MM-dd");
+      const date = formatDate(parseISO(log.created_at), "yyyy-MM-dd");
 
       if (!timelineMap.has(date)) {
         timelineMap.set(date, { count: 0, errors: 0 });
@@ -462,7 +462,7 @@ class LogSearchService {
       ];
 
       const csvRows = result.logs.map((log) => [
-        format(parseISO(log.created_at), "yyyy-MM-dd HH:mm:ss"),
+        formatDate(parseISO(log.created_at), "yyyy-MM-dd HH:mm:ss"),
         log.user?.raw_user_meta_data?.name || log.user?.email || "알 수 없음",
         log.action,
         log.resource_type,

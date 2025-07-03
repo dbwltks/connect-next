@@ -31,6 +31,7 @@ import { BoardWidget } from "../widgets/board-widget";
 import LocationWidget from "../widgets/location-widget";
 import MenuListWidget from "../widgets/menu-list-widget";
 import { StripWidget } from "../widgets/strip-widget";
+import PopularPostsWidget from "../widgets/popular-posts-widget";
 import { CarouselWidget, CAROUSEL_TYPES } from "../widgets/carousel-widget";
 import {
   OrganizationChartWidget,
@@ -5108,16 +5109,7 @@ export default function LayoutManager(): JSX.Element {
 
       case "popular-posts":
         return previewMode ? (
-          <div className="bg-white shadow rounded overflow-hidden">
-            <div className="p-4 border-b">
-              <h3 className="text-lg font-bold">{widget.title}</h3>
-            </div>
-            <ol className="p-4 space-y-2 list-decimal list-inside">
-              <li className="text-sm truncate">가장 인기있는 게시글 제목</li>
-              <li className="text-sm truncate">두 번째로 인기있는 글</li>
-              <li className="text-sm truncate">세 번째 글입니다.</li>
-            </ol>
-          </div>
+          <PopularPostsWidget widget={widget} />
         ) : (
           <div className="bg-red-50 p-4 rounded">
             <div className="font-medium">{widget.title || "인기 게시글"}</div>

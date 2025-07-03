@@ -8,7 +8,6 @@ import { Toaster } from "@/components/ui/toaster";
 import ScrollToTop from "@/components/scroll-to-top";
 import { AuthProvider } from "@/contexts/auth-context";
 import { swrGlobalConfig } from "@/config/swr-config";
-import PageTransitionManager from "@/components/layout/page-transition-manager";
 
 export default function ClientLayout({
   children,
@@ -40,7 +39,6 @@ export default function ClientLayout({
             <Footer menus={footerMenus} settings={footerSettings} />
             <Toaster />
             <ScrollToTop />
-            <PageTransitionManager />
           </div>
         </ThemeProvider>
       </SWRConfig>

@@ -30,14 +30,15 @@ interface HomepageWidgetsProps {
 // 위젯 데이터를 가져오는 fetcher 함수
 async function fetchWidgets(pageId?: string): Promise<IWidget[]> {
   let query = supabase
-    .from("cms_widgets")
+    .from("cms_layout")
     .select("*")
     .eq("is_active", true)
-    .order("column_position")
-    .order("order");
+    .order("order", { ascending: true });
 
   if (pageId) {
     query = query.eq("page_id", pageId);
+  } else {
+    query = query.is("page_id", null);
   }
 
   const { data, error } = await query;

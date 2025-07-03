@@ -52,7 +52,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/db";
 import { useAuth } from "@/contexts/auth-context";
 import useSWR from "swr";
-import { useRouterCache } from "@/hooks/use-router-cache";
 
 interface BoardPost {
   id: string;
@@ -193,7 +192,6 @@ export default function BoardSection({
   const searchParams = useSearchParams();
   const { user } = useAuth();
   const isAdmin = user?.role?.toLowerCase() === "admin";
-  const { generateCacheKey } = useRouterCache();
 
   // section에서 필요한 정보 추출
   const title = menuTitle || section.title || "게시판";
@@ -532,9 +530,9 @@ export default function BoardSection({
     // mutate(); // searchTerm이 바뀌면 SWR이 자동으로 갱신됨
   };
 
-  // 대신 SWR 사용 - 경로 정보 포함
+  // 대신 SWR 사용
   const { data, error, isLoading, mutate } = useSWR(
-    generateCacheKey(["boardData", pageId, categoryId, itemCount, page, searchType, searchTerm]),
+    ["boardData", pageId, categoryId, itemCount, page, searchType, searchTerm],
     () =>
       fetchBoardData({
         pageId,
@@ -545,10 +543,9 @@ export default function BoardSection({
         searchTerm,
       }),
     {
-      revalidateOnFocus: true,
+      revalidateOnFocus: false,
       shouldRetryOnError: true,
       errorRetryInterval: 5000,
-      dedupingInterval: 30000, // 30초로 단축
     }
   );
 
