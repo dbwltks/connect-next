@@ -1,6 +1,5 @@
-"use client";
-
-import { useRouter } from "next/navigation";
+import { createClient } from "@/utils/supabase/server";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
   Users,
@@ -15,22 +14,34 @@ import {
 } from "lucide-react";
 import AdminHeader from "@/components/layout/admin-header";
 import HideHeader from "@/components/layout/hide-header";
-import { useAuth } from "@/contexts/auth-context";
 
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const router = useRouter();
-  const { user } = useAuth();
+  const supabase = await createClient();
+  
+  // 서버에서 사용자 인증 확인
+  const {
+    data: { user },
+    error
+  } = await supabase.auth.getUser();
 
-  if (user === undefined) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
+  // 비로그인 사용자는 로그인 페이지로 리다이렉션
+  if (error || !user) {
+    redirect("/login");
+  }
+
+  // 관리자 권한 확인
+  const { data: userProfile } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (!userProfile || userProfile.role !== "admin") {
+    redirect("/");
   }
 
   const navItems = [

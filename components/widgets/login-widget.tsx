@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { IWidget } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -29,19 +29,24 @@ export default function LoginWidget({ widget }: LoginWidgetProps) {
   const router = useRouter();
 
   useEffect(() => {
+    // 매번 새로운 클라이언트 생성으로 세션 동기화 보장
+    const supabase = createClient();
+    
     const getSession = async () => {
       setIsLoading(true);
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
       
-      if (session?.user) {
-        setUser(session.user as AuthUser);
+      const {
+        data: { user },
+        error
+      } = await supabase.auth.getUser();
+      
+      if (!error && user) {
+        setUser(user as AuthUser);
         // Fetch user data from users table
         const { data: userProfile } = await supabase
           .from("users")
           .select("*")
-          .eq("id", session.user.id)
+          .eq("id", user.id)
           .single();
         setUserData(userProfile);
       } else {

@@ -12,10 +12,31 @@ export const swrGlobalConfig: SWRConfiguration = {
   dedupingInterval: 2000,             // 2초간 중복 요청 방지
   keepPreviousData: true,             // 새 데이터 로딩 중 이전 데이터 유지
   
-  // 에러 처리 설정
-  errorRetryCount: 3,                 // 에러 시 3번 재시도
-  errorRetryInterval: 5000,           // 5초 간격으로 재시도
-  shouldRetryOnError: true,           // 에러 시 자동 재시도
+  // 에러 처리 설정 - 세션 갱신을 고려한 재시도
+  errorRetryCount: 3,                 // 에러 시 3번 재시도 (미들웨어 세션 갱신 고려)
+  errorRetryInterval: 5000,           // 5초 간격으로 재시도 (미들웨어 처리 시간 고려)
+  shouldRetryOnError: (error) => {    // 인증 에러도 제한적으로 재시도
+    // 네트워크 에러나 서버 에러는 재시도
+    if (error?.message?.includes("fetch") || 
+        error?.message?.includes("network") ||
+        error?.message?.includes("timeout")) {
+      return true;
+    }
+    
+    // 인증 에러는 제한적으로 재시도 (미들웨어가 세션 갱신할 시간 제공)
+    if ((error as any)?.isAuthError ||
+        error?.message?.includes("JWT") || 
+        error?.message?.includes("PGRST301") ||
+        error?.message?.includes("401") ||
+        error?.message?.includes("unauthorized") ||
+        error?.message?.includes("인증 오류") ||
+        error?.message?.includes("expired")) {
+      console.log("[SWR Global] 인증 에러 감지 - 미들웨어 세션 갱신 후 재시도:", error.message);
+      return true; // 재시도 허용 (미들웨어가 세션 갱신)
+    }
+    
+    return true;
+  },
   
   // 페처 설정
   fetcher: async (resource, init) => {

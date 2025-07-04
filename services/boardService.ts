@@ -8,20 +8,25 @@ import {
   logDraftCreate,
 } from "./activityLogService";
 
-// 유저 정보 가져오기 (세션 기반)
+// 유저 정보 가져오기 (사용자 인증 기반)
 export const getCurrentUser = async () => {
   try {
     const {
-      data: { session },
-    } = await supabase.auth.getSession();
+      data: { user },
+      error
+    } = await supabase.auth.getUser();
+
+    if (error || !user) {
+      return { session: null, profile: null };
+    }
 
     const { data: profile } = await supabase
       .from("users")
       .select("*")
-      .eq("id", session?.user?.id)
+      .eq("id", user.id)
       .single();
 
-    return { session, profile };
+    return { session: { user }, profile };
   } catch (error) {
     console.error("사용자 정보 가져오기 실패:", error);
     return { session: null, profile: null };

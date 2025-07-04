@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { IWidget, IPage } from "@/types";
 import { Heart } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,13 +26,26 @@ async function fetchPopularPosts(
   itemCount: number,
   sortBy: string
 ): Promise<{ posts: Post[]; menuUrlMap: Record<string, string> }> {
+  // 매번 새로운 클라이언트 생성으로 세션 동기화 보장
+  const supabase = createClient();
   let finalPosts: Post[] = [];
 
   if (sortBy === "likes") {
     const { data: likeData, error: likeError } = await supabase
       .from("board_like")
       .select("post_id");
-    if (likeError) throw likeError;
+    if (likeError) {
+      // 인증 에러 구분
+      if (likeError.code === "PGRST301" || 
+          likeError.message?.includes("JWT") || 
+          likeError.message?.includes("expired") ||
+          likeError.message?.includes("unauthorized")) {
+        const authError = new Error(`세션 만료: 갱신 후 재시도`);
+        (authError as any).isAuthError = true;
+        throw authError;
+      }
+      throw likeError;
+    }
 
     const likeCounts = (likeData || []).reduce(
       (acc: Record<string, number>, like: any) => {
@@ -53,7 +66,18 @@ async function fetchPopularPosts(
         .select("id, title, views, page_id")
         .in("id", sortedPostIds)
         .eq("status", "published");
-      if (postError) throw postError;
+      if (postError) {
+        // 인증 에러 구분
+        if (postError.code === "PGRST301" || 
+            postError.message?.includes("JWT") || 
+            postError.message?.includes("expired") ||
+            postError.message?.includes("unauthorized")) {
+          const authError = new Error(`세션 만료: 갱신 후 재시도`);
+          (authError as any).isAuthError = true;
+          throw authError;
+        }
+        throw postError;
+      }
 
       const postsWithLikes = (postData || [])
         .map((post: any) => ({
@@ -90,7 +114,18 @@ async function fetchPopularPosts(
         .select("id, title, views, page_id")
         .in("id", sortedPostIds)
         .eq("status", "published");
-      if (postError) throw postError;
+      if (postError) {
+        // 인증 에러 구분
+        if (postError.code === "PGRST301" || 
+            postError.message?.includes("JWT") || 
+            postError.message?.includes("expired") ||
+            postError.message?.includes("unauthorized")) {
+          const authError = new Error(`세션 만료: 갱신 후 재시도`);
+          (authError as any).isAuthError = true;
+          throw authError;
+        }
+        throw postError;
+      }
 
       const postsWithComments = (postData || [])
         .map((post: any) => ({

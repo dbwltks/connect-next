@@ -1,19 +1,11 @@
+// @deprecated - 이 파일은 더 이상 사용하지 않습니다. 대신 다음을 사용하세요:
+// 클라이언트 컴포넌트: import { createClient } from "@/utils/supabase/client"
+// 서버 컴포넌트: import { createClient } from "@/utils/supabase/server"
+
 import { createClient } from "@/utils/supabase/client";
 
-// Supabase 클라이언트 인스턴스 (싱글톤 패턴)
-let _supabase: ReturnType<typeof createClient> | null = null;
-
-export const supabase = (() => {
-  if (typeof window !== "undefined") {
-    // 클라이언트 사이드에서만 생성
-    if (!_supabase) {
-      _supabase = createClient();
-    }
-    return _supabase;
-  }
-  // 서버 사이드에서는 매번 새로 생성
-  return createClient();
-})();
+// 하위 호환성을 위해 잠시 유지
+export const supabase = createClient();
 
 // Supabase 인증 헬퍼 함수
 export const getSession = async () => {

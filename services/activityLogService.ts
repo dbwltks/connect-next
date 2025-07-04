@@ -149,10 +149,10 @@ export async function createActivityLog({
     } else {
       // API 라우트를 통한 즉시 처리 (실무용)
       try {
-        // 현재 사용자 세션 토큰 가져오기
+        // 현재 사용자 인증 토큰 가져오기
         const {
           data: { session },
-        } = await supabase.auth.getSession();
+        } = await supabase.auth.getSession(); // API 호출을 위해 access_token이 필요하므로 getSession 유지
 
         if (!session?.access_token) {
           console.warn("활동 로그: 인증 토큰이 없습니다");

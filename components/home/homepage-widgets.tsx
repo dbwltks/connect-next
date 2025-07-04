@@ -35,8 +35,12 @@ async function fetchWidgets(pageId?: string): Promise<IWidget[]> {
       time: new Date().toISOString(),
     });
 
-    // 매번 새로운 클라이언트 생성하여 세션 문제 방지
+    // 매번 새로운 클라이언트 생성하여 최신 세션 보장
     const supabase = createClient();
+    
+    // 세션 상태 확인 (디버깅용)
+    const { data: { user } } = await supabase.auth.getUser();
+    console.log("[fetchWidgets] 현재 세션 상태:", user ? "로그인됨" : "비로그인");
 
     let query = supabase
       .from("cms_layout")
@@ -54,10 +58,20 @@ async function fetchWidgets(pageId?: string): Promise<IWidget[]> {
 
     if (error) {
       console.error("[fetchWidgets] Supabase 에러:", error);
-      // 세션 만료 에러 확인
-      if (error.code === "PGRST301" || error.message?.includes("JWT")) {
-        console.error("[fetchWidgets] 세션 만료 감지");
+      
+      // 세션 만료 에러 확인 - 미들웨어 갱신 대기 후 재시도
+      if (error.code === "PGRST301" || 
+          error.message?.includes("JWT") || 
+          error.message?.includes("expired") ||
+          error.message?.includes("unauthorized")) {
+        console.warn("[fetchWidgets] 세션 만료 감지 - 미들웨어 갱신 후 SWR 재시도 예정");
+        // 인증 에러임을 표시하되 재시도 허용
+        const authError = new Error(`세션 만료: 갱신 후 재시도`);
+        (authError as any).isAuthError = true;
+        throw authError;
       }
+      
+      // 일반 에러
       throw new Error(`위젯 데이터 로드 실패: ${error.message}`);
     }
 
@@ -83,7 +97,7 @@ export default function HomepageWidgets({
     () => (pageId ? fetchWidgets(pageId) : fetchWidgets()),
     {
       fallbackData: initialWidgets,
-      // 전역 설정 사용, 위젯은 5분마다 갱신되도록 별도 설정 가능
+      // 전역 설정 사용
     }
   );
 
@@ -211,25 +225,40 @@ export default function HomepageWidgets({
 
   const renderColumn = (widgetsToRender: IWidget[]) => (
     <div className="space-y-6">
-      {isLoading
-        ? Array.from({ length: 2 }).map((_, index) => (
-            <div key={index} className="flex flex-col">
-              <div className="relative h-64 w-full flex-1 overflow-hidden rounded-xl border border-slate-100">
-                {renderWidgetSkeleton()}
-              </div>
+      {error ? (
+        <div className="p-4 border border-yellow-200 bg-yellow-50 rounded-lg">
+          <p className="text-sm text-yellow-800">
+            {(error as any)?.isAuthError 
+              ? "데이터를 불러오는 중입니다... (세션 갱신 중)" 
+              : "위젯 데이터를 불러올 수 없습니다."}
+          </p>
+          {!(error as any)?.isAuthError && (
+            <p className="text-xs text-yellow-600 mt-1">
+              잠시 후 다시 시도됩니다.
+            </p>
+          )}
+        </div>
+      ) : isLoading ? (
+        Array.from({ length: 2 }).map((_, index) => (
+          <div key={index} className="flex flex-col">
+            <div className="relative h-64 w-full flex-1 overflow-hidden rounded-xl border border-slate-100">
+              {renderWidgetSkeleton()}
             </div>
-          ))
-        : widgetsToRender.map((widget) => (
-            <div
-              key={widget.id}
-              className="flex flex-col"
-              style={widget.height ? { height: `${widget.height}px` } : {}}
-            >
-              <div className="relative h-full w-full flex-1 overflow-hidden rounded-xl border border-slate-100">
-                {renderWidget(widget)}
-              </div>
+          </div>
+        ))
+      ) : (
+        widgetsToRender.map((widget) => (
+          <div
+            key={widget.id}
+            className="flex flex-col"
+            style={widget.height ? { height: `${widget.height}px` } : {}}
+          >
+            <div className="relative h-full w-full flex-1 overflow-hidden rounded-xl border border-slate-100">
+              {renderWidget(widget)}
             </div>
-          ))}
+          </div>
+        ))
+      )}
     </div>
   );
 

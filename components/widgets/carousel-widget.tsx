@@ -102,6 +102,7 @@ const fetchCarouselData = async (widget: IWidget): Promise<CarouselItem[]> => {
         image_url:
           post.thumbnail_image ||
           "https://via.placeholder.com/800x400/6B7280/ffffff?text=이미지+없음",
+        mobile_image_url: "", // 페이지 데이터소스일 때는 mobile_image_url 빈값
         title: post.title,
         description: post.content
           ? post.content
@@ -205,6 +206,11 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
 
   // 데스크톱/모바일에 따라 슬라이드 필터링
   const carouselItems = allCarouselItems.filter((item) => {
+    // 페이지 데이터소스일 때는 모바일/데스크톱 구분 없이 모든 게시물 표시
+    if (widget.settings?.data_source === "page") {
+      return item.image_url && item.image_url !== "";
+    }
+    
     if (isMobile) {
       // 모바일: mobile_image_url이 있는 슬라이드만
       return item.mobile_image_url && item.mobile_image_url !== "";
@@ -272,14 +278,23 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
     return (
       <div className="w-full h-64 bg-gray-50 rounded-lg flex items-center justify-center">
         <div className="text-gray-500 text-center">
-          {isMobile ? "모바일" : "데스크톱"} 캐러셀 이미지가 없습니다.
+          {widget.settings?.data_source === "page" 
+            ? "썸네일이 있는 게시물이 없습니다." 
+            : `${isMobile ? "모바일" : "데스크톱"} 캐러셀 이미지가 없습니다.`}
           <br />
           <span className="text-xs">
             전체 슬라이드: {allCarouselItems.length}개<br />
-            데스크톱 배열: {widget.settings?.desktop_images?.length || 0}개
+            {widget.settings?.data_source === "page" ? (
+              <>페이지 게시물 수: {allCarouselItems.length}개</>
+            ) : (
+              <>
+                데스크톱 배열: {widget.settings?.desktop_images?.length || 0}개
+                <br />
+                모바일 배열: {widget.settings?.mobile_images?.length || 0}개<br />
+                기존 배열: {widget.settings?.custom_images?.length || 0}개
+              </>
+            )}
             <br />
-            모바일 배열: {widget.settings?.mobile_images?.length || 0}개<br />
-            기존 배열: {widget.settings?.custom_images?.length || 0}개<br />
             데이터소스: {widget.settings?.data_source}
           </span>
         </div>
@@ -315,7 +330,11 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
                 className="w-full h-full flex-shrink-0 relative"
               >
                 <img
-                  src={item.mobile_image_url || item.image_url}
+                  src={
+                    widget.settings?.data_source === "page" 
+                      ? item.image_url 
+                      : (item.mobile_image_url || item.image_url)
+                  }
                   alt={item.title || `슬라이드 ${index + 1}`}
                   className={`w-full h-full object-cover ${
                     item.link_url && item.link_url !== "#"
@@ -347,8 +366,8 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
             ))}
           </div>
 
-          {/* 화살표 버튼 */}
-          {showArrows && carouselItems.length > 1 && (
+          {/* 화살표 버튼 - 모바일에서는 숨김 */}
+          {showArrows && carouselItems.length > 1 && !isMobile && (
             <>
               <button
                 className="absolute left-4 top-1/2 transform -translate-y-1/2 z-1 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 focus:outline-none"
@@ -415,7 +434,11 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
                 className="w-full h-full flex-shrink-0 relative"
               >
                 <img
-                  src={item.mobile_image_url || item.image_url}
+                  src={
+                    widget.settings?.data_source === "page" 
+                      ? item.image_url 
+                      : (item.mobile_image_url || item.image_url)
+                  }
                   alt={item.title || `슬라이드 ${index + 1}`}
                   className={`w-full h-full object-contain ${
                     item.link_url && item.link_url !== "#"
@@ -447,8 +470,8 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
             ))}
           </div>
 
-          {/* 화살표 버튼 */}
-          {showArrows && carouselItems.length > 1 && (
+          {/* 화살표 버튼 - 모바일에서는 숨김 */}
+          {showArrows && carouselItems.length > 1 && !isMobile && (
             <>
               <button
                 className="absolute left-4 top-1/2 transform -translate-y-1/2 z-1 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 focus:outline-none"
@@ -539,9 +562,11 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
                   <div className="aspect-video relative">
                     <img
                       src={
-                        isMobile && item.mobile_image_url
-                          ? item.mobile_image_url
-                          : item.image_url
+                        widget.settings?.data_source === "page" 
+                          ? item.image_url 
+                          : (isMobile && item.mobile_image_url
+                              ? item.mobile_image_url
+                              : item.image_url)
                       }
                       alt={item.title || `갤러리 ${index + 1}`}
                       className="w-full h-full object-cover"
@@ -580,8 +605,8 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
             </div>
           </div>
 
-          {/* 화살표 버튼 */}
-          {showArrows && carouselItems.length > 1 && (
+          {/* 화살표 버튼 - 모바일에서는 숨김 */}
+          {showArrows && carouselItems.length > 1 && !isMobile && (
             <>
               <button
                 className="absolute left-4 top-1/2 transform -translate-y-1/2 z-1 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 focus:outline-none disabled:opacity-50"

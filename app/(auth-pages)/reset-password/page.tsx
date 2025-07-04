@@ -23,22 +23,25 @@ export default function ResetPasswordPage() {
   const [passwordMatch, setPasswordMatch] = useState<boolean | null>(null);
   const [isValidSession, setIsValidSession] = useState<boolean | null>(null);
 
-  // 세션 확인
+  // 사용자 인증 확인
   useEffect(() => {
-    const checkSession = async () => {
+    const checkAuth = async () => {
       try {
         const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        setIsValidSession(!!session);
-
-        if (!session) {
+          data: { user },
+          error
+        } = await supabase.auth.getUser();
+        
+        if (error || !user) {
+          setIsValidSession(false);
           toast({
-            title: "세션이 만료되었습니다",
+            title: "인증이 만료되었습니다",
             description: "비밀번호 재설정 링크를 다시 요청해주세요.",
             variant: "destructive",
           });
           router.push("/forgot-password");
+        } else {
+          setIsValidSession(true);
         }
       } catch (error) {
         setIsValidSession(false);
@@ -46,7 +49,7 @@ export default function ResetPasswordPage() {
       }
     };
 
-    checkSession();
+    checkAuth();
   }, [router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
