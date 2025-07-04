@@ -35,19 +35,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchUserProfile = useCallback(
     async (userId: string): Promise<UserProfile | null> => {
       try {
-        const { data, error } = await supabase
+        // users 테이블에서 정보 가져오기
+        const { data: userData, error: userError } = await supabase
           .from("users")
           .select("*")
           .eq("id", userId)
           .single();
-
-        if (!error && data) {
+        
+        if (!userError && userData) {
+          // users 테이블의 nickname 사용, 없으면 username
+          const displayName = userData.nickname || userData.username;
+          
           const profile = {
-            id: data.id,
-            username: data.username,
-            email: data.email,
-            role: data.role || "user",
-            avatar_url: data.avatar_url,
+            id: userData.id,
+            username: displayName, // nickname을 표시 이름으로 사용
+            email: userData.email,
+            role: userData.role || "user",
+            avatar_url: userData.avatar_url,
           };
           return profile;
         }
@@ -63,15 +67,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // 로그아웃 처리
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      console.log("로그아웃 시작...");
+      
+      // Supabase 세션 정리
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error("Supabase 로그아웃 오류:", error);
+        throw error;
+      }
+      
+      // 로컬 상태 정리
       setUser(null);
-      router.push("/login");
-    } catch (error) {
+      
+      // 로컬 스토리지 정리 (혹시 남아있는 데이터)
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("supabase.auth.token");
+        sessionStorage.clear();
+      }
+      
+      console.log("로그아웃 성공");
+      
+      // 성공 메시지 표시
+      toast({
+        title: "로그아웃 완료",
+        description: "성공적으로 로그아웃되었습니다",
+        variant: "default",
+      });
+      
+      // 약간의 지연 후 리다이렉트 (토스트 메시지가 보이도록)
+      setTimeout(() => {
+        router.push("/login");
+        // 페이지 새로고침으로 완전히 초기화
+        if (typeof window !== "undefined") {
+          window.location.href = "/login";
+        }
+      }, 1000);
+      
+    } catch (error: any) {
+      console.error("로그아웃 처리 중 오류:", error);
+      
       toast({
         title: "로그아웃 실패",
-        description: "로그아웃 중 오류가 발생했습니다",
+        description: error?.message || "로그아웃 중 오류가 발생했습니다. 새로고침 후 다시 시도해주세요.",
         variant: "destructive",
       });
+      
+      // 오류 발생 시에도 강제로 로그인 페이지로 이동
+      setTimeout(() => {
+        if (typeof window !== "undefined") {
+          window.location.href = "/login";
+        }
+      }, 2000);
     }
   };
 

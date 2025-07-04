@@ -70,11 +70,16 @@ export async function GET(request: NextRequest) {
         }
 
         if (authUser?.user) {
+          // users 테이블에서 nickname 가져오기
+          const { data: userData } = await supabaseAdmin
+            .from("users")
+            .select("nickname, username")
+            .eq("id", userId)
+            .single();
+
           const displayName =
-            authUser.user.user_metadata?.display_name ||
-            (authUser.user as any).display_name ||
-            authUser.user.user_metadata?.name ||
-            authUser.user.user_metadata?.full_name ||
+            userData?.nickname ||
+            userData?.username ||
             authUser.user.email?.split("@")[0] ||
             "알수없음";
 

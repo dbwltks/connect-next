@@ -3,10 +3,10 @@ import { SWRConfiguration } from 'swr';
 // SWR 전역 설정
 export const swrGlobalConfig: SWRConfiguration = {
   // 재검증 설정
-  revalidateOnFocus: false,           // 포커스 시 재검증 안함
+  revalidateOnFocus: true,            // 포커스 시 재검증 (탭 전환 시 최신 데이터)
   revalidateOnReconnect: true,        // 재연결 시 재검증
   revalidateIfStale: true,            // stale 데이터일 때 자동 갱신
-  refreshInterval: 600000,            // 10분마다 자동 갱신
+  refreshInterval: 300000,            // 5분마다 자동 갱신
   
   // 캐싱 설정
   dedupingInterval: 2000,             // 2초간 중복 요청 방지

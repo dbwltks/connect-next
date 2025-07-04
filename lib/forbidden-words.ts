@@ -124,7 +124,7 @@ export function getForbiddenWordMessage(
   return baseMessage;
 }
 
-// 닉네임/디스플레이 이름 전체 검증 함수
+// 닉네임 전체 검증 함수
 export function validateDisplayName(name: string): {
   isValid: boolean;
   message?: string;

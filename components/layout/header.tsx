@@ -148,6 +148,7 @@ export default function Header({ menuItems }: { menuItems: any[] }) {
 function HeaderClient({ user, menuItems }: { user: any; menuItems: any[] }) {
   const { handleLogout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { theme, setTheme } = useTheme();
   const [openSubmenus, setOpenSubmenus] = useState<{ [key: string]: boolean }>(
     {}
@@ -307,7 +308,18 @@ function HeaderClient({ user, menuItems }: { user: any; menuItems: any[] }) {
             </Button>
           ) : user ? (
             // 클라이언트에서 사용자 정보가 있으면 UserMenu 렌더링
-            <UserMenu user={user} onLogout={handleLogout} />
+            <UserMenu 
+              user={user} 
+              onLogout={async () => {
+                setIsLoggingOut(true);
+                try {
+                  await handleLogout();
+                } finally {
+                  setIsLoggingOut(false);
+                }
+              }} 
+              isLoggingOut={isLoggingOut}
+            />
           ) : (
             // 클라이언트에서 사용자 정보가 없으면 로그인 버튼 렌더링
             <Link href="/login">
@@ -335,7 +347,18 @@ function HeaderClient({ user, menuItems }: { user: any; menuItems: any[] }) {
           </Button>
         ) : user ? (
           // 클라이언트에서 사용자 정보가 있으면 UserMenu 렌더링
-          <UserMenu user={user} onLogout={handleLogout} />
+          <UserMenu 
+            user={user} 
+            onLogout={async () => {
+              setIsLoggingOut(true);
+              try {
+                await handleLogout();
+              } finally {
+                setIsLoggingOut(false);
+              }
+            }} 
+            isLoggingOut={isLoggingOut}
+          />
         ) : (
           // 클라이언트에서 사용자 정보가 없으면 로그인 버튼 렌더링
           <Link href="/login">
@@ -501,13 +524,19 @@ function HeaderClient({ user, menuItems }: { user: any; menuItems: any[] }) {
                     </Link>
                   )}
                   <button
-                    onClick={() => {
-                      handleLogout();
+                    onClick={async () => {
+                      setIsLoggingOut(true);
                       setIsMenuOpen(false);
+                      try {
+                        await handleLogout();
+                      } finally {
+                        setIsLoggingOut(false);
+                      }
                     }}
-                    className="block text-base font-medium text-red-500 dark:text-red-400 pb-6"
+                    disabled={isLoggingOut}
+                    className="block text-base font-medium text-red-500 dark:text-red-400 pb-6 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    로그아웃
+                    {isLoggingOut ? "로그아웃 중..." : "로그아웃"}
                   </button>
                 </>
               ) : (
@@ -539,7 +568,7 @@ function HeaderClient({ user, menuItems }: { user: any; menuItems: any[] }) {
 }
 
 // 사용자 메뉴 컴포넌트
-function UserMenu({ user, onLogout }: { user: any; onLogout: () => void }) {
+function UserMenu({ user, onLogout, isLoggingOut }: { user: any; onLogout: () => void; isLoggingOut: boolean }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -547,6 +576,7 @@ function UserMenu({ user, onLogout }: { user: any; onLogout: () => void }) {
           variant="ghost"
           size="icon"
           className="relative h-8 w-8 rounded-full"
+          disabled={isLoggingOut}
         >
           <Avatar>
             <AvatarImage src={user.avatar_url || ""} alt={user.username} />
@@ -603,10 +633,11 @@ function UserMenu({ user, onLogout }: { user: any; onLogout: () => void }) {
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={onLogout}
-          className="cursor-pointer text-red-500 dark:text-red-400"
+          disabled={isLoggingOut}
+          className="cursor-pointer text-red-500 dark:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <LogOut className="mr-2 h-4 w-4" />
-          <span>로그아웃</span>
+          <span>{isLoggingOut ? "로그아웃 중..." : "로그아웃"}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -16,19 +16,19 @@ const ContentSection = dynamic(() => import("./content-section"));
 // });
 
 // 섹션 로딩 중 표시할 스켈레톤 UI
-function SectionSkeleton({ title }: { title: string }) {
-  return (
-    <div className="space-y-4 mb-8 p-4 border border-dashed rounded-md animate-pulse">
-      <div className="h-8 w-1/3 bg-gray-200 rounded"></div>
-      <div className="h-4 w-1/2 bg-gray-200 rounded"></div>
-      <div className="space-y-3">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-20 w-full bg-gray-200 rounded"></div>
-        ))}
-      </div>
-    </div>
-  );
-}
+// function SectionSkeleton({ title }: { title: string }) {
+//   return (
+//     <div className="space-y-4 mb-8 p-4 border border-dashed rounded-md animate-pulse">
+//       <div className="h-8 w-1/3 bg-gray-200 rounded"></div>
+//       <div className="h-4 w-1/2 bg-gray-200 rounded"></div>
+//       <div className="space-y-3">
+//         {Array.from({ length: 3 }).map((_, i) => (
+//           <div key={i} className="h-20 w-full bg-gray-200 rounded"></div>
+//         ))}
+//       </div>
+//     </div>
+//   );
+// }
 
 import { Section } from "@/components/admin/section-manager";
 

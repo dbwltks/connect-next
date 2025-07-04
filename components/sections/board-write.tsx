@@ -40,6 +40,8 @@ import {
   File,
   Settings,
   BookOpen,
+  Search,
+  Check,
 } from "lucide-react";
 import {
   getHeaderUser,
@@ -381,6 +383,24 @@ export default function BoardWrite({
     useState<boolean>(false);
   const [selectedEndChapter, setSelectedEndChapter] = useState<number>(1);
   const [endChapterVerses, setEndChapterVerses] = useState<number>(1);
+
+  // 성경책 검색 관련 상태
+  const [bibleBookSearchValue, setBibleBookSearchValue] = useState<string>("");
+  const [bibleBookSearchFocused, setBibleBookSearchFocused] =
+    useState<boolean>(false);
+
+  // 성경구절 리스트 관리
+  const [selectedBibleVerses, setSelectedBibleVerses] = useState<
+    {
+      book: number;
+      chapter: number;
+      startVerse: number;
+      endVerse: number;
+      endChapter?: number;
+      includeOtherChapter?: boolean;
+      version?: keyof typeof BIBLE_VERSIONS;
+    }[]
+  >([]);
 
   // useAuth 훅 사용
   const { user } = useAuth();
@@ -1323,6 +1343,55 @@ export default function BoardWrite({
 
   // 성경 관련 함수들
 
+  // 현재 선택된 성경구절을 리스트에 추가
+  const addBibleVerse = () => {
+    // 기본 검증
+    if (!selectedBibleBook || !selectedBibleChapter || !selectedStartVerse) {
+      showToast({
+        title: "입력 오류",
+        description: "성경책, 장, 시작절을 모두 선택해주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // 끝절이 비어있으면 시작절과 동일하게 설정
+    const finalEndVerse = selectedEndVerse || selectedStartVerse;
+
+    const newVerse = {
+      book: selectedBibleBook,
+      chapter: selectedBibleChapter,
+      startVerse: selectedStartVerse,
+      endVerse: finalEndVerse,
+      endChapter: includeOtherChapter ? selectedEndChapter : undefined,
+      includeOtherChapter: includeOtherChapter,
+      version: selectedBibleVersion,
+    };
+
+    setSelectedBibleVerses((prev) => [...prev, newVerse]);
+
+    showToast({
+      title: "성경구절 추가됨",
+      description: `${getBibleBookName(newVerse.book, selectedBibleVersion)} ${newVerse.chapter}:${newVerse.startVerse}${
+        newVerse.includeOtherChapter && newVerse.endChapter
+          ? ` ~ ${newVerse.endChapter}:${newVerse.endVerse}`
+          : newVerse.endVerse !== newVerse.startVerse
+            ? `-${newVerse.endVerse}`
+            : ""
+      } 리스트에 추가됨`,
+    });
+  };
+
+  // 선택된 구절을 리스트에서 제거
+  const removeBibleVerse = (index: number) => {
+    setSelectedBibleVerses((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // 리스트 전체 초기화
+  const clearBibleVerses = () => {
+    setSelectedBibleVerses([]);
+  };
+
   const insertBibleIntoEditor = async () => {
     if (!editorRef.current?.editor) {
       showToast({
@@ -1333,58 +1402,121 @@ export default function BoardWrite({
       return;
     }
 
+    // 리스트가 비어있으면 현재 선택된 구절 사용, 아니면 리스트 구절들 사용
+    const versesToProcess =
+      selectedBibleVerses.length > 0
+        ? selectedBibleVerses
+        : [
+            {
+              book: selectedBibleBook,
+              chapter: selectedBibleChapter,
+              startVerse: selectedStartVerse,
+              endVerse: selectedEndVerse,
+              endChapter: includeOtherChapter ? selectedEndChapter : undefined,
+              includeOtherChapter: includeOtherChapter,
+            },
+          ];
+
     setBibleLoading(true);
 
     try {
-      let allMainVerses: any[] = [];
-      let allSubVerses: any[] = [];
+      let finalHtmlContent = "";
 
-      if (includeOtherChapter && selectedEndChapter !== selectedBibleChapter) {
-        // 다른 장 포함인 경우: 여러 장에 걸친 구절들을 가져오기
-        for (
-          let chapter = selectedBibleChapter;
-          chapter <= selectedEndChapter;
-          chapter++
+      // 각 구절에 대해 처리
+      for (
+        let verseIndex = 0;
+        verseIndex < versesToProcess.length;
+        verseIndex++
+      ) {
+        const verseInfo = versesToProcess[verseIndex];
+        let allMainVerses: any[] = [];
+        let allSubVerses: any[] = [];
+
+        if (
+          verseInfo.includeOtherChapter &&
+          verseInfo.endChapter &&
+          verseInfo.endChapter !== verseInfo.chapter
         ) {
-          let startVerse: number;
-          let endVerse: number | undefined;
+          // 다른 장 포함인 경우: 여러 장에 걸친 구절들을 가져오기
+          for (
+            let chapter = verseInfo.chapter;
+            chapter <= verseInfo.endChapter;
+            chapter++
+          ) {
+            let startVerse: number;
+            let endVerse: number | undefined;
 
-          if (chapter === selectedBibleChapter) {
-            // 시작 장: 선택한 시작절부터 해당 장의 끝까지
-            startVerse = selectedStartVerse;
-            // 해당 장의 마지막 절 번호를 구해서 명시적으로 설정
-            const chapterVerseCount = await getBibleVerseCount(
-              selectedBibleBook,
-              chapter,
-              selectedBibleVersion
-            );
-            endVerse = chapterVerseCount;
-          } else if (chapter === selectedEndChapter) {
-            // 끝 장: 1절부터 선택한 끝절까지
-            startVerse = 1;
-            endVerse = selectedEndVerse;
-          } else {
-            // 중간 장들: 1절부터 해당 장의 끝까지 모든 절
-            startVerse = 1;
-            // 해당 장의 마지막 절 번호를 구해서 명시적으로 설정
-            const chapterVerseCount = await getBibleVerseCount(
-              selectedBibleBook,
-              chapter,
-              selectedBibleVersion
-            );
-            endVerse = chapterVerseCount;
+            if (chapter === verseInfo.chapter) {
+              // 시작 장: 선택한 시작절부터 해당 장의 끝까지
+              startVerse = verseInfo.startVerse;
+              // 해당 장의 마지막 절 번호를 구해서 명시적으로 설정
+              const chapterVerseCount = await getBibleVerseCount(
+                verseInfo.book,
+                chapter,
+                verseInfo.version || selectedBibleVersion
+              );
+              endVerse = chapterVerseCount;
+            } else if (chapter === verseInfo.endChapter) {
+              // 끝 장: 1절부터 선택한 끝절까지
+              startVerse = 1;
+              endVerse = verseInfo.endVerse;
+            } else {
+              // 중간 장들: 1절부터 해당 장의 끝까지 모든 절
+              startVerse = 1;
+              // 해당 장의 마지막 절 번호를 구해서 명시적으로 설정
+              const chapterVerseCount = await getBibleVerseCount(
+                verseInfo.book,
+                chapter,
+                verseInfo.version || selectedBibleVersion
+              );
+              endVerse = chapterVerseCount;
+            }
+
+            const mainVerses = await getBibleVerses({
+              version: verseInfo.version || selectedBibleVersion,
+              book: verseInfo.book,
+              chapter: chapter,
+              startVerse: startVerse,
+              endVerse: endVerse,
+            });
+
+            if (mainVerses && mainVerses.length > 0) {
+              allMainVerses.push(...mainVerses);
+            }
+
+            // 대역이 선택된 경우
+            if (showBothVersions && selectedBibleSubVersion) {
+              try {
+                const subVerses = await getBibleVerses({
+                  version: selectedBibleSubVersion,
+                  book: verseInfo.book,
+                  chapter: chapter,
+                  startVerse: startVerse,
+                  endVerse: endVerse,
+                });
+                if (subVerses && subVerses.length > 0) {
+                  allSubVerses.push(...subVerses);
+                }
+              } catch (error) {
+                console.error(`대역 구절 가져오기 실패 (${chapter}장):`, error);
+              }
+            }
           }
-
+        } else {
+          // 같은 장 내에서의 절 범위인 경우
           const mainVerses = await getBibleVerses({
-            version: selectedBibleVersion,
-            book: selectedBibleBook,
-            chapter: chapter,
-            startVerse: startVerse,
-            endVerse: endVerse,
+            version: verseInfo.version || selectedBibleVersion,
+            book: verseInfo.book,
+            chapter: verseInfo.chapter,
+            startVerse: verseInfo.startVerse,
+            endVerse:
+              verseInfo.endVerse !== verseInfo.startVerse
+                ? verseInfo.endVerse
+                : undefined,
           });
 
           if (mainVerses && mainVerses.length > 0) {
-            allMainVerses.push(...mainVerses);
+            allMainVerses = mainVerses as any[];
           }
 
           // 대역이 선택된 경우
@@ -1392,159 +1524,135 @@ export default function BoardWrite({
             try {
               const subVerses = await getBibleVerses({
                 version: selectedBibleSubVersion,
-                book: selectedBibleBook,
-                chapter: chapter,
-                startVerse: startVerse,
-                endVerse: endVerse,
+                book: verseInfo.book,
+                chapter: verseInfo.chapter,
+                startVerse: verseInfo.startVerse,
+                endVerse:
+                  verseInfo.endVerse !== verseInfo.startVerse
+                    ? verseInfo.endVerse
+                    : undefined,
               });
               if (subVerses && subVerses.length > 0) {
-                allSubVerses.push(...subVerses);
+                allSubVerses = subVerses as any[];
               }
             } catch (error) {
-              console.error(`대역 구절 가져오기 실패 (${chapter}장):`, error);
+              console.error("대역 구절 가져오기 실패:", error);
             }
           }
         }
-      } else {
-        // 같은 장 내에서의 절 범위인 경우
-        const mainVerses = await getBibleVerses({
-          version: selectedBibleVersion,
-          book: selectedBibleBook,
-          chapter: selectedBibleChapter,
-          startVerse: selectedStartVerse,
-          endVerse:
-            selectedEndVerse !== selectedStartVerse
-              ? selectedEndVerse
-              : undefined,
-        });
 
-        if (mainVerses && mainVerses.length > 0) {
-          allMainVerses = mainVerses as any[];
+        if (!allMainVerses || allMainVerses.length === 0) {
+          showToast({
+            title: "성경 구절 없음",
+            description: "선택한 성경 구절을 찾을 수 없습니다.",
+            variant: "destructive",
+          });
+          return;
         }
 
-        // 대역이 선택된 경우
-        if (showBothVersions && selectedBibleSubVersion) {
-          try {
-            const subVerses = await getBibleVerses({
-              version: selectedBibleSubVersion,
-              book: selectedBibleBook,
-              chapter: selectedBibleChapter,
-              startVerse: selectedStartVerse,
-              endVerse:
-                selectedEndVerse !== selectedStartVerse
-                  ? selectedEndVerse
-                  : undefined,
-            });
-            if (subVerses && subVerses.length > 0) {
-              allSubVerses = subVerses as any[];
-            }
-          } catch (error) {
-            console.error("대역 구절 가져오기 실패:", error);
-          }
-        }
-      }
+        // 본문만 또는 본문-대역 포맷팅
+        let formattedHtml;
 
-      if (!allMainVerses || allMainVerses.length === 0) {
-        showToast({
-          title: "성경 구절 없음",
-          description: "선택한 성경 구절을 찾을 수 없습니다.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // 본문만 또는 본문-대역 포맷팅
-      let formattedHtml;
-
-      if (includeOtherChapter && selectedEndChapter !== selectedBibleChapter) {
-        // 다른 장 포함인 경우: 각 장별로 포맷팅
-        let htmlContent = "";
-        let currentChapter = selectedBibleChapter;
-        let verseIndex = 0;
-
-        while (
-          currentChapter <= selectedEndChapter &&
-          verseIndex < allMainVerses.length
+        if (
+          verseInfo.includeOtherChapter &&
+          verseInfo.endChapter &&
+          verseInfo.endChapter !== verseInfo.chapter
         ) {
-          const chapterVerses = [];
-          const chapterSubVerses = [];
+          // 다른 장 포함인 경우: 각 장별로 포맷팅
+          let htmlContent = "";
+          let currentChapter = verseInfo.chapter;
+          let verseIndex = 0;
 
-          // 현재 장의 구절들만 추출
           while (
-            verseIndex < allMainVerses.length &&
-            allMainVerses[verseIndex].chapter === currentChapter
+            currentChapter <= verseInfo.endChapter &&
+            verseIndex < allMainVerses.length
           ) {
-            chapterVerses.push(allMainVerses[verseIndex]);
-            if (allSubVerses.length > verseIndex) {
-              chapterSubVerses.push(allSubVerses[verseIndex]);
+            const chapterVerses = [];
+            const chapterSubVerses = [];
+
+            // 현재 장의 구절들만 추출
+            while (
+              verseIndex < allMainVerses.length &&
+              allMainVerses[verseIndex].chapter === currentChapter
+            ) {
+              chapterVerses.push(allMainVerses[verseIndex]);
+              if (allSubVerses.length > verseIndex) {
+                chapterSubVerses.push(allSubVerses[verseIndex]);
+              }
+              verseIndex++;
             }
-            verseIndex++;
+
+            if (chapterVerses.length > 0) {
+              const chapterHtml =
+                showBothVersions && chapterSubVerses.length > 0
+                  ? formatBibleVersesWithSub(
+                      chapterVerses,
+                      chapterSubVerses,
+                      verseInfo.book,
+                      currentChapter,
+                      verseInfo.version || selectedBibleVersion,
+                      selectedBibleSubVersion!
+                    )
+                  : formatBibleVerses(
+                      chapterVerses,
+                      verseInfo.book,
+                      currentChapter,
+                      verseInfo.version || selectedBibleVersion
+                    );
+
+              htmlContent += chapterHtml;
+              if (currentChapter < verseInfo.endChapter) {
+                htmlContent += "<br>";
+              }
+            }
+
+            currentChapter++;
           }
 
-          if (chapterVerses.length > 0) {
-            const chapterHtml =
-              showBothVersions && chapterSubVerses.length > 0
-                ? formatBibleVersesWithSub(
-                    chapterVerses,
-                    chapterSubVerses,
-                    selectedBibleBook,
-                    currentChapter,
-                    selectedBibleVersion,
-                    selectedBibleSubVersion!
-                  )
-                : formatBibleVerses(
-                    chapterVerses,
-                    selectedBibleBook,
-                    currentChapter,
-                    selectedBibleVersion
-                  );
-
-            htmlContent += chapterHtml;
-            if (currentChapter < selectedEndChapter) {
-              htmlContent += "<br>";
-            }
-          }
-
-          currentChapter++;
+          formattedHtml = htmlContent;
+        } else {
+          // 같은 장 내에서의 절 범위인 경우
+          formattedHtml =
+            showBothVersions && allSubVerses.length > 0
+              ? formatBibleVersesWithSub(
+                  allMainVerses,
+                  allSubVerses,
+                  verseInfo.book,
+                  verseInfo.chapter,
+                  verseInfo.version || selectedBibleVersion,
+                  selectedBibleSubVersion!
+                )
+              : formatBibleVerses(
+                  allMainVerses,
+                  verseInfo.book,
+                  verseInfo.chapter,
+                  verseInfo.version || selectedBibleVersion
+                );
         }
 
-        formattedHtml = htmlContent;
-      } else {
-        // 같은 장 내에서의 절 범위인 경우
-        formattedHtml =
-          showBothVersions && allSubVerses.length > 0
-            ? formatBibleVersesWithSub(
-                allMainVerses,
-                allSubVerses,
-                selectedBibleBook,
-                selectedBibleChapter,
-                selectedBibleVersion,
-                selectedBibleSubVersion!
-              )
-            : formatBibleVerses(
-                allMainVerses,
-                selectedBibleBook,
-                selectedBibleChapter,
-                selectedBibleVersion
-              );
+        // Add the formatted HTML to the final content
+        if (verseIndex > 0) {
+          finalHtmlContent += "<br><br>";
+        }
+        finalHtmlContent += formattedHtml;
       }
 
-      editorRef.current.editor.commands.insertContent(formattedHtml);
+      editorRef.current.editor.commands.insertContent(finalHtmlContent);
       setShowBibleInsert(false);
+
+      // 리스트가 사용되었으면 초기화
+      if (selectedBibleVerses.length > 0) {
+        setSelectedBibleVerses([]);
+      }
 
       const versionText =
         showBothVersions && selectedBibleSubVersion
           ? `${BIBLE_VERSIONS[selectedBibleVersion].name} + ${BIBLE_VERSIONS[selectedBibleSubVersion].name}`
           : BIBLE_VERSIONS[selectedBibleVersion].name;
 
-      const rangeText =
-        includeOtherChapter && selectedEndChapter !== selectedBibleChapter
-          ? `${selectedBibleChapter}:${selectedStartVerse} - ${selectedEndChapter}:${selectedEndVerse}`
-          : `${selectedBibleChapter}:${selectedStartVerse}${selectedEndVerse !== selectedStartVerse ? `-${selectedEndVerse}` : ""}`;
-
       showToast({
         title: "성경 구절 삽입 완료",
-        description: `${getBibleBookName(selectedBibleBook, selectedBibleVersion)} ${rangeText} (${versionText}) 삽입됨`,
+        description: `${versesToProcess.length}개의 성경구절이 (${versionText}) 삽입되었습니다.`,
         variant: "default",
       });
     } catch (error) {
@@ -1916,108 +2024,160 @@ export default function BoardWrite({
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 {/* 성경 번역본 선택 */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">기본 역본</Label>
-                  <Select
-                    value={selectedBibleVersion}
-                    onValueChange={(value) => {
-                      console.log(`🔄 번역본 선택: ${value}`);
-                      setSelectedBibleVersion(
-                        value as keyof typeof BIBLE_VERSIONS
-                      );
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(BIBLE_VERSIONS).map(([key, version]) => (
-                        <SelectItem key={key} value={key}>
-                          {version.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">기본 역본</Label>
+                    <Select
+                      value={selectedBibleVersion}
+                      onValueChange={(value) => {
+                        console.log(`🔄 번역본 선택: ${value}`);
+                        setSelectedBibleVersion(
+                          value as keyof typeof BIBLE_VERSIONS
+                        );
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(BIBLE_VERSIONS).map(
+                          ([key, version]) => (
+                            <SelectItem key={key} value={key}>
+                              {version.name}
+                            </SelectItem>
+                          )
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-gray-600">
+                      대조 역본
+                    </Label>
+                    <Select
+                      value={selectedBibleSubVersion || ""}
+                      onValueChange={(value) => {
+                        setSelectedBibleSubVersion(
+                          value ? (value as keyof typeof BIBLE_VERSIONS) : null
+                        );
+                        if (value) {
+                          setShowBothVersions(true);
+                        }
+                      }}
+                      disabled={!showBothVersions}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="대역 번역본 선택 (선택사항)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(BIBLE_VERSIONS)
+                          .filter(([key]) => key !== selectedBibleVersion) // 본문과 다른 번역본만 표시
+                          .map(([key, version]) => (
+                            <SelectItem key={key} value={key}>
+                              {version.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 {/* 본문-대역 옵션 */}
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="show-both-versions"
-                      checked={showBothVersions}
-                      onCheckedChange={(checked) => {
-                        setShowBothVersions(checked === true);
-                        if (checked === false) {
-                          setSelectedBibleSubVersion(null);
-                        }
-                      }}
-                    />
-                    <Label
-                      htmlFor="show-both-versions"
-                      className="text-sm font-medium"
-                    >
-                      본문과 대역 함께 표시
-                    </Label>
-                  </div>
-
-                  {/* 대역 번역본 선택 (본문-대역 옵션이 활성화된 경우만 표시) */}
-                  {showBothVersions && (
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-gray-600">
-                        대조 역본
-                      </Label>
-                      <Select
-                        value={selectedBibleSubVersion || ""}
-                        onValueChange={(value) => {
-                          setSelectedBibleSubVersion(
-                            value
-                              ? (value as keyof typeof BIBLE_VERSIONS)
-                              : null
-                          );
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="대역 번역본을 선택하세요" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Object.entries(BIBLE_VERSIONS)
-                            .filter(([key]) => key !== selectedBibleVersion) // 본문과 다른 번역본만 표시
-                            .map(([key, version]) => (
-                              <SelectItem key={key} value={key}>
-                                {version.name}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="show-both-versions"
+                    checked={showBothVersions}
+                    onCheckedChange={(checked) => {
+                      setShowBothVersions(checked === true);
+                      if (checked === false) {
+                        setSelectedBibleSubVersion(null);
+                      }
+                    }}
+                  />
+                  <Label
+                    htmlFor="show-both-versions"
+                    className="text-sm font-medium"
+                  >
+                    본문과 대역 함께 표시
+                  </Label>
                 </div>
 
                 {/* 성경 책 선택 */}
-                <div className="space-y-2">
+                <div className="space-y-2 relative">
                   <Label className="text-sm font-medium">성경 책</Label>
-                  <Select
-                    value={selectedBibleBook.toString()}
-                    onValueChange={(value) => {
-                      const newBookNum = parseInt(value);
-                      console.log(`📚 성경 책 선택: ${value} → ${newBookNum}`);
-                      setSelectedBibleBook(newBookNum);
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-60 overflow-y-auto">
-                      {Object.entries(BIBLE_BOOKS).map(
-                        ([bookNum, bookName]) => (
-                          <SelectItem key={bookNum} value={bookNum}>
-                            {bookName}
-                          </SelectItem>
+                  <div className="relative">
+                    <Input
+                      type="text"
+                      placeholder={
+                        selectedBibleBook
+                          ? (BIBLE_BOOKS as any)[selectedBibleBook]
+                          : "성경 책 검색... (예: 창세기, 시편, 마태복음)"
+                      }
+                      value={bibleBookSearchValue}
+                      onChange={(e) => setBibleBookSearchValue(e.target.value)}
+                      onFocus={() => setBibleBookSearchFocused(true)}
+                      onBlur={() =>
+                        setTimeout(() => setBibleBookSearchFocused(false), 200)
+                      }
+                      className="w-full"
+                    />
+                    <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  </div>
+
+                  {/* 검색 결과 드롭다운 */}
+                  {(bibleBookSearchFocused || bibleBookSearchValue) && (
+                    <div className="absolute top-full left-0 right-0 z-50 border rounded-md max-h-60 overflow-y-auto bg-background shadow-lg">
+                      {Object.entries(BIBLE_BOOKS)
+                        .filter(
+                          ([_, bookName]) =>
+                            bibleBookSearchValue === "" ||
+                            bookName
+                              .toLowerCase()
+                              .includes(bibleBookSearchValue.toLowerCase())
                         )
+                        .map(([bookNum, bookName]) => (
+                          <button
+                            key={bookNum}
+                            type="button"
+                            className={`w-full text-left px-3 py-2 hover:bg-accent hover:text-accent-foreground flex items-center gap-2 ${
+                              selectedBibleBook === parseInt(bookNum)
+                                ? "bg-accent text-accent-foreground"
+                                : ""
+                            }`}
+                            onMouseDown={() => {
+                              const newBookNum = parseInt(bookNum);
+                              console.log(
+                                `📚 성경 책 선택: ${bookNum} → ${newBookNum}`
+                              );
+                              setSelectedBibleBook(newBookNum);
+                              setBibleBookSearchValue("");
+                              setBibleBookSearchFocused(false);
+                            }}
+                          >
+                            <Check
+                              className={`h-4 w-4 ${
+                                selectedBibleBook === parseInt(bookNum)
+                                  ? "opacity-100"
+                                  : "opacity-0"
+                              }`}
+                            />
+                            {bookName}
+                          </button>
+                        ))}
+                      {Object.entries(BIBLE_BOOKS).filter(
+                        ([_, bookName]) =>
+                          bibleBookSearchValue === "" ||
+                          bookName
+                            .toLowerCase()
+                            .includes(bibleBookSearchValue.toLowerCase())
+                      ).length === 0 && (
+                        <div className="px-3 py-2 text-muted-foreground text-sm">
+                          검색 결과가 없습니다.
+                        </div>
                       )}
-                    </SelectContent>
-                  </Select>
+                    </div>
+                  )}
                 </div>
 
                 {/* 다른 장 포함 옵션 */}
@@ -2136,16 +2296,13 @@ export default function BoardWrite({
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium">
-                        끝 절 (총 {endChapterVerses}절)
-                      </Label>
+                      <Label className="text-sm font-medium">끝 절</Label>
                       <Input
                         type="number"
                         min="1"
-                        max={endChapterVerses}
-                        value={selectedEndVerse}
+                        value={selectedEndVerse || ""}
                         onChange={(e) =>
-                          setSelectedEndVerse(parseInt(e.target.value) || 1)
+                          setSelectedEndVerse(parseInt(e.target.value) || 0)
                         }
                         className="w-full"
                         placeholder="끝 절"
@@ -2157,9 +2314,7 @@ export default function BoardWrite({
                 {/* 단일 장 내에서의 절 범위 선택 (다른 장 포함이 비활성화된 경우) */}
                 {!includeOtherChapter && (
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium">
-                      끝 절 (같은 장 내에서 범위 선택)
-                    </Label>
+                    <Label className="text-sm font-medium">끝 절</Label>
                     <div className="flex gap-2 items-center">
                       <span className="text-sm text-gray-600 min-w-fit">
                         {selectedStartVerse}절
@@ -2167,25 +2322,17 @@ export default function BoardWrite({
                       <span className="text-sm text-gray-500">~</span>
                       <Input
                         type="number"
-                        min={selectedStartVerse}
-                        max={availableVerses}
-                        value={selectedEndVerse}
+                        min="1"
+                        value={selectedEndVerse || ""}
                         onChange={(e) => {
-                          const newEndVerse =
-                            parseInt(e.target.value) || selectedStartVerse;
-                          setSelectedEndVerse(
-                            Math.max(newEndVerse, selectedStartVerse)
-                          );
+                          setSelectedEndVerse(parseInt(e.target.value) || 0);
                         }}
                         className="flex-1"
                         placeholder="끝 절"
                       />
-                      <span className="text-xs text-gray-500 min-w-fit">
-                        (최대 {availableVerses}절)
-                      </span>
                     </div>
                     <p className="text-xs text-gray-500">
-                      단일 절을 선택하려면 시작 절과 동일한 번호를 입력하세요.
+                      빈칸으로 두면 시작절과 동일하게 처리됩니다.
                     </p>
                   </div>
                 )}
@@ -2221,6 +2368,56 @@ export default function BoardWrite({
                   </div>
                 </div>
               </div>
+
+              {/* 선택된 성경구절 리스트 */}
+              {selectedBibleVerses.length > 0 && (
+                <div className="mt-6 border-t pt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-medium">
+                      선택된 구절 목록 ({selectedBibleVerses.length}개)
+                    </h4>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearBibleVerses}
+                      className="text-xs text-muted-foreground"
+                    >
+                      전체 삭제
+                    </Button>
+                  </div>
+                  <div className="max-h-32 overflow-y-auto space-y-2">
+                    {selectedBibleVerses.map((verse, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between bg-muted p-2 rounded text-sm"
+                      >
+                        <span>
+                          {getBibleBookName(verse.book, selectedBibleVersion)}{" "}
+                          {verse.chapter}:{verse.startVerse}
+                          {verse.endVerse !== verse.startVerse &&
+                          !verse.includeOtherChapter
+                            ? `-${verse.endVerse}`
+                            : ""}
+                          {verse.includeOtherChapter && verse.endChapter
+                            ? ` ~ ${verse.endChapter}:${verse.endVerse}`
+                            : ""}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeBibleVerse(index)}
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <DialogFooter>
                 <Button
                   type="button"
@@ -2232,9 +2429,21 @@ export default function BoardWrite({
                 </Button>
                 <Button
                   type="button"
+                  variant="secondary"
+                  onClick={addBibleVerse}
+                  disabled={
+                    bibleLoading ||
+                    (showBothVersions && !selectedBibleSubVersion)
+                  }
+                >
+                  리스트에 구절 추가
+                </Button>
+                <Button
+                  type="button"
                   onClick={insertBibleIntoEditor}
                   disabled={
                     bibleLoading ||
+                    selectedBibleVerses.length === 0 ||
                     (showBothVersions && !selectedBibleSubVersion)
                   }
                 >

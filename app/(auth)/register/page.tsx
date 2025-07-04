@@ -113,12 +113,55 @@ export default function RegisterPage() {
     }));
 
     try {
-      // 중복 체크 - nickname의 경우 display_name 필드로 체크
-      const checkField = field === "nickname" ? "display_name" : field;
+      // nickname 중복 체크
+      if (field === "nickname") {
+        const { data } = await supabase
+          .from("users")
+          .select("id")
+          .eq("nickname", value)
+          .single();
+          
+        if (data) {
+          setDuplicateCheck((prev) => ({
+            ...prev,
+            [field]: {
+              status: "error",
+              message: "이미 사용 중인 닉네임입니다",
+              isChecking: false,
+            },
+          }));
+        } else {
+          setDuplicateCheck((prev) => ({
+            ...prev,
+            [field]: {
+              status: "success",
+              message: "사용 가능합니다",
+              isChecking: false,
+            },
+          }));
+        }
+        return;
+      }
+      
+      if (field === "email") {
+        // 이메일은 실제 회원가입 시 Supabase Auth가 중복 체크함
+        // 여기서는 형식만 검증하고 사용 가능으로 표시
+        setDuplicateCheck((prev) => ({
+          ...prev,
+          [field]: {
+            status: "success",
+            message: "사용 가능한 이메일입니다",
+            isChecking: false,
+          },
+        }));
+        return;
+      }
+      
+      // username만 users 테이블에서 체크
       const { data } = await supabase
         .from("users")
         .select("id")
-        .eq(checkField, value)
+        .eq(field, value)
         .single();
 
       if (data) {
@@ -229,38 +272,29 @@ export default function RegisterPage() {
         .single();
       if (existUser) throw new Error("이미 사용 중인 아이디입니다");
 
+      // 닉네임 중복 체크
       const { data: existNickname } = await supabase
         .from("users")
         .select("id")
-        .eq("display_name", formData.nickname)
+        .eq("nickname", formData.nickname)
         .single();
       if (existNickname) throw new Error("이미 사용 중인 닉네임입니다");
-
-      const { data: existEmail } = await supabase
-        .from("users")
-        .select("id")
-        .eq("email", formData.email)
-        .single();
-      if (existEmail) throw new Error("이미 사용 중인 이메일입니다");
+      
+      // 이메일은 Supabase Auth가 회원가입 시 자동으로 중복 체크함
 
       // Supabase Auth 회원가입
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
-        options: {
-          data: {
-            display_name: formData.nickname,
-          },
-        },
       });
       if (error || !data.user)
         throw new Error(error?.message || "회원가입에 실패했습니다");
 
-      // users 테이블에 username, display_name, email 저장
+      // users 테이블에 username, nickname, email 저장
       const { error: userError } = await supabase.from("users").insert({
         id: data.user.id,
         username: formData.username,
-        display_name: formData.nickname,
+        nickname: formData.nickname,
         email: formData.email,
       });
       if (userError) throw new Error(userError.message);
@@ -285,7 +319,7 @@ export default function RegisterPage() {
   return (
     <div className="w-full py-8 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900/30 px-4 sm:px-6 relative ">
       <div className="mx-auto w-full max-w-[450px] bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 sm:p-8 md:p-10">
-        <div className="mb-2">
+        {/* <div className="mb-2">
           <Link
             href="/"
             className="inline-flex items-center text-sm text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 mb-6"
@@ -293,7 +327,7 @@ export default function RegisterPage() {
             <ArrowLeft className="mr-2 h-4 w-4" />
             홈으로 돌아가기
           </Link>
-        </div>
+        </div> */}
 
         <div className="flex flex-col space-y-2 text-center mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-50">
@@ -309,7 +343,11 @@ export default function RegisterPage() {
             <div className="grid gap-5">
               <div className="grid gap-2">
                 <Label htmlFor="username" className="text-sm font-medium">
-                  아이디{"로그인용"}
+                  아이디
+                  <span className="text-xs text-gray-500">
+                    {" "}
+                    (로그인 시 사용)
+                  </span>
                 </Label>
                 <div className="relative">
                   <Input
@@ -414,7 +452,8 @@ export default function RegisterPage() {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="email" className="text-sm font-medium">
-                  이메일 <span className="text-xs text-gray-500">(인증용)</span>
+                  이메일{" "}
+                  <span className="text-xs text-gray-500">(인증 시 사용)</span>
                 </Label>
                 <div className="relative">
                   <Input

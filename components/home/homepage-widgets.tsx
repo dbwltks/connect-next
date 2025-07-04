@@ -18,7 +18,7 @@ import { OrganizationChartWidget } from "@/components/widgets/organization-chart
 import CalendarWidget from "@/components/widgets/calendar-widget";
 import { IWidget } from "@/types/index";
 import useSWR from "swr";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 
 type LayoutStructure = "1-col" | "2-col-left" | "2-col-right" | "3-col";
 
@@ -29,44 +29,61 @@ interface HomepageWidgetsProps {
 
 // 위젯 데이터를 가져오는 fetcher 함수
 async function fetchWidgets(pageId?: string): Promise<IWidget[]> {
-  let query = supabase
-    .from("cms_layout")
-    .select("*")
-    .eq("is_active", true)
-    .order("order", { ascending: true });
+  try {
+    console.log("[fetchWidgets] 요청 시작:", {
+      pageId,
+      time: new Date().toISOString(),
+    });
 
-  if (pageId) {
-    query = query.eq("page_id", pageId);
-  } else {
-    query = query.is("page_id", null);
+    // 매번 새로운 클라이언트 생성하여 세션 문제 방지
+    const supabase = createClient();
+
+    let query = supabase
+      .from("cms_layout")
+      .select("*")
+      .eq("is_active", true)
+      .order("order", { ascending: true });
+
+    if (pageId) {
+      query = query.eq("page_id", pageId);
+    } else {
+      query = query.is("page_id", null);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("[fetchWidgets] Supabase 에러:", error);
+      // 세션 만료 에러 확인
+      if (error.code === "PGRST301" || error.message?.includes("JWT")) {
+        console.error("[fetchWidgets] 세션 만료 감지");
+      }
+      throw new Error(`위젯 데이터 로드 실패: ${error.message}`);
+    }
+
+    console.log("[fetchWidgets] 성공:", { count: data?.length || 0 });
+    return data || [];
+  } catch (err) {
+    console.error("[fetchWidgets] 예외 발생:", err);
+    throw err;
   }
-
-  const { data, error } = await query;
-
-  if (error) {
-    throw new Error(`위젯 데이터 로드 실패: ${error.message}`);
-  }
-
-  return data || [];
 }
 
 export default function HomepageWidgets({
   widgets: initialWidgets,
   pageId,
 }: HomepageWidgetsProps) {
-  // SWR을 사용해서 위젯 데이터 관리
+  // SWR을 사용해서 위젯 데이터 관리 - 전역 설정 사용
   const {
     data: widgets,
     error,
     isLoading,
   } = useSWR(
-    pageId ? ["widgets", pageId] : initialWidgets ? null : ["widgets"],
+    pageId ? ["widgets", pageId] : ["widgets"],
     () => (pageId ? fetchWidgets(pageId) : fetchWidgets()),
     {
       fallbackData: initialWidgets,
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      dedupingInterval: 60000, // 1분간 중복 요청 방지
+      // 전역 설정 사용, 위젯은 5분마다 갱신되도록 별도 설정 가능
     }
   );
 
@@ -252,29 +269,29 @@ export default function HomepageWidgets({
   }
 
   if (!widgets || widgets.length === 0) {
-    if (isLoading) {
-      // 로딩 중일 때 스켈레톤 표시
-      return (
-        <div className="xl:container mx-auto sm:px-8 md:px-12 lg:px-16 py-0 sm:py-4 xl:px-0">
-          <div className="grid grid-cols-12 gap-6">
-            <div className="col-span-12">
-              <div className="grid grid-cols-12 gap-6">
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <div
-                    key={index}
-                    className="col-span-12 lg:col-span-6 flex flex-col"
-                  >
-                    <div className="relative h-64 w-full flex-1 overflow-hidden">
-                      {renderWidgetSkeleton()}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
+    // if (isLoading) {
+    //   // 로딩 중일 때 스켈레톤 표시
+    //   return (
+    //     <div className="xl:container mx-auto sm:px-8 md:px-12 lg:px-16 py-0 sm:py-4 xl:px-0">
+    //       <div className="grid grid-cols-12 gap-6">
+    //         <div className="col-span-12">
+    //           <div className="grid grid-cols-12 gap-6">
+    //             {Array.from({ length: 4 }).map((_, index) => (
+    //               <div
+    //                 key={index}
+    //                 className="col-span-12 lg:col-span-6 flex flex-col"
+    //               >
+    //                 <div className="relative h-64 w-full flex-1 overflow-hidden">
+    //                   {renderWidgetSkeleton()}
+    //                 </div>
+    //               </div>
+    //             ))}
+    //           </div>
+    //         </div>
+    //       </div>
+    //     </div>
+    //   );
+    // }
 
     return (
       <div className="xl:container mx-auto sm:px-8 md:px-12 lg:px-16 py-8 xl:px-0">
@@ -330,7 +347,7 @@ export default function HomepageWidgets({
       ))}
 
       {/* 기존 메인 레이아웃 */}
-      <div className="xl:container mx-auto sm:px-8 md:px-12 lg:px-16 py-0 sm:py-6 xl:px-0">
+      <div className="xl:container mx-auto pt-6 sm:px-8 md:px-12 lg:px-16 py-0 sm:py-6 xl:px-0">
         <div className="grid grid-cols-12 gap-6">
           {layoutStructure === "1-col" && (
             <div className="col-span-12 flex justify-center">

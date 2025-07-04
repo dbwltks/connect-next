@@ -24,6 +24,7 @@ interface LoginWidgetProps {
 
 export default function LoginWidget({ widget }: LoginWidgetProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [userData, setUserData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
@@ -33,15 +34,41 @@ export default function LoginWidget({ widget }: LoginWidgetProps) {
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      setUser(session?.user as AuthUser | null);
+      
+      if (session?.user) {
+        setUser(session.user as AuthUser);
+        // Fetch user data from users table
+        const { data: userProfile } = await supabase
+          .from("users")
+          .select("*")
+          .eq("id", session.user.id)
+          .single();
+        setUserData(userProfile);
+      } else {
+        setUser(null);
+        setUserData(null);
+      }
+      
       setIsLoading(false);
     };
 
     getSession();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user as AuthUser | null);
+      async (_event, session) => {
+        if (session?.user) {
+          setUser(session.user as AuthUser);
+          // Fetch user data from users table
+          const { data: userProfile } = await supabase
+            .from("users")
+            .select("*")
+            .eq("id", session.user.id)
+            .single();
+          setUserData(userProfile);
+        } else {
+          setUser(null);
+          setUserData(null);
+        }
       }
     );
 
@@ -56,7 +83,7 @@ export default function LoginWidget({ widget }: LoginWidgetProps) {
   };
 
   const displayName =
-    user?.user_metadata?.full_name || user?.email?.split("@")[0] || "사용자";
+    userData?.nickname || userData?.username || user?.email?.split("@")[0] || "사용자";
 
   if (isLoading) {
     return (
@@ -78,7 +105,7 @@ export default function LoginWidget({ widget }: LoginWidgetProps) {
           <div className="flex items-center space-x-3">
             <Avatar>
               <AvatarImage
-                src={user.user_metadata.avatar_url}
+                src={userData?.avatar_url}
                 alt={displayName}
               />
               <AvatarFallback>

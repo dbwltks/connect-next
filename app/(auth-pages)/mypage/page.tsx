@@ -54,7 +54,7 @@ export default function MyPage() {
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileForm, setProfileForm] = useState({
-    displayName: "",
+    nickname: "",
   });
 
   // 아바타 업로드 상태 및 로직
@@ -136,7 +136,7 @@ export default function MyPage() {
 
     console.log("프로필 수정 시작:", {
       user,
-      displayName: profileForm.displayName,
+      nickname: profileForm.nickname,
     });
 
     try {
@@ -146,13 +146,13 @@ export default function MyPage() {
       }
 
       // 유효성 검사
-      const displayName = profileForm.displayName.trim();
-      if (!displayName) {
-        throw new Error("디스플레이 이름을 입력해주세요.");
+      const nickname = profileForm.nickname.trim();
+      if (!nickname) {
+        throw new Error("닉네임을 입력해주세요.");
       }
 
       // 금지어 및 전체 유효성 검사
-      const validation = validateDisplayName(displayName);
+      const validation = validateDisplayName(nickname);
       if (!validation.isValid) {
         throw new Error(validation.message);
       }
@@ -161,34 +161,20 @@ export default function MyPage() {
       const { data: existingUser } = await supabase
         .from("users")
         .select("id")
-        .eq("display_name", displayName)
+        .eq("nickname", nickname)
         .neq("id", user.id)
         .single();
 
       if (existingUser) {
-        throw new Error("이미 사용 중인 디스플레이 이름입니다.");
+        throw new Error("이미 사용 중인 닉네임입니다.");
       }
 
-      console.log("Supabase Auth 업데이트 시작...");
+      console.log("닉네임 업데이트 시작...");
 
-      // Supabase Auth의 user_metadata 업데이트
-      const { data, error: authError } = await supabase.auth.updateUser({
-        data: {
-          display_name: displayName,
-        },
-      });
-
-      console.log("Auth 업데이트 결과:", { data, error: authError });
-
-      if (authError) {
-        console.error("Auth 업데이트 에러:", authError);
-        throw authError;
-      }
-
-      // users 테이블도 업데이트
+      // users 테이블의 nickname 업데이트
       const { error: dbError } = await supabase
         .from("users")
-        .update({ display_name: displayName })
+        .update({ nickname: nickname })
         .eq("id", user.id);
 
       if (dbError) {
@@ -196,11 +182,13 @@ export default function MyPage() {
         throw dbError;
       }
 
+      // Auth의 user_metadata 업데이트는 제거 (users.nickname만 사용)
+
       console.log("프로필 수정 성공!");
 
       toast({
         title: "프로필 수정 완료",
-        description: "디스플레이 이름이 성공적으로 변경되었습니다.",
+        description: "닉네임이 성공적으로 변경되었습니다.",
       });
 
       setProfileDialogOpen(false);
@@ -408,12 +396,9 @@ export default function MyPage() {
         setPostCount(postCount || 0);
         setCommentCount(commentCount || 0);
 
-        // 현재 사용자의 display_name을 폼에 설정
-        const currentDisplayName =
-          (user as any)?.user_metadata?.display_name ||
-          (user as any)?.username ||
-          "";
-        setProfileForm({ displayName: currentDisplayName });
+        // 현재 사용자의 nickname을 폼에 설정
+        const currentNickname = (user as any)?.username || "";
+        setProfileForm({ nickname: currentNickname });
       } catch (error) {
         console.error("사용자 통계 가져오기 오류:", error);
       } finally {
@@ -465,12 +450,7 @@ export default function MyPage() {
                     alt={user.username}
                   />
                   <AvatarFallback className="text-2xl font-bold bg-muted">
-                    {(
-                      (user as any)?.user_metadata?.display_name ||
-                      user.username
-                    )
-                      ?.charAt(0)
-                      .toUpperCase() || "U"}
+                    {user.username?.charAt(0).toUpperCase() || "U"}
                   </AvatarFallback>
                 </Avatar>
                 {/* 이미지 변경/삭제 버튼 (마우스 오버 시 노출) */}
@@ -511,7 +491,7 @@ export default function MyPage() {
               </div>
               <div className="flex-1 w-full">
                 <h2 className="text-2xl font-bold leading-tight mb-1">
-                  {(user as any)?.user_metadata?.display_name || user.username}
+                  {user.username}
                 </h2>
                 <p className="text-muted-foreground text-sm mb-2">
                   {user.email}
@@ -596,18 +576,18 @@ export default function MyPage() {
                 <DialogHeader>
                   <DialogTitle>프로필 수정</DialogTitle>
                   <DialogDescription>
-                    디스플레이 이름을 변경하여 다른 사용자들에게 표시될 이름을
+                    닉네임을 변경하여 다른 사용자들에게 표시될 이름을
                     설정하세요.
                   </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleProfileSubmit} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="displayName">디스플레이 이름</Label>
+                    <Label htmlFor="nickname">닉네임</Label>
                     <Input
-                      id="displayName"
-                      name="displayName"
+                      id="nickname"
+                      name="nickname"
                       type="text"
-                      value={profileForm.displayName}
+                      value={profileForm.nickname}
                       onChange={handleProfileChange}
                       placeholder="2-10자로 입력하세요"
                       minLength={2}

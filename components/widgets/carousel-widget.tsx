@@ -32,15 +32,38 @@ const fetchCarouselData = async (widget: IWidget): Promise<CarouselItem[]> => {
   const dataSource = widget.settings?.data_source || "sample";
 
   // 직접 관리하는 이미지들 사용
-  if (dataSource === "custom" && widget.settings?.custom_images) {
-    return widget.settings.custom_images.map((img: any, index: number) => ({
-      id: `custom-${index}`,
-      image_url: img.image_url,
-      mobile_image_url: img.mobile_image_url || img.image_url, // 모바일 이미지가 없으면 기본 이미지 사용
-      title: img.title || "",
-      description: img.description || "",
-      link_url: img.link_url || "#",
-    }));
+  if (dataSource === "custom") {
+    const desktopImages = widget.settings?.desktop_images || [];
+    const mobileImages = widget.settings?.mobile_images || [];
+
+    // 새로운 구조 사용: 데스크톱과 모바일 배열을 합쳐서 반환
+    const allItems: CarouselItem[] = [];
+
+    // 데스크톱 이미지들 추가
+    desktopImages.forEach((img: any, index: number) => {
+      allItems.push({
+        id: `desktop-${index}`,
+        image_url: img.image_url,
+        mobile_image_url: "",
+        title: img.title || "",
+        description: img.description || "",
+        link_url: img.link_url || "#",
+      });
+    });
+
+    // 모바일 이미지들 추가
+    mobileImages.forEach((img: any, index: number) => {
+      allItems.push({
+        id: `mobile-${index}`,
+        image_url: "",
+        mobile_image_url: img.image_url,
+        title: img.title || "",
+        description: img.description || "",
+        link_url: img.link_url || "#",
+      });
+    });
+
+    return allItems;
   }
 
   // 페이지 콘텐츠 사용
@@ -140,10 +163,10 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768); // md 브레이크포인트
     };
-    
+
     checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   const carouselType = widget.settings?.carousel_type || CAROUSEL_TYPES.BASIC;
@@ -157,15 +180,49 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
   const transparentBackground =
     widget.settings?.transparent_background ?? false;
 
+  // 데이터 변경을 감지하기 위한 해시 생성
+  const dataHash = JSON.stringify({
+    dataSource: widget.settings?.data_source,
+    pageId: widget.display_options?.page_id,
+    desktopImagesHash: JSON.stringify(widget.settings?.desktop_images),
+    mobileImagesHash: JSON.stringify(widget.settings?.mobile_images),
+  });
+
   const {
-    data: carouselItems = [],
+    data: allCarouselItems = [],
     error,
     isLoading,
+    mutate,
   } = useSWR(
-    `carousel-${widget.id}-${widget.settings?.data_source}-${widget.display_options?.page_id}-${JSON.stringify(widget.settings?.custom_images)}`,
-    () => fetchCarouselData(widget)
-    // 전역 설정 사용 - 필요한 경우만 오버라이드
+    `carousel-${widget.id}-${dataHash}`,
+    () => fetchCarouselData(widget),
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      refreshInterval: 0,
+    }
   );
+
+  // 데스크톱/모바일에 따라 슬라이드 필터링
+  const carouselItems = allCarouselItems.filter((item) => {
+    if (isMobile) {
+      // 모바일: mobile_image_url이 있는 슬라이드만
+      return item.mobile_image_url && item.mobile_image_url !== "";
+    } else {
+      // 데스크톱: image_url이 있는 슬라이드만
+      return item.image_url && item.image_url !== "";
+    }
+  });
+
+  // 데이터 변경 감지 및 강제 새로고침
+  useEffect(() => {
+    mutate();
+  }, [
+    widget.settings?.desktop_images,
+    widget.settings?.mobile_images,
+    widget.settings?.custom_images,
+    mutate,
+  ]);
 
   // 자동 재생 효과
   useEffect(() => {
@@ -200,10 +257,32 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
     );
   }
 
-  if (error || carouselItems.length === 0) {
+  if (error) {
+    console.error("캐러셀 에러:", error);
     return (
       <div className="w-full h-64 bg-gray-50 rounded-lg flex items-center justify-center">
-        <div className="text-gray-500">캐러셀 데이터를 불러올 수 없습니다.</div>
+        <div className="text-gray-500">
+          캐러셀 데이터를 불러올 수 없습니다: {error.message}
+        </div>
+      </div>
+    );
+  }
+
+  if (carouselItems.length === 0) {
+    return (
+      <div className="w-full h-64 bg-gray-50 rounded-lg flex items-center justify-center">
+        <div className="text-gray-500 text-center">
+          {isMobile ? "모바일" : "데스크톱"} 캐러셀 이미지가 없습니다.
+          <br />
+          <span className="text-xs">
+            전체 슬라이드: {allCarouselItems.length}개<br />
+            데스크톱 배열: {widget.settings?.desktop_images?.length || 0}개
+            <br />
+            모바일 배열: {widget.settings?.mobile_images?.length || 0}개<br />
+            기존 배열: {widget.settings?.custom_images?.length || 0}개<br />
+            데이터소스: {widget.settings?.data_source}
+          </span>
+        </div>
       </div>
     );
   }
@@ -213,11 +292,12 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
     // 위젯에 설정된 높이가 있으면 사용, 없으면 기본값
     const widgetHeight = widget.height || 400;
     // 제목이 있으면 제목 높이(약 60px) 제외
-    const imageHeightPx = showTitle && widget.title ? widgetHeight - 60 : widgetHeight;
+    const imageHeightPx =
+      showTitle && widget.title ? widgetHeight - 60 : widgetHeight;
     const imageHeightStyle = { height: `${imageHeightPx}px` };
 
     return (
-      <div className="relative w-full bg-white rounded-lg overflow-hidden shadow-sm">
+      <div className="relative w-full bg-white rounded-0 sm:rounded-lg overflow-hidden shadow-sm">
         {showTitle && widget.title && (
           <div className="p-4 border-b">
             <h3 className="text-lg font-semibold">{widget.title}</h3>
@@ -235,7 +315,7 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
                 className="w-full h-full flex-shrink-0 relative"
               >
                 <img
-                  src={isMobile && item.mobile_image_url ? item.mobile_image_url : item.image_url}
+                  src={item.mobile_image_url || item.image_url}
                   alt={item.title || `슬라이드 ${index + 1}`}
                   className={`w-full h-full object-cover ${
                     item.link_url && item.link_url !== "#"
@@ -335,7 +415,7 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
                 className="w-full h-full flex-shrink-0 relative"
               >
                 <img
-                  src={isMobile && item.mobile_image_url ? item.mobile_image_url : item.image_url}
+                  src={item.mobile_image_url || item.image_url}
                   alt={item.title || `슬라이드 ${index + 1}`}
                   className={`w-full h-full object-contain ${
                     item.link_url && item.link_url !== "#"
@@ -458,7 +538,11 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
                 >
                   <div className="aspect-video relative">
                     <img
-                      src={isMobile && item.mobile_image_url ? item.mobile_image_url : item.image_url}
+                      src={
+                        isMobile && item.mobile_image_url
+                          ? item.mobile_image_url
+                          : item.image_url
+                      }
                       alt={item.title || `갤러리 ${index + 1}`}
                       className="w-full h-full object-cover"
                     />

@@ -40,7 +40,7 @@ import {
 import CalendarWidget from "../widgets/calendar-widget";
 import { supabase } from "@/db";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Trash2, MoveVertical, Settings, Eye } from "lucide-react";
+import { Plus, Trash2, MoveVertical, Settings, Eye, GripVertical, ChevronLeft, ChevronRight } from "lucide-react";
 import { IWidget } from "@/types";
 
 // 위젯 타입 정의 (IWidget으로 대체)
@@ -1934,8 +1934,7 @@ export default function LayoutManager(): JSX.Element {
                       <div className="flex items-center justify-between">
                         <Label>이미지 관리</Label>
                         <div className="text-xs text-gray-500">
-                          {(editingWidget.settings?.custom_images || []).length}
-                          /8
+                          데스크톱 {(editingWidget.settings?.desktop_images || []).length}개 | 모바일 {(editingWidget.settings?.mobile_images || []).length}개
                         </div>
                       </div>
 
@@ -1949,7 +1948,12 @@ export default function LayoutManager(): JSX.Element {
 
                         {/* 데스크톱 이미지 탭 */}
                         <TabsContent value="desktop" className="space-y-3 pt-4">
-                          <p className="text-sm text-gray-600">데스크톱에서 표시될 이미지들을 관리합니다</p>
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm text-gray-600">데스크톱에서 표시될 이미지들을 관리합니다</p>
+                            <div className="text-xs text-blue-600 font-medium">
+                              {(editingWidget.settings?.desktop_images || []).length}개 이미지
+                            </div>
+                          </div>
                           
                           {/* 데스크톱 이미지 추가 버튼들 */}
                           <div className="bg-blue-50 p-3 rounded-lg space-y-2">
@@ -1964,7 +1968,7 @@ export default function LayoutManager(): JSX.Element {
                                     ...editingWidget,
                                     settings: {
                                       ...editingWidget.settings,
-                                      currentMode: "new",
+                                      currentMode: "desktop",
                                     },
                                   });
                                   setShowImageBrowser(true);
@@ -1985,7 +1989,7 @@ export default function LayoutManager(): JSX.Element {
                                     ...editingWidget,
                                     settings: {
                                       ...editingWidget.settings,
-                                      currentMode: "new",
+                                      currentMode: "desktop",
                                     },
                                   });
                                   carouselFileInputRef.current?.click();
@@ -2001,56 +2005,14 @@ export default function LayoutManager(): JSX.Element {
                             </div>
                             
                             {/* URL 입력 */}
-                            <div className="space-y-2">
-                              <Label className="text-xs text-blue-700">또는 URL로 이미지 추가</Label>
-                              <div className="flex gap-2">
-                                <Input
-                                  type="url"
-                                  placeholder="이미지 URL을 입력하세요"
-                                  className="text-sm"
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                      const url = (e.target as HTMLInputElement).value.trim();
-                                      if (url) {
-                                        const currentImages = editingWidget.settings?.custom_images || [];
-                                        if (currentImages.length >= 8) {
-                                          toast({
-                                            title: "이미지 개수 제한",
-                                            description: "최대 8개까지만 추가할 수 있습니다.",
-                                            variant: "destructive",
-                                          });
-                                          return;
-                                        }
-                                        const newImage = {
-                                          image_url: url,  // 데스크톱 탭에서는 데스크톱 이미지만 설정
-                                          mobile_image_url: "",
-                                          title: "",
-                                          description: "",
-                                          link_url: "",
-                                        };
-                                        setEditingWidget({
-                                          ...editingWidget,
-                                          settings: {
-                                            ...editingWidget.settings,
-                                            custom_images: [...currentImages, newImage],
-                                          },
-                                        });
-                                        (e.target as HTMLInputElement).value = '';
-                                        toast({
-                                          title: "새 슬라이드 추가 성공",
-                                          description: "URL에서 새 슬라이드가 추가되었습니다.",
-                                        });
-                                      }
-                                    }
-                                  }}
-                                />
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={(e) => {
-                                    const input = (e.target as HTMLElement).previousElementSibling as HTMLInputElement;
-                                    const url = input?.value.trim();
+                            <div className="flex gap-2">
+                              <Input
+                                type="url"
+                                placeholder="이미지 URL을 입력하세요"
+                                className="text-sm"
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    const url = (e.target as HTMLInputElement).value.trim();
                                     if (url) {
                                       const currentImages = editingWidget.settings?.custom_images || [];
                                       if (currentImages.length >= 8) {
@@ -2063,7 +2025,7 @@ export default function LayoutManager(): JSX.Element {
                                       }
                                       const newImage = {
                                         image_url: url,
-                                        mobile_image_url: url,
+                                        mobile_image_url: "",
                                         title: "",
                                         description: "",
                                         link_url: "",
@@ -2075,18 +2037,56 @@ export default function LayoutManager(): JSX.Element {
                                           custom_images: [...currentImages, newImage],
                                         },
                                       });
-                                      input.value = '';
+                                      (e.target as HTMLInputElement).value = '';
                                       toast({
                                         title: "새 슬라이드 추가 성공",
                                         description: "URL에서 새 슬라이드가 추가되었습니다.",
                                       });
                                     }
-                                  }}
-                                  disabled={(editingWidget.settings?.custom_images || []).length >= 8}
-                                >
-                                  추가
-                                </Button>
-                              </div>
+                                  }
+                                }}
+                              />
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => {
+                                  const input = (e.target as HTMLElement).previousElementSibling as HTMLInputElement;
+                                  const url = input?.value.trim();
+                                  if (url) {
+                                    const currentImages = editingWidget.settings?.desktop_images || [];
+                                    if (currentImages.length >= 8) {
+                                      toast({
+                                        title: "이미지 개수 제한",
+                                        description: "최대 8개까지만 추가할 수 있습니다.",
+                                        variant: "destructive",
+                                      });
+                                      return;
+                                    }
+                                    const newImage = {
+                                      image_url: url,
+                                      title: "",
+                                      description: "",
+                                      link_url: "",
+                                    };
+                                    setEditingWidget({
+                                      ...editingWidget,
+                                      settings: {
+                                        ...editingWidget.settings,
+                                        desktop_images: [...currentImages, newImage],
+                                      },
+                                    });
+                                    input.value = '';
+                                    toast({
+                                      title: "새 슬라이드 추가 성공",
+                                      description: "URL에서 새 슬라이드가 추가되었습니다.",
+                                    });
+                                  }
+                                }}
+                                disabled={(editingWidget.settings?.custom_images || []).length >= 8}
+                              >
+                                추가
+                              </Button>
                             </div>
                           </div>
 
@@ -2094,57 +2094,103 @@ export default function LayoutManager(): JSX.Element {
                           <div className="space-y-2">
                             <Label className="text-sm font-medium text-blue-800">데스크톱 이미지 미리보기</Label>
                             <div className="bg-white p-3 rounded-lg border border-blue-200">
-                              {(editingWidget.settings?.custom_images || []).length > 0 ? (
+                              {(editingWidget.settings?.desktop_images || []).length > 0 ? (
                                 <div className="grid grid-cols-3 gap-2">
-                                  {(editingWidget.settings?.custom_images || []).map(
-                                    (img: any, index: number) => (
-                                      <div
-                                        key={`desktop-preview-${index}`}
-                                        className="relative group cursor-pointer rounded-lg overflow-hidden border-2 border-blue-200 hover:border-blue-400 transition-all aspect-video"
-                                        onClick={() => {
+                                  {(editingWidget.settings?.desktop_images || []).map((img: any, index: number) => (
+                                    <div
+                                      key={`desktop-preview-${index}`}
+                                      className="relative group cursor-pointer rounded-lg overflow-hidden border-2 border-blue-200 hover:border-blue-400 transition-all aspect-video"
+                                      onClick={() => {
+                                        setEditingWidget({
+                                          ...editingWidget,
+                                          settings: {
+                                            ...editingWidget.settings,
+                                            selectedImageIndex: index,
+                                            editMode: "desktop",
+                                          },
+                                        });
+                                      }}
+                                    >
+                                      <img
+                                        src={img.image_url}
+                                        alt={img.title || `데스크톱 이미지 ${index + 1}`}
+                                        className="w-full h-full object-cover"
+                                      />
+                                      <div className="absolute bottom-1 left-1 bg-blue-600 text-white text-xs px-1.5 py-0.5 rounded">
+                                        {index + 1}
+                                      </div>
+                                      
+                                      {/* 왼쪽 이동 버튼 */}
+                                      <Button
+                                        type="button"
+                                        size="icon"
+                                        variant="secondary"
+                                        className="absolute left-1 top-1/2 -translate-y-1/2 w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 hover:bg-white"
+                                        disabled={index === 0}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const images = [...(editingWidget.settings?.desktop_images || [])];
+                                          [images[index], images[index - 1]] = [images[index - 1], images[index]];
                                           setEditingWidget({
                                             ...editingWidget,
                                             settings: {
                                               ...editingWidget.settings,
-                                              selectedImageIndex: index,
-                                              editMode: "desktop",
+                                              desktop_images: images,
                                             },
                                           });
                                         }}
                                       >
-                                        <img
-                                          src={img.image_url}
-                                          alt={img.title || `데스크톱 이미지 ${index + 1}`}
-                                          className="w-full h-full object-cover"
-                                        />
-                                        <div className="absolute bottom-1 left-1 bg-blue-600 text-white text-xs px-1.5 py-0.5 rounded">
-                                          {index + 1}
-                                        </div>
-                                        <Button
-                                          type="button"
-                                          size="icon"
-                                          variant="destructive"
-                                          className="absolute top-1 right-1 w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            const updatedImages = [
-                                              ...(editingWidget.settings?.custom_images || []),
-                                            ];
-                                            updatedImages.splice(index, 1);
-                                            setEditingWidget({
-                                              ...editingWidget,
-                                              settings: {
-                                                ...editingWidget.settings,
-                                                custom_images: updatedImages,
-                                              },
-                                            });
-                                          }}
-                                        >
-                                          <Trash2 className="h-3 w-3" />
-                                        </Button>
-                                      </div>
-                                    )
-                                  )}
+                                        <ChevronLeft className="h-3 w-3" />
+                                      </Button>
+                                      
+                                      {/* 오른쪽 이동 버튼 */}
+                                      <Button
+                                        type="button"
+                                        size="icon"
+                                        variant="secondary"
+                                        className="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 hover:bg-white"
+                                        disabled={index === (editingWidget.settings?.desktop_images || []).length - 1}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const images = [...(editingWidget.settings?.desktop_images || [])];
+                                          [images[index], images[index + 1]] = [images[index + 1], images[index]];
+                                          setEditingWidget({
+                                            ...editingWidget,
+                                            settings: {
+                                              ...editingWidget.settings,
+                                              desktop_images: images,
+                                            },
+                                          });
+                                        }}
+                                      >
+                                        <ChevronRight className="h-3 w-3" />
+                                      </Button>
+
+                                      {/* 삭제 버튼 */}
+                                      <Button
+                                        type="button"
+                                        size="icon"
+                                        variant="destructive"
+                                        className="absolute top-1 right-1 w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const updatedImages = [
+                                            ...(editingWidget.settings?.desktop_images || []),
+                                          ];
+                                          updatedImages.splice(index, 1);
+                                          setEditingWidget({
+                                            ...editingWidget,
+                                            settings: {
+                                              ...editingWidget.settings,
+                                              desktop_images: updatedImages,
+                                            },
+                                          });
+                                        }}
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  ))}
                                 </div>
                               ) : (
                                 <div className="text-center text-gray-500 py-8">
@@ -2159,7 +2205,12 @@ export default function LayoutManager(): JSX.Element {
 
                         {/* 모바일 이미지 탭 */}
                         <TabsContent value="mobile" className="space-y-3 pt-4">
-                          <p className="text-sm text-gray-600">모바일에서 표시될 이미지들을 관리합니다</p>
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm text-gray-600">모바일에서 표시될 이미지들을 관리합니다</p>
+                            <div className="text-xs text-green-600 font-medium">
+                              {(editingWidget.settings?.mobile_images || []).length}개 이미지
+                            </div>
+                          </div>
                           
                           {/* 모바일 이미지 추가 버튼들 */}
                           <div className="bg-green-50 p-3 rounded-lg space-y-2">
@@ -2211,58 +2262,16 @@ export default function LayoutManager(): JSX.Element {
                             </div>
                             
                             {/* URL 입력 */}
-                            <div className="space-y-2">
-                              <Label className="text-xs text-green-700">또는 URL로 이미지 추가</Label>
-                              <div className="flex gap-2">
-                                <Input
-                                  type="url"
-                                  placeholder="이미지 URL을 입력하세요"
-                                  className="text-sm"
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                      const url = (e.target as HTMLInputElement).value.trim();
-                                      if (url) {
-                                        const currentImages = editingWidget.settings?.custom_images || [];
-                                        if (currentImages.length >= 8) {
-                                          toast({
-                                            title: "이미지 개수 제한",
-                                            description: "최대 8개까지만 추가할 수 있습니다.",
-                                            variant: "destructive",
-                                          });
-                                          return;
-                                        }
-                                        const newImage = {
-                                          image_url: "",
-                                          mobile_image_url: url,  // 모바일 탭에서는 모바일 이미지만 설정
-                                          title: "",
-                                          description: "",
-                                          link_url: "",
-                                        };
-                                        setEditingWidget({
-                                          ...editingWidget,
-                                          settings: {
-                                            ...editingWidget.settings,
-                                            custom_images: [...currentImages, newImage],
-                                          },
-                                        });
-                                        (e.target as HTMLInputElement).value = '';
-                                        toast({
-                                          title: "새 슬라이드 추가 성공",
-                                          description: "URL에서 새 슬라이드가 추가되었습니다.",
-                                        });
-                                      }
-                                    }
-                                  }}
-                                />
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={(e) => {
-                                    const input = (e.target as HTMLElement).previousElementSibling as HTMLInputElement;
-                                    const url = input?.value.trim();
+                            <div className="flex gap-2">
+                              <Input
+                                type="url"
+                                placeholder="이미지 URL을 입력하세요"
+                                className="text-sm"
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    const url = (e.target as HTMLInputElement).value.trim();
                                     if (url) {
-                                      const currentImages = editingWidget.settings?.custom_images || [];
+                                      const currentImages = editingWidget.settings?.mobile_images || [];
                                       if (currentImages.length >= 8) {
                                         toast({
                                           title: "이미지 개수 제한",
@@ -2272,8 +2281,7 @@ export default function LayoutManager(): JSX.Element {
                                         return;
                                       }
                                       const newImage = {
-                                        image_url: "",
-                                        mobile_image_url: url,  // 모바일 탭에서는 모바일 이미지만 설정
+                                        image_url: url,
                                         title: "",
                                         description: "",
                                         link_url: "",
@@ -2282,21 +2290,60 @@ export default function LayoutManager(): JSX.Element {
                                         ...editingWidget,
                                         settings: {
                                           ...editingWidget.settings,
-                                          custom_images: [...currentImages, newImage],
+                                          mobile_images: [...currentImages, newImage],
                                         },
                                       });
-                                      input.value = '';
+                                      (e.target as HTMLInputElement).value = '';
                                       toast({
                                         title: "새 슬라이드 추가 성공",
                                         description: "URL에서 새 슬라이드가 추가되었습니다.",
                                       });
                                     }
-                                  }}
-                                  disabled={(editingWidget.settings?.custom_images || []).length >= 8}
-                                >
-                                  추가
-                                </Button>
-                              </div>
+                                  }
+                                }}
+                              />
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => {
+                                  const input = (e.target as HTMLElement).previousElementSibling as HTMLInputElement;
+                                  const url = input?.value.trim();
+                                  if (url) {
+                                    const currentImages = editingWidget.settings?.custom_images || [];
+                                    if (currentImages.length >= 8) {
+                                      toast({
+                                        title: "이미지 개수 제한",
+                                        description: "최대 8개까지만 추가할 수 있습니다.",
+                                        variant: "destructive",
+                                      });
+                                      return;
+                                    }
+                                    const newImage = {
+                                      image_url: "",
+                                      mobile_image_url: url,
+                                      title: "",
+                                      description: "",
+                                      link_url: "",
+                                    };
+                                    setEditingWidget({
+                                      ...editingWidget,
+                                      settings: {
+                                        ...editingWidget.settings,
+                                        custom_images: [...currentImages, newImage],
+                                      },
+                                    });
+                                    input.value = '';
+                                    toast({
+                                      title: "새 슬라이드 추가 성공",
+                                      description: "URL에서 새 슬라이드가 추가되었습니다.",
+                                    });
+                                  }
+                                }}
+                                disabled={(editingWidget.settings?.custom_images || []).length >= 8}
+                              >
+                                추가
+                              </Button>
                             </div>
                           </div>
 
@@ -2304,62 +2351,103 @@ export default function LayoutManager(): JSX.Element {
                           <div className="space-y-2">
                             <Label className="text-sm font-medium text-green-800">모바일 이미지 미리보기</Label>
                             <div className="bg-white p-3 rounded-lg border border-green-200">
-                              {(editingWidget.settings?.custom_images || []).length > 0 ? (
+                              {(editingWidget.settings?.mobile_images || []).length > 0 ? (
                                 <div className="grid grid-cols-4 gap-2">
-                                  {(editingWidget.settings?.custom_images || []).map(
-                                    (img: any, index: number) => (
-                                      <div
-                                        key={`mobile-preview-${index}`}
-                                        className="relative group cursor-pointer rounded-lg overflow-hidden border-2 border-green-200 hover:border-green-400 transition-all aspect-square"
-                                        onClick={() => {
+                                  {(editingWidget.settings?.mobile_images || []).map((img: any, index: number) => (
+                                    <div
+                                      key={`mobile-preview-${index}`}
+                                      className="relative group cursor-pointer rounded-lg overflow-hidden border-2 border-green-200 hover:border-green-400 transition-all aspect-square"
+                                      onClick={() => {
+                                        setEditingWidget({
+                                          ...editingWidget,
+                                          settings: {
+                                            ...editingWidget.settings,
+                                            selectedImageIndex: index,
+                                            editMode: "mobile",
+                                          },
+                                        });
+                                      }}
+                                    >
+                                      <img
+                                        src={img.image_url}
+                                        alt={img.title || `모바일 이미지 ${index + 1}`}
+                                        className="w-full h-full object-cover"
+                                      />
+                                      <div className="absolute bottom-1 left-1 bg-green-600 text-white text-xs px-1.5 py-0.5 rounded">
+                                        {index + 1}
+                                      </div>
+                                      
+                                      {/* 왼쪽 이동 버튼 */}
+                                      <Button
+                                        type="button"
+                                        size="icon"
+                                        variant="secondary"
+                                        className="absolute left-1 top-1/2 -translate-y-1/2 w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 hover:bg-white"
+                                        disabled={index === 0}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const images = [...(editingWidget.settings?.mobile_images || [])];
+                                          [images[index], images[index - 1]] = [images[index - 1], images[index]];
                                           setEditingWidget({
                                             ...editingWidget,
                                             settings: {
                                               ...editingWidget.settings,
-                                              selectedImageIndex: index,
-                                              editMode: "mobile",
+                                              mobile_images: images,
                                             },
                                           });
                                         }}
                                       >
-                                        <img
-                                          src={img.mobile_image_url || img.image_url}
-                                          alt={img.title || `모바일 이미지 ${index + 1}`}
-                                          className="w-full h-full object-cover"
-                                        />
-                                        <div className="absolute bottom-1 left-1 bg-green-600 text-white text-xs px-1.5 py-0.5 rounded">
-                                          {index + 1}
-                                        </div>
-                                        {img.mobile_image_url && img.mobile_image_url !== img.image_url && (
-                                          <div className="absolute top-1 left-1 bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded">
-                                            독립
-                                          </div>
-                                        )}
-                                        <Button
-                                          type="button"
-                                          size="icon"
-                                          variant="destructive"
-                                          className="absolute top-1 right-1 w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            const updatedImages = [
-                                              ...(editingWidget.settings?.custom_images || []),
-                                            ];
-                                            updatedImages.splice(index, 1);
-                                            setEditingWidget({
-                                              ...editingWidget,
-                                              settings: {
-                                                ...editingWidget.settings,
-                                                custom_images: updatedImages,
-                                              },
-                                            });
-                                          }}
-                                        >
-                                          <Trash2 className="h-3 w-3" />
-                                        </Button>
-                                      </div>
-                                    )
-                                  )}
+                                        <ChevronLeft className="h-3 w-3" />
+                                      </Button>
+                                      
+                                      {/* 오른쪽 이동 버튼 */}
+                                      <Button
+                                        type="button"
+                                        size="icon"
+                                        variant="secondary"
+                                        className="absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 hover:bg-white"
+                                        disabled={index === (editingWidget.settings?.mobile_images || []).length - 1}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const images = [...(editingWidget.settings?.mobile_images || [])];
+                                          [images[index], images[index + 1]] = [images[index + 1], images[index]];
+                                          setEditingWidget({
+                                            ...editingWidget,
+                                            settings: {
+                                              ...editingWidget.settings,
+                                              mobile_images: images,
+                                            },
+                                          });
+                                        }}
+                                      >
+                                        <ChevronRight className="h-3 w-3" />
+                                      </Button>
+
+                                      {/* 삭제 버튼 */}
+                                      <Button
+                                        type="button"
+                                        size="icon"
+                                        variant="destructive"
+                                        className="absolute top-1 right-1 w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const updatedImages = [
+                                            ...(editingWidget.settings?.mobile_images || []),
+                                          ];
+                                          updatedImages.splice(index, 1);
+                                          setEditingWidget({
+                                            ...editingWidget,
+                                            settings: {
+                                              ...editingWidget.settings,
+                                              mobile_images: updatedImages,
+                                            },
+                                          });
+                                        }}
+                                      >
+                                        <Trash2 className="h-2 w-2" />
+                                      </Button>
+                                    </div>
+                                  ))}
                                 </div>
                               ) : (
                                 <div className="text-center text-gray-500 py-8">
@@ -2382,11 +2470,12 @@ export default function LayoutManager(): JSX.Element {
                           const file = e.target.files?.[0];
                           if (!file) return;
 
-                          const currentImages =
-                            editingWidget.settings?.custom_images || [];
-                          const currentMode = editingWidget.settings?.currentMode || "new";
+                          const currentMode = editingWidget.settings?.currentMode || "desktop";
+                          const currentImages = currentMode === "desktop" 
+                            ? (editingWidget.settings?.desktop_images || [])
+                            : (editingWidget.settings?.mobile_images || []);
                           
-                          if (currentMode === "new" && currentImages.length >= 8) {
+                          if (currentImages.length >= 8) {
                             toast({
                               title: "이미지 개수 제한",
                               description: "최대 8개까지만 추가할 수 있습니다.",
@@ -2397,38 +2486,44 @@ export default function LayoutManager(): JSX.Element {
 
                           setCarouselUploading(true);
                           try {
-                            const fileName = file.name;
-                            const filePath = `carousel-images/${Date.now()}_${fileName}`;
+                            const fileExt = file.name.split(".").pop();
+                            const fileName = `carousel-${Date.now()}.${fileExt}`;
+                            const filePath = `carousel/${fileName}`;
+                            console.log("업로드 시도:", { fileName, filePath, fileSize: file.size });
+                            
                             const { error: uploadError } =
                               await supabase.storage
-                                .from("homepage-banners")
-                                .upload(filePath, file, {
-                                  cacheControl: "3600",
-                                  upsert: true,
-                                });
+                                .from("admin")
+                                .upload(filePath, file, { upsert: true });
 
-                            if (uploadError) throw uploadError;
+                            if (uploadError) {
+                              console.error("업로드 에러 상세:", uploadError);
+                              throw uploadError;
+                            }
 
                             const { data: publicUrlData } = supabase.storage
-                              .from("homepage-banners")
+                              .from("admin")
                               .getPublicUrl(filePath);
 
-                            // 항상 새 슬라이드 추가
+                            // 새 슬라이드 추가
                             const newImage = {
-                              image_url: currentMode === "mobile" ? "" : publicUrlData.publicUrl,
-                              mobile_image_url: currentMode === "mobile" ? publicUrlData.publicUrl : "",
+                              image_url: publicUrlData.publicUrl,
                               title: "",
                               description: "",
                               link_url: "",
                             };
 
+                            const updatedSettings = { ...editingWidget.settings };
+                            if (currentMode === "desktop") {
+                              updatedSettings.desktop_images = [...currentImages, newImage];
+                            } else {
+                              updatedSettings.mobile_images = [...currentImages, newImage];
+                            }
+                            updatedSettings.currentMode = undefined;
+
                             setEditingWidget({
                               ...editingWidget,
-                              settings: {
-                                ...editingWidget.settings,
-                                custom_images: [...currentImages, newImage],
-                                currentMode: undefined,
-                              },
+                              settings: updatedSettings,
                             });
 
                             toast({
@@ -2436,6 +2531,7 @@ export default function LayoutManager(): JSX.Element {
                               description: `${currentMode === "mobile" ? "모바일" : "데스크톱"} 이미지와 함께 새 슬라이드가 추가되었습니다.`,
                             });
                           } catch (err) {
+                            console.error("Carousel upload error:", err);
                             toast({
                               title: "이미지 업로드 실패",
                               description:
@@ -5664,8 +5760,10 @@ export default function LayoutManager(): JSX.Element {
         onImageSelect={(imageUrl: string, imageName?: string) => {
           if (!editingWidget) return;
 
-          const currentImages = editingWidget.settings?.custom_images || [];
-          const currentMode = editingWidget.settings?.currentMode || "new";
+          const currentMode = editingWidget.settings?.currentMode || "desktop";
+          const currentImages = currentMode === "desktop" 
+            ? (editingWidget.settings?.desktop_images || [])
+            : (editingWidget.settings?.mobile_images || []);
 
           if (currentImages.length >= 8) {
             toast({
@@ -5676,22 +5774,25 @@ export default function LayoutManager(): JSX.Element {
             return;
           }
 
-          // 항상 새 슬라이드 추가
+          // 새 슬라이드 추가
           const newImage = {
-            image_url: currentMode === "mobile" ? "" : imageUrl,
-            mobile_image_url: currentMode === "mobile" ? imageUrl : "",
+            image_url: imageUrl,
             title: "",
             description: "",
             link_url: "",
           };
 
+          const updatedSettings = { ...editingWidget.settings };
+          if (currentMode === "desktop") {
+            updatedSettings.desktop_images = [...currentImages, newImage];
+          } else {
+            updatedSettings.mobile_images = [...currentImages, newImage];
+          }
+          updatedSettings.currentMode = undefined;
+
           setEditingWidget({
             ...editingWidget,
-            settings: {
-              ...editingWidget.settings,
-              custom_images: [...currentImages, newImage],
-              currentMode: undefined,
-            },
+            settings: updatedSettings,
           });
 
           toast({
