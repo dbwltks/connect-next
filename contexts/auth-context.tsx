@@ -8,7 +8,7 @@ import {
   useCallback,
 } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { toast } from "@/components/ui/toaster";
 
 export interface UserProfile {
@@ -30,6 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // user: undefined(초기화중), null(비로그인), {...}(로그인)
   const [user, setUser] = useState<UserProfile | null | undefined>(undefined);
   const router = useRouter();
+  const supabase = createClient();
 
   // 사용자 프로필 가져오기 (항상 서버에서 조회)
   const fetchUserProfile = useCallback(
@@ -61,7 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return null;
       }
     },
-    []
+    [supabase]
   );
 
   // 로그아웃 처리
@@ -167,7 +168,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       mounted = false;
       subscription?.unsubscribe();
     };
-  }, [fetchUserProfile, router]);
+  }, [fetchUserProfile, router, supabase]);
 
   return (
     <AuthContext.Provider value={{ user, handleLogout }}>
