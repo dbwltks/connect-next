@@ -6,7 +6,7 @@ export const swrGlobalConfig: SWRConfiguration = {
   revalidateOnFocus: true,            // 포커스 시 재검증 (탭 전환 시 최신 데이터)
   revalidateOnReconnect: true,        // 재연결 시 재검증
   revalidateIfStale: true,            // stale 데이터일 때 자동 갱신
-  refreshInterval: 300000,            // 5분마다 자동 갱신
+  refreshInterval: 240000,            // 4분마다 자동 갱신 (세션 갱신)
   
   // 캐싱 설정
   dedupingInterval: 2000,             // 2초간 중복 요청 방지

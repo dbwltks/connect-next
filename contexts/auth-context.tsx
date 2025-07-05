@@ -124,6 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
+    let sessionRefreshInterval: NodeJS.Timeout;
 
     async function init() {
       // 로그인 상태 확인
@@ -135,6 +136,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session?.user?.id) {
         const profile = await fetchUserProfile(session.user.id);
         if (mounted) setUser(profile);
+        
+        // 세션이 있으면 주기적으로 갱신 (4분마다)
+        sessionRefreshInterval = setInterval(async () => {
+          try {
+            console.log("[Auth] 세션 갱신 시도");
+            await supabase.auth.refreshSession();
+          } catch (error) {
+            console.error("[Auth] 세션 갱신 실패:", error);
+          }
+        }, 240000); // 4분마다
       } else {
         if (mounted) setUser(null);
       }
@@ -152,12 +163,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (mounted) {
           setUser(null);
         }
+        // 로그아웃 시 세션 갱신 간격 정리
+        if (sessionRefreshInterval) {
+          clearInterval(sessionRefreshInterval);
+        }
         return;
       }
 
       if (session?.user?.id) {
         const profile = await fetchUserProfile(session.user.id);
         if (mounted) setUser(profile);
+        
+        // 로그인 시 세션 갱신 간격 설정
+        if (sessionRefreshInterval) {
+          clearInterval(sessionRefreshInterval);
+        }
+        sessionRefreshInterval = setInterval(async () => {
+          try {
+            console.log("[Auth] 세션 갱신 시도");
+            await supabase.auth.refreshSession();
+          } catch (error) {
+            console.error("[Auth] 세션 갱신 실패:", error);
+          }
+        }, 240000); // 4분마다
       } else {
         if (mounted) setUser(null);
       }
@@ -166,6 +194,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       mounted = false;
       subscription?.unsubscribe();
+      if (sessionRefreshInterval) {
+        clearInterval(sessionRefreshInterval);
+      }
     };
   }, [fetchUserProfile, router]);
 
