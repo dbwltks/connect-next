@@ -14,7 +14,7 @@ export const swrGlobalConfig: SWRConfiguration = {
   
   // 에러 처리 설정 - 안정성 보장
   errorRetryCount: 3,                 // 최대 3회 재시도
-  errorRetryInterval: (attempt) => Math.min(attempt * 1000, 3000), // 점진적 백오프
+  errorRetryInterval: 2000,           // 2초 간격으로 재시도
   shouldRetryOnError: (error) => {
     // 4xx 클라이언트 에러는 재시도하지 않음 (403, 404 등)
     if (error?.status >= 400 && error?.status < 500 && error?.status !== 401) {
