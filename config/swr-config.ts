@@ -1,44 +1,19 @@
 import { SWRConfiguration } from 'swr';
 
-// SWR 공식 권장 전역 설정
+// SWR 설정 - 매번 새로운 데이터 가져오기
 export const swrGlobalConfig: SWRConfiguration = {
-  // 재검증 설정 (기본값 사용)
+  // 캐시 비활성화 - 매번 새로운 데이터 가져오기
   revalidateOnFocus: true,
   revalidateOnReconnect: true,
   revalidateIfStale: true,
   
-  // 성능 설정
-  dedupingInterval: 2000,
-  keepPreviousData: true,
+  // 캐시 설정 비활성화
+  dedupingInterval: 0,        // 중복 제거 간격 0으로 설정
+  keepPreviousData: false,    // 이전 데이터 유지하지 않음
   
-  // 에러 처리 설정 - 안정성 보장
-  errorRetryCount: 3,                 // 최대 3회 재시도
-  errorRetryInterval: 2000,           // 2초 간격으로 재시도
-  shouldRetryOnError: (error) => {
-    // 4xx 클라이언트 에러는 재시도하지 않음 (403, 404 등)
-    if (error?.status >= 400 && error?.status < 500 && error?.status !== 401) {
-      return false;
-    }
-    
-    // 401 인증 에러는 재시도 (세션 갱신 가능)
-    if (error?.status === 401 || 
-        (error as any)?.isAuthError ||
-        error?.message?.includes("JWT") || 
-        error?.message?.includes("expired") ||
-        error?.message?.includes("unauthorized")) {
-      return true;
-    }
-    
-    // 5xx 서버 에러, 네트워크 에러는 재시도
-    if (error?.status >= 500 ||
-        error?.message?.includes("fetch") || 
-        error?.message?.includes("network") ||
-        error?.message?.includes("timeout")) {
-      return true;
-    }
-    
-    return false; // 그 외는 재시도 안함
-  },
+  // 에러 처리 설정
+  errorRetryCount: 1,         // 재시도 횟수 줄임
+  errorRetryInterval: 1000,   // 재시도 간격 줄임
   
   // 로깅 (개발 환경에서만)
   onError: (error, key) => {
@@ -56,12 +31,12 @@ export const swrGlobalConfig: SWRConfiguration = {
 // 위젯별 커스텀 설정이 필요한 경우
 export const widgetSWRConfig: SWRConfiguration = {
   ...swrGlobalConfig,
-  refreshInterval: 300000,  // 위젯은 5분마다 갱신
+  refreshInterval: 0,  // 자동 갱신 비활성화
 };
 
 // 실시간 데이터가 필요한 경우 (예: 채팅, 알림 등)
 export const realtimeSWRConfig: SWRConfiguration = {
   ...swrGlobalConfig,
-  refreshInterval: 30000,   // 30초마다 갱신
+  refreshInterval: 0,   // 자동 갱신 비활성화
   revalidateOnFocus: true,  // 포커스 시 재검증
 };

@@ -2127,24 +2127,20 @@ const TipTapEditor = forwardRef(function TipTapEditor(
       const yyyy = now.getFullYear();
       const mm = String(now.getMonth() + 1).padStart(2, "0");
 
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+      // 모든 파일을 병렬로 업로드
+      const uploadPromises = Array.from(files).map(async (file, index) => {
         const fileExt = file.name.split(".").pop()?.toLowerCase() || "";
-        const isImage = ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(
-          fileExt
-        );
-        if (!isImage) continue;
-
-        setUploadingFileName(file.name);
-
-        // 파일명에 타임스탬프 추가하여 유니크하게 생성
-        const timestamp = Date.now();
-        const fileName = `${timestamp}-${Math.random().toString(36).substring(2, 11)}.${fileExt}`;
-        const filePath = `temp/images/${yyyy}/${mm}/${fileName}`;
+        const isImage = ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(fileExt);
+        
+        if (!isImage) return null;
 
         try {
-          setUploadProgress(10);
+          // 파일명 생성
+          const timestamp = Date.now() + index;
+          const fileName = `${timestamp}-${Math.random().toString(36).substring(2, 11)}.${fileExt}`;
+          const filePath = `temp/images/${yyyy}/${mm}/${fileName}`;
 
+          // Supabase에 업로드
           const { data, error } = await supabase.storage
             .from("board")
             .upload(filePath, file, {
@@ -2160,20 +2156,16 @@ const TipTapEditor = forwardRef(function TipTapEditor(
               },
             });
 
-          setUploadProgress(70);
-
           if (error) {
             showToast({
               title: "이미지 업로드 실패",
               description: `${file.name}: ${error.message}`,
               variant: "destructive",
             });
-            setUploadProgress(0);
-            setUploadingFileName("");
-            continue;
+            return null;
           }
 
-          setUploadProgress(85);
+          // URL 가져오기
           const { data: publicUrlData } = supabase.storage
             .from("board")
             .getPublicUrl(filePath);
@@ -2182,60 +2174,66 @@ const TipTapEditor = forwardRef(function TipTapEditor(
           if (!publicUrl) {
             showToast({
               title: "URL 생성 실패",
-              description: "이미지 URL을 가져오지 못했습니다.",
+              description: `${file.name}: 이미지 URL을 가져오지 못했습니다.`,
               variant: "destructive",
             });
-            setUploadProgress(0);
-            setUploadingFileName("");
-            continue;
+            return null;
           }
 
-          setUploadProgress(95);
-          // 에디터에 삽입
-          editor
-            .chain()
-            .focus()
-            .insertContent({ type: "image", attrs: { src: publicUrl } })
-            .run();
-
-          // 파일관리에도 추가
-          const fileInfo = {
+          return {
             url: publicUrl,
             name: file.name,
             size: `${(file.size / 1024).toFixed(1)}KB`,
             type: fileExt,
             uploadedAt: new Date().toISOString(),
+            index: index
           };
 
-          if (typeof setUploadedFiles === "function") {
-            setUploadedFiles([...uploadedFiles, fileInfo]);
-          }
-
-          if (typeof handleImageUploaded === "function") {
-            handleImageUploaded(
-              publicUrl,
-              file.name,
-              `${(file.size / 1024).toFixed(1)}KB`,
-              fileExt
-            );
-          }
-
-          setUploadProgress(100);
-          showToast({
-            title: "이미지 업로드 완료",
-            description: `${file.name} 이미지가 업로드되었습니다.`,
-            variant: "default",
-          });
         } catch (uploadError) {
           showToast({
             title: "이미지 업로드 예외 발생",
             description: `${file.name}: ${uploadError instanceof Error ? uploadError.message : "알 수 없는 오류"}`,
             variant: "destructive",
           });
-          setUploadProgress(0);
-          setUploadingFileName("");
+          return null;
+        }
+      });
+
+      // 모든 업로드 완료 대기
+      const results = await Promise.all(uploadPromises);
+      const successfulUploads = results.filter(Boolean).sort((a, b) => a!.index - b!.index);
+
+      // 한 번에 모든 이미지를 에디터에 삽입
+      if (successfulUploads.length > 0) {
+        const content = successfulUploads.map(result => ({
+          type: "image",
+          attrs: {
+            src: result!.url,
+            alt: result!.name,
+          },
+        }));
+
+        editor.chain().insertContent(content).run();
+
+        // 파일 정보 일괄 추가
+        if (typeof setUploadedFiles === "function") {
+          const newFiles = successfulUploads.map(r => ({
+            url: r!.url,
+            name: r!.name,
+            size: r!.size,
+            type: r!.type,
+            uploadedAt: r!.uploadedAt,
+          }));
+          setUploadedFiles([...uploadedFiles, ...newFiles]);
         }
       }
+
+      setUploadProgress(100);
+      showToast({
+        title: "이미지 업로드 완료",
+        description: `이미지 업로드가 완료되었습니다.`,
+        variant: "default",
+      });
 
       setIsUploadingImage(false);
       setUploadProgress(0);
@@ -2244,11 +2242,9 @@ const TipTapEditor = forwardRef(function TipTapEditor(
     },
     [
       editor,
-      handleImageUploaded,
       setUploadedFiles,
       category,
       pageId,
-      uploadedFiles,
     ]
   );
 

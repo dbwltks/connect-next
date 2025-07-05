@@ -200,19 +200,21 @@ export default function SimpleCalendarWidget({
                     <div className="text-sm font-medium truncate">
                       {event.title}
                     </div>
-                    {event.is_all_day &&
-                      (widget.settings?.show_all_day_badge ?? true) && (
-                        <Badge variant="secondary" className="text-xs">
-                          종일
-                        </Badge>
-                      )}
                   </div>
                   <div className="text-xs text-gray-600">
                     {formatDate(event.start_date)}
-                    {!event.is_all_day && event.start_time && (
-                      <span className="ml-2">
-                        {formatTime(event.start_time)}
-                      </span>
+                    {event.is_all_day ? (
+                      (widget.settings?.show_all_day_badge ?? true) && (
+                        <span className="ml-2">
+                          종일
+                        </span>
+                      )
+                    ) : (
+                      event.start_time && (
+                        <span className="ml-2">
+                          {formatTime(event.start_time)}
+                        </span>
+                      )
                     )}
                   </div>
                 </div>
