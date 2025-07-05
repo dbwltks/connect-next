@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import useSWR from "swr";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -130,12 +131,10 @@ export default function CalendarWidget({
 }: CalendarWidgetProps) {
   const { user } = useAuth();
   const isAdmin = user?.role?.toLowerCase() === "admin";
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<"week" | "month" | "year">(
     settings.default_view || "month"
   );
-  const [loading, setLoading] = useState(true);
   const [showEventDialog, setShowEventDialog] = useState(false);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
@@ -234,31 +233,22 @@ export default function CalendarWidget({
     });
   };
 
-  useEffect(() => {
-    fetchEvents();
-  }, [currentDate, view]);
-
-  const fetchEvents = async () => {
-    try {
-      setLoading(true);
+  // SWR로 일정 데이터 관리
+  const { data: events = [], error, isLoading, mutate } = useSWR(
+    ["calendar_events", currentDate, view],
+    async () => {
       const { data, error } = await supabase
         .from("calendar_events")
         .select("*")
         .order("start_date", { ascending: true });
-
+      
       if (error) throw error;
-      setEvents(data || []);
-    } catch (error: any) {
-      console.error("일정 조회 오류:", error);
-      toast({
-        title: "조회 오류",
-        description: error.message || "일정을 불러오는 중 오류가 발생했습니다.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+      return data || [];
+    },
+    {
+      // 전역 설정 사용
     }
-  };
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -271,143 +261,146 @@ export default function CalendarWidget({
       return;
     }
 
-    try {
-      // 필수 필드 검증
-      if (!formData.title.trim()) {
+    // 필수 필드 검증
+    if (!formData.title.trim()) {
+      toast({
+        title: "오류",
+        description: "제목을 입력해주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.start_date) {
+      toast({
+        title: "오류",
+        description: "시작일을 선택해주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const eventData = {
+      ...formData,
+      // 종일 일정일 때는 시간 필드를 null로 설정
+      start_time: formData.is_all_day ? null : formData.start_time,
+      end_time: formData.is_all_day ? null : formData.end_time,
+      color: getCategoryColor(formData.category),
+      created_by: user.id,
+    };
+
+    // 로그에 사용할 세부 정보
+    const logDetails = {
+      start_date: formData.start_date,
+      end_date: formData.end_date,
+      category: formData.category,
+      department: formData.department,
+      is_all_day: formData.is_all_day,
+      has_location: !!formData.location,
+      has_description: !!formData.description,
+    };
+
+    if (isEditing && selectedEvent) {
+      const { error } = await supabase
+        .from("calendar_events")
+        .update(eventData)
+        .eq("id", selectedEvent.id);
+      if (error) {
         toast({
-          title: "오류",
-          description: "제목을 입력해주세요.",
+          title: "저장 오류",
+          description: error.message || "일정 저장 중 오류가 발생했습니다.",
           variant: "destructive",
         });
         return;
       }
 
-      if (!formData.start_date) {
+      // 수정 로그 기록
+      await logCalendarEventUpdate(
+        user.id,
+        selectedEvent.id,
+        formData.title,
+        logDetails
+      );
+
+      toast({
+        title: "성공",
+        description: "일정이 수정되었습니다.",
+      });
+    } else {
+      const { data, error } = await supabase
+        .from("calendar_events")
+        .insert([eventData])
+        .select()
+        .single();
+      if (error) {
         toast({
-          title: "오류",
-          description: "시작일을 선택해주세요.",
+          title: "저장 오류",
+          description: error.message || "일정 저장 중 오류가 발생했습니다.",
           variant: "destructive",
         });
         return;
       }
 
-      const eventData = {
-        ...formData,
-        // 종일 일정일 때는 시간 필드를 null로 설정
-        start_time: formData.is_all_day ? null : formData.start_time,
-        end_time: formData.is_all_day ? null : formData.end_time,
-        color: getCategoryColor(formData.category),
-        created_by: user.id,
-      };
-
-      // 로그에 사용할 세부 정보
-      const logDetails = {
-        start_date: formData.start_date,
-        end_date: formData.end_date,
-        category: formData.category,
-        department: formData.department,
-        is_all_day: formData.is_all_day,
-        has_location: !!formData.location,
-        has_description: !!formData.description,
-      };
-
-      if (isEditing && selectedEvent) {
-        const { error } = await supabase
-          .from("calendar_events")
-          .update(eventData)
-          .eq("id", selectedEvent.id);
-        if (error) throw error;
-
-        // 수정 로그 기록
-        await logCalendarEventUpdate(
+      // 생성 로그 기록
+      if (data?.id) {
+        await logCalendarEventCreate(
           user.id,
-          selectedEvent.id,
+          data.id,
           formData.title,
           logDetails
         );
-
-        toast({
-          title: "성공",
-          description: "일정이 수정되었습니다.",
-        });
-      } else {
-        const { data, error } = await supabase
-          .from("calendar_events")
-          .insert([eventData])
-          .select()
-          .single();
-        if (error) throw error;
-
-        // 생성 로그 기록
-        if (data?.id) {
-          await logCalendarEventCreate(
-            user.id,
-            data.id,
-            formData.title,
-            logDetails
-          );
-        }
-
-        toast({
-          title: "성공",
-          description: "일정이 추가되었습니다.",
-        });
       }
 
-      fetchEvents();
-      resetForm();
-      setShowEventDialog(false);
-    } catch (error: any) {
-      console.error("일정 저장 오류:", error);
       toast({
-        title: "저장 오류",
-        description: error.message || "일정 저장 중 오류가 발생했습니다.",
-        variant: "destructive",
+        title: "성공",
+        description: "일정이 추가되었습니다.",
       });
     }
+
+    mutate();
+    resetForm();
+    setShowEventDialog(false);
   };
 
   const handleDelete = async (eventId: string) => {
     if (!confirm("정말로 이 일정을 삭제하시겠습니까?")) return;
 
-    try {
-      // 삭제할 이벤트 정보 미리 저장 (로그용)
-      const eventToDelete = events.find((event) => event.id === eventId);
-      const eventTitle = eventToDelete?.title || "제목 없음";
-      const logDetails = {
-        start_date: eventToDelete?.start_date,
-        category: eventToDelete?.category,
-        department: eventToDelete?.department,
-        was_all_day: eventToDelete?.is_all_day,
-      };
+    // 삭제할 이벤트 정보 미리 저장 (로그용)
+    const eventToDelete = events.find((event) => event.id === eventId);
+    const eventTitle = eventToDelete?.title || "제목 없음";
+    const logDetails = {
+      start_date: eventToDelete?.start_date,
+      category: eventToDelete?.category,
+      department: eventToDelete?.department,
+      was_all_day: eventToDelete?.is_all_day,
+    };
 
-      const { error } = await supabase
-        .from("calendar_events")
-        .delete()
-        .eq("id", eventId);
+    const { error } = await supabase
+      .from("calendar_events")
+      .delete()
+      .eq("id", eventId);
 
-      if (error) throw error;
-
-      // 삭제 로그 기록 (사용자 정보가 있는 경우)
-      if (user?.id) {
-        await logCalendarEventDelete(user.id, eventId, eventTitle, logDetails);
-      }
-
-      toast({
-        title: "성공",
-        description: "일정이 삭제되었습니다.",
-      });
-
-      fetchEvents();
-      setShowEventDialog(false);
-    } catch (error: any) {
-      console.error("일정 삭제 오류:", error);
+    if (error) {
       toast({
         title: "삭제 오류",
         description: error.message || "일정 삭제 중 오류가 발생했습니다.",
         variant: "destructive",
       });
+      return;
     }
+
+    // 삭제 로그 기록 (사용자 정보가 있는 경우)
+    if (user?.id) {
+      await logCalendarEventDelete(user.id, eventId, eventTitle, logDetails);
+    }
+
+    toast({
+      title: "성공",
+      description: "일정이 삭제되었습니다.",
+    });
+
+    mutate();
+    setShowEventDialog(false);
   };
 
   const resetForm = () => {
@@ -513,11 +506,23 @@ export default function CalendarWidget({
     });
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <Card>
         <CardContent className="p-4">
           <div className="text-center">로딩 중...</div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-4">
+          <div className="text-center text-red-600">
+            일정을 불러오는 중 오류가 발생했습니다.
+          </div>
         </CardContent>
       </Card>
     );
@@ -1011,7 +1016,7 @@ export default function CalendarWidget({
       </CardHeader>
 
       <CardContent className="px-6 pb-6">
-        {loading ? (
+        {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <div className="text-gray-500">일정을 불러오는 중...</div>
           </div>

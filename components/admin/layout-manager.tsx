@@ -38,6 +38,7 @@ import {
   CHART_STYLES,
 } from "../widgets/organization-chart-widget";
 import CalendarWidget from "../widgets/calendar-widget";
+import SimpleCalendarWidget from "../widgets/simple-calendar-widget";
 import { supabase } from "@/db";
 import { toast } from "@/hooks/use-toast";
 import { Plus, Trash2, MoveVertical, Settings, Eye, GripVertical, ChevronLeft, ChevronRight } from "lucide-react";
@@ -113,6 +114,7 @@ const WIDGET_TYPES = [
   { id: "carousel", name: "캐러셀 슬라이드" },
   { id: "organization-chart", name: "조직도" },
   { id: "calendar", name: "캘린더" },
+  { id: "simple-calendar", name: "간단 캘린더" },
 ];
 
 export default function LayoutManager(): JSX.Element {
@@ -4863,6 +4865,126 @@ export default function LayoutManager(): JSX.Element {
             </div>
           )}
 
+          {/* 간단 캘린더 위젯 전용 설정 */}
+          {editingWidget.type === "simple-calendar" && (
+            <div className="space-y-4">
+              <h4 className="font-medium text-sm">간단 캘린더 설정</h4>
+              
+              <div className="space-y-2">
+                <Label htmlFor="simple-calendar-event-count">표시할 일정 개수</Label>
+                <Input
+                  id="simple-calendar-event-count"
+                  type="number"
+                  min="1"
+                  max="50"
+                  value={editingWidget.settings?.event_count || 10}
+                  onChange={(e) =>
+                    setEditingWidget({
+                      ...editingWidget,
+                      settings: {
+                        ...editingWidget.settings,
+                        event_count: Math.max(1, Math.min(50, parseInt(e.target.value) || 10)),
+                      },
+                    })
+                  }
+                  placeholder="일정 개수 입력"
+                />
+                <p className="text-xs text-gray-500">
+                  각 탭(다가올 일정, 지난 일정)에 표시할 일정의 개수를 설정합니다. (1-50개)
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="simple-calendar-default-tab">기본 표시 탭</Label>
+                <Select
+                  value={editingWidget.settings?.default_tab || "upcoming"}
+                  onValueChange={(value) =>
+                    setEditingWidget({
+                      ...editingWidget,
+                      settings: {
+                        ...editingWidget.settings,
+                        default_tab: value,
+                      },
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="기본 탭 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="upcoming">다가올 일정</SelectItem>
+                    <SelectItem value="past">지난 일정</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-500">
+                  위젯이 처음 로드될 때 기본으로 표시할 탭을 선택합니다.
+                </p>
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="show-category-colors"
+                    checked={editingWidget.settings?.show_category_colors ?? true}
+                    onCheckedChange={(checked) =>
+                      setEditingWidget({
+                        ...editingWidget,
+                        settings: {
+                          ...editingWidget.settings,
+                          show_category_colors: checked === true,
+                        },
+                      })
+                    }
+                  />
+                  <Label htmlFor="show-category-colors">카테고리 색상 표시</Label>
+                </div>
+                <p className="text-xs text-gray-500 ml-6">
+                  일정 왼쪽에 카테고리를 나타내는 색상 점을 표시합니다.
+                </p>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="show-all-day-badge"
+                    checked={editingWidget.settings?.show_all_day_badge ?? true}
+                    onCheckedChange={(checked) =>
+                      setEditingWidget({
+                        ...editingWidget,
+                        settings: {
+                          ...editingWidget.settings,
+                          show_all_day_badge: checked === true,
+                        },
+                      })
+                    }
+                  />
+                  <Label htmlFor="show-all-day-badge">종일 일정 배지 표시</Label>
+                </div>
+                <p className="text-xs text-gray-500 ml-6">
+                  종일 일정에 "종일" 배지를 표시합니다.
+                </p>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="show-tab-buttons"
+                    checked={editingWidget.settings?.show_tab_buttons ?? true}
+                    onCheckedChange={(checked) =>
+                      setEditingWidget({
+                        ...editingWidget,
+                        settings: {
+                          ...editingWidget.settings,
+                          show_tab_buttons: checked === true,
+                        },
+                      })
+                    }
+                  />
+                  <Label htmlFor="show-tab-buttons">탭 버튼 표시</Label>
+                </div>
+                <p className="text-xs text-gray-500 ml-6">
+                  다가올 일정/지난 일정 전환 탭 버튼을 표시합니다.
+                </p>
+              </div>
+            </div>
+          )}
+
           <DialogFooter>
             <Button
               variant="outline"
@@ -5304,6 +5426,26 @@ export default function LayoutManager(): JSX.Element {
           </div>
         );
 
+      case "simple-calendar":
+        return previewMode ? (
+          <SimpleCalendarWidget widget={widget} />
+        ) : (
+          <div className="bg-purple-50 p-4 rounded">
+            <div className="font-medium">{widget.title || "간단 캘린더"}</div>
+            <div className="text-sm text-gray-500 mt-1">간단 캘린더 위젯</div>
+            {widget.settings?.event_count && (
+              <div className="text-xs text-purple-500 mt-1">
+                표시 개수: {widget.settings.event_count}개
+              </div>
+            )}
+            {widget.settings?.default_tab && (
+              <div className="text-xs text-purple-500 mt-1">
+                기본 탭: {widget.settings.default_tab === "upcoming" ? "다가올 일정" : "지난 일정"}
+              </div>
+            )}
+          </div>
+        );
+
       default:
         return <div className="bg-gray-100 p-4 rounded">알 수 없는 위젯</div>;
     }
@@ -5578,6 +5720,21 @@ export default function LayoutManager(): JSX.Element {
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     캘린더 추가
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      addNewWidget("simple-calendar", addingWidgetToArea, {
+                        title: "간단 캘린더",
+                      });
+                      setAddingWidgetToArea(null);
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    간단 캘린더 추가
                   </Button>
                 </div>
               </div>

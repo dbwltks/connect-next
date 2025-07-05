@@ -16,6 +16,7 @@ import { StripWidget } from "@/components/widgets/strip-widget";
 import { CarouselWidget } from "@/components/widgets/carousel-widget";
 import { OrganizationChartWidget } from "@/components/widgets/organization-chart-widget";
 import CalendarWidget from "@/components/widgets/calendar-widget";
+import SimpleCalendarWidget from "@/components/widgets/simple-calendar-widget";
 import { IWidget } from "@/types/index";
 import useSWR from "swr";
 import { supabase } from "@/db";
@@ -65,8 +66,7 @@ export default function HomepageWidgets({
     () => (pageId ? fetchWidgets(pageId) : fetchWidgets()),
     {
       fallbackData: initialWidgets,
-      revalidateOnMount: initialWidgets ? false : true, // 초기 데이터가 있으면 마운트 시 재검증 안함
-      // 전역 설정 사용
+      // 전역 설정 사용 - 페이지 이동 후에도 데이터 갱신
     }
   );
 
@@ -112,6 +112,8 @@ export default function HomepageWidgets({
             }}
           />
         );
+      case "simple-calendar":
+        return <SimpleCalendarWidget widget={widget} />;
       default:
         return (
           <Card className="h-full">

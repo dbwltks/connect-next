@@ -304,9 +304,8 @@ export function OrganizationChartWidget({
     `organization-chart-${widget.id}-${JSON.stringify(widget.settings?.custom_data)}`,
     fetcher,
     {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
       dedupingInterval: 60000, // 1분간 중복 요청 방지
+      // 전역 설정 사용
     }
   );
 

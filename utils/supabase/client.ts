@@ -9,6 +9,7 @@ export const createClient = () =>
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: false,
+        debug: process.env.NODE_ENV === 'development',
       },
     }
   );

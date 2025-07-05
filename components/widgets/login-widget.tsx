@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/utils/supabase/client";
+import { supabase } from "@/db";
 import { IWidget } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -28,8 +28,6 @@ export default function LoginWidget({ widget }: LoginWidgetProps) {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   
-  // 컴포넌트 레벨에서 supabase 클라이언트 생성
-  const supabase = createClient();
 
   useEffect(() => {
     
