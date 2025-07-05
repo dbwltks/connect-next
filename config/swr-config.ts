@@ -1,41 +1,44 @@
 import { SWRConfiguration } from 'swr';
 
-// SWR 전역 설정
+// SWR 전역 설정 - 실무 수준 최적화
 export const swrGlobalConfig: SWRConfiguration = {
-  // 재검증 설정
-  revalidateOnFocus: true,            // 포커스 시 재검증 (탭 전환 시 최신 데이터)
-  revalidateOnReconnect: true,        // 재연결 시 재검증
-  revalidateIfStale: true,            // stale 데이터일 때 자동 갱신
-  refreshInterval: 240000,            // 4분마다 자동 갱신 (세션 갱신)
+  // 재검증 설정 - 사용자 경험 최적화
+  revalidateOnFocus: true,            // 탭 포커스 시 최신 데이터 확인
+  revalidateOnReconnect: true,        // 네트워크 재연결 시 데이터 갱신
+  revalidateIfStale: true,            // 오래된 데이터 자동 갱신
+  refreshInterval: 0,                 // 자동 갱신 비활성화 (필요시 개별 설정)
   
-  // 캐싱 설정
+  // 캐싱 설정 - 성능과 UX 균형
   dedupingInterval: 2000,             // 2초간 중복 요청 방지
-  keepPreviousData: true,             // 새 데이터 로딩 중 이전 데이터 유지
+  keepPreviousData: true,             // 로딩 중 이전 데이터 유지 (깜빡임 방지)
   
-  // 에러 처리 설정 - 세션 갱신을 고려한 재시도
-  errorRetryCount: 3,                 // 에러 시 3번 재시도 (미들웨어 세션 갱신 고려)
-  errorRetryInterval: 5000,           // 5초 간격으로 재시도 (미들웨어 처리 시간 고려)
+  // 에러 처리 설정 - 안정성 보장
+  errorRetryCount: 3,                 // 최대 3회 재시도
+  errorRetryInterval: (attempt) => Math.min(attempt * 1000, 3000), // 점진적 백오프
   shouldRetryOnError: (error) => {
-    // 네트워크 에러나 서버 에러는 재시도
-    if (error?.message?.includes("fetch") || 
+    // 4xx 클라이언트 에러는 재시도하지 않음 (403, 404 등)
+    if (error?.status >= 400 && error?.status < 500 && error?.status !== 401) {
+      return false;
+    }
+    
+    // 401 인증 에러는 재시도 (세션 갱신 가능)
+    if (error?.status === 401 || 
+        (error as any)?.isAuthError ||
+        error?.message?.includes("JWT") || 
+        error?.message?.includes("expired") ||
+        error?.message?.includes("unauthorized")) {
+      return true;
+    }
+    
+    // 5xx 서버 에러, 네트워크 에러는 재시도
+    if (error?.status >= 500 ||
+        error?.message?.includes("fetch") || 
         error?.message?.includes("network") ||
         error?.message?.includes("timeout")) {
       return true;
     }
     
-    // 인증 에러는 제한적으로 재시도 (미들웨어가 세션 갱신할 시간 제공)
-    if ((error as any)?.isAuthError ||
-        error?.message?.includes("JWT") || 
-        error?.message?.includes("PGRST301") ||
-        error?.message?.includes("401") ||
-        error?.message?.includes("unauthorized") ||
-        error?.message?.includes("인증 오류") ||
-        error?.message?.includes("expired")) {
-      console.log("[SWR Global] 인증 에러 감지 - 미들웨어 세션 갱신 후 재시도:", error.message);
-      return true; // 재시도 허용 (미들웨어가 세션 갱신)
-    }
-    
-    return true;
+    return false; // 그 외는 재시도 안함
   },
   
   // 페처 설정

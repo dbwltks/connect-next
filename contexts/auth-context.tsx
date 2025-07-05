@@ -137,15 +137,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const profile = await fetchUserProfile(session.user.id);
         if (mounted) setUser(profile);
         
-        // 세션이 있으면 주기적으로 갱신 (4분마다)
+        // 세션 자동 갱신 (토큰 만료 30분 전에 갱신)
         sessionRefreshInterval = setInterval(async () => {
           try {
-            console.log("[Auth] 세션 갱신 시도");
-            await supabase.auth.refreshSession();
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.expires_at) {
+              const expiresAt = new Date(session.expires_at * 1000);
+              const now = new Date();
+              const timeUntilExpiry = expiresAt.getTime() - now.getTime();
+              
+              // 30분 미만 남았으면 갱신
+              if (timeUntilExpiry < 30 * 60 * 1000) {
+                console.log("[Auth] 세션 갱신 실행 (만료 30분 전)");
+                await supabase.auth.refreshSession();
+              }
+            }
           } catch (error) {
             console.error("[Auth] 세션 갱신 실패:", error);
           }
-        }, 240000); // 4분마다
+        }, 5 * 60 * 1000); // 5분마다 체크
       } else {
         if (mounted) setUser(null);
       }
@@ -180,12 +190,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         sessionRefreshInterval = setInterval(async () => {
           try {
-            console.log("[Auth] 세션 갱신 시도");
-            await supabase.auth.refreshSession();
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.expires_at) {
+              const expiresAt = new Date(session.expires_at * 1000);
+              const now = new Date();
+              const timeUntilExpiry = expiresAt.getTime() - now.getTime();
+              
+              // 30분 미만 남았으면 갱신
+              if (timeUntilExpiry < 30 * 60 * 1000) {
+                console.log("[Auth] 세션 갱신 실행 (만료 30분 전)");
+                await supabase.auth.refreshSession();
+              }
+            }
           } catch (error) {
             console.error("[Auth] 세션 갱신 실패:", error);
           }
-        }, 240000); // 4분마다
+        }, 5 * 60 * 1000); // 5분마다 체크
       } else {
         if (mounted) setUser(null);
       }

@@ -2,8 +2,6 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function updateSession(request: NextRequest) {
-  console.log("[Middleware] updateSession 호출:", request.nextUrl.pathname);
-  
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -36,8 +34,6 @@ export async function updateSession(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  
-  console.log("[Middleware] 사용자 상태:", user ? "로그인됨" : "비로그인");
 
   // 로그인이 필요한 보호된 경로들
   const protectedPaths = ['/mypage', '/admin'];

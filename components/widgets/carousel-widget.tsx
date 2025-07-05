@@ -196,12 +196,8 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
     mutate,
   } = useSWR(
     `carousel-${widget.id}-${dataHash}`,
-    () => fetchCarouselData(widget),
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      refreshInterval: 0,
-    }
+    () => fetchCarouselData(widget)
+    // 전역 설정 사용
   );
 
   // 데스크톱/모바일에 따라 슬라이드 필터링
