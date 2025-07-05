@@ -30,17 +30,27 @@ interface HomepageWidgetsProps {
 // 위젯 데이터를 가져오는 fetcher 함수
 async function fetchWidgets(pageId?: string): Promise<IWidget[]> {
   try {
-    console.log("[fetchWidgets] 요청 시작:", {
-      pageId,
-      time: new Date().toISOString(),
-    });
-
     // 매번 새로운 클라이언트 생성하여 최신 세션 보장
     const supabase = createClient();
     
-    // 세션 상태 확인 (디버깅용)
-    const { data: { user } } = await supabase.auth.getUser();
-    console.log("[fetchWidgets] 현재 세션 상태:", user ? "로그인됨" : "비로그인");
+    // 세션 상태 확인 및 대기 (새로고침 시 안정성 확보)
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    while (retryCount < maxRetries) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) break; // 세션이 있으면 진행
+        
+        // 세션이 없으면 잠시 대기 후 재시도
+        await new Promise(resolve => setTimeout(resolve, 200));
+        retryCount++;
+      } catch (error) {
+        console.warn("[fetchWidgets] 세션 확인 실패, 재시도:", retryCount + 1);
+        await new Promise(resolve => setTimeout(resolve, 200));
+        retryCount++;
+      }
+    }
 
     let query = supabase
       .from("cms_layout")
@@ -97,6 +107,7 @@ export default function HomepageWidgets({
     () => (pageId ? fetchWidgets(pageId) : fetchWidgets()),
     {
       fallbackData: initialWidgets,
+      revalidateOnMount: initialWidgets ? false : true, // 초기 데이터가 있으면 마운트 시 재검증 안함
       // 전역 설정 사용
     }
   );
