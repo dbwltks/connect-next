@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { createClient } from "@/utils/supabase/client";
+import { supabase } from "@/db";
 import { IWidget, IPage } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import useSWR from "swr";
@@ -23,8 +23,6 @@ interface RecentCommentsWidgetProps {
 async function fetchRecentComments(
   itemCount: number
 ): Promise<{ comments: Comment[]; menuUrlMap: Record<string, string> }> {
-  // 매번 새로운 클라이언트 생성으로 세션 동기화 보장
-  const supabase = createClient();
   
   const { data, error } = await supabase
     .from("board_comments")
@@ -36,19 +34,11 @@ async function fetchRecentComments(
     .limit(itemCount);
 
   if (error) {
-    // 인증 에러 구분
-    if (error.code === "PGRST301" || 
-        error.message?.includes("JWT") || 
-        error.message?.includes("expired") ||
-        error.message?.includes("unauthorized")) {
-      const authError = new Error(`세션 만료: 갱신 후 재시도`);
-      (authError as any).isAuthError = true;
-      throw authError;
-    }
     throw error;
   }
 
   const comments = (data || []) as Comment[];
+
 
   // 메뉴 URL 매핑 생성
   const uniquePageIds = Array.from(

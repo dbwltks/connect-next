@@ -18,7 +18,7 @@ import { OrganizationChartWidget } from "@/components/widgets/organization-chart
 import CalendarWidget from "@/components/widgets/calendar-widget";
 import { IWidget } from "@/types/index";
 import useSWR from "swr";
-import { createClient } from "@/utils/supabase/client";
+import { supabase } from "@/db";
 
 type LayoutStructure = "1-col" | "2-col-left" | "2-col-right" | "3-col";
 
@@ -29,28 +29,6 @@ interface HomepageWidgetsProps {
 
 // 위젯 데이터를 가져오는 fetcher 함수
 async function fetchWidgets(pageId?: string): Promise<IWidget[]> {
-  try {
-    // 매번 새로운 클라이언트 생성하여 최신 세션 보장
-    const supabase = createClient();
-    
-    // 세션 상태 확인 및 대기 (새로고침 시 안정성 확보)
-    let retryCount = 0;
-    const maxRetries = 3;
-    
-    while (retryCount < maxRetries) {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) break; // 세션이 있으면 진행
-        
-        // 세션이 없으면 잠시 대기 후 재시도
-        await new Promise(resolve => setTimeout(resolve, 200));
-        retryCount++;
-      } catch (error) {
-        console.warn("[fetchWidgets] 세션 확인 실패, 재시도:", retryCount + 1);
-        await new Promise(resolve => setTimeout(resolve, 200));
-        retryCount++;
-      }
-    }
 
     let query = supabase
       .from("cms_layout")
@@ -67,30 +45,10 @@ async function fetchWidgets(pageId?: string): Promise<IWidget[]> {
     const { data, error } = await query;
 
     if (error) {
-      console.error("[fetchWidgets] Supabase 에러:", error);
-      
-      // 세션 만료 에러 확인 - 미들웨어 갱신 대기 후 재시도
-      if (error.code === "PGRST301" || 
-          error.message?.includes("JWT") || 
-          error.message?.includes("expired") ||
-          error.message?.includes("unauthorized")) {
-        console.warn("[fetchWidgets] 세션 만료 감지 - 미들웨어 갱신 후 SWR 재시도 예정");
-        // 인증 에러임을 표시하되 재시도 허용
-        const authError = new Error(`세션 만료: 갱신 후 재시도`);
-        (authError as any).isAuthError = true;
-        throw authError;
-      }
-      
-      // 일반 에러
-      throw new Error(`위젯 데이터 로드 실패: ${error.message}`);
+      throw error;
     }
 
-    console.log("[fetchWidgets] 성공:", { count: data?.length || 0 });
     return data || [];
-  } catch (err) {
-    console.error("[fetchWidgets] 예외 발생:", err);
-    throw err;
-  }
 }
 
 export default function HomepageWidgets({
@@ -237,17 +195,13 @@ export default function HomepageWidgets({
   const renderColumn = (widgetsToRender: IWidget[]) => (
     <div className="space-y-6">
       {error ? (
-        <div className="p-4 border border-yellow-200 bg-yellow-50 rounded-lg">
-          <p className="text-sm text-yellow-800">
-            {(error as any)?.isAuthError 
-              ? "데이터를 불러오는 중입니다... (세션 갱신 중)" 
-              : "위젯 데이터를 불러올 수 없습니다."}
+        <div className="p-4 border border-red-200 bg-red-50 rounded-lg">
+          <p className="text-sm text-red-800">
+            위젯 데이터를 불러올 수 없습니다.
           </p>
-          {!(error as any)?.isAuthError && (
-            <p className="text-xs text-yellow-600 mt-1">
-              잠시 후 다시 시도됩니다.
-            </p>
-          )}
+          <p className="text-xs text-red-600 mt-1">
+            잠시 후 다시 시도됩니다.
+          </p>
         </div>
       ) : isLoading ? (
         Array.from({ length: 2 }).map((_, index) => (

@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { IBoardPost, IPage, IWidget, IBoardWidgetOptions } from "@/types/index";
 import Link from "next/link";
 import React from "react";
-import { createClient } from "@/utils/supabase/client";
+import { supabase } from "@/db";
 import {
   Calendar,
   MessageSquare,
@@ -63,8 +63,6 @@ async function fetchBoardWidgetPosts(
   pageId: string,
   limit: number = 10
 ): Promise<{ posts: IBoardPost[]; menuUrlMap: Record<string, string> }> {
-  // 매번 새로운 클라이언트 생성으로 세션 동기화 보장
-  const supabase = createClient();
   
   const { data, error } = await supabase
     .from("board_posts")
@@ -75,17 +73,7 @@ async function fetchBoardWidgetPosts(
     .limit(limit);
 
   if (error) {
-    // 세션 만료 에러 - 미들웨어 갱신 후 재시도 허용
-    if (error.code === "PGRST301" || 
-        error.message?.includes("JWT") || 
-        error.message?.includes("expired") ||
-        error.message?.includes("unauthorized")) {
-      console.warn("[fetchBoardWidgetPosts] 세션 만료 감지 - 미들웨어 갱신 후 재시도");
-      const authError = new Error(`세션 만료: 갱신 후 재시도`);
-      (authError as any).isAuthError = true;
-      throw authError;
-    }
-    throw new Error(`게시판 데이터 로드 실패: ${error.message}`);
+    throw error;
   }
 
   const posts = (data as IBoardPost[]) || [];
