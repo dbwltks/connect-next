@@ -13,8 +13,8 @@ export const swrGlobalConfig: SWRConfiguration = {
   keepPreviousData: true,             // 새 데이터 로딩 중 이전 데이터 유지
   
   // 에러 처리 설정 - 세션 갱신을 고려한 재시도
-  errorRetryCount: 2,                 // 에러 시 2번 재시도 (미들웨어 세션 갱신 고려)
-  errorRetryInterval: 3000,           // 3초 간격으로 재시도 (미들웨어 처리 시간 고려)
+  errorRetryCount: 3,                 // 에러 시 3번 재시도 (미들웨어 세션 갱신 고려)
+  errorRetryInterval: 5000,           // 5초 간격으로 재시도 (미들웨어 처리 시간 고려)
   shouldRetryOnError: (error) => {
     // 네트워크 에러나 서버 에러는 재시도
     if (error?.message?.includes("fetch") || 
