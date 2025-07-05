@@ -50,8 +50,7 @@ export default function SimpleCalendarWidget({
     error,
     isLoading,
   } = useSWR(
-    // 전역 캐시 키 - 모든 캘린더 위젯이 같은 데이터 공유
-    "calendar_events",
+    ["calendar_events"],
     async () => {
       const { data, error } = await supabase
         .from("calendar_events")
@@ -61,7 +60,7 @@ export default function SimpleCalendarWidget({
       if (error) throw error;
       return data || [];
     }
-    // 전역 설정 사용 - 별도 설정 없음
+    // 전역 설정 사용
   );
 
   // 이벤트 색상 가져오기 (데이터베이스에 저장된 color 사용)

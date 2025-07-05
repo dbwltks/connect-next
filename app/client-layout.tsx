@@ -24,21 +24,9 @@ export default function ClientLayout({
   footerSettings: any;
   widgets: any[];
 }) {
-  // SWR fallback 데이터 - 서버에서 미리 가져온 데이터를 캐시에 저장
-  const swrConfigWithFallback = {
-    ...swrGlobalConfig,
-    fallback: {
-      // 위젯 데이터를 전역 캐시에 저장
-      'widgets': widgets,
-      'menu_items': menuItems,
-      'footer_menus': footerMenus,
-      'footer_settings': footerSettings,
-    }
-  };
-
   return (
     <AuthProvider>
-      <SWRConfig value={swrConfigWithFallback}>
+      <SWRConfig value={swrGlobalConfig}>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"

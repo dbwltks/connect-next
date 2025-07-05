@@ -314,7 +314,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
   // 글꼴 크기, 굵기, 패밀리 상태
   const [fontSizeLevel, setFontSizeLevel] = useState<number>(0);
   const [fontBoldLevel, setFontBoldLevel] = useState<number>(0);
-  const [fontFamily, setFontFamily] = useState<string>("default");
+  const [fontFamily, setFontFamily] = useState<string>("nanumMyeongjo");
   // 메뉴 소스 (more: 데스크탑 더보기 버튼, font: 모바일 글꼴 버튼)
   const [menuSource, setMenuSource] = useState<string>("more");
   // 더보기 메뉴 표시 상태
@@ -324,7 +324,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
   // 로컬 스토리지에서 글꼴 설정을 불러오는 함수
   const loadFontSettings = () => {
     if (typeof window === "undefined")
-      return { size: 0, bold: 0, family: "default" };
+      return { size: 0, bold: 0, family: "nanumMyeongjo" };
 
     try {
       const savedSettings = localStorage.getItem("fontSettings");
@@ -335,7 +335,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
       console.error("글꼴 설정 불러오기 오류:", error);
     }
 
-    return { size: 0, bold: 0, family: "default" };
+    return { size: 0, bold: 0, family: "nanumMyeongjo" };
   };
 
   // 로컬 스토리지에 글꼴 설정을 저장하는 함수
@@ -1425,8 +1425,8 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
 
   // 글꼴 초기화 함수
   const resetFontFamily = () => {
-    setFontFamily("default");
-    saveFontSettings(fontSizeLevel, fontBoldLevel, "default");
+    setFontFamily("nanumMyeongjo");
+    saveFontSettings(fontSizeLevel, fontBoldLevel, "nanumMyeongjo");
   };
 
   // 게시글에 연결된 첨부파일 가져오기

@@ -56,18 +56,16 @@ export default function HomepageWidgets({
   widgets: initialWidgets,
   pageId,
 }: HomepageWidgetsProps) {
-  // SWR을 사용해서 위젯 데이터 관리 - 전역 캐시 활용
+  // SWR을 사용해서 위젯 데이터 관리 - 전역 설정 사용
   const {
     data: widgets,
     error,
     isLoading,
   } = useSWR(
-    // 전역 키 사용 - 모든 위젯이 같은 캐시 공유
-    'widgets',
-    () => fetchWidgets(pageId),
+    pageId ? ["widgets", pageId] : ["widgets"],
+    () => (pageId ? fetchWidgets(pageId) : fetchWidgets()),
     {
       fallbackData: initialWidgets,
-      // 페이지별 필터링은 클라이언트에서 처리
     }
   );
 

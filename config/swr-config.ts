@@ -1,21 +1,15 @@
 import { SWRConfiguration } from 'swr';
 
-// Next.js + SWR 공식 권장 설정 (2025)
+// SWR 공식 권장 전역 설정
 export const swrGlobalConfig: SWRConfiguration = {
-  // 기본 fetcher 함수
-  fetcher: (resource, init) => fetch(resource, init).then(res => res.json()),
+  // 재검증 설정 (기본값 사용)
+  revalidateOnFocus: true,
+  revalidateOnReconnect: true,
+  revalidateIfStale: true,
   
-  // 재검증 설정 - 공식 권장
-  revalidateOnFocus: true,            // 포커스 시 재검증 (기본값)
-  revalidateOnReconnect: true,        // 네트워크 재연결 시 재검증
-  revalidateIfStale: true,            // 오래된 데이터 재검증
-  
-  // 캐싱 최적화
-  dedupingInterval: 2000,             // 2초간 중복 요청 방지
-  keepPreviousData: true,             // 로딩 중 이전 데이터 유지
-  
-  // 성능 최적화
-  focusThrottleInterval: 5000,        // 포커스 재검증 스로틀링 (5초)
+  // 성능 설정
+  dedupingInterval: 2000,
+  keepPreviousData: true,
   
   // 에러 처리 설정 - 안정성 보장
   errorRetryCount: 3,                 // 최대 3회 재시도
@@ -44,15 +38,6 @@ export const swrGlobalConfig: SWRConfiguration = {
     }
     
     return false; // 그 외는 재시도 안함
-  },
-  
-  // 페처 설정
-  fetcher: async (resource, init) => {
-    const res = await fetch(resource, init);
-    if (!res.ok) {
-      throw new Error('API 요청 실패');
-    }
-    return res.json();
   },
   
   // 로깅 (개발 환경에서만)
