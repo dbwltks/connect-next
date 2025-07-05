@@ -2,8 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { IBoardPost, IPage, IWidget, IBoardWidgetOptions } from "@/types/index";
 import Link from "next/link";
-import React from "react";
-import { supabase } from "@/db";
+import React, { useState, useEffect, useCallback } from "react";
+import { createClient } from "@/utils/supabase/client";
 import {
   Calendar,
   MessageSquare,
@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatRelativeTime } from "@/utils/utils";
-import useSWR from "swr";
 
 interface BoardWidgetProps {
   widget: IWidget & {
@@ -63,6 +62,13 @@ async function fetchBoardWidgetPosts(
   pageId: string,
   limit: number = 10
 ): Promise<{ posts: IBoardPost[]; menuUrlMap: Record<string, string> }> {
+  console.log(`🔍 Fetching board widget posts for pageId: ${pageId}, limit: ${limit}`);
+  
+  const supabase = createClient();
+  
+  // 세션 상태 확인
+  const { data: session } = await supabase.auth.getSession();
+  console.log(`🔑 Current session:`, session.session ? 'authenticated' : 'not authenticated');
   
   const { data, error } = await supabase
     .from("board_posts")
@@ -73,8 +79,11 @@ async function fetchBoardWidgetPosts(
     .limit(limit);
 
   if (error) {
+    console.error(`❌ Error fetching board posts:`, error);
     throw error;
   }
+
+  console.log(`✅ Fetched ${data?.length || 0} posts for pageId: ${pageId}`);
 
   const posts = (data as IBoardPost[]) || [];
 
@@ -116,6 +125,11 @@ async function fetchBoardWidgetPosts(
 }
 
 export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
+  const [posts, setPosts] = useState<IBoardPost[]>([]);
+  const [menuUrlMap, setMenuUrlMap] = useState<Record<string, string>>({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  
   // 페이지 ID와 표시할 게시물 수 계산
   const pageId = page?.id || widget.display_options?.page_id;
   let limit = 10; // 기본값
@@ -128,15 +142,33 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
     }
   }
 
-  // SWR을 사용해서 게시판 데이터 관리 - 전역 설정 사용
-  const { data, error, isLoading } = useSWR(
-    pageId ? ["boardWidgetPosts", pageId, limit] : null,
-    () => fetchBoardWidgetPosts(pageId!, limit)
-    // 전역 설정 사용
-  );
+  // 데이터 로딩 함수
+  const loadBoardData = useCallback(async () => {
+    if (!pageId) {
+      setIsLoading(false);
+      return;
+    }
 
-  const posts = data?.posts || [];
-  const menuUrlMap = data?.menuUrlMap || {};
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await fetchBoardWidgetPosts(pageId, limit);
+      setPosts(data.posts);
+      setMenuUrlMap(data.menuUrlMap);
+    } catch (err) {
+      console.error('Failed to load board data:', err);
+      setError(err as Error);
+      setPosts([]);
+      setMenuUrlMap({});
+    } finally {
+      setIsLoading(false);
+    }
+  }, [pageId, limit]);
+
+  // 컴포넌트 마운트 시와 pageId, limit 변경 시 데이터 로딩
+  useEffect(() => {
+    loadBoardData();
+  }, [loadBoardData]);
 
   // 템플릿 번호 가져오기 (문자열 또는 숫자 처리)
   const getTemplateNumber = (template: string | number | undefined): number => {

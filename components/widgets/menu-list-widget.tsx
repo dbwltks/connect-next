@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { IWidget } from "@/types";
 import useSWR from "swr";
 
@@ -27,6 +27,7 @@ function useMenuList(widget: IWidget, pathname: string) {
   return useSWR<UseMenuListResult>(
     ["menuList", widget.settings?.parent_menu_id, pathname],
     async () => {
+      const supabase = createClient();
       let parentMenuId = widget.settings?.parent_menu_id;
       let tempParentMenu: Menu | null = null;
       if (parentMenuId) {

@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import useSWR from "swr";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 
 interface ServiceTime {
   id: string;
@@ -63,6 +63,7 @@ interface FooterSettings {
 
 // Footer 데이터 fetcher
 const fetchFooterData = async () => {
+  const supabase = createClient();
   const [menuRes, settingsRes] = await Promise.all([
     supabase
       .from("cms_menus")

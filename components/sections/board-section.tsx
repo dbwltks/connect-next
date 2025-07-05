@@ -49,9 +49,8 @@ import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { useAuth } from "@/contexts/auth-context";
-import useSWR from "swr";
 
 interface BoardPost {
   id: string;
@@ -102,6 +101,7 @@ async function fetchBoardData({
   searchType,
   searchTerm,
 }: FetchBoardDataParams) {
+  const supabase = createClient();
   // 1. 전체 게시글 수(count) 쿼리
   let countQuery = supabase
     .from("board_posts")
@@ -527,27 +527,46 @@ export default function BoardSection({
     e.preventDefault();
     setPage(1); // 검색 시 첫 페이지로 이동
     setSearchTerm(searchInput);
-    // mutate(); // searchTerm이 바뀌면 SWR이 자동으로 갱신됨
+    // 검색 시 데이터 새로 로딩
   };
 
-  // 대신 SWR 사용
-  const { data, error, isLoading, mutate } = useSWR(
-    ["boardData", pageId, categoryId, itemCount, page, searchType, searchTerm],
-    () =>
-      fetchBoardData({
+  // 직접 fetch 방식으로 데이터 관리
+  const [data, setData] = useState<any>(null);
+  const [error, setError] = useState<Error | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 데이터 로딩 함수
+  const loadBoardData = useCallback(async () => {
+    if (!pageId) {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+      const result = await fetchBoardData({
         pageId,
         categoryId,
         itemCount,
         page,
         searchType,
         searchTerm,
-      }),
-    {
-      revalidateOnFocus: false,
-      shouldRetryOnError: true,
-      errorRetryInterval: 5000,
+      });
+      setData(result);
+    } catch (err) {
+      console.error('Failed to load board data:', err);
+      setError(err as Error);
+      setData(null);
+    } finally {
+      setIsLoading(false);
     }
-  );
+  }, [pageId, categoryId, itemCount, page, searchType, searchTerm]);
+
+  // 컴포넌트 마운트 시와 의존성 변경 시 데이터 로딩
+  useEffect(() => {
+    loadBoardData();
+  }, [loadBoardData]);
 
   // 공지/고정글/일반글 분리
   const now = Date.now();
@@ -647,6 +666,7 @@ export default function BoardSection({
   async function handlePostClick(postId: string) {
     try {
       // 조회수 증가
+      const supabase = createClient();
       const { data, error: fetchError } = await supabase
         .from("board_posts")
         .select("views")
@@ -675,7 +695,7 @@ export default function BoardSection({
 
   // 게시글 작성 폼 표시 제어
   const handleWriteSuccess = () => {
-    mutate(); // 최신 글 목록 반영
+    loadBoardData(); // 최신 글 목록 반영
   };
 
   // 상세에서 목록으로 돌아가기 (쿼리스트링에서 post 제거)
@@ -872,7 +892,7 @@ export default function BoardSection({
       >
         <h3 className="font-bold mb-2">데이터 로드 오류</h3>
         <p>{error.message}</p>
-        <Button variant="outline" className="mt-2" onClick={() => mutate()}>
+        <Button variant="outline" className="mt-2" onClick={() => loadBoardData()}>
           다시 시도
         </Button>
       </div>

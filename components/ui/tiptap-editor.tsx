@@ -86,7 +86,7 @@ import {
 } from "lucide-react";
 import { Button } from "./button";
 import { Input } from "./input";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import {
   Select,
   SelectContent,
@@ -1737,6 +1737,7 @@ const FileManager = ({
                 const bucket = match[1];
                 const filePath = match[2];
                 // 2. Storage에서 삭제
+                const supabase = createClient();
                 const { error: removeError } = await supabase.storage
                   .from(bucket)
                   .remove([filePath]);
@@ -2141,6 +2142,7 @@ const TipTapEditor = forwardRef(function TipTapEditor(
           const filePath = `temp/images/${yyyy}/${mm}/${fileName}`;
 
           // Supabase에 업로드
+          const supabase = createClient();
           const { data, error } = await supabase.storage
             .from("board")
             .upload(filePath, file, {
@@ -2276,6 +2278,7 @@ const TipTapEditor = forwardRef(function TipTapEditor(
         try {
           setUploadProgress(10);
 
+          const supabase = createClient();
           const { data, error } = await supabase.storage
             .from("board")
             .upload(filePath, file, { cacheControl: "3600", upsert: true });
@@ -2373,6 +2376,7 @@ const TipTapEditor = forwardRef(function TipTapEditor(
         const bucketName = "board";
         const filePath = `temp/documents/${yyyy}/${mm}/${fileName}`;
         try {
+          const supabase = createClient();
           const { data, error } = await supabase.storage
             .from(bucketName)
             .upload(filePath, file, {

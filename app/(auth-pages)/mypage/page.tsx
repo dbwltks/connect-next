@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { User, Settings, LogOut } from "lucide-react";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import { Label } from "@/components/ui/label";
@@ -92,7 +92,7 @@ export default function MyPage() {
         throw new Error("로그인된 사용자 정보를 찾을 수 없습니다.");
       const userData = JSON.parse(storedUser);
       if (!userData.id) throw new Error("사용자 ID를 찾을 수 없습니다.");
-      const { data: dbUser, error: dbError } = await supabase
+      const { data: dbUser, error: dbError } = await createClient()
         .from("users")
         .select("*")
         .eq("id", userData.id)
@@ -105,7 +105,7 @@ export default function MyPage() {
       if (pwForm.newPassword !== pwForm.confirmPassword) {
         throw new Error("새 비밀번호가 일치하지 않습니다.");
       }
-      const { error: updateError } = await supabase
+      const { error: updateError } = await createClient()
         .from("users")
         .update({
           password: pwForm.newPassword,
@@ -158,7 +158,7 @@ export default function MyPage() {
       }
 
       // 중복 체크 (현재 사용자 제외)
-      const { data: existingUser } = await supabase
+      const { data: existingUser } = await createClient()
         .from("users")
         .select("id")
         .eq("nickname", nickname)
@@ -172,7 +172,7 @@ export default function MyPage() {
       console.log("닉네임 업데이트 시작...");
 
       // users 테이블의 nickname 업데이트
-      const { error: dbError } = await supabase
+      const { error: dbError } = await createClient()
         .from("users")
         .update({ nickname: nickname })
         .eq("id", user.id);
@@ -290,19 +290,19 @@ export default function MyPage() {
       }
       const ext = "jpg";
       const filePath = `profile-avatars/${user.id}/${Date.now()}.${ext}`;
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError } = await createClient().storage
         .from("profile-avatars")
         .upload(filePath, croppedBlob, {
           upsert: true,
           contentType: "image/jpeg",
         });
       if (uploadError) throw uploadError;
-      const { data: publicUrlData } = supabase.storage
+      const { data: publicUrlData } = createClient().storage
         .from("profile-avatars")
         .getPublicUrl(filePath);
       const publicUrl = publicUrlData?.publicUrl;
       if (!publicUrl) throw new Error("이미지 URL을 가져오지 못했습니다.");
-      const { error: updateError } = await supabase
+      const { error: updateError } = await createClient()
         .from("users")
         .update({ avatar_url: publicUrl })
         .eq("id", user.id);
@@ -338,12 +338,12 @@ export default function MyPage() {
       const filePath = matches ? `profile-avatars/${matches[1]}` : null;
       if (!filePath) throw new Error("파일 경로를 추출할 수 없습니다.");
       // Storage에서 삭제
-      const { error: removeError } = await supabase.storage
+      const { error: removeError } = await createClient().storage
         .from("profile-avatars")
         .remove([filePath.replace("profile-avatars/", "")]);
       if (removeError) throw removeError;
       // DB에서 avatar_url null로
-      const { error: updateError } = await supabase
+      const { error: updateError } = await createClient()
         .from("users")
         .update({ avatar_url: null })
         .eq("id", user.id);
@@ -382,13 +382,13 @@ export default function MyPage() {
 
       try {
         // 게시글 수 가져오기
-        const { count: postCount } = await supabase
+        const { count: postCount } = await createClient()
           .from("board_posts")
           .select("*", { count: "exact", head: true })
           .eq("user_id", user.id);
 
         // 댓글 수 가져오기 (board_comments 테이블 사용)
-        const { count: commentCount } = await supabase
+        const { count: commentCount } = await createClient()
           .from("board_comments")
           .select("*", { count: "exact", head: true })
           .eq("user_id", user.id);

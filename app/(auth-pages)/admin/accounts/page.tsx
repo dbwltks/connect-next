@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -95,7 +95,7 @@ export default function AccountsPage() {
     setLoading(true);
     try {
       // 사용자 목록 가져오기
-      const { data: userData, error: userError } = await supabase
+      const { data: userData, error: userError } = await createClient()
         .from("users")
         .select("*")
         .order("created_at", { ascending: false });
@@ -103,7 +103,7 @@ export default function AccountsPage() {
       if (userError) throw userError;
 
       // 교인 목록 가져오기
-      const { data: memberData, error: memberError } = await supabase
+      const { data: memberData, error: memberError } = await createClient()
         .from("members")
         .select("id, first_name, last_name, korean_name, email, user_id")
         .not("user_id", "is", null);
@@ -135,7 +135,7 @@ export default function AccountsPage() {
   // 연결되지 않은 교인 목록 가져오기
   const fetchUnlinkedMembers = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await createClient()
         .from("members")
         .select("id, first_name, last_name, korean_name, email, user_id")
         .is("user_id", null);
@@ -185,7 +185,7 @@ export default function AccountsPage() {
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const { data, error } = await supabase
+      const { data, error } = await createClient()
         .from("users")
         .insert([
           {
@@ -234,7 +234,7 @@ export default function AccountsPage() {
         updateData.password = formData.password; // 실제로는 암호화 필요
       }
 
-      const { error } = await supabase
+      const { error } = await createClient()
         .from("users")
         .update(updateData)
         .eq("id", currentUser.id);
@@ -264,13 +264,13 @@ export default function AccountsPage() {
 
     try {
       // 먼저 연결된 members 테이블의 user_id를 null로 설정
-      await supabase
+      await createClient()
         .from("members")
         .update({ user_id: null })
         .eq("user_id", currentUser.id);
 
       // 그 다음 사용자 삭제
-      const { error } = await supabase
+      const { error } = await createClient()
         .from("users")
         .delete()
         .eq("id", currentUser.id);
@@ -329,14 +329,14 @@ export default function AccountsPage() {
     try {
       // 이전에 연결된 교인이 있으면 연결 해제
       if (currentUser.linked_member) {
-        await supabase
+        await createClient()
           .from("members")
           .update({ user_id: null })
           .eq("id", currentUser.linked_member.id);
       }
 
       // 새 교인 연결
-      const { error } = await supabase
+      const { error } = await createClient()
         .from("members")
         .update({ user_id: currentUser.id })
         .eq("id", selectedMemberId);
@@ -365,7 +365,7 @@ export default function AccountsPage() {
     if (!currentUser || !currentUser.linked_member) return;
 
     try {
-      const { error } = await supabase
+      const { error } = await createClient()
         .from("members")
         .update({ user_id: null })
         .eq("id", currentUser.linked_member.id);

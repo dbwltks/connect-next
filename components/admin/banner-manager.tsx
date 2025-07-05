@@ -54,7 +54,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Trash2 as Trash, Edit, Plus } from "lucide-react";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import ImageBrowser from "@/components/ui/image-browser";
 import useSWR from "swr";
@@ -553,6 +553,7 @@ export default function BannerManager() {
   const handleSaveBanners = async () => {
     setIsLoading(true);
     try {
+      const supabase = createClient();
       // 1. 기존 배너 id 목록 조회
       const { data: existingBanners } = await supabase
         .from("cms_banners")
@@ -952,6 +953,7 @@ export default function BannerManager() {
                           if (!file) return;
                           setUploadingImage(true);
                           try {
+                            const supabase = createClient();
                             // 원본 파일 이름 그대로 사용
                             const fileName = file.name;
                             const filePath = `banners/${fileName}`;
@@ -1218,6 +1220,7 @@ export default function BannerManager() {
 
                 try {
                   setIsLoading(true);
+                  const supabase = createClient();
 
                   // id가 없거나 잘못된 경우 uuid 생성
                   let validId =

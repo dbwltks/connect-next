@@ -14,7 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { toast } from "@/components/ui/toaster";
 import { Plus, Trash2, Upload, Image, Link as LinkIcon } from "lucide-react";
 import MenuManager from "@/components/admin/menu-manager";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -68,7 +68,7 @@ export default function MembersPage() {
   async function fetchMembers() {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      const { data, error } = await createClient()
         .from("members")
         .select("*")
         .order("first_name", { ascending: true });
@@ -125,7 +125,7 @@ export default function MembersPage() {
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const { data: memberData, error: memberError } = await supabase
+      const { data: memberData, error: memberError } = await createClient()
         .from("members")
         .insert([
           {
@@ -161,7 +161,7 @@ export default function MembersPage() {
         formData.province &&
         formData.postal_code
       ) {
-        const { data: addressData, error: addressError } = await supabase
+        const { data: addressData, error: addressError } = await createClient()
           .from("addresses")
           .insert([
             {
@@ -179,7 +179,7 @@ export default function MembersPage() {
         if (addressError) throw addressError;
 
         // 교인과 주소 연결
-        const { error: relationError } = await supabase
+        const { error: relationError } = await createClient()
           .from("member_addresses")
           .insert([
             {
@@ -215,7 +215,7 @@ export default function MembersPage() {
     if (!currentMember) return;
 
     try {
-      const { error } = await supabase
+      const { error } = await createClient()
         .from("members")
         .update({
           first_name: formData.first_name,
@@ -265,7 +265,7 @@ export default function MembersPage() {
     if (!currentMember) return;
 
     try {
-      const { error } = await supabase
+      const { error } = await createClient()
         .from("members")
         .delete()
         .eq("id", currentMember.id);

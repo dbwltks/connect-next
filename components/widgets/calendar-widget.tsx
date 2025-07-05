@@ -33,7 +33,7 @@ import {
   MapPin,
   Users,
 } from "lucide-react";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { useAuth } from "@/contexts/auth-context";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -237,6 +237,7 @@ export default function CalendarWidget({
   const { data: events = [], error, isLoading, mutate } = useSWR(
     ["calendar_events", currentDate, view],
     async () => {
+      const supabase = createClient();
       const { data, error } = await supabase
         .from("calendar_events")
         .select("*")
@@ -301,6 +302,7 @@ export default function CalendarWidget({
     };
 
     if (isEditing && selectedEvent) {
+      const supabase = createClient();
       const { error } = await supabase
         .from("calendar_events")
         .update(eventData)
@@ -327,6 +329,7 @@ export default function CalendarWidget({
         description: "일정이 수정되었습니다.",
       });
     } else {
+      const supabase = createClient();
       const { data, error } = await supabase
         .from("calendar_events")
         .insert([eventData])
@@ -375,6 +378,7 @@ export default function CalendarWidget({
       was_all_day: eventToDelete?.is_all_day,
     };
 
+    const supabase = createClient();
     const { error } = await supabase
       .from("calendar_events")
       .delete()

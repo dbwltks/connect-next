@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { IWidget } from "@/types";
 import useSWR from "swr";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 
 // 캐러셀 타입 정의
 export const CAROUSEL_TYPES = {
@@ -69,6 +69,7 @@ const fetchCarouselData = async (widget: IWidget): Promise<CarouselItem[]> => {
   // 페이지 콘텐츠 사용
   if (dataSource === "page" && widget.display_options?.page_id) {
     try {
+      const supabase = createClient();
       const { data, error } = await supabase
         .from("board_posts")
         .select(

@@ -1,7 +1,8 @@
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 
 // 콘텐츠(페이지) 단일 조회
 export async function fetchContent(pageId: string) {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from("cms_pages")
     .select("*")
@@ -21,6 +22,7 @@ export async function saveContent({
   content: string;
   fullWidth: boolean;
 }) {
+  const supabase = createClient();
   const result = await supabase
     .from("cms_pages")
     .update({
@@ -42,12 +44,14 @@ export async function saveContent({
 
 // 콘텐츠(페이지) 삭제
 export async function deleteContent(pageId: string) {
+  const supabase = createClient();
   const { error } = await supabase.from("cms_pages").delete().eq("id", pageId);
   if (error) throw error;
 }
 
 // 콘텐츠(페이지) 여러 개 불러오기 (옵션)
 export async function fetchContents(filter: any = {}) {
+  const supabase = createClient();
   let query = supabase.from("cms_pages").select("*");
   Object.entries(filter).forEach(([key, value]) => {
     query = query.eq(key, value);
@@ -68,6 +72,7 @@ export async function upsertContent({
   fullWidth: boolean;
 }) {
   // 먼저 해당 page가 존재하는지 확인
+  const supabase = createClient();
   const { data, error } = await supabase
     .from("cms_pages")
     .select("id")

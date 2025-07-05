@@ -12,18 +12,24 @@ export const swrGlobalConfig: SWRConfiguration = {
   keepPreviousData: false,    // 이전 데이터 유지하지 않음
   
   // 에러 처리 설정
-  errorRetryCount: 1,         // 재시도 횟수 줄임
-  errorRetryInterval: 1000,   // 재시도 간격 줄임
+  errorRetryCount: 3,         // 재시도 횟수 늘림
+  errorRetryInterval: 1000,   // 재시도 간격
   
   // 로깅 (개발 환경에서만)
   onError: (error, key) => {
     if (process.env.NODE_ENV === 'development') {
-      console.error(`SWR Error for ${key}:`, error);
+      console.error(`🔴 SWR Error for ${key}:`, error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      });
     }
   },
   onSuccess: (data, key) => {
     if (process.env.NODE_ENV === 'development') {
-      console.log(`SWR Success for ${key}`);
+      console.log(`✅ SWR Success for ${key}:`, data);
     }
   },
 };

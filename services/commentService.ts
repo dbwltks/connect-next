@@ -1,8 +1,9 @@
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { logCommentCreate, logCommentDelete } from "./activityLogService";
 
 // 댓글 목록 불러오기
 export async function fetchComments(postId: string) {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from("board_comments")
     .select("*")
@@ -15,6 +16,7 @@ export async function fetchComments(postId: string) {
 // users 정보 매핑 (user_id/reply_to 배열로)
 export async function fetchUsersMap(userIds: string[]) {
   if (!userIds.length) return {};
+  const supabase = createClient();
   const { data, error } = await supabase
     .from("users")
     .select("id, username, avatar_url")
@@ -44,6 +46,7 @@ export async function addComment({
 }) {
   try {
     // 게시글 제목 가져오기 (로그용)
+    const supabase = createClient();
     const { data: postData } = await supabase
       .from("board_posts")
       .select("title")
@@ -89,6 +92,7 @@ export async function addReply({
 }) {
   try {
     // 게시글 제목 가져오기 (로그용)
+    const supabase = createClient();
     const { data: postData } = await supabase
       .from("board_posts")
       .select("title")
@@ -133,6 +137,7 @@ export async function addReply({
 export async function deleteComment(commentId: string) {
   try {
     // 삭제할 댓글 정보 먼저 가져오기 (로그용)
+    const supabase = createClient();
     const { data: commentData } = await supabase
       .from("board_comments")
       .select(
@@ -176,6 +181,7 @@ export async function updateComment({
   commentId: string;
   content: string;
 }) {
+  const supabase = createClient();
   const { error } = await supabase
     .from("board_comments")
     .update({ content })

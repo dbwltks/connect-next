@@ -1,7 +1,8 @@
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 
 // 메뉴 목록
 export async function fetchMenus() {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from("cms_menus")
     .select("*")
@@ -18,6 +19,7 @@ export async function fetchMenus() {
 
 // 카테고리 목록
 export async function fetchCategories() {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from("cms_categories")
     .select("*")
@@ -30,6 +32,7 @@ export async function fetchCategories() {
 export async function fetchSections() {
   try {
     console.log("fetchSections 호출됨");
+    const supabase = createClient();
     const { data, error } = await supabase
       .from("cms_sections")
       .select("*")
@@ -66,6 +69,7 @@ export async function fetchSections() {
 
 // 페이지 목록
 export async function fetchPages() {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from("cms_pages")
     .select("*")
@@ -86,6 +90,7 @@ export async function fetchPages() {
 
 // 배너 목록
 export async function fetchBanners() {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from("cms_banners")
     .select("*")

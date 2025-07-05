@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { mutate } from "swr";
 import {
   Card,
@@ -490,6 +490,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
     try {
       if (!postId) return;
 
+      const supabase = createClient();
       // 현재 게시글 정보 가져오기 (작성일 확인용)
       const { data: currentPost } = await supabase
         .from("board_posts")
@@ -536,6 +537,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
       setLoading(true);
       setError(null);
       try {
+        const supabase = createClient();
         // postId prop이 있으면 그걸 우선 사용, 없으면 params에서 추출
         let id = postId || (params?.id as string);
         if (!id) {
@@ -789,6 +791,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
   // 게시글/작성자 정보 로드 useEffect 내부에 추가
   useEffect(() => {
     if (post?.user_id) {
+      const supabase = createClient();
       supabase
         .from("users")
         .select("avatar_url")
@@ -888,6 +891,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
   // 게시글의 첨부파일들을 Storage에서 삭제하는 함수
   async function deletePostFiles(files: string, content: string) {
     try {
+      const supabase = createClient();
       const filesToDelete: string[] = [];
 
       // 1. 첨부파일 목록에서 파일 경로 추출
@@ -947,6 +951,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
       return;
 
     try {
+      const supabase = createClient();
       // 로그에 사용할 정보 미리 저장 (삭제 전)
       const postTitle = post.title;
       const postFiles = post.files;
@@ -1106,6 +1111,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
 
     setLikeLoading(true);
     try {
+      const supabase = createClient();
       if (liked) {
         // 좋아요 삭제
         const { error } = await supabase
@@ -1149,6 +1155,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
   // getHeaderUser 함수 수정
   async function getHeaderUser(): Promise<User | null> {
     try {
+      const supabase = createClient();
       // Supabase 세션 확인을 우선으로
       const {
         data: { session },

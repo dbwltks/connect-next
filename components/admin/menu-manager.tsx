@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { toast } from "@/components/ui/toaster";
 import { Button } from "@/components/ui/button";
 import {
@@ -487,6 +487,7 @@ export default function MenuManager() {
   // 메뉴 항목 로드
   const fetchMenuItems = async () => {
     try {
+      const supabase = createClient();
       const { data, error } = await supabase
         .from("cms_menus")
         .select("*")

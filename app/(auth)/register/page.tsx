@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Check, X, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { toast } from "@/components/ui/toaster";
 import {
   Dialog,
@@ -44,7 +44,7 @@ export default function RegisterPage() {
         // Supabase 세션 확인
         const {
           data: { session },
-        } = await supabase.auth.getSession();
+        } = await createClient().auth.getSession();
 
         // 이미 로그인된 상태면 홈페이지로 리다이렉트
         if (session?.user) {
@@ -115,7 +115,7 @@ export default function RegisterPage() {
     try {
       // nickname 중복 체크
       if (field === "nickname") {
-        const { data } = await supabase
+        const { data } = await createClient()
           .from("users")
           .select("id")
           .eq("nickname", value)
@@ -158,7 +158,7 @@ export default function RegisterPage() {
       }
       
       // username만 users 테이블에서 체크
-      const { data } = await supabase
+      const { data } = await createClient()
         .from("users")
         .select("id")
         .eq(field, value)
@@ -265,7 +265,7 @@ export default function RegisterPage() {
       }
 
       // 최종 중복 체크 (보안을 위한 이중 체크)
-      const { data: existUser } = await supabase
+      const { data: existUser } = await createClient()
         .from("users")
         .select("id")
         .eq("username", formData.username)
@@ -273,7 +273,7 @@ export default function RegisterPage() {
       if (existUser) throw new Error("이미 사용 중인 아이디입니다");
 
       // 닉네임 중복 체크
-      const { data: existNickname } = await supabase
+      const { data: existNickname } = await createClient()
         .from("users")
         .select("id")
         .eq("nickname", formData.nickname)
@@ -283,7 +283,7 @@ export default function RegisterPage() {
       // 이메일은 Supabase Auth가 회원가입 시 자동으로 중복 체크함
 
       // Supabase Auth 회원가입
-      const { data, error } = await supabase.auth.signUp({
+      const { data, error } = await createClient().auth.signUp({
         email: formData.email,
         password: formData.password,
       });
@@ -291,7 +291,7 @@ export default function RegisterPage() {
         throw new Error(error?.message || "회원가입에 실패했습니다");
 
       // users 테이블에 username, nickname, email 저장
-      const { error: userError } = await supabase.from("users").insert({
+      const { error: userError } = await createClient().from("users").insert({
         id: data.user.id,
         username: formData.username,
         nickname: formData.nickname,

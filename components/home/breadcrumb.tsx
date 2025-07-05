@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight, Home } from "lucide-react";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 
 // 브레드크럼 항목 타입 정의
@@ -48,6 +48,7 @@ export default function Breadcrumb({
         let menuItemsData = menuData;
         // SSR에서 menuItems가 없으면 CSR에서 fetch (fallback)
         if (!menuItemsData) {
+          const supabase = createClient();
           const { data: fetchedMenus, error: supabaseError } = await supabase
             .from("cms_menus")
             .select("id, title, url, parent_id")

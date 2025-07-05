@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/toaster";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { Loader2, Save, Plus, Trash2 } from "lucide-react";
 import {
   Dialog,
@@ -86,6 +86,7 @@ export default function FooterManager() {
     async function fetchFooterSettings() {
       try {
         setIsLoading(true);
+        const supabase = createClient();
         const { data, error } = await supabase
           .from("cms_footer")
           .select("*")
@@ -232,6 +233,7 @@ export default function FooterManager() {
   const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const supabase = createClient();
     // Supabase Storage 업로드 예시
     const fileExt = file.name.split(".").pop();
     const fileName = `footer-logo-${Date.now()}.${fileExt}`;
@@ -261,6 +263,7 @@ export default function FooterManager() {
   const handleSave = async () => {
     try {
       setIsSaving(true);
+      const supabase = createClient();
       console.log("저장 시도 데이터:", {
         id: settings.id,
         church_name: settings.church_name,

@@ -47,7 +47,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Edit, Trash, Plus } from "lucide-react";
 import { toast } from "@/components/ui/toaster";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import useSWR from "swr";
 import { fetchSections } from "@/services/adminService";
 
@@ -320,6 +320,7 @@ export default function SectionManager({
     setIsLoading(true);
 
     try {
+      const supabase = createClient();
       // 기존 섹션 ID 목록 가져오기
       const { data: existingSections } = await supabase
         .from("cms_sections")

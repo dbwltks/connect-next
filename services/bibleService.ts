@@ -1,7 +1,7 @@
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 
 // 성경 전용 supabase 클라이언트 생성
-const bibleSupabase = supabase;
+// 이제 createClient()를 사용하여 각 함수에서 직접 생성합니다
 
 // 성경 책 번호와 이름 매핑 (한글)
 export const BIBLE_BOOKS_KOR = {
@@ -180,9 +180,10 @@ export async function getBibleVerses({
   endVerse?: number;
 }) {
   try {
+    const supabase = createClient();
     const tableName = BIBLE_VERSIONS[version].table;
 
-    let query = bibleSupabase
+    let query = supabase
       .from(tableName)
       .select("book, chapter, verse, btext")
       .eq("book", book)
@@ -215,9 +216,10 @@ export async function getBibleChapters(
   version: keyof typeof BIBLE_VERSIONS
 ) {
   try {
+    const supabase = createClient();
     const tableName = BIBLE_VERSIONS[version].table;
 
-    const { data, error } = await bibleSupabase
+    const { data, error } = await supabase
       .from(tableName)
       .select("chapter")
       .eq("book", book)
@@ -248,9 +250,10 @@ export async function getBibleVerseCount(
   version: keyof typeof BIBLE_VERSIONS
 ) {
   try {
+    const supabase = createClient();
     const tableName = BIBLE_VERSIONS[version].table;
 
-    const { data, error } = await bibleSupabase
+    const { data, error } = await supabase
       .from(tableName)
       .select("verse")
       .eq("book", book)

@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, Check, X, Eye, EyeOff } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { toast } from "@/components/ui/toaster";
 
 export default function ResetPasswordPage() {
@@ -30,7 +30,7 @@ export default function ResetPasswordPage() {
         const {
           data: { user },
           error
-        } = await supabase.auth.getUser();
+        } = await createClient().auth.getUser();
         
         if (error || !user) {
           setIsValidSession(false);
@@ -92,7 +92,7 @@ export default function ResetPasswordPage() {
       }
 
       // 비밀번호 업데이트
-      const { error } = await supabase.auth.updateUser({
+      const { error } = await createClient().auth.updateUser({
         password: formData.password,
       });
 
@@ -107,7 +107,7 @@ export default function ResetPasswordPage() {
       });
 
       // 로그아웃 후 로그인 페이지로 이동
-      await supabase.auth.signOut();
+      await createClient().auth.signOut();
       router.push("/login");
     } catch (error: any) {
       toast({

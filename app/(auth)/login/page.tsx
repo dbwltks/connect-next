@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { toast } from "@/components/ui/toaster";
 import { useAuth } from "@/contexts/auth-context";
 
@@ -47,7 +47,7 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       // 1. username으로 사용자 정보 조회
-      const { data: userRow, error: userError } = await supabase
+      const { data: userRow, error: userError } = await createClient()
         .from("users")
         .select("id, email, role, username")
         .eq("username", formData.username)
@@ -59,7 +59,7 @@ export default function LoginPage() {
 
       // 2. 이메일로 로그인 시도
       const { data, error: signInError } =
-        await supabase.auth.signInWithPassword({
+        await createClient().auth.signInWithPassword({
           email: userRow.email,
           password: formData.password,
         });
@@ -76,7 +76,7 @@ export default function LoginPage() {
       }
 
       // 3. 세션 사용자 정보 업데이트
-      await supabase.from("users").upsert({
+      await createClient().from("users").upsert({
         id: data.session.user.id,
         email: userRow.email,
         username: userRow.username,
@@ -108,15 +108,15 @@ export default function LoginPage() {
   };
 
   const handleGoogleLogin = async () => {
-    await supabase.auth.signInWithOAuth({ provider: "google" });
+    await createClient().auth.signInWithOAuth({ provider: "google" });
   };
 
   const handleAppleLogin = async () => {
-    await supabase.auth.signInWithOAuth({ provider: "apple" });
+    await createClient().auth.signInWithOAuth({ provider: "apple" });
   };
 
   const handleKakaoLogin = async () => {
-    await supabase.auth.signInWithOAuth({ provider: "kakao" });
+    await createClient().auth.signInWithOAuth({ provider: "kakao" });
   };
 
   return (

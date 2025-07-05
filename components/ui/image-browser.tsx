@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
@@ -35,6 +35,7 @@ interface ServerImage {
 
 // SWR fetcher 함수
 const fetchServerImages = async (buckets: string[]): Promise<ServerImage[]> => {
+  const supabase = createClient();
   const allImages: ServerImage[] = [];
 
   for (const bucket of buckets) {

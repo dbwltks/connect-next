@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { IWidget, IPage } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import useSWR from "swr";
@@ -23,6 +23,7 @@ interface RecentCommentsWidgetProps {
 async function fetchRecentComments(
   itemCount: number
 ): Promise<{ comments: Comment[]; menuUrlMap: Record<string, string> }> {
+  const supabase = createClient();
   
   const { data, error } = await supabase
     .from("board_comments")

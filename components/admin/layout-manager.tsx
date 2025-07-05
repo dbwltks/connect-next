@@ -39,7 +39,7 @@ import {
 } from "../widgets/organization-chart-widget";
 import CalendarWidget from "../widgets/calendar-widget";
 import SimpleCalendarWidget from "../widgets/simple-calendar-widget";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Plus, Trash2, MoveVertical, Settings, Eye, GripVertical, ChevronLeft, ChevronRight } from "lucide-react";
 import { IWidget } from "@/types";
@@ -164,6 +164,7 @@ export default function LayoutManager(): JSX.Element {
   // 메뉴 항목 가져오기
   const fetchMenuItems = async () => {
     try {
+      const supabase = createClient();
       const { data, error } = await supabase
         .from("cms_menus")
         .select("*")
@@ -184,6 +185,7 @@ export default function LayoutManager(): JSX.Element {
   // 배너 가져오기
   const fetchBanners = async () => {
     try {
+      const supabase = createClient();
       const { data, error } = await supabase
         .from("cms_banners")
         .select("*")
@@ -201,6 +203,7 @@ export default function LayoutManager(): JSX.Element {
   // 페이지 가져오기
   const fetchPages = async () => {
     try {
+      const supabase = createClient();
       const { data, error } = await supabase.from("cms_pages").select("*");
 
       if (error) throw error;
@@ -252,6 +255,7 @@ export default function LayoutManager(): JSX.Element {
   // 레이아웃 데이터 가져오기
   const fetchLayoutData = async (pageId: string | null) => {
     try {
+      const supabase = createClient();
       let query = supabase
         .from("cms_layout")
         .select("*")
@@ -343,6 +347,7 @@ export default function LayoutManager(): JSX.Element {
       // DB 업데이트
       try {
         setIsLoading(true);
+        const supabase = createClient();
         for (const widget of updatedWidgets) {
           await supabase
             .from("cms_layout")
@@ -392,6 +397,7 @@ export default function LayoutManager(): JSX.Element {
         setIsLoading(true);
 
         // 이동된 위젯 업데이트 (위치 및 순서)
+        const supabase = createClient();
         await supabase
           .from("cms_layout")
           .update({
@@ -493,6 +499,7 @@ export default function LayoutManager(): JSX.Element {
       };
 
       // DB에 위젯 추가
+      const supabase = createClient();
       const { data, error } = await supabase
         .from("cms_layout")
         .insert(newWidgetData)
@@ -531,6 +538,7 @@ export default function LayoutManager(): JSX.Element {
       setIsLoading(true);
 
       // DB에서 위젯 삭제
+      const supabase = createClient();
       const { error } = await supabase
         .from("cms_layout")
         .delete()
@@ -660,6 +668,7 @@ export default function LayoutManager(): JSX.Element {
       setIsLoading(true);
 
       // DB 업데이트
+      const supabase = createClient();
       const { error } = await supabase
         .from("cms_layout")
         .update({
@@ -1688,6 +1697,7 @@ export default function LayoutManager(): JSX.Element {
                         if (!file) return;
                         setStripUploading(true);
                         try {
+                          const supabase = createClient();
                           const fileName = file.name;
                           const filePath = `strip-banners/${Date.now()}_${fileName}`;
                           const { error: uploadError } = await supabase.storage
@@ -2488,6 +2498,7 @@ export default function LayoutManager(): JSX.Element {
 
                           setCarouselUploading(true);
                           try {
+                            const supabase = createClient();
                             const fileExt = file.name.split(".").pop();
                             const fileName = `carousel-${Date.now()}.${fileExt}`;
                             const filePath = `carousel/${fileName}`;
@@ -6228,6 +6239,7 @@ function MemberForm({
 
             setMemberImageUploading(true);
             try {
+              const supabase = createClient();
               const fileName = file.name;
               const filePath = `organization-avatars/${Date.now()}_${fileName}`;
               const { error: uploadError } = await supabase.storage

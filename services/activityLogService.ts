@@ -1,4 +1,4 @@
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { queueLog } from "./logBatchProcessor";
 import {
   LogLevel,
@@ -100,6 +100,7 @@ export async function createActivityLog({
     // 관리자 접근 로깅
     if (config.enableSecurityLog) {
       // 사용자 정보 가져와서 관리자인지 확인
+      const supabase = createClient();
       const { data: user } = await supabase.auth.getUser();
       if (user?.user?.user_metadata?.role === "admin") {
         logAdminAccess(
@@ -150,6 +151,7 @@ export async function createActivityLog({
       // API 라우트를 통한 즉시 처리 (실무용)
       try {
         // 현재 사용자 인증 토큰 가져오기
+        const supabase = createClient();
         const {
           data: { session },
         } = await supabase.auth.getSession(); // API 호출을 위해 access_token이 필요하므로 getSession 유지
@@ -458,6 +460,7 @@ export async function getActivityLogs({
 }) {
   try {
     // 현재 사용자 세션 토큰 가져오기
+    const supabase = createClient();
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -501,6 +504,7 @@ export async function getActivityLogs({
 // 사용자별 활동 통계 조회
 export async function getUserActivityStats(userId: string) {
   try {
+    const supabase = createClient();
     const { data, error } = await supabase
       .from("activity_logs")
       .select("action, resource_type")

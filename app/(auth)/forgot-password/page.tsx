@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, Mail, CheckCircle } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { toast } from "@/components/ui/toaster";
 
 export default function ForgotPasswordPage() {
@@ -30,7 +30,7 @@ export default function ForgotPasswordPage() {
       }
 
       // 먼저 해당 이메일이 등록되어 있는지 확인
-      const { data: userExists } = await supabase
+      const { data: userExists } = await createClient()
         .from("users")
         .select("id")
         .eq("email", email)
@@ -41,7 +41,7 @@ export default function ForgotPasswordPage() {
       }
 
       // 비밀번호 재설정 이메일 발송
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await createClient().auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
 

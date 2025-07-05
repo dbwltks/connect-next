@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { IWidget } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,7 @@ export default function LoginWidget({ widget }: LoginWidgetProps) {
     
     const getSession = async () => {
       setIsLoading(true);
+      const supabase = createClient();
       
       const {
         data: { user },
@@ -58,6 +59,7 @@ export default function LoginWidget({ widget }: LoginWidgetProps) {
 
     getSession();
 
+    const supabase = createClient();
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         if (session?.user) {
@@ -82,6 +84,7 @@ export default function LoginWidget({ widget }: LoginWidgetProps) {
   }, []);
 
   const handleLogout = async () => {
+    const supabase = createClient();
     await supabase.auth.signOut();
     router.refresh();
   };

@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { IWidget, IPage } from "@/types";
 import { Heart } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import useSWR from "swr";
+import React, { useState, useEffect, useCallback } from "react";
 
 interface Post {
   id: string;
@@ -26,6 +26,7 @@ async function fetchPopularPosts(
   itemCount: number,
   sortBy: string
 ): Promise<{ posts: Post[]; menuUrlMap: Record<string, string> }> {
+  const supabase = createClient();
   let finalPosts: Post[] = [];
 
   if (sortBy === "likes") {
@@ -150,14 +151,33 @@ export default function PopularPostsWidget({
   // 메뉴 URL 계산 (boardlist-widget.tsx와 동일한 방식)
   const menuUrl = page?.slug || widget.display_options?.menu_url || "/";
 
-  const { data, error, isLoading } = useSWR(
-    ["popularPosts", itemCount, sortBy],
-    () => fetchPopularPosts(itemCount, sortBy)
-    // 전역 설정 사용 - 필요한 경우만 오버라이드
-  );
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [menuUrlMap, setMenuUrlMap] = useState<Record<string, string>>({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-  const posts = data?.posts || [];
-  const menuUrlMap = data?.menuUrlMap || {};
+  // 데이터 로딩 함수
+  const loadPopularPosts = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await fetchPopularPosts(itemCount, sortBy);
+      setPosts(data.posts);
+      setMenuUrlMap(data.menuUrlMap);
+    } catch (err) {
+      console.error('Failed to load popular posts:', err);
+      setError(err as Error);
+      setPosts([]);
+      setMenuUrlMap({});
+    } finally {
+      setIsLoading(false);
+    }
+  }, [itemCount, sortBy]);
+
+  // 컴포넌트 마운트 시와 의존성 변경 시 데이터 로딩
+  useEffect(() => {
+    loadPopularPosts();
+  }, [loadPopularPosts]);
 
   // 게시글별 메뉴 URL 매핑을 함수로 처리 - 쿼리스트링 방식으로 변경
   const getPostUrl = (post: Post) => {

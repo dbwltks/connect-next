@@ -51,7 +51,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Edit, Trash, Plus } from "lucide-react";
 import { toast } from "@/components/ui/toaster";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { Section } from "./section-manager";
 
 // 카테고리 타입 정의
@@ -161,6 +161,7 @@ export default function CategoryManager({
   // 데이터 로드 함수
   const loadCategories = async () => {
     try {
+      const supabase = createClient();
       const { data, error } = await supabase
         .from("cms_categories")
         .select("*")
@@ -195,6 +196,7 @@ export default function CategoryManager({
 
   const loadSections = async () => {
     try {
+      const supabase = createClient();
       const { data, error } = await supabase
         .from("cms_sections")
         .select("*")
@@ -300,6 +302,7 @@ export default function CategoryManager({
   const handleSaveCategories = async () => {
     setIsLoading(true);
     try {
+      const supabase = createClient();
       // 1. 기존 카테고리 id 목록 조회
       const { data: existingCategories } = await supabase
         .from("cms_categories")

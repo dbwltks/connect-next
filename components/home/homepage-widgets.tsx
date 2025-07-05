@@ -18,8 +18,8 @@ import { OrganizationChartWidget } from "@/components/widgets/organization-chart
 import CalendarWidget from "@/components/widgets/calendar-widget";
 import SimpleCalendarWidget from "@/components/widgets/simple-calendar-widget";
 import { IWidget } from "@/types/index";
-import useSWR from "swr";
-import { supabase } from "@/db";
+import React, { useState, useEffect, useCallback } from "react";
+import { createClient } from "@/utils/supabase/client";
 
 type LayoutStructure = "1-col" | "2-col-left" | "2-col-right" | "3-col";
 
@@ -30,6 +30,7 @@ interface HomepageWidgetsProps {
 
 // 위젯 데이터를 가져오는 fetcher 함수
 async function fetchWidgets(pageId?: string): Promise<IWidget[]> {
+    const supabase = createClient();
 
     let query = supabase
       .from("cms_layout")
@@ -56,18 +57,41 @@ export default function HomepageWidgets({
   widgets: initialWidgets,
   pageId,
 }: HomepageWidgetsProps) {
-  // SWR을 사용해서 위젯 데이터 관리 - 전역 설정 사용
-  const {
-    data: widgets,
-    error,
-    isLoading,
-  } = useSWR(
-    pageId ? ["widgets", pageId] : ["widgets"],
-    () => (pageId ? fetchWidgets(pageId) : fetchWidgets()),
-    {
-      fallbackData: initialWidgets,
+  // 직접 fetch 방식으로 위젯 데이터 관리
+  const [widgets, setWidgets] = useState<IWidget[]>(initialWidgets || []);
+  const [error, setError] = useState<Error | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 데이터 로딩 함수
+  const loadWidgets = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = pageId ? await fetchWidgets(pageId) : await fetchWidgets();
+      setWidgets(data);
+    } catch (err) {
+      console.error('Failed to load widgets:', err);
+      setError(err as Error);
+      // fallback 데이터가 있으면 사용
+      if (initialWidgets) {
+        setWidgets(initialWidgets);
+      }
+    } finally {
+      setIsLoading(false);
     }
-  );
+  }, [pageId, initialWidgets]);
+
+  // 컴포넌트 마운트 시와 pageId 변경 시 데이터 로딩
+  useEffect(() => {
+    loadWidgets();
+  }, [loadWidgets]);
+
+  // initialWidgets가 변경될 때 상태 업데이트
+  useEffect(() => {
+    if (initialWidgets && !isLoading) {
+      setWidgets(initialWidgets);
+    }
+  }, [initialWidgets, isLoading]);
 
   const renderWidget = (widget: IWidget) => {
     if (!widget.is_active) return null;

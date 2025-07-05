@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import {
   User,
   MoreHorizontal,

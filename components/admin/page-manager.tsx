@@ -30,7 +30,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Edit, Eye, EyeOff, Plus, Trash } from "lucide-react";
 import { toast } from "@/components/ui/toaster";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { Section } from "./section-manager";
 import { Category } from "./category-manager";
 import {

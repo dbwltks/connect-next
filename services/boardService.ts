@@ -1,4 +1,4 @@
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { toast } from "@/components/ui/toaster";
 import type { BoardPostStatus } from "@/types/index";
 import {
@@ -11,6 +11,7 @@ import {
 // 유저 정보 가져오기 (사용자 인증 기반)
 export const getCurrentUser = async () => {
   try {
+    const supabase = createClient();
     const {
       data: { user },
       error
@@ -54,6 +55,7 @@ export async function fetchDrafts({
   pageId: string;
   categoryId?: string;
 }) {
+  const supabase = createClient();
   let query = supabase
     .from("board_posts")
     .select("*")
@@ -70,6 +72,7 @@ export async function fetchDrafts({
 
 // 임시등록 삭제
 export async function deleteDraft({ draftId }: { draftId: string }) {
+  const supabase = createClient();
   const { error } = await supabase
     .from("board_posts")
     .delete()
@@ -146,6 +149,7 @@ export async function saveBoardPost({
     // 수정모드: 기존 글 정보 먼저 조회 (변경 전 데이터)
     console.log("[boardService] 수정 모드 실행. user_id:", userId);
 
+    const supabase = createClient();
     const { data: beforeData, error: beforeError } = await supabase
       .from("board_posts")
       .select("*")
@@ -213,6 +217,7 @@ export async function saveBoardPost({
   } else if (postId) {
     // 임시저장/불러오기: 기존 draft update
     console.log("[boardService] 임시저장 업데이트 모드 실행. user_id:", userId);
+    const supabase = createClient();
     result = await supabase
       .from("board_posts")
       .update({
@@ -238,6 +243,7 @@ export async function saveBoardPost({
   } else {
     // 새 글 작성(임시저장 or 등록)
     console.log("[boardService] 새 글 작성 모드 실행. user_id:", userId);
+    const supabase = createClient();
     const insertData = {
       title,
       content,
@@ -285,6 +291,7 @@ export async function saveBoardPost({
 
 // 게시글 데이터 로드 (수정 모드)
 export async function getBoardPost({ postId }: { postId: string }) {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from("board_posts")
     .select("*")
@@ -301,6 +308,7 @@ async function handleRequest<T>(requestFn: () => Promise<T>): Promise<T> {
     // 세션 만료 에러 처리
     if (error.status === 401) {
       // 세션 갱신 시도
+      const supabase = createClient();
       const {
         data: { session },
       } = await supabase.auth.refreshSession();
@@ -324,6 +332,7 @@ async function handleRequest<T>(requestFn: () => Promise<T>): Promise<T> {
 export const boardService = {
   async getBoards() {
     return handleRequest(async () => {
+      const supabase = createClient();
       const { data, error } = await supabase
         .from("boards")
         .select("*")

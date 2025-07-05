@@ -8,7 +8,7 @@ import {
   useCallback,
 } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { toast } from "@/components/ui/toaster";
 
 export interface UserProfile {
@@ -36,6 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (userId: string): Promise<UserProfile | null> => {
       try {
         // users 테이블에서 정보 가져오기
+        const supabase = createClient();
         const { data: userData, error: userError } = await supabase
           .from("users")
           .select("*")
@@ -70,6 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log("로그아웃 시작...");
       
       // Supabase 세션 정리
+      const supabase = createClient();
       const { error } = await supabase.auth.signOut();
       
       if (error) {
@@ -125,6 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
     let sessionRefreshInterval: NodeJS.Timeout;
+    const supabase = createClient();
 
     async function init() {
       // 로그인 상태 확인
@@ -166,7 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // 인증 상태 변경 구독
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
       if (!mounted) return;
 
       if (event === "SIGNED_OUT") {

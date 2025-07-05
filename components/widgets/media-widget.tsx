@@ -5,7 +5,7 @@ import Link from "next/link";
 import React from "react";
 import { fetchMediaWidgetPosts } from "@/services/widgetService";
 import useSWR from "swr";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { Heart } from "lucide-react";
 
 interface MediaWidgetProps {
@@ -24,6 +24,7 @@ const fetchMediaData = async (pageId: string, maxItems: number = 5) => {
     new Set(posts.map((post: any) => post.page_id))
   );
   const menuUrlMap: Record<string, string> = {};
+  const supabase = createClient();
 
   for (const pId of uniquePageIds) {
     console.log("메뉴 검색 중 - page_id:", pId);

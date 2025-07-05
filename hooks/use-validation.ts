@@ -3,7 +3,7 @@ import {
   validateDisplayName,
   checkForbiddenWords,
 } from "@/lib/forbidden-words";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 
 export interface ValidationResult {
   status: "idle" | "checking" | "success" | "error";
@@ -45,6 +45,7 @@ export function useDisplayNameValidation() {
       });
 
       try {
+        const supabase = createClient();
         let query = supabase
           .from("users")
           .select("id")

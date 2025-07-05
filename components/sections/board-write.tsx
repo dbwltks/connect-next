@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -235,6 +235,7 @@ const FileManager = ({
               type="button"
               className="ml-2 text-red-500 hover:text-red-700 text-lg font-bold"
               onClick={async () => {
+                const supabase = createClient();
                 // 1. Storage 경로 추출
                 const url = file.url;
                 // 예: https://<project>.supabase.co/storage/v1/object/public/images/2024/07/abc.jpg
@@ -427,6 +428,7 @@ export default function BoardWrite({
 
   useEffect(() => {
     const fetchBoardPages = async () => {
+      const supabase = createClient();
       const { data, error } = await supabase
         .from("cms_pages")
         .select("id, title")
@@ -448,11 +450,11 @@ export default function BoardWrite({
           pageIdFromQuery = params.get("pageId");
         }
         // 우선순위: initialPageId > 쿼리 pageId > 첫 번째 게시판
-        if (initialPageId && (data || []).some((p) => p.id === initialPageId)) {
+        if (initialPageId && (data || []).some((p: any) => p.id === initialPageId)) {
           setSelectedPageId(initialPageId);
         } else if (
           pageIdFromQuery &&
-          (data || []).some((p) => p.id === pageIdFromQuery)
+          (data || []).some((p: any) => p.id === pageIdFromQuery)
         ) {
           setSelectedPageId(pageIdFromQuery);
         } else if ((data || []).length > 0) {
@@ -910,6 +912,7 @@ export default function BoardWrite({
   // status를 인자로 받아 저장하는 함수
   // 임시 폴더의 파일들을 정식 폴더로 이동하고 URL 매핑 반환
   const moveFilesFromTemp = async (files: IFileInfo[]) => {
+    const supabase = createClient();
     const movedFiles: IFileInfo[] = [];
     const urlMapping: { [oldUrl: string]: string } = {}; // 이전 URL -> 새 URL 매핑
 
@@ -1042,6 +1045,7 @@ export default function BoardWrite({
             const newPath = tempPath.replace("temp/", "");
 
             // 파일 복사
+            const supabase = createClient();
             const { data: downloadData, error: downloadError } =
               await supabase.storage.from("board").download(tempPath);
 
@@ -1099,6 +1103,7 @@ export default function BoardWrite({
       let nextNumber = 1;
       if (!isEditMode && !postId) {
         try {
+          const supabase = createClient();
           const { data: maxData } = await supabase
             .from("board_posts")
             .select("number")
@@ -1258,6 +1263,7 @@ export default function BoardWrite({
     if (tempFiles.length > 0) {
       for (const file of tempFiles) {
         try {
+          const supabase = createClient();
           const tempPath = file.url.split(
             "/storage/v1/object/public/board/"
           )[1];
@@ -1316,6 +1322,7 @@ export default function BoardWrite({
         if (tempFiles.length > 0) {
           for (const file of tempFiles) {
             try {
+              const supabase = createClient();
               const tempPath = file.url.split(
                 "/storage/v1/object/public/board/"
               )[1];

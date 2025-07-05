@@ -1,8 +1,9 @@
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { IBoardPost } from "@/types/index";
 
 // 위젯 단일 조회
 export async function fetchWidget(widgetId: string) {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from("cms_layout")
     .select("*")
@@ -22,6 +23,7 @@ export async function fetchBoardWidgetPosts(
   boardId: string,
   limit: number = 5
 ) {
+  const supabase = createClient();
   const { data: posts, error } = await supabase
     .from("board_posts")
     .select("*")
@@ -52,6 +54,7 @@ export async function fetchBoardWidgetPosts(
 
 // 미디어 위젯용 게시글 조회
 export async function fetchMediaWidgetPosts(pageId: string, limit: number = 5) {
+  const supabase = createClient();
   const { data: posts, error } = await supabase
     .from("board_posts")
     .select("*")
@@ -95,6 +98,7 @@ export async function fetchBoardSectionPosts(
   pageId: string,
   limit: number = 10
 ) {
+  const supabase = createClient();
   const { data: posts, error } = await supabase
     .from("board_posts")
     .select("*")
@@ -111,6 +115,7 @@ export const fetchBoardPostsForWidget = async (
   pageId: string,
   limit: number = 5
 ) => {
+  const supabase = createClient();
   const { data: posts, error } = await supabase
     .from("board_posts")
     .select("*")
@@ -151,6 +156,7 @@ export const fetchBoardPostsForWidget = async (
 
 // 최근 댓글 가져오기
 export const fetchRecentComments = async (limit: number = 5) => {
+  const supabase = createClient();
   const { data: comments, error } = await supabase
     .from("board_comments")
     .select("*")
@@ -213,6 +219,7 @@ export const fetchPopularPosts = async (
   if (sortBy === "likes") orderColumn = "likes_count";
   if (sortBy === "comments") orderColumn = "comments_count";
 
+  const supabase = createClient();
   const { data: posts, error } = await supabase
     .from("board_posts")
     .select("*")
@@ -252,6 +259,7 @@ export const fetchPopularPosts = async (
 
 // 인기 게시물 조회 (기존)
 export async function fetchPopularPostsWidget(limit: number = 10) {
+  const supabase = createClient();
   const { data: posts, error } = await supabase
     .from("board_posts")
     .select("*")
@@ -291,6 +299,7 @@ export async function fetchPopularPostsWidget(limit: number = 10) {
 
 // 메뉴 항목 가져오기
 export const fetchMenuItems = async (parentId?: string) => {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from("cms_menus")
     .select("*")
@@ -307,6 +316,7 @@ export const fetchMenuItems = async (parentId?: string) => {
 
 // 위젯 목록 가져오기
 export const fetchWidgets = async (pageId?: string) => {
+  const supabase = createClient();
   const { data: widgets, error } = await supabase
     .from("cms_layout")
     .select("*")
@@ -324,6 +334,7 @@ export const fetchWidgets = async (pageId?: string) => {
 
 // 캘린더 이벤트 가져오기
 export const fetchCalendarEvents = async () => {
+  const supabase = createClient();
   const { data: events, error } = await supabase
     .from("calendar_events")
     .select("*")

@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Calendar, CalendarDays, History, MapPin, Clock, User } from "lucide-react";
-import { supabase } from "@/db";
+import { createClient } from "@/utils/supabase/client";
 import { IWidget } from "@/types";
 
 interface CalendarEvent {
@@ -52,6 +52,7 @@ export default function SimpleCalendarWidget({
   } = useSWR(
     ["calendar_events"],
     async () => {
+      const supabase = createClient();
       const { data, error } = await supabase
         .from("calendar_events")
         .select("*")
