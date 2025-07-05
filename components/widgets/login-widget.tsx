@@ -27,10 +27,11 @@ export default function LoginWidget({ widget }: LoginWidgetProps) {
   const [userData, setUserData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  
+  // 컴포넌트 레벨에서 supabase 클라이언트 생성
+  const supabase = createClient();
 
   useEffect(() => {
-    // 매번 새로운 클라이언트 생성으로 세션 동기화 보장
-    const supabase = createClient();
     
     const getSession = async () => {
       setIsLoading(true);
