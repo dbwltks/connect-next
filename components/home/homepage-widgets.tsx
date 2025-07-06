@@ -29,9 +29,14 @@ interface HomepageWidgetsProps {
 }
 
 // 위젯 데이터를 가져오는 fetcher 함수
-async function fetchWidgets(pageId?: string): Promise<IWidget[]> {
-    const supabase = createClient();
+async function fetchWidgets(pageId?: string, retryCount = 0): Promise<IWidget[]> {
+  const supabase = createClient();
 
+  try {
+    // 세션 상태 확인 및 로깅
+    const { data: session } = await supabase.auth.getSession();
+    console.log(`🔍 Widget fetch - Session status:`, session.session ? 'authenticated' : 'not authenticated');
+    
     let query = supabase
       .from("cms_layout")
       .select("*")
@@ -47,10 +52,26 @@ async function fetchWidgets(pageId?: string): Promise<IWidget[]> {
     const { data, error } = await query;
 
     if (error) {
+      // 세션 만료 관련 오류인 경우 세션 갱신 후 재시도
+      if (error.message?.includes('JWT') || error.message?.includes('expired') || error.message?.includes('refresh')) {
+        if (retryCount < 2) {
+          console.log(`🔄 Session issue detected, refreshing and retrying... (attempt ${retryCount + 1})`);
+          await supabase.auth.refreshSession();
+          // 200ms 딜레이 후 재시도
+          await new Promise(resolve => setTimeout(resolve, 200));
+          return fetchWidgets(pageId, retryCount + 1);
+        }
+      }
+      console.error(`❌ Widget fetch error:`, error);
       throw error;
     }
 
+    console.log(`✅ Fetched ${data?.length || 0} widgets`);
     return data || [];
+  } catch (error) {
+    console.error(`❌ Widget fetch error:`, error);
+    throw error;
+  }
 }
 
 export default function HomepageWidgets({
@@ -70,7 +91,7 @@ export default function HomepageWidgets({
       const data = pageId ? await fetchWidgets(pageId) : await fetchWidgets();
       setWidgets(data);
     } catch (err) {
-      console.error('Failed to load widgets:', err);
+      console.error("Failed to load widgets:", err);
       setError(err as Error);
       // fallback 데이터가 있으면 사용
       if (initialWidgets) {
@@ -224,9 +245,7 @@ export default function HomepageWidgets({
           <p className="text-sm text-red-800">
             위젯 데이터를 불러올 수 없습니다.
           </p>
-          <p className="text-xs text-red-600 mt-1">
-            잠시 후 다시 시도됩니다.
-          </p>
+          <p className="text-xs text-red-600 mt-1">잠시 후 다시 시도됩니다.</p>
         </div>
       ) : isLoading ? (
         Array.from({ length: 2 }).map((_, index) => (

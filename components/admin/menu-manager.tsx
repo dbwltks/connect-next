@@ -905,6 +905,7 @@ export default function MenuManager() {
   async function handleSaveMenu() {
     setIsSaving(true);
     try {
+      const supabase = createClient();
       // 메뉴 항목을 데이터베이스 형식에 맞게 변환
       const prepareMenuItems = (items: MenuItem[]): any[] => {
         let result: any[] = [];

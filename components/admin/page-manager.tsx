@@ -107,6 +107,7 @@ export default function PageManager({ pageId, templateId }: PageManagerProps) {
   // 섹션 불러오기
   const loadSections = async () => {
     try {
+      const supabase = createClient();
       const { data, error } = await supabase
         .from("cms_sections")
         .select("*")
@@ -144,6 +145,7 @@ export default function PageManager({ pageId, templateId }: PageManagerProps) {
   // 카테고리 불러오기
   const loadCategories = async () => {
     try {
+      const supabase = createClient();
       const { data, error } = await supabase
         .from("cms_categories")
         .select("*")
@@ -177,6 +179,7 @@ export default function PageManager({ pageId, templateId }: PageManagerProps) {
   // 페이지 불러오기
   const loadPages = async () => {
     try {
+      const supabase = createClient();
       const { data, error } = await supabase
         .from("cms_pages")
         .select("*")
@@ -220,6 +223,7 @@ export default function PageManager({ pageId, templateId }: PageManagerProps) {
   const handleTogglePage = async (id: string, isActive: boolean) => {
     try {
       setIsLoading(true);
+      const supabase = createClient();
 
       const { error } = await supabase
         .from("cms_pages")
@@ -265,6 +269,7 @@ export default function PageManager({ pageId, templateId }: PageManagerProps) {
 
     try {
       setIsLoading(true);
+      const supabase = createClient();
 
       const { error } = await supabase.from("cms_pages").delete().eq("id", id);
 
@@ -319,6 +324,7 @@ export default function PageManager({ pageId, templateId }: PageManagerProps) {
 
     try {
       setIsLoading(true);
+      const supabase = createClient();
 
       // 저장할 데이터 객체 생성
       const pageData: any = {

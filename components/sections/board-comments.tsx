@@ -179,6 +179,7 @@ export default function BoardComments({
   // 로그인 유저 가져오기 (단일 선언)
   async function getHeaderUser() {
     try {
+      const supabase = createClient();
       // 먼저 Supabase 세션 확인
       const {
         data: { session },
@@ -292,6 +293,7 @@ export default function BoardComments({
 
   useEffect(() => {
     async function fetchPostAuthor() {
+      const supabase = createClient();
       const { data, error } = await supabase
         .from("board_posts")
         .select("author, user_id")

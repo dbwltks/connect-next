@@ -60,32 +60,44 @@ const templateInfo = {
 // 게시판 위젯 데이터를 가져오는 fetcher 함수
 async function fetchBoardWidgetPosts(
   pageId: string,
-  limit: number = 10
+  limit: number = 10,
+  retryCount = 0
 ): Promise<{ posts: IBoardPost[]; menuUrlMap: Record<string, string> }> {
   console.log(`🔍 Fetching board widget posts for pageId: ${pageId}, limit: ${limit}`);
   
   const supabase = createClient();
   
-  // 세션 상태 확인
-  const { data: session } = await supabase.auth.getSession();
-  console.log(`🔑 Current session:`, session.session ? 'authenticated' : 'not authenticated');
-  
-  const { data, error } = await supabase
-    .from("board_posts")
-    .select("*")
-    .eq("page_id", pageId)
-    .eq("status", "published")
-    .order("created_at", { ascending: false })
-    .limit(limit);
+  try {
+    // 세션 상태 확인
+    const { data: session } = await supabase.auth.getSession();
+    console.log(`🔑 Current session:`, session.session ? 'authenticated' : 'not authenticated');
+    
+    const { data, error } = await supabase
+      .from("board_posts")
+      .select("*")
+      .eq("page_id", pageId)
+      .eq("status", "published")
+      .order("created_at", { ascending: false })
+      .limit(limit);
 
-  if (error) {
-    console.error(`❌ Error fetching board posts:`, error);
-    throw error;
-  }
+    if (error) {
+      // 세션 만료 관련 오류인 경우 세션 갱신 후 재시도
+      if (error.message?.includes('JWT') || error.message?.includes('expired') || error.message?.includes('refresh')) {
+        if (retryCount < 2) {
+          console.log(`🔄 Session issue detected, refreshing and retrying... (attempt ${retryCount + 1})`);
+          await supabase.auth.refreshSession();
+          // 200ms 딜레이 후 재시도
+          await new Promise(resolve => setTimeout(resolve, 200));
+          return fetchBoardWidgetPosts(pageId, limit, retryCount + 1);
+        }
+      }
+      console.error(`❌ Error fetching board posts:`, error);
+      throw error;
+    }
 
-  console.log(`✅ Fetched ${data?.length || 0} posts for pageId: ${pageId}`);
+    console.log(`✅ Fetched ${data?.length || 0} posts for pageId: ${pageId}`);
 
-  const posts = (data as IBoardPost[]) || [];
+    const posts = (data as IBoardPost[]) || [];
 
   // 클라이언트에서 published_at 우선 정렬
   const sortedPosts = [...posts].sort((a, b) => {
@@ -122,6 +134,10 @@ async function fetchBoardWidgetPosts(
   }
 
   return { posts: sortedPosts, menuUrlMap };
+  } catch (error) {
+    console.error(`❌ Board widget fetch error:`, error);
+    throw error;
+  }
 }
 
 export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
