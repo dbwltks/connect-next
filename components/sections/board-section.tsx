@@ -93,6 +93,30 @@ interface FetchBoardDataParams {
   searchType: string;
   searchTerm: string;
 }
+// 재시도 헬퍼 함수
+async function retryQuery<T>(
+  queryFn: () => Promise<T>,
+  maxRetries = 3,
+  baseDelay = 1000
+): Promise<T> {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await queryFn();
+    } catch (error) {
+      console.error(`Query attempt ${attempt + 1} failed:`, error);
+      
+      if (attempt === maxRetries - 1) {
+        throw error;
+      }
+      
+      const delay = baseDelay * Math.pow(2, attempt);
+      console.log(`Retrying in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  throw new Error('Retry logic error');
+}
+
 async function fetchBoardData({
   pageId,
   categoryId,
@@ -102,81 +126,109 @@ async function fetchBoardData({
   searchTerm,
 }: FetchBoardDataParams) {
   const supabase = createClient();
-  // 1. 전체 게시글 수(count) 쿼리
-  let countQuery = supabase
-    .from("board_posts")
-    .select("*", { count: "exact", head: true })
-    .eq("status", "published");
-  if (pageId) countQuery = countQuery.eq("page_id", pageId);
-  if (categoryId) countQuery = countQuery.eq("category_id", categoryId);
-  if (searchTerm) {
-    if (searchType === "title")
-      countQuery = countQuery.ilike("title", `%${searchTerm}%`);
-    else if (searchType === "content")
-      countQuery = countQuery.ilike("content", `%${searchTerm}%`);
-    else if (searchType === "author")
-      countQuery = countQuery.ilike("user_id", `%${searchTerm}%`);
-  }
-  const { count: totalCount, error: countError } = await countQuery;
-  if (countError) throw countError;
-  const pageSize = itemCount;
-  const totalPages = Math.max(1, Math.ceil((totalCount || 0) / pageSize));
+  
+  try {
+    // 1. 전체 게시글 수(count) 쿼리 - 재시도 로직 적용
+    const totalCount = await retryQuery(async () => {
+      let countQuery = supabase
+        .from("board_posts")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "published");
+      if (pageId) countQuery = countQuery.eq("page_id", pageId);
+      if (categoryId) countQuery = countQuery.eq("category_id", categoryId);
+      if (searchTerm) {
+        if (searchType === "title")
+          countQuery = countQuery.ilike("title", `%${searchTerm}%`);
+        else if (searchType === "content")
+          countQuery = countQuery.ilike("content", `%${searchTerm}%`);
+        else if (searchType === "author")
+          countQuery = countQuery.ilike("user_id", `%${searchTerm}%`);
+      }
+      const { count, error } = await countQuery;
+      if (error) throw error;
+      return count || 0;
+    });
 
-  // 2. 실제 게시글 목록 쿼리 (페이지네이션 적용)
-  // 데이터베이스에서 기본 정렬 후 클라이언트에서 published_at 우선 정렬
-  let query = supabase
-    .from("board_posts")
-    .select(
-      `id, title, content, user_id, created_at, views, category_id, page_id, is_notice, is_pinned, comment_count:board_comments(count), thumbnail_image, status, published_at`
-    )
-    .eq("status", "published")
-    .order("is_pinned", { ascending: false })
-    .order("is_notice", { ascending: false })
-    .order("created_at", { ascending: false })
-    .range((page - 1) * itemCount, page * itemCount - 1);
-  if (pageId) query = query.eq("page_id", pageId);
-  if (categoryId) query = query.eq("category_id", categoryId);
-  if (searchTerm) {
-    if (searchType === "title") query = query.ilike("title", `%${searchTerm}%`);
-    else if (searchType === "content")
-      query = query.ilike("content", `%${searchTerm}%`);
-    else if (searchType === "author")
-      query = query.ilike("user_id", `%${searchTerm}%`);
-  }
-  const { data, error } = await query;
-  if (error) throw error;
-  const postsWithComments = (data || []).map((post) => ({
-    ...post,
-    comment_count: post.comment_count?.[0]?.count || 0,
-    view_count: post.views || 0,
-  }));
+    const pageSize = itemCount;
+    const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
-  // 3. 작성자 정보 가져오기
-  const userIds = postsWithComments
-    .map((post) => post.user_id)
-    .filter((id): id is string => Boolean(id))
-    .filter((id, index, self) => self.indexOf(id) === index);
-  let authorInfoMap: Record<string, UserInfo> = {};
-  if (userIds.length > 0) {
-    const { data: usersData, error: usersError } = await supabase
-      .from("users")
-      .select("id, username, avatar_url")
-      .in("id", userIds);
-    if (!usersError && usersData) {
-      usersData.forEach((user) => {
-        authorInfoMap[user.id] = {
-          username: user.username || "익명",
-          avatar_url: user.avatar_url,
-        };
-      });
+    // 2. 실제 게시글 목록 쿼리 (페이지네이션 적용) - 재시도 로직 적용
+    const postsData = await retryQuery(async () => {
+      let query = supabase
+        .from("board_posts")
+        .select(
+          `id, title, content, user_id, created_at, views, category_id, page_id, is_notice, is_pinned, comment_count:board_comments(count), thumbnail_image, status, published_at`
+        )
+        .eq("status", "published")
+        .order("is_pinned", { ascending: false })
+        .order("is_notice", { ascending: false })
+        .order("created_at", { ascending: false })
+        .range((page - 1) * itemCount, page * itemCount - 1);
+      if (pageId) query = query.eq("page_id", pageId);
+      if (categoryId) query = query.eq("category_id", categoryId);
+      if (searchTerm) {
+        if (searchType === "title") query = query.ilike("title", `%${searchTerm}%`);
+        else if (searchType === "content")
+          query = query.ilike("content", `%${searchTerm}%`);
+        else if (searchType === "author")
+          query = query.ilike("user_id", `%${searchTerm}%`);
+      }
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    });
+
+    const postsWithComments = postsData.map((post: any) => ({
+      ...post,
+      comment_count: post.comment_count?.[0]?.count || 0,
+      view_count: post.views || 0,
+    }));
+
+    // 3. 작성자 정보 가져오기 - 재시도 로직 적용
+    const userIds = postsWithComments
+      .map((post) => post.user_id)
+      .filter((id): id is string => Boolean(id))
+      .filter((id, index, self) => self.indexOf(id) === index);
+    
+    let authorInfoMap: Record<string, UserInfo> = {};
+    if (userIds.length > 0) {
+      try {
+        const usersData = await retryQuery(async () => {
+          const { data, error } = await supabase
+            .from("users")
+            .select("id, username, avatar_url")
+            .in("id", userIds);
+          if (error) throw error;
+          return data || [];
+        }, 2); // 사용자 정보는 2회만 재시도
+
+        usersData.forEach((user: any) => {
+          authorInfoMap[user.id] = {
+            username: user.username || "익명",
+            avatar_url: user.avatar_url,
+          };
+        });
+      } catch (error) {
+        console.error('Failed to fetch user info, using fallback:', error);
+        // 사용자 정보 실패 시에도 계속 진행
+      }
     }
+
+    return {
+      posts: postsWithComments,
+      totalCount,
+      totalPages,
+      authorInfoMap,
+    };
+  } catch (error) {
+    console.error('Board data fetch failed:', error);
+    return {
+      posts: [],
+      totalCount: 0,
+      totalPages: 1,
+      authorInfoMap: {},
+    };
   }
-  return {
-    posts: postsWithComments,
-    totalCount: totalCount || 0,
-    totalPages,
-    authorInfoMap,
-  };
 }
 
 export default function BoardSection({

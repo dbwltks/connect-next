@@ -28,15 +28,12 @@ interface HomepageWidgetsProps {
   pageId?: string;
 }
 
-// 위젯 데이터를 가져오는 fetcher 함수
+// 재시도 로직이 포함된 위젯 데이터 fetcher 함수
 async function fetchWidgets(pageId?: string, retryCount = 0): Promise<IWidget[]> {
   const supabase = createClient();
+  const maxRetries = 3;
 
   try {
-    // 세션 상태 확인 및 로깅
-    const { data: session } = await supabase.auth.getSession();
-    console.log(`🔍 Widget fetch - Session status:`, session.session ? 'authenticated' : 'not authenticated');
-    
     let query = supabase
       .from("cms_layout")
       .select("*")
@@ -52,25 +49,24 @@ async function fetchWidgets(pageId?: string, retryCount = 0): Promise<IWidget[]>
     const { data, error } = await query;
 
     if (error) {
-      // 세션 만료 관련 오류인 경우 세션 갱신 후 재시도
-      if (error.message?.includes('JWT') || error.message?.includes('expired') || error.message?.includes('refresh')) {
-        if (retryCount < 2) {
-          console.log(`🔄 Session issue detected, refreshing and retrying... (attempt ${retryCount + 1})`);
-          await supabase.auth.refreshSession();
-          // 200ms 딜레이 후 재시도
-          await new Promise(resolve => setTimeout(resolve, 200));
-          return fetchWidgets(pageId, retryCount + 1);
-        }
-      }
-      console.error(`❌ Widget fetch error:`, error);
       throw error;
     }
 
-    console.log(`✅ Fetched ${data?.length || 0} widgets`);
     return data || [];
   } catch (error) {
-    console.error(`❌ Widget fetch error:`, error);
-    throw error;
+    console.error(`Widget fetch attempt ${retryCount + 1} failed:`, error);
+    
+    if (retryCount < maxRetries) {
+      // 지수 백오프: 1초, 2초, 4초
+      const delay = 1000 * Math.pow(2, retryCount);
+      console.log(`Retrying in ${delay}ms...`);
+      
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return fetchWidgets(pageId, retryCount + 1);
+    }
+    
+    console.error('All retry attempts failed, returning empty array');
+    return [];
   }
 }
 
@@ -88,7 +84,7 @@ export default function HomepageWidgets({
     try {
       setIsLoading(true);
       setError(null);
-      const data = pageId ? await fetchWidgets(pageId) : await fetchWidgets();
+      const data = await fetchWidgets(pageId);
       setWidgets(data);
     } catch (err) {
       console.error("Failed to load widgets:", err);
