@@ -125,6 +125,14 @@ export const api = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(tagData)
       }).then(res => res.json()),
+    update: (id: string, tagData: any) =>
+      fetch(`/api/tags/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(tagData)
+      }).then(res => res.json()),
+    delete: (id: string) =>
+      fetch(`/api/tags/${id}`, { method: 'DELETE' }).then(res => res.json()),
   },
 };
 

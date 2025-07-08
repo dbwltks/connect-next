@@ -473,12 +473,12 @@ export default function BoardWrite({
   // 태그 수정
   const handleUpdateTag = async (id: string, updates: Partial<ITag>) => {
     try {
-      // Note: API does not support tag updates yet
-      const existingTag = allTags.find(tag => tag.id === id);
-      if (existingTag) {
-        const updatedTag = { ...existingTag, ...updates };
-        setAllTags(allTags.map(tag => tag.id === id ? updatedTag : tag));
-      }
+      // API를 통해 태그 업데이트
+      const result = await api.tags.update(id, updates);
+      const updatedTag = result.tag;
+      
+      // 로컬 상태 업데이트
+      setAllTags(allTags.map(tag => tag.id === id ? updatedTag : tag));
       setEditingTag(null);
       showToast({
         title: "성공",
@@ -500,7 +500,10 @@ export default function BoardWrite({
     if (!confirm("정말로 이 태그를 삭제하시겠습니까?")) return;
     
     try {
-      // Note: API does not support tag deletion yet
+      // API를 통해 태그 삭제
+      await api.tags.delete(id);
+      
+      // 로컬 상태 업데이트
       setAllTags(allTags.filter(tag => tag.id !== id));
       showToast({
         title: "성공",
@@ -773,6 +776,11 @@ export default function BoardWrite({
         setDescription(data.description || ""); // 상세 설명 로드
         setIsHidden(data.status === "hidden"); // 숨김 상태 반영
         setIsNotice(data.is_notice === true); // 공지사항 상태 반영
+        
+        // 페이지 ID 설정 (수정 모드에서 기존 게시글의 페이지 선택)
+        if (data.page_id) {
+          setSelectedPageId(data.page_id);
+        }
         // 게시일 반영 - published_at 우선, 없으면 created_at 사용
         setPublishDate(
           (() => {
@@ -796,6 +804,7 @@ export default function BoardWrite({
             }
           })()
         );
+        // 파일 정보 파싱
         let parsedFiles: any[] = [];
         if (data.files) {
           try {
@@ -819,6 +828,22 @@ export default function BoardWrite({
           );
           if (firstImage) setThumbnailImage(firstImage.url);
         }
+
+        // 태그 정보 파싱
+        let parsedTags: ITag[] = [];
+        if (data.tags) {
+          try {
+            parsedTags =
+              typeof data.tags === "string"
+                ? JSON.parse(data.tags)
+                : data.tags;
+          } catch (error) {
+            parsedTags = [];
+            console.error("태그 정보 파싱 오류:", error);
+          }
+        }
+        if (!Array.isArray(parsedTags)) parsedTags = [];
+        setSelectedTags(parsedTags);
       }
     } catch (err) {
       console.error("게시글 로드 오류:", err);
@@ -2754,40 +2779,37 @@ export default function BoardWrite({
           {/* 입력 영역 */}
           <div className="p-2 sm:p-6">
             {/* 게시판 선택 */}
-            {!isEditMode && (
-              <div className="space-y-2 mb-4">
-                <Label htmlFor="page-select"></Label>
-                <Select
-                  value={selectedPageId}
-                  onValueChange={(value) => setSelectedPageId(value)}
-                  disabled={loading || isEditMode}
-                >
-                  <SelectTrigger id="page-select" className="w-full">
-                    <SelectValue placeholder="게시판을 선택하세요" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {!initialPageId && boardPages.length > 0 && (
-                      <>
-                        <SelectItem value="placeholder" disabled>
-                          게시판을 선택하세요
-                        </SelectItem>
-                        <SelectSeparator />
-                      </>
-                    )}
-                    {boardPages.map((page) => (
-                      <SelectItem key={page.id} value={page.id}>
-                        {page.title}
+            <div className="space-y-2 mb-4">
+              <Select
+                value={selectedPageId}
+                onValueChange={(value) => setSelectedPageId(value)}
+                disabled={loading}
+              >
+                <SelectTrigger id="page-select" className="w-full">
+                  <SelectValue placeholder="게시판을 선택하세요" />
+                </SelectTrigger>
+                <SelectContent>
+                  {!initialPageId && boardPages.length > 0 && (
+                    <>
+                      <SelectItem value="placeholder" disabled>
+                        게시판을 선택하세요
                       </SelectItem>
-                    ))}
-                    {boardPages.length === 0 && (
-                      <SelectItem value="no-pages" disabled>
-                        선택 가능한 게시판이 없습니다.
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+                      <SelectSeparator />
+                    </>
+                  )}
+                  {boardPages.map((page) => (
+                    <SelectItem key={page.id} value={page.id}>
+                      {page.title}
+                    </SelectItem>
+                  ))}
+                  {boardPages.length === 0 && (
+                    <SelectItem value="no-pages" disabled>
+                      선택 가능한 게시판이 없습니다.
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
             {isEditMode || selectedPageId ? (
               <>
                 {/* 제목 입력 */}

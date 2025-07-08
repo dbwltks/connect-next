@@ -1735,6 +1735,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
             </CardTitle>
           </div>
 
+
           {/* 유저/메타데이터 + 액션 버튼 한 줄 */}
           <div className="flex items-start my-6 border-b border-gray-200 pb-6 justify-between">
             <div className="flex items-center">
@@ -1761,31 +1762,6 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                   <span className="mx-2">·</span>
                   <span>조회 {post.views || post.view_count || 0}</span>
                 </div>
-                {/* 태그 표시 */}
-                {post.tags && (() => {
-                  try {
-                    const tags: ITag[] = JSON.parse(post.tags);
-                    return tags.length > 0 ? (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {tags.map((tag) => (
-                          <span
-                            key={tag.id}
-                            className="inline-flex items-center px-2 py-1 rounded-full text-xs border"
-                            style={{ 
-                              backgroundColor: tag.color + "20", 
-                              color: tag.color, 
-                              borderColor: tag.color 
-                            }}
-                          >
-                            {tag.name}
-                          </span>
-                        ))}
-                      </div>
-                    ) : null;
-                  } catch {
-                    return null;
-                  }
-                })()}
               </div>
             </div>
             {/* 액션 버튼 - 모바일에서는 숨김 */}
@@ -1933,6 +1909,32 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
               <span className="text-sm">{commentCount}</span>
             </div>
           </div>
+
+          {/* 태그 표시 */}
+          {post.tags && (() => {
+            try {
+              const tags: ITag[] = JSON.parse(post.tags);
+              return tags && tags.length > 0 ? (
+                <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-100">
+                  {tags.map((tag, index) => (
+                    <Badge 
+                      key={index} 
+                      variant="secondary"
+                      className="text-xs px-2 py-1"
+                      style={{
+                        backgroundColor: tag.color || '#e5e7eb',
+                        color: tag.color ? '#ffffff' : '#374151'
+                      }}
+                    >
+                      {tag.name}
+                    </Badge>
+                  ))}
+                </div>
+              ) : null;
+            } catch (e) {
+              return null;
+            }
+          })()}
         </CardContent>
 
         <CardFooter className="px-0 sm:px-6 pt-0 pb-0 border-t-0">

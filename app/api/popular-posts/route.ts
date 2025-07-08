@@ -11,15 +11,12 @@ export async function GET(request: NextRequest) {
     
     let query;
     if (sortBy === 'comments') {
-      // 댓글 수로 정렬하는 경우 JOIN 쿼리 사용
+      // 댓글 수로 정렬하는 경우 - 별도로 처리
       query = supabase
         .from('board_posts')
-        .select(`
-          *, 
-          comment_count:board_comments(count)
-        `)
+        .select('*')
         .eq('status', 'published')
-        .limit(limit);
+        .limit(50); // 더 많이 가져와서 나중에 정렬
     } else if (sortBy === 'likes') {
       // 좋아요 수로 정렬하는 경우 - 별도로 처리
       query = supabase
@@ -47,11 +44,26 @@ export async function GET(request: NextRequest) {
     // 댓글 수 또는 좋아요 수로 정렬하는 경우 클라이언트에서 정렬
     let sortedPosts = posts || [];
     if (sortBy === 'comments' && posts) {
-      sortedPosts = [...posts].sort((a: any, b: any) => {
+      // 각 게시글의 댓글 수를 별도로 조회
+      const postsWithComments = await Promise.all(
+        posts.map(async (post: any) => {
+          const { count } = await supabase
+            .from('board_comments')
+            .select('*', { count: 'exact', head: true })
+            .eq('post_id', post.id);
+          
+          return {
+            ...post,
+            comment_count: [{ count: count || 0 }]
+          };
+        })
+      );
+      
+      sortedPosts = postsWithComments.sort((a: any, b: any) => {
         const aCount = a.comment_count?.[0]?.count || 0;
         const bCount = b.comment_count?.[0]?.count || 0;
         return bCount - aCount;
-      });
+      }).slice(0, limit); // 원하는 수만큼만 자르기
     } else if (sortBy === 'likes' && posts) {
       // 각 게시글의 좋아요 수를 별도로 조회
       const postsWithLikes = await Promise.all(
@@ -75,22 +87,38 @@ export async function GET(request: NextRequest) {
       }).slice(0, limit); // 원하는 수만큼만 자르기
     }
 
-    // 좋아요 수를 추가 (likes 정렬이 아닌 경우)
-    if (sortBy !== 'likes' && sortedPosts && sortedPosts.length > 0) {
-      const postsWithLikes = await Promise.all(
+    // 좋아요 수와 댓글 수를 추가 (이미 처리되지 않은 경우)
+    if (sortedPosts && sortedPosts.length > 0) {
+      const postsWithCounts = await Promise.all(
         sortedPosts.map(async (post: any) => {
-          const { count } = await supabase
-            .from('board_like')
-            .select('*', { count: 'exact', head: true })
-            .eq('post_id', post.id);
+          // 좋아요 수 조회 (likes 정렬이 아닌 경우)
+          let likeCount = post.like_count;
+          if (sortBy !== 'likes') {
+            const { count } = await supabase
+              .from('board_like')
+              .select('*', { count: 'exact', head: true })
+              .eq('post_id', post.id);
+            likeCount = [{ count: count || 0 }];
+          }
+          
+          // 댓글 수 조회 (comments 정렬이 아닌 경우)
+          let commentCount = post.comment_count;
+          if (sortBy !== 'comments') {
+            const { count } = await supabase
+              .from('board_comments')
+              .select('*', { count: 'exact', head: true })
+              .eq('post_id', post.id);
+            commentCount = [{ count: count || 0 }];
+          }
           
           return {
             ...post,
-            like_count: [{ count: count || 0 }]
+            like_count: likeCount,
+            comment_count: commentCount
           };
         })
       );
-      sortedPosts = postsWithLikes;
+      sortedPosts = postsWithCounts;
     }
 
     // 사용자 정보를 수동으로 조회

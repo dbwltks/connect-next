@@ -829,48 +829,6 @@ export default function BoardSection({
     totalCount
   });
 
-  // 태그 파싱 및 렌더링 함수
-  const parseTags = (tagsJson?: string): ITag[] => {
-    if (!tagsJson) return [];
-    try {
-      const parsed = JSON.parse(tagsJson);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  };
-
-  const renderTags = (post: BoardPost, maxTags = 3) => {
-    const tags = parseTags(post.tags);
-    if (tags.length === 0) return null;
-
-    const visibleTags = tags.slice(0, maxTags);
-    const remainingCount = tags.length - maxTags;
-
-    return (
-      <div className="flex items-center gap-1 flex-wrap">
-        {visibleTags.map((tag) => (
-          <Badge
-            key={tag.id}
-            variant="secondary"
-            className="text-xs px-1.5 py-0.5"
-            style={{ 
-              backgroundColor: tag.color + "20", 
-              color: tag.color, 
-              borderColor: tag.color + "40" 
-            }}
-          >
-            {tag.name}
-          </Badge>
-        ))}
-        {remainingCount > 0 && (
-          <Badge variant="outline" className="text-xs px-1.5 py-0.5">
-            +{remainingCount}
-          </Badge>
-        )}
-      </div>
-    );
-  };
 
   if (selectedPostId) {
     // 인라인 상세보기
@@ -1086,10 +1044,6 @@ export default function BoardSection({
                       </div>
                     </div>
 
-                    {/* 태그 영역 */}
-                    <div className="mt-2">
-                      {renderTags(post, 2)}
-                    </div>
 
                     {/* 작성자, 날짜, 조회수 영역 */}
                     <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-2">
@@ -1149,11 +1103,6 @@ export default function BoardSection({
                             style={{ wordBreak: "break-word" }}
                           >
                             {post.title}
-                          </div>
-                          
-                          {/* 태그 영역 */}
-                          <div className="mt-1">
-                            {renderTags(post, 2)}
                           </div>
                           
                           {/* 작성자, 날짜, 조회수 영역 */}

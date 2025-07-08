@@ -289,9 +289,10 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
         return (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {posts.map((post) => (
-              <div
+              <Link
                 key={post.id}
-                className="cursor-pointer overflow-hidden border-gray-100 widget-scale border rounded-lg hover:shadow-md"
+                href={getPostUrl(post)}
+                className="cursor-pointer overflow-hidden border-gray-100 widget-scale border rounded-lg hover:shadow-md block"
               >
                 {showThumbnail && post.thumbnail_image ? (
                   <div className="aspect-video w-full overflow-hidden">
@@ -307,9 +308,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
                   </div>
                 )}
                 <div className="p-3">
-                  <Link href={getPostUrl(post)} className="">
-                    <h4 className="font-medium truncate">{post.title}</h4>
-                  </Link>
+                  <h4 className="font-medium truncate">{post.title}</h4>
                   {showDate && (
                     <div className="flex items-center space-x-1 text-xs text-gray-500 mt-2">
                       <span className="truncate">
@@ -318,7 +317,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
                     </div>
                   )}
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         );
