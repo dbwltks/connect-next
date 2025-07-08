@@ -10,10 +10,8 @@ export async function GET(request: NextRequest) {
     const itemCount = parseInt(searchParams.get('itemCount') || '10');
     const searchType = searchParams.get('searchType') || 'title';
     const searchTerm = searchParams.get('searchTerm') || '';
+    const sortOption = searchParams.get('sortOption') || 'latest';
     
-    console.log('API Debug - Query params:', {
-      pageId, categoryId, page, itemCount, searchType, searchTerm
-    });
     
     const supabase = await createClient();
     
@@ -45,12 +43,9 @@ export async function GET(request: NextRequest) {
         is_notice, is_pinned, comment_count:board_comments(count), 
         thumbnail_image, status, published_at, tags
       `)
-      .eq('status', 'published')
-      .order('is_pinned', { ascending: false })
-      .order('is_notice', { ascending: false })
-      .order('created_at', { ascending: false })
-      .range((page - 1) * itemCount, page * itemCount - 1);
+      .eq('status', 'published');
       
+    // 필터 조건 먼저 적용
     if (pageId) query = query.eq('page_id', pageId);
     if (categoryId) query = query.eq('category_id', categoryId);
     if (searchTerm) {
@@ -59,17 +54,103 @@ export async function GET(request: NextRequest) {
       else if (searchType === 'author') query = query.ilike('user_id', `%${searchTerm}%`);
     }
     
+    // 정렬 적용 (고정글과 공지글 우선)
+    query = query
+      .order('is_pinned', { ascending: false })
+      .order('is_notice', { ascending: false });
+      
+    // 기본 정렬만 적용 (JavaScript에서 다시 정렬할 예정)
+    query = query.order('created_at', { ascending: false });
+    
+    // pagination은 정렬 후에 적용할 예정이므로 여기서는 더 많이 가져옴
+    if (sortOption === 'popular' || sortOption === 'likes' || sortOption === 'comments') {
+      // 정렬이 필요한 경우 더 많이 가져와서 정렬 후 자르기
+      query = query.limit(100);
+    } else {
+      // 최신순은 그대로 pagination 적용
+      query = query.range((page - 1) * itemCount, page * itemCount - 1);
+    }
+    
     const { data: posts, error: postsError } = await query;
     if (postsError) throw postsError;
     
     console.log('API Debug - Raw posts from DB:', posts?.length || 0, 'posts found');
     console.log('API Debug - First post:', posts?.[0]);
     
-    const postsWithComments = (posts || []).map((post: any) => ({
+    let postsWithComments = (posts || []).map((post: any) => ({
       ...post,
       comment_count: post.comment_count?.[0]?.count || 0,
       view_count: post.views || 0,
     }));
+    
+    // 정렬 옵션에 따른 JavaScript 정렬
+    if (sortOption === 'popular') {
+      postsWithComments.sort((a: any, b: any) => {
+        // 고정글 우선
+        if (a.is_pinned !== b.is_pinned) return b.is_pinned ? 1 : -1;
+        // 공지글 우선  
+        if (a.is_notice !== b.is_notice) return b.is_notice ? 1 : -1;
+        // 조회수로 정렬 - 모든 가능한 필드 확인
+        const aViews = a.views || a.view_count || 0;
+        const bViews = b.views || b.view_count || 0;
+        return bViews - aViews;
+      });
+      
+      // 정렬 후 pagination 적용
+      const startIndex = (page - 1) * itemCount;
+      const endIndex = startIndex + itemCount;
+      postsWithComments = postsWithComments.slice(startIndex, endIndex);
+      
+    }
+    
+    // 좋아요와 댓글 정렬을 위한 추가 처리
+    if (sortOption === 'likes') {
+      // 각 게시글의 좋아요 수를 조회
+      const postsWithLikes = await Promise.all(
+        postsWithComments.map(async (post: any) => {
+          const { count } = await supabase
+            .from('board_like')
+            .select('*', { count: 'exact', head: true })
+            .eq('post_id', post.id);
+          
+          return {
+            ...post,
+            likes_count: count || 0
+          };
+        })
+      );
+      
+      // 좋아요 수로 정렬 (고정글, 공지글 우선 유지)
+      postsWithLikes.sort((a: any, b: any) => {
+        // 고정글 우선
+        if (a.is_pinned !== b.is_pinned) return b.is_pinned ? 1 : -1;
+        // 공지글 우선
+        if (a.is_notice !== b.is_notice) return b.is_notice ? 1 : -1;
+        // 좋아요 수로 정렬
+        return b.likes_count - a.likes_count;
+      });
+      
+      // 정렬 후 pagination 적용
+      const startIndex = (page - 1) * itemCount;
+      const endIndex = startIndex + itemCount;
+      postsWithComments = postsWithLikes.slice(startIndex, endIndex);
+      
+    } else if (sortOption === 'comments') {
+      // 댓글 수로 정렬 (이미 comment_count가 있으므로)
+      postsWithComments.sort((a: any, b: any) => {
+        // 고정글 우선
+        if (a.is_pinned !== b.is_pinned) return b.is_pinned ? 1 : -1;
+        // 공지글 우선
+        if (a.is_notice !== b.is_notice) return b.is_notice ? 1 : -1;
+        // 댓글 수로 정렬
+        return b.comment_count - a.comment_count;
+      });
+      
+      // 정렬 후 pagination 적용
+      const startIndex = (page - 1) * itemCount;
+      const endIndex = startIndex + itemCount;
+      postsWithComments = postsWithComments.slice(startIndex, endIndex);
+    }
     
     console.log('API Debug - Posts with comments:', postsWithComments.length);
     

@@ -94,6 +94,7 @@ interface FetchBoardDataParams {
   page: number;
   searchType: string;
   searchTerm: string;
+  sortOption?: string;
 }
 // 재시도 헬퍼 함수
 async function retryQuery<T>(
@@ -126,6 +127,7 @@ async function fetchBoardData({
   page,
   searchType,
   searchTerm,
+  sortOption,
 }: FetchBoardDataParams) {
   try {
     const url = new URL('/api/board', window.location.origin);
@@ -140,6 +142,8 @@ async function fetchBoardData({
     if (categoryId) params.categoryId = categoryId;
     if (searchType) params.searchType = searchType;
     if (searchTerm) params.searchTerm = searchTerm;
+    // sortOption 항상 전달 (undefined면 latest로)
+    params.sortOption = sortOption || 'latest';
     
     Object.entries(params).forEach(([key, value]) => {
       url.searchParams.set(key, value);
@@ -235,6 +239,17 @@ export default function BoardSection({
   const [searchType, setSearchType] = useState<string>("title");
   const [searchInput, setSearchInput] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
+
+  // 정렬 옵션 state
+  const [sortOption, setSortOption] = useState<string>("latest");
+  
+  // 정렬 옵션 정의
+  const sortOptions = [
+    { value: "latest", label: "최신순" },
+    { value: "popular", label: "인기순" },
+    { value: "likes", label: "좋아요순" },
+    { value: "comments", label: "댓글순" },
+  ];
 
   // Pagination state
   const [page, setPage] = useState(1);
@@ -531,9 +546,15 @@ export default function BoardSection({
     // 검색 시 데이터 새로 로딩
   };
 
+  // 정렬 변경 핸들러
+  const handleSortChange = (newSortOption: string) => {
+    setSortOption(newSortOption);
+    setPage(1); // 정렬 변경 시 첫 페이지로
+  };
+
   // SWR을 사용한 데이터 관리
   const { data, error, isLoading, mutate } = useSWR(
-    pageId && !selectedPostId ? ['boardData', pageId, categoryId, itemCount, page, searchType, searchTerm] : null,
+    pageId && !selectedPostId ? ['boardData', pageId, categoryId, itemCount, page, searchType, searchTerm, layout, layout === 'table' ? 'latest' : sortOption] : null,
     () => fetchBoardData({
       pageId: pageId!,
       categoryId,
@@ -541,6 +562,7 @@ export default function BoardSection({
       page,
       searchType,
       searchTerm,
+      sortOption: layout === 'table' ? 'latest' : sortOption, // 테이블형에서는 기본 정렬만 사용
     }),
     {
       revalidateOnFocus: false,
@@ -554,34 +576,37 @@ export default function BoardSection({
   const now = Date.now();
 
   // sortedPosts 먼저 정의
-  const sortedPosts = [...(data?.posts || [])].sort((a, b) => {
-    // 1. 고정글 우선
-    const aPinned = a.is_pinned ? 1 : 0;
-    const bPinned = b.is_pinned ? 1 : 0;
-    if (aPinned !== bPinned) {
-      return bPinned - aPinned; // 고정글이 위로
-    }
+  // 테이블형에서만 프론트엔드 정렬, 리스트형/카드형에서는 API 정렬 유지
+  const sortedPosts = layout === 'table' 
+    ? [...(data?.posts || [])].sort((a, b) => {
+        // 1. 고정글 우선
+        const aPinned = a.is_pinned ? 1 : 0;
+        const bPinned = b.is_pinned ? 1 : 0;
+        if (aPinned !== bPinned) {
+          return bPinned - aPinned; // 고정글이 위로
+        }
 
-    // 2. 공지사항 우선 (고정글이 아닌 경우)
-    const aNotice = a.is_notice ? 1 : 0;
-    const bNotice = b.is_notice ? 1 : 0;
-    if (aNotice !== bNotice) {
-      return bNotice - aNotice; // 공지사항이 위로
-    }
+        // 2. 공지사항 우선 (고정글이 아닌 경우)
+        const aNotice = a.is_notice ? 1 : 0;
+        const bNotice = b.is_notice ? 1 : 0;
+        if (aNotice !== bNotice) {
+          return bNotice - aNotice; // 공지사항이 위로
+        }
 
-    // 3. 날짜 정렬: published_at 우선, 없으면 created_at
-    const aDate = new Date(a.published_at || a.created_at);
-    const bDate = new Date(b.published_at || b.created_at);
+        // 3. 날짜 정렬: published_at 우선, 없으면 created_at
+        const aDate = new Date(a.published_at || a.created_at);
+        const bDate = new Date(b.published_at || b.created_at);
 
-    const timeDiff = bDate.getTime() - aDate.getTime();
+        const timeDiff = bDate.getTime() - aDate.getTime();
 
-    // 4. 날짜가 같으면 ID로 정렬 (안정성 보장)
-    if (timeDiff === 0) {
-      return a.id.localeCompare(b.id);
-    }
+        // 4. 날짜가 같으면 ID로 정렬 (안정성 보장)
+        if (timeDiff === 0) {
+          return a.id.localeCompare(b.id);
+        }
 
-    return timeDiff; // 최신순
-  });
+        return timeDiff; // 최신순
+      })
+    : [...(data?.posts || [])]; // 리스트형/카드형에서는 API 정렬 그대로 사용
 
   const notices =
     sortedPosts.filter((p: BoardPost) => p.is_notice || p.is_pinned) || [];
@@ -901,8 +926,33 @@ export default function BoardSection({
       {/* 필터/버튼 + 게시글 목록을 하나의 카드로 감싸기 */}
       <div className="sm:rounded-lg border-gray-100 shadow-sm bg-white">
         {/* 필터/버튼 영역 */}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center border-b border-gray-100 px-4 py-3">
-          <div></div>
+        <div className="flex justify-between items-center border-b border-gray-100 px-4 py-3">
+          {/* 정렬 드롭다운 - 리스트형과 카드형에서만 표시 */}
+          {layout !== "table" ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <ArrowUpDown className="h-4 w-4" />
+                  {sortOptions.find(option => option.value === sortOption)?.label || "정렬"}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuLabel>정렬 방식</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {sortOptions.map((option) => (
+                  <DropdownMenuItem
+                    key={option.value}
+                    onClick={() => handleSortChange(option.value)}
+                    className={sortOption === option.value ? "bg-blue-50" : ""}
+                  >
+                    {option.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <div></div>
+          )}
           <div className="flex flex-wrap gap-2 items-center">
             <select
               className="px-3 py-2 border-gray-100 border rounded-lg text-sm min-w-[75px] bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"

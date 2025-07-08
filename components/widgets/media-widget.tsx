@@ -16,7 +16,7 @@ const fetchMediaData = async (pageId: string, maxItems: number = 5) => {
   // API를 통해 미디어 게시글 데이터 가져오기
   const result = await api.posts.getForMedia(pageId, maxItems);
   const posts = Array.isArray(result) ? result : result.posts || [];
-  
+
   // 정렬: published_at 우선, 없으면 created_at
   const sortedPosts = [...posts].sort((a: any, b: any) => {
     const aDate = new Date(a.published_at || a.created_at);
@@ -130,7 +130,8 @@ export function MediaWidget({ widget, page }: MediaWidgetProps) {
   // 게시글별 메뉴 URL 매핑을 함수로 처리 - 쿼리스트링 방식으로 변경
   const getPostUrl = (post: any) => {
     const menuUrlMap = data?.menuUrlMap as Record<string, string> | undefined;
-    const menuUrl = menuUrlMap?.[post.page_id] || page?.slug || page?.url || '/';
+    const menuUrl =
+      menuUrlMap?.[post.page_id] || page?.slug || page?.url || "/";
     return `${menuUrl}?post=${post.id}`;
   };
 
@@ -255,93 +256,94 @@ export function MediaWidget({ widget, page }: MediaWidgetProps) {
           {/* Video List */}
           <div className="space-y-3 col-span-2">
             {data.posts.slice(1).map((post: any) => (
-                <div
-                  key={post.id}
-                  className="overflow-hidden bg-white border border-gray-100 hover:shadow-md transition-all duration-500 transform hover:-translate-y-1 rounded-lg w-full"
-                >
-                  <Link
-                    href={getPostUrl(post)}
-                    className="flex flex-row w-full group"
-                  >
-                    <div className="relative w-20 sm:w-28 h-20 flex-shrink-0">
-                      {post.thumbnail_image ? (
-                        <img
-                          src={post.thumbnail_image}
-                          alt={post.title}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                          <div className="text-gray-400 text-xl">📹</div>
-                        </div>
-                      )}
-                      <div className="absolute inset-0 bg-black/15 group-hover:bg-black/10 flex items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="14"
-                          height="14"
-                          className="text-white opacity-80 group-hover:opacity-100"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                        </svg>
-                      </div>
-                    </div>
-                    <div className="p-1.5 sm:p-2 flex-1 w-full overflow-hidden">
-                      <div className="w-full overflow-hidden">
-                        <div className="text-base truncate block w-full">
-                          {post.title}
-                        </div>
-                      </div>
-                      <div className="h-5 flex items-center space-x-3 truncate text-xs text-gray-600">
-                        {post.description && <span>{post.description}</span>}
-                      </div>
-                      <div className="pt-1 flex items-center justify-between">
-                        <span className="text-[10px] text-gray-500">
-                          {new Date(post.created_at).toLocaleDateString()}
-                        </span>
-                        <div className="flex items-center space-x-2 text-[10px] text-gray-500">
-                          <div className="flex items-center space-x-1">
-                            <span className="">👀</span>
-                            <span>{post.views || 0}</span>
-                          </div>
-                          <div className="flex items-center space-x-1">
-                            <Heart className="w-3 h-3 text-red-500 fill-current" />
-                            <span>{post.likes_count || 0}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                </div>
-              ))}
-            
-            {data.posts.length > 1 && (
-            <Link
-              href={page?.slug || page?.url || "/"}
-              className="w-full bg-white py-2 px-4 border border-gray-200 rounded-md hover:shadow-lg transition-all duration-500 transform hover:-translate-y-1 text-sm flex items-center justify-center group"
-            >
-              {widget.display_options?.media_more_text || "더 많은 미디어 보기"}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="ml-1 transition-transform duration-200 group-hover:translate-x-1"
+              <div
+                key={post.id}
+                className="overflow-hidden bg-white border border-gray-100 hover:shadow-md transition-all duration-500 transform hover:-translate-y-1 rounded-lg w-full"
               >
-                <polyline points="9 18 15 12 9 6"></polyline>
-              </svg>
-            </Link>
+                <Link
+                  href={getPostUrl(post)}
+                  className="flex flex-row w-full group"
+                >
+                  <div className="relative w-20 sm:w-28 h-20 flex-shrink-0">
+                    {post.thumbnail_image ? (
+                      <img
+                        src={post.thumbnail_image}
+                        alt={post.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                        {/* <div className="text-gray-400 text-xl">📹</div> */}
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-black/15 group-hover:bg-black/10 flex items-center justify-center">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="14"
+                        height="14"
+                        className="text-white opacity-80 group-hover:opacity-100"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="p-1.5 sm:p-2 flex-1 w-full overflow-hidden">
+                    <div className="w-full overflow-hidden">
+                      <div className="text-base truncate block w-full">
+                        {post.title}
+                      </div>
+                    </div>
+                    <div className="h-5 flex items-center space-x-3 truncate text-xs text-gray-600">
+                      {post.description && <span>{post.description}</span>}
+                    </div>
+                    <div className="pt-1 flex items-center justify-between">
+                      <span className="text-[10px] text-gray-500">
+                        {new Date(post.created_at).toLocaleDateString()}
+                      </span>
+                      <div className="flex items-center space-x-2 text-[10px] text-gray-500">
+                        <div className="flex items-center space-x-1">
+                          <span className="">👀</span>
+                          <span>{post.views || 0}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <Heart className="w-3 h-3 text-red-500 fill-current" />
+                          <span>{post.likes_count || 0}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              </div>
+            ))}
+
+            {data.posts.length > 1 && (
+              <Link
+                href={page?.slug || page?.url || "/"}
+                className="w-full bg-white py-2 px-4 border border-gray-200 rounded-md hover:shadow-lg transition-all duration-500 transform hover:-translate-y-1 text-sm flex items-center justify-center group"
+              >
+                {widget.display_options?.media_more_text ||
+                  "더 많은 미디어 보기"}
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="ml-1 transition-transform duration-200 group-hover:translate-x-1"
+                >
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+              </Link>
             )}
           </div>
         </div>
