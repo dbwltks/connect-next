@@ -9,8 +9,8 @@ export async function GET(request: NextRequest) {
     
     const supabase = await createClient();
     
-    let parentMenu = null;
-    let childMenus = [];
+    let parentMenu: any = null;
+    let childMenus: any[] = [];
     
     if (parentMenuId) {
       // 지정된 부모 메뉴 ID로 조회
