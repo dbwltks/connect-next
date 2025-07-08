@@ -19,7 +19,6 @@ import CalendarWidget from "@/components/widgets/calendar-widget";
 import SimpleCalendarWidget from "@/components/widgets/simple-calendar-widget";
 import { IWidget } from "@/types/index";
 import React, { useState, useEffect, useCallback } from "react";
-import { createClient } from "@/utils/supabase/client";
 
 type LayoutStructure = "1-col" | "2-col-left" | "2-col-right" | "3-col";
 
@@ -28,31 +27,29 @@ interface HomepageWidgetsProps {
   pageId?: string;
 }
 
-// 재시도 로직이 포함된 위젯 데이터 fetcher 함수
+// API를 통한 위젯 데이터 fetcher 함수
 async function fetchWidgets(pageId?: string, retryCount = 0): Promise<IWidget[]> {
-  const supabase = createClient();
   const maxRetries = 3;
 
   try {
-    let query = supabase
-      .from("cms_layout")
-      .select("*")
-      .eq("is_active", true)
-      .order("order", { ascending: true });
-
+    const url = new URL('/api/widgets', window.location.origin);
     if (pageId) {
-      query = query.eq("page_id", pageId);
-    } else {
-      query = query.is("page_id", null);
+      url.searchParams.set('pageId', pageId);
     }
 
-    const { data, error } = await query;
-
-    if (error) {
-      throw error;
+    const response = await fetch(url.toString());
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    return data || [];
+    const result = await response.json();
+    
+    if (result.error) {
+      throw new Error(result.error);
+    }
+
+    return result.data || [];
   } catch (error) {
     console.error(`Widget fetch attempt ${retryCount + 1} failed:`, error);
     
