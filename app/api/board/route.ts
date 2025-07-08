@@ -59,15 +59,24 @@ export async function GET(request: NextRequest) {
       .order('is_pinned', { ascending: false })
       .order('is_notice', { ascending: false });
       
-    // 기본 정렬만 적용 (JavaScript에서 다시 정렬할 예정)
-    query = query.order('created_at', { ascending: false });
+    // 정렬 옵션에 따른 데이터베이스 레벨 정렬 (성능 향상)
+    switch (sortOption) {
+      case 'popular':
+        query = query.order('views', { ascending: false });
+        break;
+      case 'latest':
+      default:
+        query = query.order('created_at', { ascending: false });
+        break;
+      // likes와 comments는 여전히 JavaScript 정렬 필요
+    }
     
-    // pagination은 정렬 후에 적용할 예정이므로 여기서는 더 많이 가져옴
-    if (sortOption === 'popular' || sortOption === 'likes' || sortOption === 'comments') {
-      // 정렬이 필요한 경우 더 많이 가져와서 정렬 후 자르기
+    // pagination 적용 (popular은 이제 DB에서 정렬되므로 바로 pagination 가능)
+    if (sortOption === 'likes' || sortOption === 'comments') {
+      // 좋아요/댓글 정렬만 더 많이 가져와서 JS 정렬
       query = query.limit(100);
     } else {
-      // 최신순은 그대로 pagination 적용
+      // latest, popular은 DB에서 정렬되므로 바로 pagination
       query = query.range((page - 1) * itemCount, page * itemCount - 1);
     }
     
@@ -83,25 +92,7 @@ export async function GET(request: NextRequest) {
       view_count: post.views || 0,
     }));
     
-    // 정렬 옵션에 따른 JavaScript 정렬
-    if (sortOption === 'popular') {
-      postsWithComments.sort((a: any, b: any) => {
-        // 고정글 우선
-        if (a.is_pinned !== b.is_pinned) return b.is_pinned ? 1 : -1;
-        // 공지글 우선  
-        if (a.is_notice !== b.is_notice) return b.is_notice ? 1 : -1;
-        // 조회수로 정렬 - 모든 가능한 필드 확인
-        const aViews = a.views || a.view_count || 0;
-        const bViews = b.views || b.view_count || 0;
-        return bViews - aViews;
-      });
-      
-      // 정렬 후 pagination 적용
-      const startIndex = (page - 1) * itemCount;
-      const endIndex = startIndex + itemCount;
-      postsWithComments = postsWithComments.slice(startIndex, endIndex);
-      
-    }
+    // JavaScript 정렬은 likes와 comments만 필요 (popular은 이미 DB에서 정렬됨)
     
     // 좋아요와 댓글 정렬을 위한 추가 처리
     if (sortOption === 'likes') {

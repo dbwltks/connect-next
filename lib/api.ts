@@ -51,6 +51,42 @@ export const api = {
   },
 
   // 메뉴 관련
+  menus: {
+    getMenuList: (parentMenuId?: string, pathname?: string) => {
+      const params: Record<string, string> = {};
+      if (parentMenuId) params.parentMenuId = parentMenuId;
+      if (pathname) params.pathname = pathname;
+      return apiCall(createUrl('/api/menus', params));
+    },
+  },
+
+  // 보드 관련 (최적화된 버전)
+  board: {
+    getPosts: (params: {
+      pageId: string;
+      categoryId?: string;
+      itemCount: number;
+      page: number;
+      searchType: string;
+      searchTerm: string;
+      sortOption?: string;
+    }) => {
+      const queryParams: Record<string, string> = {
+        pageId: params.pageId,
+        itemCount: params.itemCount.toString(),
+        page: params.page.toString(),
+        searchType: params.searchType,
+        searchTerm: params.searchTerm,
+      };
+      
+      if (params.categoryId) queryParams.categoryId = params.categoryId;
+      if (params.sortOption) queryParams.sortOption = params.sortOption;
+      
+      return apiCall(createUrl('/api/board-optimized', queryParams));
+    },
+  },
+
+  // 메뉴 관련
   menu: {
     getItems: (parentId?: string) =>
       apiCall(createUrl('/api/menu-items', parentId ? { parentId } : undefined)),

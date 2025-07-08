@@ -69,6 +69,10 @@ interface BoardPost {
   thumbnail_image?: string;
   published_at?: string | null; // 게시일 필드 추가
   tags?: string; // 태그 JSON 문자열
+  author?: {
+    username: string;
+    avatar_url?: string;
+  }; // 최적화된 API에서 제공하는 작성자 정보
 }
 
 // 사용자 정보 인터페이스
@@ -78,6 +82,7 @@ interface UserInfo {
 }
 
 import { Section } from "@/components/admin/section-manager";
+import { api } from "@/lib/api";
 import useSWR from "swr";
 
 interface BoardSectionProps {
@@ -107,17 +112,17 @@ async function retryQuery<T>(
       return await queryFn();
     } catch (error) {
       console.error(`Query attempt ${attempt + 1} failed:`, error);
-      
+
       if (attempt === maxRetries - 1) {
         throw error;
       }
-      
+
       const delay = baseDelay * Math.pow(2, attempt);
       console.log(`Retrying in ${delay}ms...`);
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
-  throw new Error('Retry logic error');
+  throw new Error("Retry logic error");
 }
 
 async function fetchBoardData({
@@ -130,48 +135,48 @@ async function fetchBoardData({
   sortOption,
 }: FetchBoardDataParams) {
   try {
-    const url = new URL('/api/board', window.location.origin);
-    
+    const url = new URL("/api/board", window.location.origin);
+
     // 파라미터 설정
     const params: Record<string, string> = {
       itemCount: itemCount.toString(),
       page: page.toString(),
     };
-    
+
     if (pageId) params.pageId = pageId;
     if (categoryId) params.categoryId = categoryId;
     if (searchType) params.searchType = searchType;
     if (searchTerm) params.searchTerm = searchTerm;
     // sortOption 항상 전달 (undefined면 latest로)
-    params.sortOption = sortOption || 'latest';
-    
+    params.sortOption = sortOption || "latest";
+
     Object.entries(params).forEach(([key, value]) => {
       url.searchParams.set(key, value);
     });
 
     const response = await fetch(url.toString());
-    
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const result = await response.json();
-    
-    console.log('Client Debug - API Response:', {
+
+    console.log("Client Debug - API Response:", {
       posts: result.posts?.length || 0,
       totalCount: result.totalCount,
       totalPages: result.totalPages,
-      authorInfoMap: Object.keys(result.authorInfoMap || {}).length
+      authorInfoMap: Object.keys(result.authorInfoMap || {}).length,
     });
-    console.log('Client Debug - First post:', result.posts?.[0]);
-    
+    console.log("Client Debug - First post:", result.posts?.[0]);
+
     if (result.error) {
       throw new Error(result.error);
     }
 
     return result;
   } catch (error) {
-    console.error('Board data fetch failed:', error);
+    console.error("Board data fetch failed:", error);
     return {
       posts: [],
       totalCount: 0,
@@ -242,7 +247,7 @@ export default function BoardSection({
 
   // 정렬 옵션 state
   const [sortOption, setSortOption] = useState<string>("latest");
-  
+
   // 정렬 옵션 정의
   const sortOptions = [
     { value: "latest", label: "최신순" },
@@ -554,21 +559,33 @@ export default function BoardSection({
 
   // SWR을 사용한 데이터 관리
   const { data, error, isLoading, mutate } = useSWR(
-    pageId && !selectedPostId ? ['boardData', pageId, categoryId, itemCount, page, searchType, searchTerm, layout, layout === 'table' ? 'latest' : sortOption] : null,
-    () => fetchBoardData({
-      pageId: pageId!,
-      categoryId,
-      itemCount,
-      page,
-      searchType,
-      searchTerm,
-      sortOption: layout === 'table' ? 'latest' : sortOption, // 테이블형에서는 기본 정렬만 사용
-    }),
+    pageId && !selectedPostId
+      ? [
+          "boardData",
+          pageId,
+          categoryId,
+          itemCount,
+          page,
+          searchType,
+          searchTerm,
+          layout === "table" ? "latest" : sortOption,
+        ]
+      : null,
+    () =>
+      fetchBoardData({
+        pageId: pageId!,
+        categoryId,
+        itemCount,
+        page,
+        searchType,
+        searchTerm,
+        sortOption: layout === "table" ? "latest" : sortOption,
+      }),
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
-      dedupingInterval: 5000, // 5초 내 중복 요청 방지
-      keepPreviousData: true, // 이전 데이터 유지로 깜빡임 방지
+      dedupingInterval: 3000, // 3초로 단축
+      keepPreviousData: true,
     }
   );
 
@@ -577,36 +594,37 @@ export default function BoardSection({
 
   // sortedPosts 먼저 정의
   // 테이블형에서만 프론트엔드 정렬, 리스트형/카드형에서는 API 정렬 유지
-  const sortedPosts = layout === 'table' 
-    ? [...(data?.posts || [])].sort((a, b) => {
-        // 1. 고정글 우선
-        const aPinned = a.is_pinned ? 1 : 0;
-        const bPinned = b.is_pinned ? 1 : 0;
-        if (aPinned !== bPinned) {
-          return bPinned - aPinned; // 고정글이 위로
-        }
+  const sortedPosts =
+    layout === "table"
+      ? [...(data?.posts || [])].sort((a, b) => {
+          // 1. 고정글 우선
+          const aPinned = a.is_pinned ? 1 : 0;
+          const bPinned = b.is_pinned ? 1 : 0;
+          if (aPinned !== bPinned) {
+            return bPinned - aPinned; // 고정글이 위로
+          }
 
-        // 2. 공지사항 우선 (고정글이 아닌 경우)
-        const aNotice = a.is_notice ? 1 : 0;
-        const bNotice = b.is_notice ? 1 : 0;
-        if (aNotice !== bNotice) {
-          return bNotice - aNotice; // 공지사항이 위로
-        }
+          // 2. 공지사항 우선 (고정글이 아닌 경우)
+          const aNotice = a.is_notice ? 1 : 0;
+          const bNotice = b.is_notice ? 1 : 0;
+          if (aNotice !== bNotice) {
+            return bNotice - aNotice; // 공지사항이 위로
+          }
 
-        // 3. 날짜 정렬: published_at 우선, 없으면 created_at
-        const aDate = new Date(a.published_at || a.created_at);
-        const bDate = new Date(b.published_at || b.created_at);
+          // 3. 날짜 정렬: published_at 우선, 없으면 created_at
+          const aDate = new Date(a.published_at || a.created_at);
+          const bDate = new Date(b.published_at || b.created_at);
 
-        const timeDiff = bDate.getTime() - aDate.getTime();
+          const timeDiff = bDate.getTime() - aDate.getTime();
 
-        // 4. 날짜가 같으면 ID로 정렬 (안정성 보장)
-        if (timeDiff === 0) {
-          return a.id.localeCompare(b.id);
-        }
+          // 4. 날짜가 같으면 ID로 정렬 (안정성 보장)
+          if (timeDiff === 0) {
+            return a.id.localeCompare(b.id);
+          }
 
-        return timeDiff; // 최신순
-      })
-    : [...(data?.posts || [])]; // 리스트형/카드형에서는 API 정렬 그대로 사용
+          return timeDiff; // 최신순
+        })
+      : [...(data?.posts || [])]; // 리스트형/카드형에서는 API 정렬 그대로 사용
 
   const notices =
     sortedPosts.filter((p: BoardPost) => p.is_notice || p.is_pinned) || [];
@@ -670,15 +688,15 @@ export default function BoardSection({
   async function handlePostClick(postId: string) {
     // 상태를 먼저 설정하여 즉시 UI 전환
     setSelectedPostId(postId);
-    
+
     // URL 업데이트
     const params = new URLSearchParams(window.location.search);
     params.set("post", postId);
     const newUrl = `${pathname}?${params.toString()}`;
-    
+
     // URL 변경 (비동기로 처리하여 UI 블로킹 방지)
     router.push(newUrl, { scroll: false });
-    
+
     try {
       // 조회수 증가 - API 호출로 변경 (일단 주석 처리)
       // TODO: 조회수 증가 API 구현 필요
@@ -843,17 +861,16 @@ export default function BoardSection({
   const totalCount: number = data?.totalCount || 0;
   const totalPages: number = data?.totalPages || 1;
   const authorInfoMap: Record<string, UserInfo> = data?.authorInfoMap || {};
-  
+
   // 디버그 정보 출력
-  console.log('Board Section Debug:', {
+  console.log("Board Section Debug:", {
     hasData: !!data,
     postsLength: posts.length,
     isLoading,
     error: error?.message,
     pageId,
-    totalCount
+    totalCount,
   });
-
 
   if (selectedPostId) {
     // 인라인 상세보기
@@ -933,7 +950,8 @@ export default function BoardSection({
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2">
                   <ArrowUpDown className="h-4 w-4" />
-                  {sortOptions.find(option => option.value === sortOption)?.label || "정렬"}
+                  {sortOptions.find((option) => option.value === sortOption)
+                    ?.label || "정렬"}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
@@ -1094,7 +1112,6 @@ export default function BoardSection({
                       </div>
                     </div>
 
-
                     {/* 작성자, 날짜, 조회수 영역 */}
                     <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-2">
                       <span
@@ -1154,7 +1171,7 @@ export default function BoardSection({
                           >
                             {post.title}
                           </div>
-                          
+
                           {/* 작성자, 날짜, 조회수 영역 */}
                           <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-1">
                             <span
@@ -1467,7 +1484,7 @@ export default function BoardSection({
             </div>
           ) : (
             // 카드형 레이아웃 (shadcn Card 컴포넌트 적용)
-            <div className="p-4 bg-background bg-gray-50 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="p-4 bg-background bg-gray-50 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
               {[...sortedNotices, ...sortedNormals].length === 0 ? (
                 <div className="col-span-full text-center text-gray-400 py-12 bg-gray-50 rounded">
                   게시글이 없습니다.

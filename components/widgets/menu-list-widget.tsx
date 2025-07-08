@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { createClient } from "@/utils/supabase/client";
 import { IWidget } from "@/types";
+import { api } from "@/lib/api";
+import { Skeleton } from "@/components/ui/skeleton";
 import useSWR from "swr";
 
 interface Menu {
@@ -23,91 +24,59 @@ interface UseMenuListResult {
   childMenus: Menu[];
 }
 
-function useMenuList(widget: IWidget, pathname: string) {
-  return useSWR<UseMenuListResult>(
-    ["menuList", widget.settings?.parent_menu_id, pathname],
-    async () => {
-      const supabase = createClient();
-      let parentMenuId = widget.settings?.parent_menu_id;
-      let tempParentMenu: Menu | null = null;
-      if (parentMenuId) {
-        const { data, error } = await supabase
-          .from("cms_menus")
-          .select("id, title, url, parent_id")
-          .eq("id", parentMenuId)
-          .single();
-        if (error) throw error;
-        tempParentMenu = data;
-      } else {
-        const { data: currentMenu, error: currentMenuError } = await supabase
-          .from("cms_menus")
-          .select("id, title, url, parent_id")
-          .eq("url", pathname)
-          .single();
-        if (currentMenuError) {
-          let parentPath = pathname;
-          while (parentPath.includes("/")) {
-            parentPath = parentPath.substring(0, parentPath.lastIndexOf("/"));
-            if (!parentPath) break;
-            const { data: foundMenu } = await supabase
-              .from("cms_menus")
-              .select("id, title, url, parent_id")
-              .eq("url", parentPath)
-              .single();
-            if (foundMenu) {
-              tempParentMenu = foundMenu;
-              break;
-            }
-          }
-        } else if (currentMenu?.parent_id) {
-          const { data: parentData, error: parentErr } = await supabase
-            .from("cms_menus")
-            .select("id, title, url, parent_id")
-            .eq("id", currentMenu.parent_id)
-            .single();
-          if (parentErr) throw parentErr;
-          tempParentMenu = parentData;
-        } else {
-          tempParentMenu = currentMenu;
-        }
-      }
-      let childMenus: Menu[] = [];
-      if (tempParentMenu) {
-        const { data: children, error: childrenError } = await supabase
-          .from("cms_menus")
-          .select("id, title, url, parent_id")
-          .eq("parent_id", tempParentMenu.id)
-          .eq("is_active", true)
-          .order("order_num", { ascending: true });
-        if (childrenError) throw childrenError;
-        childMenus = children || [];
-      }
-      return { parentMenu: tempParentMenu, childMenus };
-    },
-    {
-      // 전역 설정 사용
-    }
-  );
+// SWR 페처 함수 분리
+async function fetchMenuList(
+  parentMenuId?: string, 
+  pathname?: string
+): Promise<UseMenuListResult> {
+  const result = await api.menus.getMenuList(parentMenuId, pathname);
+  return {
+    parentMenu: result.parentMenu || null,
+    childMenus: result.childMenus || []
+  };
 }
 
 export default function MenuListWidget({ widget }: MenuListWidgetProps) {
   const pathname = usePathname();
-  const { data, error, isLoading } = useMenuList(widget, pathname);
+  const parentMenuId = widget.settings?.parent_menu_id;
+  
+  // SWR을 사용한 데이터 페칭
+  const { data, error, isLoading } = useSWR(
+    ['menuList', parentMenuId, pathname],
+    () => fetchMenuList(parentMenuId, pathname),
+    {
+      keepPreviousData: true,
+      revalidateOnFocus: false,
+    }
+  );
+  // 로딩 상태
   if (isLoading) {
     return (
-      <div className="p-4 bg-white rounded-lg shadow-sm">
-        <div className="w-3/4 h-6 mb-4 bg-gray-200 rounded animate-pulse"></div>
-        <div className="space-y-2">
-          <div className="w-full h-4 bg-gray-200 rounded animate-pulse"></div>
-          <div className="w-5/6 h-4 bg-gray-200 rounded animate-pulse"></div>
-          <div className="w-full h-4 bg-gray-200 rounded animate-pulse"></div>
+      <aside className="p-4 bg-white rounded-lg backdrop-blur-sm border border-gray-50">
+        <Skeleton className="h-6 w-32 mb-3" />
+        <div className="space-y-1">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-8 w-full" />
+          ))}
         </div>
-      </div>
+      </aside>
     );
   }
+  // 에러 상태
   if (error) {
     return (
-      <div className="p-4 text-red-500">메뉴 로딩 오류: {error.message}</div>
+      <aside className="p-4 bg-white rounded-lg backdrop-blur-sm border border-red-200">
+        <h3 className="text-lg font-semibold mb-3 text-gray-800">
+          {widget.title || "메뉴 목록"}
+        </h3>
+        <div className="text-center">
+          <div className="text-red-600">
+            <div className="text-lg mb-1">❌</div>
+            <div className="font-medium mb-1">메뉴를 불러올 수 없습니다</div>
+            <div className="text-sm text-red-500">{error.message}</div>
+          </div>
+        </div>
+      </aside>
     );
   }
   const parentMenu = data?.parentMenu;
