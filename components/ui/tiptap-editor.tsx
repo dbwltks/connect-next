@@ -2202,7 +2202,7 @@ const TipTapEditor = forwardRef(function TipTapEditor(
               type: fileExt,
               uploadedAt: new Date().toISOString(),
             };
-            setUploadedFiles(prev => [...prev, newFile]);
+            setUploadedFiles([...uploadedFiles, newFile]);
           }
 
           // 개별 파일 업로드 완료 토스트
@@ -2430,7 +2430,7 @@ const TipTapEditor = forwardRef(function TipTapEditor(
       <ToastProvider>
         <Toast
           open={toastState.open}
-          onOpenChange={(open) => setToastState((prev) => ({ ...prev, open }))}
+          onOpenChange={(open) => setToastState((prev: any) => ({ ...prev, open }))}
         >
           {toastState.title && <ToastTitle>{toastState.title}</ToastTitle>}
           {toastState.description && (

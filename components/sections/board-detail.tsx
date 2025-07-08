@@ -585,7 +585,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
     async function checkUserStatus() {
       try {
         const currentUser = await getHeaderUser();
-        if (currentUser) {
+        if (currentUser && post) {
           setIsAuthor(currentUser.id === post.user_id);
           
           // 좋아요 상태 확인
@@ -596,7 +596,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
             .eq("post_id", currentPostId)
             .eq("user_id", currentUser.id);
           
-          setLiked(likeData && likeData.length > 0);
+          setLiked(Boolean(likeData && likeData.length > 0));
         }
       } catch (err) {
         console.error("사용자 상태 확인 오류:", err);
