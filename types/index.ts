@@ -18,6 +18,27 @@ export interface IPage {
   is_published?: boolean;
 }
 
+// 태그 인터페이스
+export interface ITag {
+  id: string;
+  name: string;
+  slug: string;
+  color: string;
+  description?: string;
+  created_at: string;
+  updated_at: string;
+  created_by?: string;
+  is_active: boolean;
+}
+
+// 게시글-태그 관계 인터페이스
+export interface IPostTag {
+  id: string;
+  post_id: string;
+  tag_id: string;
+  created_at: string;
+}
+
 // 게시판 게시물 인터페이스
 export interface IBoardPost {
   id: string;
@@ -40,6 +61,7 @@ export interface IBoardPost {
   is_notice?: boolean; // 공지사항 여부
   is_pinned?: boolean; // 고정글 여부
   published_at?: string | null; // 게시일
+  tags?: ITag[]; // 태그 목록
 }
 
 // 위젯 기본 인터페이스

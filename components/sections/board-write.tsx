@@ -42,6 +42,7 @@ import {
   BookOpen,
   Search,
   Check,
+  Tag,
 } from "lucide-react";
 import {
   getHeaderUser,
@@ -49,6 +50,7 @@ import {
   deleteDraft as serviceDeleteDraft,
   saveBoardPost as serviceSaveBoardPost,
   getBoardPost as serviceGetBoardPost,
+  tagService,
 } from "@/services/boardService";
 import { logDraftDelete } from "@/services/activityLogService";
 import {
@@ -62,6 +64,8 @@ import {
   getBibleBookName,
 } from "@/services/bibleService";
 import { useAuth } from "@/contexts/auth-context";
+import { TagInput } from "@/components/ui/tag-input";
+import { ITag } from "@/types/index";
 
 // TipTap 에디터 컴포넌트를 동적으로 불러옴 (SSR 방지)
 // 동적 임포트 방식을 수정하여 ChunkLoadError 해결
@@ -93,6 +97,7 @@ interface BoardWriteProps {
     content?: string;
     allow_comments?: boolean;
     files?: string; // 파일 정보 JSON 문자열
+    tags?: string; // 태그 정보 JSON 문자열
   }; // 수정 모드에서 사용할 초기 데이터
   isEditMode?: boolean; // 수정 모드 여부
   onThumbnailChange?: (url: string) => void; // 썸네일 변경 시 호출할 콜백
@@ -402,6 +407,116 @@ export default function BoardWrite({
       version?: keyof typeof BIBLE_VERSIONS;
     }[]
   >([]);
+
+  // 태그 상태 추가
+  const [selectedTags, setSelectedTags] = useState<ITag[]>([]);
+  const [allTags, setAllTags] = useState<ITag[]>([]);
+  const [showTagManagement, setShowTagManagement] = useState(false);
+  const [editingTag, setEditingTag] = useState<ITag | null>(null);
+  const [newTag, setNewTag] = useState({ name: "", color: "#6B7280", description: "" });
+
+  // 초기 데이터에서 태그 로드
+  useEffect(() => {
+    if (initialData?.tags) {
+      try {
+        const parsedTags = JSON.parse(initialData.tags);
+        if (Array.isArray(parsedTags)) {
+          setSelectedTags(parsedTags);
+        }
+      } catch (error) {
+        console.error("태그 파싱 실패:", error);
+      }
+    }
+  }, [initialData?.tags]);
+
+  // 태그 목록 로드
+  useEffect(() => {
+    loadTags();
+  }, []);
+
+  const loadTags = async () => {
+    try {
+      console.log("태그 로드 시작...");
+      const tags = await tagService.getAllTags();
+      console.log("로드된 태그:", tags);
+      setAllTags(tags);
+    } catch (error) {
+      console.error("태그 로드 실패:", error);
+    }
+  };
+
+  // 태그 추가
+  const handleAddTag = async () => {
+    if (!newTag.name.trim()) return;
+    
+    try {
+      const createdTag = await tagService.createTag({
+        name: newTag.name,
+        slug: newTag.name.toLowerCase().replace(/\s+/g, "-"),
+        color: newTag.color,
+        description: newTag.description,
+        is_active: true,
+      });
+      
+      setAllTags([...allTags, createdTag]);
+      setNewTag({ name: "", color: "#6B7280", description: "" });
+      showToast({
+        title: "성공",
+        description: "태그가 추가되었습니다.",
+        variant: "default",
+      });
+    } catch (error) {
+      console.error("태그 추가 실패:", error);
+      showToast({
+        title: "오류",
+        description: "태그 추가에 실패했습니다.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // 태그 수정
+  const handleUpdateTag = async (id: string, updates: Partial<ITag>) => {
+    try {
+      const updatedTag = await tagService.updateTag(id, updates);
+      setAllTags(allTags.map(tag => tag.id === id ? updatedTag : tag));
+      setEditingTag(null);
+      showToast({
+        title: "성공",
+        description: "태그가 수정되었습니다.",
+        variant: "default",
+      });
+    } catch (error) {
+      console.error("태그 수정 실패:", error);
+      showToast({
+        title: "오류",
+        description: "태그 수정에 실패했습니다.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // 태그 삭제
+  const handleDeleteTag = async (id: string) => {
+    if (!confirm("정말로 이 태그를 삭제하시겠습니까?")) return;
+    
+    try {
+      await tagService.deleteTag(id);
+      setAllTags(allTags.filter(tag => tag.id !== id));
+      showToast({
+        title: "성공",
+        description: "태그가 삭제되었습니다.",
+        variant: "default",
+      });
+    } catch (error) {
+      console.error("태그 삭제 실패:", error);
+      showToast({
+        title: "오류",
+        description: "태그 삭제에 실패했습니다.",
+        variant: "destructive",
+      });
+    }
+  };
 
   // useAuth 훅 사용
   const { user } = useAuth();
@@ -1150,6 +1265,7 @@ export default function BoardWrite({
         number: nextNumber,
         description: description.trim(), // 상세 설명 추가
         isNotice, // 공지사항 설정 추가
+        tags: selectedTags, // 태그 추가
         // 게시일 추가 - board-section.tsx와 board-detail.tsx와 일관성 유지
         publishedAt: publishDate
           ? (() => {
@@ -1878,6 +1994,31 @@ export default function BoardWrite({
               </p>
             </div>
 
+            {/* 태그 관리 */}
+            <div className="space-y-2 border-t pt-4">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Tag className="h-4 w-4" />
+                태그 관리
+              </Label>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  console.log("태그 관리 다이얼로그 열기");
+                  setShowAdminSettings(false);
+                  setShowTagManagement(true);
+                  loadTags();
+                }}
+                className="w-full flex items-center gap-2"
+              >
+                <Tag className="h-4 w-4" />
+                태그 관리하기
+              </Button>
+              <p className="text-xs text-gray-500">
+                태그를 추가, 수정, 삭제할 수 있습니다.
+              </p>
+            </div>
+
             {/* 성경 구절 삽입 */}
             <div className="space-y-2 border-t pt-4">
               <Label className="text-sm font-medium flex items-center gap-2">
@@ -2019,6 +2160,156 @@ export default function BoardWrite({
 
           {/* AdminSettingsDialog 팝업 렌더링 */}
           <AdminSettingsDialog />
+          
+          {/* 태그 관리 다이얼로그 */}
+          <Dialog open={showTagManagement} onOpenChange={setShowTagManagement}>
+            <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>태그 관리</DialogTitle>
+                <DialogDescription>
+                  태그를 추가, 수정, 삭제할 수 있습니다.
+                </DialogDescription>
+              </DialogHeader>
+              
+              {/* 새 태그 추가 */}
+              <div className="space-y-4 border-b pb-4">
+                <h3 className="text-lg font-medium">새 태그 추가</h3>
+                <div className="grid gap-3">
+                  <div>
+                    <Label htmlFor="new-tag-name">태그 이름</Label>
+                    <Input
+                      id="new-tag-name"
+                      value={newTag.name}
+                      onChange={(e) => setNewTag({ ...newTag, name: e.target.value })}
+                      placeholder="태그 이름을 입력하세요"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="new-tag-color">태그 색상</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="new-tag-color"
+                        type="color"
+                        value={newTag.color}
+                        onChange={(e) => setNewTag({ ...newTag, color: e.target.value })}
+                        className="w-20"
+                      />
+                      <Input
+                        value={newTag.color}
+                        onChange={(e) => setNewTag({ ...newTag, color: e.target.value })}
+                        placeholder="#6B7280"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="new-tag-description">설명 (선택사항)</Label>
+                    <Input
+                      id="new-tag-description"
+                      value={newTag.description}
+                      onChange={(e) => setNewTag({ ...newTag, description: e.target.value })}
+                      placeholder="태그 설명을 입력하세요"
+                    />
+                  </div>
+                  <Button onClick={handleAddTag} className="w-full">
+                    태그 추가
+                  </Button>
+                </div>
+              </div>
+              
+              {/* 기존 태그 목록 */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">기존 태그 ({allTags.length}개)</h3>
+                {console.log("다이얼로그에서 allTags:", allTags)}
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {allTags.map((tag) => (
+                    <div key={tag.id} className="flex items-center gap-3 p-3 border rounded-lg">
+                      <div
+                        className="w-4 h-4 rounded-full"
+                        style={{ backgroundColor: tag.color }}
+                      />
+                      {editingTag?.id === tag.id ? (
+                        <div className="flex-1 grid gap-2">
+                          <Input
+                            value={editingTag.name}
+                            onChange={(e) => setEditingTag({ ...editingTag, name: e.target.value })}
+                            className="text-sm"
+                          />
+                          <div className="flex gap-2">
+                            <Input
+                              type="color"
+                              value={editingTag.color}
+                              onChange={(e) => setEditingTag({ ...editingTag, color: e.target.value })}
+                              className="w-16"
+                            />
+                            <Input
+                              value={editingTag.description || ""}
+                              onChange={(e) => setEditingTag({ ...editingTag, description: e.target.value })}
+                              placeholder="설명"
+                              className="text-sm"
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => handleUpdateTag(tag.id, {
+                                name: editingTag.name,
+                                color: editingTag.color,
+                                description: editingTag.description,
+                              })}
+                            >
+                              저장
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setEditingTag(null)}
+                            >
+                              취소
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex-1">
+                            <div className="font-medium">{tag.name}</div>
+                            {tag.description && (
+                              <div className="text-sm text-gray-500">{tag.description}</div>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setEditingTag(tag)}
+                            >
+                              수정
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleDeleteTag(tag.id)}
+                            >
+                              삭제
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowTagManagement(false)}
+                >
+                  닫기
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {/* 성경 선택 다이얼로그 */}
           <Dialog open={showBibleInsert} onOpenChange={setShowBibleInsert}>
@@ -2512,6 +2803,7 @@ export default function BoardWrite({
                   />
                 </div>
 
+
                 {/* TipTap 에디터 + 사이드바 영역 */}
                 <div className="lg:flex lg:gap-4">
                   {/* TipTap 에디터 */}
@@ -2589,6 +2881,25 @@ export default function BoardWrite({
                         onChange={(e) => setDescription(e.target.value)}
                         disabled={loading}
                       />
+                    </div>
+
+                    {/* 태그 선택 카드 */}
+                    <div className="border border-gray-200 rounded-md p-3 lg:p-4 mb-3 bg-white">
+                      <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                        <Tag size={16} />
+                        태그 선택
+                      </h3>
+                      <TagInput
+                        value={selectedTags}
+                        onChange={setSelectedTags}
+                        placeholder="태그를 선택하세요..."
+                        maxTags={5}
+                        allowCreate={true}
+                        className="w-full"
+                      />
+                      <p className="text-xs text-gray-500 mt-2">
+                        최대 5개의 태그를 선택할 수 있습니다.
+                      </p>
                     </div>
 
                     {/* 댓글 허용 카드 */}

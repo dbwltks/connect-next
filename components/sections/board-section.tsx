@@ -51,6 +51,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { useAuth } from "@/contexts/auth-context";
+import { ITag } from "@/types/index";
 
 interface BoardPost {
   id: string;
@@ -68,6 +69,7 @@ interface BoardPost {
   is_pinned?: boolean;
   thumbnail_image?: string;
   published_at?: string | null; // 게시일 필드 추가
+  tags?: string; // 태그 JSON 문자열
 }
 
 // 사용자 정보 인터페이스
@@ -157,7 +159,7 @@ async function fetchBoardData({
       let query = supabase
         .from("board_posts")
         .select(
-          `id, title, content, user_id, created_at, views, category_id, page_id, is_notice, is_pinned, comment_count:board_comments(count), thumbnail_image, status, published_at`
+          `id, title, content, user_id, created_at, views, category_id, page_id, is_notice, is_pinned, comment_count:board_comments(count), thumbnail_image, status, published_at, tags`
         )
         .eq("status", "published")
         .order("is_pinned", { ascending: false })
@@ -897,6 +899,49 @@ export default function BoardSection({
   const totalPages: number = data?.totalPages || 1;
   const authorInfoMap: Record<string, UserInfo> = data?.authorInfoMap || {};
 
+  // 태그 파싱 및 렌더링 함수
+  const parseTags = (tagsJson?: string): ITag[] => {
+    if (!tagsJson) return [];
+    try {
+      const parsed = JSON.parse(tagsJson);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const renderTags = (post: BoardPost, maxTags = 3) => {
+    const tags = parseTags(post.tags);
+    if (tags.length === 0) return null;
+
+    const visibleTags = tags.slice(0, maxTags);
+    const remainingCount = tags.length - maxTags;
+
+    return (
+      <div className="flex items-center gap-1 flex-wrap">
+        {visibleTags.map((tag) => (
+          <Badge
+            key={tag.id}
+            variant="secondary"
+            className="text-xs px-1.5 py-0.5"
+            style={{ 
+              backgroundColor: tag.color + "20", 
+              color: tag.color, 
+              borderColor: tag.color + "40" 
+            }}
+          >
+            {tag.name}
+          </Badge>
+        ))}
+        {remainingCount > 0 && (
+          <Badge variant="outline" className="text-xs px-1.5 py-0.5">
+            +{remainingCount}
+          </Badge>
+        )}
+      </div>
+    );
+  };
+
   if (selectedPostId) {
     // 인라인 상세보기
     return (
@@ -1111,6 +1156,11 @@ export default function BoardSection({
                       </div>
                     </div>
 
+                    {/* 태그 영역 */}
+                    <div className="mt-2">
+                      {renderTags(post, 2)}
+                    </div>
+
                     {/* 작성자, 날짜, 조회수 영역 */}
                     <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-2">
                       <span
@@ -1170,6 +1220,12 @@ export default function BoardSection({
                           >
                             {post.title}
                           </div>
+                          
+                          {/* 태그 영역 */}
+                          <div className="mt-1">
+                            {renderTags(post, 2)}
+                          </div>
+                          
                           {/* 작성자, 날짜, 조회수 영역 */}
                           <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-1">
                             <span

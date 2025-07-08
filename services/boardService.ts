@@ -1,6 +1,6 @@
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "@/components/ui/toaster";
-import type { BoardPostStatus } from "@/types/index";
+import type { BoardPostStatus, ITag } from "@/types/index";
 import {
   logBoardPostCreate,
   logBoardPostUpdate,
@@ -99,6 +99,7 @@ export async function saveBoardPost({
   description,
   isNotice,
   publishedAt,
+  tags,
 }: {
   postId?: string;
   isEditMode?: boolean;
@@ -115,6 +116,7 @@ export async function saveBoardPost({
   description?: string;
   isNotice?: boolean;
   publishedAt?: string | null;
+  tags?: any[];
 }) {
   console.log("[boardService] saveBoardPost 호출됨. userId:", userId);
   console.log("[boardService] 저장할 데이터:", {
@@ -175,6 +177,7 @@ export async function saveBoardPost({
         description, // 상세 설명 필드 추가
         is_notice: isNotice, // 공지사항 필드 추가
         published_at: publishedAt, // 게시일 필드 추가
+        tags: JSON.stringify(tags || []), // 태그 JSON 저장
       })
       .eq("id", postId);
     console.log("[boardService] 수정 결과:", result);
@@ -232,6 +235,7 @@ export async function saveBoardPost({
         description, // 상세 설명 필드 추가
         is_notice: isNotice, // 공지사항 필드 추가
         published_at: publishedAt, // 게시일 필드 추가
+        tags: JSON.stringify(tags || []), // 태그 JSON 저장
       })
       .eq("id", postId);
     console.log("[boardService] 임시저장 업데이트 결과:", result);
@@ -258,6 +262,7 @@ export async function saveBoardPost({
       description, // 상세 설명 필드 추가
       is_notice: isNotice, // 공지사항 필드 추가
       published_at: publishedAt, // 게시일 필드 추가
+      tags: JSON.stringify(tags || []), // 태그 JSON 저장
     };
     console.log("[boardService] 삽입할 데이터:", {
       ...insertData,
@@ -328,6 +333,77 @@ async function handleRequest<T>(requestFn: () => Promise<T>): Promise<T> {
     throw error;
   }
 }
+
+// 태그 관련 함수들
+export const tagService = {
+  // 모든 태그 조회
+  async getAllTags(): Promise<ITag[]> {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("tags")
+      .select("*")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  // 태그 생성
+  async createTag(tag: Omit<ITag, "id" | "created_at" | "updated_at">): Promise<ITag> {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("tags")
+      .insert({
+        ...tag,
+        slug: tag.slug || tag.name.toLowerCase().replace(/\s+/g, "-"),
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  // 태그 수정
+  async updateTag(id: string, updates: Partial<ITag>): Promise<ITag> {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("tags")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  // 태그 삭제 (비활성화)
+  async deleteTag(id: string): Promise<void> {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("tags")
+      .update({ is_active: false })
+      .eq("id", id);
+
+    if (error) throw error;
+  },
+
+  // 태그 검색
+  async searchTags(query: string): Promise<ITag[]> {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("tags")
+      .select("*")
+      .eq("is_active", true)
+      .ilike("name", `%${query}%`)
+      .limit(10);
+
+    if (error) throw error;
+    return data || [];
+  },
+};
 
 export const boardService = {
   async getBoards() {
