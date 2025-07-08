@@ -27,28 +27,14 @@ interface HomepageWidgetsProps {
   pageId?: string;
 }
 
+import { api } from "@/lib/api";
+
 // API를 통한 위젯 데이터 fetcher 함수
 async function fetchWidgets(pageId?: string, retryCount = 0): Promise<IWidget[]> {
   const maxRetries = 3;
 
   try {
-    const url = new URL('/api/widgets', window.location.origin);
-    if (pageId) {
-      url.searchParams.set('pageId', pageId);
-    }
-
-    const response = await fetch(url.toString());
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const result = await response.json();
-    
-    if (result.error) {
-      throw new Error(result.error);
-    }
-
+    const result = await api.widgets.getAll(pageId);
     return result.data || [];
   } catch (error) {
     console.error(`Widget fetch attempt ${retryCount + 1} failed:`, error);

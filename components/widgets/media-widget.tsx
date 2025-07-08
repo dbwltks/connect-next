@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { IPage, IWidget, IMediaWidgetOptions, IBoardPost } from "@/types/index";
 import Link from "next/link";
 import React from "react";
-import { fetchMediaWidgetPosts } from "@/services/widgetService";
+import { api } from "@/lib/api";
 import useSWR from "swr";
 import { createClient } from "@/utils/supabase/client";
 import { Heart } from "lucide-react";
@@ -15,7 +15,7 @@ interface MediaWidgetProps {
 // SWR 키와 페처 함수
 const fetchMediaData = async (pageId: string, maxItems: number = 5) => {
   // 1. 게시글 데이터
-  const postsData = await fetchMediaWidgetPosts(pageId, maxItems);
+  const postsData = await api.posts.getForMedia(pageId, maxItems);
   const posts = postsData.posts;
   if (!posts || posts.length === 0) return { posts: [], menuUrl: null };
 

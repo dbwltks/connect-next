@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { createClient } from "@/utils/supabase/client";
+import { api } from "@/lib/api";
 import { IWidget, IPage } from "@/types";
 import { Heart } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,119 +26,10 @@ async function fetchPopularPosts(
   itemCount: number,
   sortBy: string
 ): Promise<{ posts: Post[]; menuUrlMap: Record<string, string> }> {
-  const supabase = createClient();
-  let finalPosts: Post[] = [];
-
-  if (sortBy === "likes") {
-    const { data: likeData, error: likeError } = await supabase
-      .from("board_like")
-      .select("post_id");
-    if (likeError) throw likeError;
-
-    const likeCounts = (likeData || []).reduce(
-      (acc: Record<string, number>, like: any) => {
-        if (like.post_id) acc[like.post_id] = (acc[like.post_id] || 0) + 1;
-        return acc;
-      },
-      {} as Record<string, number>
-    );
-
-    const sortedPostIds = Object.entries(likeCounts)
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, itemCount)
-      .map(([id]) => id);
-
-    if (sortedPostIds.length > 0) {
-      const { data: postData, error: postError } = await supabase
-        .from("board_posts")
-        .select("id, title, views, page_id")
-        .in("id", sortedPostIds)
-        .eq("status", "published");
-      if (postError) throw postError;
-
-      const postsWithLikes = (postData || [])
-        .map((post: any) => ({
-          ...post,
-          like_count: likeCounts[post.id] || 0,
-          comment_count: 0,
-        }))
-        .sort((a: Post, b: Post) => b.like_count - a.like_count);
-      finalPosts = postsWithLikes;
-    }
-  } else if (sortBy === "comments") {
-    const { data: commentData, error: commentError } = await supabase
-      .from("board_comments")
-      .select("post_id");
-    if (commentError) throw commentError;
-
-    const commentCounts = (commentData || []).reduce(
-      (acc: Record<string, number>, comment: any) => {
-        if (comment.post_id)
-          acc[comment.post_id] = (acc[comment.post_id] || 0) + 1;
-        return acc;
-      },
-      {} as Record<string, number>
-    );
-
-    const sortedPostIds = Object.entries(commentCounts)
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, itemCount)
-      .map(([id]) => id);
-
-    if (sortedPostIds.length > 0) {
-      const { data: postData, error: postError } = await supabase
-        .from("board_posts")
-        .select("id, title, views, page_id")
-        .in("id", sortedPostIds)
-        .eq("status", "published");
-      if (postError) throw postError;
-
-      const postsWithComments = (postData || [])
-        .map((post: any) => ({
-          ...post,
-          like_count: 0,
-          comment_count: commentCounts[post.id] || 0,
-        }))
-        .sort((a: Post, b: Post) => b.comment_count - a.comment_count);
-      finalPosts = postsWithComments;
-    }
-  } else {
-    const { data: postData, error: postError } = await supabase
-      .from("board_posts")
-      .select("id, title, views, page_id")
-      .eq("status", "published")
-      .order("status", { ascending: false })
-      .order("views", { ascending: false })
-      .limit(itemCount);
-    if (postError) throw postError;
-
-    if (postData && postData.length > 0) {
-      finalPosts = postData.map((post: any) => ({
-        ...post,
-        like_count: 0,
-        comment_count: 0,
-      }));
-    }
-  }
-
-  // 메뉴 URL 매핑 생성
-  const uniquePageIds = Array.from(
-    new Set(finalPosts.map((post) => post.page_id))
-  );
-  const menuUrlMap: Record<string, string> = {};
-
-  for (const pId of uniquePageIds) {
-    const { data: menuData, error: menuError } = await supabase
-      .from("cms_menus")
-      .select("*")
-      .eq("page_id", pId);
-
-    if (!menuError && menuData && menuData.length > 0) {
-      menuUrlMap[pId] = (menuData[0] as any).url;
-    }
-  }
-
-  return { posts: finalPosts, menuUrlMap };
+  const result = await api.popular.getPosts(itemCount, sortBy as 'views' | 'likes' | 'comments');
+  // API 응답이 { posts: [...] } 구조이므로 posts 추출
+  const posts = result.posts || result || [];
+  return { posts, menuUrlMap: {} };
 }
 
 export default function PopularPostsWidget({

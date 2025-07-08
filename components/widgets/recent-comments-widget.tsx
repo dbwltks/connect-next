@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { createClient } from "@/utils/supabase/client";
+import { api } from "@/lib/api";
 import { IWidget, IPage } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import useSWR from "swr";
@@ -23,52 +23,12 @@ interface RecentCommentsWidgetProps {
 async function fetchRecentComments(
   itemCount: number
 ): Promise<{ comments: Comment[]; menuUrlMap: Record<string, string> }> {
-  const supabase = createClient();
-  
-  const { data, error } = await supabase
-    .from("board_comments")
-    .select(
-      "id, content, created_at, post_id, board_posts!inner( title, status, page_id )"
-    )
-    .eq("board_posts.status", "published")
-    .order("created_at", { ascending: false })
-    .limit(itemCount);
-
-  if (error) {
-    throw error;
-  }
-
-  const comments = (data || []) as Comment[];
-
-
-  // 메뉴 URL 매핑 생성
-  const uniquePageIds = Array.from(
-    new Set(
-      comments
-        .map((comment) => {
-          const post = Array.isArray(comment.board_posts)
-            ? comment.board_posts[0]
-            : comment.board_posts;
-          return post?.page_id;
-        })
-        .filter(Boolean)
-    )
-  );
-
-  const menuUrlMap: Record<string, string> = {};
-
-  for (const pId of uniquePageIds) {
-    const { data: menuData, error: menuError } = await supabase
-      .from("cms_menus")
-      .select("*")
-      .eq("page_id", pId);
-
-    if (!menuError && menuData && menuData.length > 0) {
-      menuUrlMap[pId] = (menuData[0] as any).url;
-    }
-  }
-
-  return { comments, menuUrlMap };
+  const result = await api.comments.getRecent(itemCount);
+  // API 응답을 위젯이 기대하는 구조로 변환
+  return { 
+    comments: Array.isArray(result) ? result : result.comments || [],
+    menuUrlMap: {}
+  };
 }
 
 export default function RecentCommentsWidget({

@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { IBoardPost, IPage, IWidget, IBoardWidgetOptions } from "@/types/index";
 import Link from "next/link";
 import React, { useState, useEffect, useCallback } from "react";
-import { createClient } from "@/utils/supabase/client";
+import { api } from "@/lib/api";
 import {
   Calendar,
   MessageSquare,
@@ -65,77 +65,23 @@ async function fetchBoardWidgetPosts(
 ): Promise<{ posts: IBoardPost[]; menuUrlMap: Record<string, string> }> {
   console.log(`🔍 Fetching board widget posts for pageId: ${pageId}, limit: ${limit}`);
   
-  const supabase = createClient();
-  
   try {
-    // 세션 상태 확인
-    const { data: session } = await supabase.auth.getSession();
-    console.log(`🔑 Current session:`, session.session ? 'authenticated' : 'not authenticated');
-    
-    const { data, error } = await supabase
-      .from("board_posts")
-      .select("*")
-      .eq("page_id", pageId)
-      .eq("status", "published")
-      .order("created_at", { ascending: false })
-      .limit(limit);
-
-    if (error) {
-      // 세션 만료 관련 오류인 경우 세션 갱신 후 재시도
-      if (error.message?.includes('JWT') || error.message?.includes('expired') || error.message?.includes('refresh')) {
-        if (retryCount < 2) {
-          console.log(`🔄 Session issue detected, refreshing and retrying... (attempt ${retryCount + 1})`);
-          await supabase.auth.refreshSession();
-          // 200ms 딜레이 후 재시도
-          await new Promise(resolve => setTimeout(resolve, 200));
-          return fetchBoardWidgetPosts(pageId, limit, retryCount + 1);
-        }
-      }
-      console.error(`❌ Error fetching board posts:`, error);
-      throw error;
-    }
-
-    console.log(`✅ Fetched ${data?.length || 0} posts for pageId: ${pageId}`);
-
-    const posts = (data as IBoardPost[]) || [];
-
-  // 클라이언트에서 published_at 우선 정렬
-  const sortedPosts = [...posts].sort((a, b) => {
-    // 날짜 정렬: published_at 우선, 없으면 created_at
-    const aDate = new Date(a.published_at || a.created_at);
-    const bDate = new Date(b.published_at || b.created_at);
-    const timeDiff = bDate.getTime() - aDate.getTime();
-
-    // 날짜가 같으면 ID로 정렬
-    if (timeDiff === 0) {
-      return a.id.localeCompare(b.id);
-    }
-
-    return timeDiff;
-  });
-
-  // 메뉴 URL 매핑 생성
-  const uniquePageIds = Array.from(
-    new Set(posts.map((post) => post.page_id).filter(Boolean))
-  );
-  const menuUrlMap: Record<string, string> = {};
-
-  for (const pId of uniquePageIds) {
-    if (pId) {
-      const { data: menuData, error: menuError } = await supabase
-        .from("cms_menus")
-        .select("*")
-        .eq("page_id", pId);
-
-      if (!menuError && menuData && menuData.length > 0) {
-        menuUrlMap[pId] = (menuData[0] as any).url;
-      }
-    }
-  }
-
-  return { posts: sortedPosts, menuUrlMap };
+    const result = await api.posts.getForWidget(pageId, limit);
+    // API 응답을 위젯이 기대하는 구조로 변환
+    return { 
+      posts: Array.isArray(result) ? result : result.posts || [],
+      menuUrlMap: {}
+    };
   } catch (error) {
     console.error(`❌ Board widget fetch error:`, error);
+    
+    if (retryCount < 2) {
+      console.log(`🔄 Retrying... (attempt ${retryCount + 1})`);
+      // 200ms 딜레이 후 재시도
+      await new Promise(resolve => setTimeout(resolve, 200));
+      return fetchBoardWidgetPosts(pageId, limit, retryCount + 1);
+    }
+    
     throw error;
   }
 }

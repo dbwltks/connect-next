@@ -11,6 +11,10 @@ export async function GET(request: NextRequest) {
     const searchType = searchParams.get('searchType') || 'title';
     const searchTerm = searchParams.get('searchTerm') || '';
     
+    console.log('API Debug - Query params:', {
+      pageId, categoryId, page, itemCount, searchType, searchTerm
+    });
+    
     const supabase = await createClient();
     
     // 1. 전체 게시글 수 조회
@@ -58,11 +62,16 @@ export async function GET(request: NextRequest) {
     const { data: posts, error: postsError } = await query;
     if (postsError) throw postsError;
     
+    console.log('API Debug - Raw posts from DB:', posts?.length || 0, 'posts found');
+    console.log('API Debug - First post:', posts?.[0]);
+    
     const postsWithComments = (posts || []).map((post: any) => ({
       ...post,
       comment_count: post.comment_count?.[0]?.count || 0,
       view_count: post.views || 0,
     }));
+    
+    console.log('API Debug - Posts with comments:', postsWithComments.length);
     
     // 3. 작성자 정보 조회
     const userIds = postsWithComments

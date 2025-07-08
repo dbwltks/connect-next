@@ -49,7 +49,6 @@ import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { createClient } from "@/utils/supabase/client";
 import { useAuth } from "@/contexts/auth-context";
 import { ITag } from "@/types/index";
 
@@ -127,101 +126,45 @@ async function fetchBoardData({
   searchType,
   searchTerm,
 }: FetchBoardDataParams) {
-  const supabase = createClient();
-  
   try {
-    // 1. 전체 게시글 수(count) 쿼리 - 재시도 로직 적용
-    const totalCount = await retryQuery(async () => {
-      let countQuery = supabase
-        .from("board_posts")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "published");
-      if (pageId) countQuery = countQuery.eq("page_id", pageId);
-      if (categoryId) countQuery = countQuery.eq("category_id", categoryId);
-      if (searchTerm) {
-        if (searchType === "title")
-          countQuery = countQuery.ilike("title", `%${searchTerm}%`);
-        else if (searchType === "content")
-          countQuery = countQuery.ilike("content", `%${searchTerm}%`);
-        else if (searchType === "author")
-          countQuery = countQuery.ilike("user_id", `%${searchTerm}%`);
-      }
-      const { count, error } = await countQuery;
-      if (error) throw error;
-      return count || 0;
-    });
-
-    const pageSize = itemCount;
-    const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
-
-    // 2. 실제 게시글 목록 쿼리 (페이지네이션 적용) - 재시도 로직 적용
-    const postsData = await retryQuery(async () => {
-      let query = supabase
-        .from("board_posts")
-        .select(
-          `id, title, content, user_id, created_at, views, category_id, page_id, is_notice, is_pinned, comment_count:board_comments(count), thumbnail_image, status, published_at, tags`
-        )
-        .eq("status", "published")
-        .order("is_pinned", { ascending: false })
-        .order("is_notice", { ascending: false })
-        .order("created_at", { ascending: false })
-        .range((page - 1) * itemCount, page * itemCount - 1);
-      if (pageId) query = query.eq("page_id", pageId);
-      if (categoryId) query = query.eq("category_id", categoryId);
-      if (searchTerm) {
-        if (searchType === "title") query = query.ilike("title", `%${searchTerm}%`);
-        else if (searchType === "content")
-          query = query.ilike("content", `%${searchTerm}%`);
-        else if (searchType === "author")
-          query = query.ilike("user_id", `%${searchTerm}%`);
-      }
-      const { data, error } = await query;
-      if (error) throw error;
-      return data || [];
-    });
-
-    const postsWithComments = postsData.map((post: any) => ({
-      ...post,
-      comment_count: post.comment_count?.[0]?.count || 0,
-      view_count: post.views || 0,
-    }));
-
-    // 3. 작성자 정보 가져오기 - 재시도 로직 적용
-    const userIds = postsWithComments
-      .map((post) => post.user_id)
-      .filter((id): id is string => Boolean(id))
-      .filter((id, index, self) => self.indexOf(id) === index);
+    const url = new URL('/api/board', window.location.origin);
     
-    let authorInfoMap: Record<string, UserInfo> = {};
-    if (userIds.length > 0) {
-      try {
-        const usersData = await retryQuery(async () => {
-          const { data, error } = await supabase
-            .from("users")
-            .select("id, username, avatar_url")
-            .in("id", userIds);
-          if (error) throw error;
-          return data || [];
-        }, 2); // 사용자 정보는 2회만 재시도
+    // 파라미터 설정
+    const params: Record<string, string> = {
+      itemCount: itemCount.toString(),
+      page: page.toString(),
+    };
+    
+    if (pageId) params.pageId = pageId;
+    if (categoryId) params.categoryId = categoryId;
+    if (searchType) params.searchType = searchType;
+    if (searchTerm) params.searchTerm = searchTerm;
+    
+    Object.entries(params).forEach(([key, value]) => {
+      url.searchParams.set(key, value);
+    });
 
-        usersData.forEach((user: any) => {
-          authorInfoMap[user.id] = {
-            username: user.username || "익명",
-            avatar_url: user.avatar_url,
-          };
-        });
-      } catch (error) {
-        console.error('Failed to fetch user info, using fallback:', error);
-        // 사용자 정보 실패 시에도 계속 진행
-      }
+    const response = await fetch(url.toString());
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    return {
-      posts: postsWithComments,
-      totalCount,
-      totalPages,
-      authorInfoMap,
-    };
+    const result = await response.json();
+    
+    console.log('Client Debug - API Response:', {
+      posts: result.posts?.length || 0,
+      totalCount: result.totalCount,
+      totalPages: result.totalPages,
+      authorInfoMap: Object.keys(result.authorInfoMap || {}).length
+    });
+    console.log('Client Debug - First post:', result.posts?.[0]);
+    
+    if (result.error) {
+      throw new Error(result.error);
+    }
+
+    return result;
   } catch (error) {
     console.error('Board data fetch failed:', error);
     return {
@@ -719,20 +662,13 @@ export default function BoardSection({
   // 인라인 상세보기용 게시글 클릭 핸들러
   async function handlePostClick(postId: string) {
     try {
-      // 조회수 증가
-      const supabase = createClient();
-      const { data, error: fetchError } = await supabase
-        .from("board_posts")
-        .select("views")
-        .eq("id", postId)
-        .single();
-      if (!fetchError) {
-        const currentViews = data?.views || 0;
-        await supabase
-          .from("board_posts")
-          .update({ views: currentViews + 1 })
-          .eq("id", postId);
-      }
+      // 조회수 증가 - API 호출로 변경 (일단 주석 처리)
+      // TODO: 조회수 증가 API 구현 필요
+      /*
+      const response = await fetch(`/api/posts/${postId}/increment-view`, {
+        method: 'POST'
+      });
+      */
     } catch (error) {
       // 무시
     } finally {
@@ -898,6 +834,16 @@ export default function BoardSection({
   const totalCount: number = data?.totalCount || 0;
   const totalPages: number = data?.totalPages || 1;
   const authorInfoMap: Record<string, UserInfo> = data?.authorInfoMap || {};
+  
+  // 디버그 정보 출력
+  console.log('Board Section Debug:', {
+    hasData: !!data,
+    postsLength: posts.length,
+    isLoading,
+    error: error?.message,
+    pageId,
+    totalCount
+  });
 
   // 태그 파싱 및 렌더링 함수
   const parseTags = (tagsJson?: string): ITag[] => {
