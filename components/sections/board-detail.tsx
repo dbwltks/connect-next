@@ -5,6 +5,8 @@ import { useParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import { mutate } from "swr";
+import useSWR from "swr";
+import { api } from "@/lib/api";
 import {
   Card,
   CardHeader,
@@ -525,8 +527,6 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
         .order("created_at", { ascending: true })
         .limit(1);
 
-      console.log("Current post created_at:", currentPost.created_at);
-      console.log("Next post data:", nextData);
 
       setNextPost(nextData && nextData.length > 0 ? nextData[0] : null);
     } catch (err) {
@@ -534,254 +534,88 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
     }
   }
 
+  // SWR을 사용한 게시글 데이터 페칭
+  const currentPostId = postId || (params?.id as string);
+  const { data: postData, error: postError, isLoading: postLoading, mutate: mutatePost } = useSWR(
+    currentPostId ? ['postDetail', currentPostId] : null,
+    () => api.posts.getDetail(currentPostId!),
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      dedupingInterval: 5000,
+      errorRetryCount: 2,
+    }
+  );
+
+  // SWR 데이터에서 개별 상태로 분리
   useEffect(() => {
-    async function fetchPost() {
-      setLoading(true);
-      setError(null);
+    if (postData?.post) {
+      setPost(postData.post);
+      setAuthorInfo(postData.post.author ? {
+        username: postData.post.author.username,
+        avatar_url: postData.post.author.avatar_url
+      } : null);
+      setLikeCount(postData.post.like_count || 0);
+      setCommentCount(postData.post.comment_count || 0);
+      setMenuInfo(postData.menuInfo);
+      setPrevPost(postData.prevPost);
+      setNextPost(postData.nextPost);
+      setAttachments(postData.attachments || []);
+      setLoading(false);
+    }
+  }, [postData]);
+
+  // 에러 처리
+  useEffect(() => {
+    if (postError) {
+      setError(postError.message || "게시글을 불러올 수 없습니다.");
+      setLoading(false);
+    }
+  }, [postError]);
+
+  // 로딩 상태 동기화
+  useEffect(() => {
+    setLoading(postLoading);
+  }, [postLoading]);
+
+  // 사용자 권한 확인 및 좋아요 상태 확인
+  useEffect(() => {
+    if (!post || !currentPostId) return;
+    
+    async function checkUserStatus() {
       try {
-        const supabase = createClient();
-        // postId prop이 있으면 그걸 우선 사용, 없으면 params에서 추출
-        let id = postId || (params?.id as string);
-        if (!id) {
-          setError("잘못된 접근입니다.");
-          setLoading(false);
-          return;
-        }
-        // 게시글 데이터 패칭
-        const { data, error } = await supabase
-          .from("board_posts")
-          .select("*")
-          .eq("id", id)
-          .single();
-        if (error || !data) {
-          setError("게시글을 찾을 수 없습니다.");
-          setLoading(false);
-          return;
-        }
-        setPost(data);
-        console.log("게시글 데이터:", data);
-
-        // 작성자 정보 별도 조회
-        if (data.user_id) {
-          const { data: user, error: userErr } = await supabase
-            .from("users")
-            .select("username, nickname, avatar_url")
-            .eq("id", data.user_id)
-            .single();
-          if (!userErr && user) {
-            setAuthorInfo({
-              username: user.nickname || user.username || '익명',
-              avatar_url: user.avatar_url
-            });
-          } else {
-            setAuthorInfo(null);
-          }
-        } else {
-          setAuthorInfo(null);
-        }
-
-        // 현재 로그인한 사용자 정보 가져오기
         const currentUser = await getHeaderUser();
-        console.log("현재 사용자:", currentUser);
-        console.log("게시글 user_id:", data.user_id);
-
         if (currentUser) {
-          // user_id가 일치하는지 확인
-          const isUserAuthor = currentUser.id === data.user_id;
-          console.log("작성자 여부:", isUserAuthor);
-          setIsAuthor(isUserAuthor);
-        }
-
-        // 이전글, 다음글 가져오기
-        fetchPrevNextPosts(id, data.page_id);
-
-        // 좋아요 수와 댓글 수 가져오기
-        try {
-          // 좋아요 수 가져오기
-          const { count: likeCount } = await supabase
+          setIsAuthor(currentUser.id === post.user_id);
+          
+          // 좋아요 상태 확인
+          const supabase = createClient();
+          const { data: likeData } = await supabase
             .from("board_like")
-            .select("*", { count: "exact", head: true })
-            .eq("post_id", id);
-
-          setLikeCount(likeCount || 0);
-
-          // 댓글 수 가져오기
-          const { count: commentCount } = await supabase
-            .from("board_comments")
-            .select("*", { count: "exact", head: true })
-            .eq("post_id", id);
-
-          setCommentCount(commentCount || 0);
-
-          // 현재 사용자의 좋아요 여부 확인
-          const userData = await getHeaderUser();
-          if (userData?.username) {
-            const { data: likeData } = await supabase
-              .from("board_like")
-              .select("id")
-              .eq("post_id", id)
-              .eq("user_id", userData.username)
-              .maybeSingle();
-
-            setLiked(!!likeData);
-          }
-
-          // 해당 게시글의 cms_pages 정보를 통해 메뉴 정보 가져오기
-          if (data && data.page_id) {
-            try {
-              console.log("메뉴 찾기 시작, page_id:", data.page_id);
-
-              // 1. 게시글의 page_id로 cms_pages 정보 가져오기
-              const { data: pageData, error: pageError } = await supabase
-                .from("cms_pages")
-                .select("title, slug, section_id, category_id")
-                .eq("id", data.page_id)
-                .single();
-
-              console.log("페이지 데이터:", pageData, "오류:", pageError);
-
-              if (pageError) {
-                console.error("페이지 데이터 가져오기 오류:", pageError);
-                throw pageError;
-              }
-
-              if (pageData) {
-                // 2. 여러 방법으로 메뉴 찾기 시도
-                let foundMenu = null;
-
-                // 방법 1: page_id로 직접 찾기
-                const { data: menuData1, error: menuError1 } = await supabase
-                  .from("cms_menus")
-                  .select("title, url, parent_id")
-                  .eq("page_id", data.page_id)
-                  .eq("is_active", true)
-                  .order("order_num")
-                  .limit(1);
-
-                console.log(
-                  "방법 1 - page_id로 찾기:",
-                  menuData1,
-                  "오류:",
-                  menuError1
-                );
-
-                if (menuData1 && menuData1.length > 0) {
-                  foundMenu = menuData1[0];
-                } else {
-                  // 방법 2: URL 패턴으로 찾기 (현재 pathname 기반)
-                  const segments = pathname.split("/").filter(Boolean);
-                  console.log("URL 세그먼트:", segments);
-
-                  if (segments.length > 0) {
-                    // 정확한 URL 매칭 시도
-                    const currentPath = "/" + segments.join("/");
-                    const { data: menuData2, error: menuError2 } =
-                      await supabase
-                        .from("cms_menus")
-                        .select("title, url, parent_id")
-                        .eq("url", currentPath)
-                        .eq("is_active", true)
-                        .order("order_num")
-                        .limit(1);
-
-                    console.log(
-                      "방법 2 - 정확한 URL 매칭:",
-                      menuData2,
-                      "오류:",
-                      menuError2
-                    );
-
-                    if (menuData2 && menuData2.length > 0) {
-                      foundMenu = menuData2[0];
-                    } else {
-                      // 방법 3: 부분 URL 매칭 (like 패턴)
-                      const boardType = segments[0];
-                      const { data: menuData3, error: menuError3 } =
-                        await supabase
-                          .from("cms_menus")
-                          .select("title, url, parent_id")
-                          .ilike("url", `/${boardType}%`)
-                          .eq("is_active", true)
-                          .order("order_num")
-                          .limit(1);
-
-                      console.log(
-                        "방법 3 - 부분 URL 매칭:",
-                        menuData3,
-                        "오류:",
-                        menuError3
-                      );
-
-                      if (menuData3 && menuData3.length > 0) {
-                        foundMenu = menuData3[0];
-                      }
-                    }
-                  }
-                }
-
-                // 메뉴를 찾았으면 설정, 못 찾았으면 페이지 정보로 대체
-                if (foundMenu) {
-                  console.log("메뉴 찾기 성공:", foundMenu);
-                  setMenuInfo(foundMenu);
-                } else {
-                  console.log(
-                    "메뉴 찾기 실패, 페이지 정보 사용:",
-                    pageData.title
-                  );
-                  setMenuInfo({
-                    title: pageData.title,
-                    url: `/page/${data.page_id}`,
-                  });
-                }
-              }
-            } catch (err) {
-              console.error("메뉴 정보 가져오기 전체 오류:", err);
-
-              // 최종 fallback: URL 기반으로 추정
-              const segments = pathname.split("/").filter(Boolean);
-              if (segments.length > 0) {
-                const boardType = segments[0];
-                try {
-                  const { data: fallbackMenuData } = await supabase
-                    .from("cms_menus")
-                    .select("title, url")
-                    .eq("is_active", true)
-                    .ilike("url", `/${boardType}%`)
-                    .order("order_num")
-                    .limit(1);
-
-                  if (fallbackMenuData && fallbackMenuData.length > 0) {
-                    console.log("Fallback 메뉴 사용:", fallbackMenuData[0]);
-                    setMenuInfo(fallbackMenuData[0]);
-                  } else {
-                    console.log("모든 메뉴 찾기 실패");
-                    setMenuInfo(null);
-                  }
-                } catch (fallbackErr) {
-                  console.error("Fallback 메뉴 찾기 오류:", fallbackErr);
-                  setMenuInfo(null);
-                }
-              } else {
-                setMenuInfo(null);
-              }
-            }
-          } else {
-            console.log("page_id가 없음");
-            setMenuInfo(null);
-          }
-        } catch (err) {
-          console.error("좋아요/댓글 정보 가져오기 오류:", err);
+            .select("id")
+            .eq("post_id", currentPostId)
+            .eq("user_id", currentUser.id);
+          
+          setLiked(likeData && likeData.length > 0);
         }
       } catch (err) {
-        console.error("게시글 로드 중 오류가 발생했습니다.");
-        setError("게시글을 불러오는 중 오류가 발생했습니다.");
-      } finally {
-        setLoading(false);
+        console.error("사용자 상태 확인 오류:", err);
       }
     }
-    fetchPost();
-  }, [postId, params, editing]);
+    
+    checkUserStatus();
+  }, [post, currentPostId]);
 
+  // 기존 복잡한 로직들 제거됨 - SWR API로 처리
+  useEffect(() => {
+    if (!currentPostId) {
+      setError("잘못된 접근입니다.");
+      setLoading(false);
+      return;
+    }
+  }, [currentPostId]);
+
+  // 기타 UI 관련 useEffect들
   useEffect(() => {
     if (!showAttachments) return;
     function handleClickOutside(event: MouseEvent) {
@@ -796,22 +630,14 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
     return () => window.removeEventListener("mousedown", handleClickOutside);
   }, [showAttachments]);
 
-  // 게시글/작성자 정보 로드 useEffect 내부에 추가
+  // 작성자 아바타 설정 (SWR 데이터에서 이미 처리되지만 기존 호환성 유지)
   useEffect(() => {
-    if (post?.user_id) {
-      const supabase = createClient();
-      supabase
-        .from("users")
-        .select("avatar_url")
-        .eq("id", post.user_id)
-        .single()
-        .then(({ data }) => {
-          setAuthorAvatar(data?.avatar_url || null);
-        });
+    if (authorInfo?.avatar_url) {
+      setAuthorAvatar(authorInfo.avatar_url);
     } else {
       setAuthorAvatar(null);
     }
-  }, [post?.user_id]);
+  }, [authorInfo]);
 
   if (loading) {
     return (
@@ -940,7 +766,6 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
         if (error) {
           console.error("파일 삭제 중 오류:", error);
         } else {
-          console.log(`${uniqueFiles.length}개 파일이 삭제되었습니다.`);
         }
       }
     } catch (error) {
@@ -1017,7 +842,6 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
           (key: any) => key && typeof key === "string" && key.includes("widget")
         );
 
-        console.log("캐시 무효화 완료");
       } catch (cacheError) {
         console.warn("캐시 무효화 중 오류:", cacheError);
       }
@@ -1089,7 +913,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
     };
   }
 
-  // 좋아요 토글 함수
+  // 좋아요 토글 함수 (SWR mutate 사용)
   const toggleLike = async () => {
     if (!post) return;
 
@@ -1126,7 +950,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
           .from("board_like")
           .delete()
           .eq("post_id", post.id)
-          .eq("user_id", user.username);
+          .eq("user_id", user.id);
 
         if (error) throw error;
 
@@ -1136,7 +960,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
         // 좋아요 추가
         const { error } = await supabase.from("board_like").insert({
           post_id: post.id,
-          user_id: user.username,
+          user_id: user.id,
         });
 
         if (error) {
@@ -1148,6 +972,9 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
         setLikeCount((prev) => prev + 1);
         setLiked(true);
       }
+      
+      // SWR 데이터 갱신
+      mutatePost();
     } catch (err) {
       console.error("좋아요 처리 중 오류:", err);
       showToast({
@@ -1183,7 +1010,6 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
             profile?.username || session.user.email?.split("@")[0] || "익명",
           email: session.user.email,
         };
-        console.log("Supabase 세션 사용자:", userData);
         return userData;
       }
 
@@ -1195,7 +1021,6 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
           try {
             const user = JSON.parse(stored);
             if (user && user.id && user.username) {
-              console.log("스토리지 사용자:", user);
               // 스토리지의 사용자 정보로 Supabase 세션 생성 시도
               try {
                 const { data: profile } = await supabase
@@ -1208,7 +1033,6 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                   return user as User;
                 }
               } catch (error) {
-                console.log("스토리지 사용자 검증 실패");
               }
             }
           } catch (error) {
@@ -1255,13 +1079,9 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
   // 첨부파일 추출 함수
   function extractAttachments() {
     if (!post?.content) {
-      console.log("게시글 내용이 없습니다.");
       return;
     }
 
-    console.log("첨부파일 추출 시작");
-    console.log("게시글 ID:", post.id);
-    console.log("게시글 내용 일부:", post.content.substring(0, 200) + "...");
 
     const extractedAttachments: IAttachment[] = [];
 
@@ -1273,7 +1093,6 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
 
     while ((match = regex.exec(post.content)) !== null) {
       const url = match[1];
-      console.log("추출된 URL:", url);
 
       if (url.includes("supabase") && !urls.has(url)) {
         urls.add(url);
@@ -1285,7 +1104,6 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
 
         // 파일 확장자 추출
         const fileExt = decodedFileName.split(".").pop()?.toLowerCase() || "";
-        console.log("파일 이름:", decodedFileName, "확장자:", fileExt);
 
         // 이미지 파일인지 확인
         const isImage = ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(
@@ -1299,9 +1117,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
             name: decodedFileName,
             type: fileExt,
           });
-          console.log("첨부파일 추가:", decodedFileName);
         } else {
-          console.log("이미지 파일이라 건너뜀:", decodedFileName);
         }
       }
     }
@@ -1312,7 +1128,6 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
     while ((match = anchorRegex.exec(post.content)) !== null) {
       const url = match[1];
       const linkText = match[2];
-      console.log("링크 추출:", url, linkText);
 
       if (url.includes("supabase") && !urls.has(url)) {
         urls.add(url);
@@ -1337,12 +1152,10 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
             name: linkText || decodedFileName,
             type: fileExt,
           });
-          console.log("링크에서 첨부파일 추가:", decodedFileName);
         }
       }
     }
 
-    console.log("추출된 첨부파일 수:", extractedAttachments.length);
     setAttachments(extractedAttachments);
   }
 
@@ -1447,12 +1260,10 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
   // 게시글에 연결된 첨부파일 가져오기
   async function fetchAttachments(postId: string, content?: string) {
     try {
-      console.log("첨부파일 가져오기 시도:", postId);
 
       // 게시글 내용에서 파일 URL 추출
       const contentToProcess = content || post?.content;
       if (contentToProcess) {
-        console.log("게시글 내용 처리 시작");
         const fileUrls: string[] = [];
 
         // 1. 모든 a 태그 추출
@@ -1462,12 +1273,10 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
         while ((match = anchorRegex.exec(contentToProcess)) !== null) {
           const url = match[1];
           const text = match[2];
-          console.log("추출된 링크:", url, text);
 
           // 파일 확장자가 있는 URL만 추출
           if (url.match(/\.(pdf|doc|docx|xls|xlsx|ppt|pptx|zip|rar|txt)$/i)) {
             fileUrls.push(url);
-            console.log("첨부파일 URL 추가:", url);
           }
         }
 
@@ -1478,7 +1287,6 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
           const url = match[1];
           if (!fileUrls.includes(url)) {
             fileUrls.push(url);
-            console.log("href에서 첨부파일 URL 추가:", url);
           }
         }
 
@@ -1489,11 +1297,9 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
           const url = match[1];
           if (!fileUrls.includes(url)) {
             fileUrls.push(url);
-            console.log("직접 URL에서 첨부파일 추가:", url);
           }
         }
 
-        console.log("추출된 파일 URL:", fileUrls);
 
         // 파일 URL에서 첨부파일 정보 추출
         const extractedAttachments: IAttachment[] = [];
@@ -1522,7 +1328,6 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
           }
         }
 
-        console.log("추출된 첨부파일:", extractedAttachments);
         setAttachments(extractedAttachments);
       }
     } catch (error) {

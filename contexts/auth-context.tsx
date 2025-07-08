@@ -22,6 +22,7 @@ export interface UserProfile {
 interface AuthContextType {
   user: UserProfile | null | undefined;
   handleLogout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -65,11 +66,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  // 사용자 정보 새로고침
+  const refreshUser = useCallback(async () => {
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user?.id) {
+        const profile = await fetchUserProfile(user.id);
+        setUser(profile);
+      } else {
+        setUser(null);
+      }
+    } catch (error) {
+      console.error("사용자 정보 새로고침 오류:", error);
+    }
+  }, [fetchUserProfile]);
+
   // 로그아웃 처리
   const handleLogout = async () => {
     try {
-      console.log("로그아웃 시작...");
-      
       // Supabase 세션 정리
       const supabase = createClient();
       const { error } = await supabase.auth.signOut();
@@ -87,8 +103,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem("supabase.auth.token");
         sessionStorage.clear();
       }
-      
-      console.log("로그아웃 성공");
       
       // 성공 메시지 표시
       toast({
@@ -130,14 +144,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const supabase = createClient();
 
     async function init() {
-      // 로그인 상태 확인
+      // 로그인 상태 확인 - getUser()를 사용하여 안전하게 인증
       const {
-        data: { session },
-      } = await supabase.auth.getSession();
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!mounted) return;
 
-      if (session?.user?.id) {
-        const profile = await fetchUserProfile(session.user.id);
+      if (user?.id) {
+        const profile = await fetchUserProfile(user.id);
         if (mounted) setUser(profile);
         
         // 세션 자동 갱신 (토큰 만료 30분 전에 갱신)
@@ -151,7 +165,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               
               // 30분 미만 남았으면 갱신
               if (timeUntilExpiry < 30 * 60 * 1000) {
-                console.log("[Auth] 세션 갱신 실행 (만료 30분 전)");
                 await supabase.auth.refreshSession();
               }
             }
@@ -183,34 +196,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      if (session?.user?.id) {
-        const profile = await fetchUserProfile(session.user.id);
-        if (mounted) setUser(profile);
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") {
+        // getUser()를 사용하여 안전하게 사용자 정보 가져오기
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.id) {
+          const profile = await fetchUserProfile(user.id);
+          if (mounted) setUser(profile);
         
-        // 로그인 시 세션 갱신 간격 설정
-        if (sessionRefreshInterval) {
-          clearInterval(sessionRefreshInterval);
-        }
-        sessionRefreshInterval = setInterval(async () => {
-          try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session?.expires_at) {
-              const expiresAt = new Date(session.expires_at * 1000);
-              const now = new Date();
-              const timeUntilExpiry = expiresAt.getTime() - now.getTime();
-              
-              // 30분 미만 남았으면 갱신
-              if (timeUntilExpiry < 30 * 60 * 1000) {
-                console.log("[Auth] 세션 갱신 실행 (만료 30분 전)");
-                await supabase.auth.refreshSession();
-              }
-            }
-          } catch (error) {
-            console.error("[Auth] 세션 갱신 실패:", error);
+          // 로그인 시 세션 갱신 간격 설정
+          if (sessionRefreshInterval) {
+            clearInterval(sessionRefreshInterval);
           }
-        }, 5 * 60 * 1000); // 5분마다 체크
-      } else {
-        if (mounted) setUser(null);
+          sessionRefreshInterval = setInterval(async () => {
+            try {
+              const { data: { session } } = await supabase.auth.getSession();
+              if (session?.expires_at) {
+                const expiresAt = new Date(session.expires_at * 1000);
+                const now = new Date();
+                const timeUntilExpiry = expiresAt.getTime() - now.getTime();
+                
+                // 30분 미만 남았으면 갱신
+                if (timeUntilExpiry < 30 * 60 * 1000) {
+                  await supabase.auth.refreshSession();
+                }
+              }
+            } catch (error) {
+              console.error("[Auth] 세션 갱신 실패:", error);
+            }
+          }, 5 * 60 * 1000); // 5분마다 체크
+        } else {
+          if (mounted) setUser(null);
+        }
       }
     });
 
@@ -224,7 +240,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [fetchUserProfile, router]);
 
   return (
-    <AuthContext.Provider value={{ user, handleLogout }}>
+    <AuthContext.Provider value={{ user, handleLogout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

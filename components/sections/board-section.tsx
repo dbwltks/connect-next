@@ -118,7 +118,6 @@ async function retryQuery<T>(
       }
 
       const delay = baseDelay * Math.pow(2, attempt);
-      console.log(`Retrying in ${delay}ms...`);
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
@@ -161,14 +160,6 @@ async function fetchBoardData({
     }
 
     const result = await response.json();
-
-    console.log("Client Debug - API Response:", {
-      posts: result.posts?.length || 0,
-      totalCount: result.totalCount,
-      totalPages: result.totalPages,
-      authorInfoMap: Object.keys(result.authorInfoMap || {}).length,
-    });
-    console.log("Client Debug - First post:", result.posts?.[0]);
 
     if (result.error) {
       throw new Error(result.error);
@@ -862,15 +853,6 @@ export default function BoardSection({
   const totalPages: number = data?.totalPages || 1;
   const authorInfoMap: Record<string, UserInfo> = data?.authorInfoMap || {};
 
-  // 디버그 정보 출력
-  console.log("Board Section Debug:", {
-    hasData: !!data,
-    postsLength: posts.length,
-    isLoading,
-    error: error?.message,
-    pageId,
-    totalCount,
-  });
 
   if (selectedPostId) {
     // 인라인 상세보기

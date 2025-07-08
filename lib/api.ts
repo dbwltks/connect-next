@@ -1,6 +1,6 @@
 // API 호출 유틸리티
-const apiCall = async (endpoint: string) => {
-  const response = await fetch(endpoint);
+const apiCall = async (endpoint: string, options?: RequestInit) => {
+  const response = await fetch(endpoint, options);
   
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
@@ -58,6 +58,12 @@ export const api = {
       if (pathname) params.pathname = pathname;
       return apiCall(createUrl('/api/menus', params));
     },
+    getHeaderMenus: () => apiCall('/api/header-menus'),
+  },
+
+  // 사용자 관련
+  user: {
+    getCurrentUser: () => apiCall('/api/user/me'),
   },
 
   // 보드 관련 (최적화된 버전)
@@ -86,19 +92,15 @@ export const api = {
     },
   },
 
-  // 메뉴 관련
-  menu: {
-    getItems: (parentId?: string) =>
-      apiCall(createUrl('/api/menu-items', parentId ? { parentId } : undefined)),
-  },
-
-  // 캘린더 관련
-  calendar: {
-    getEvents: () => apiCall('/api/calendar-events'),
-  },
-
-  // 게시글 관련 - 기존 함수에 추가
+  // 게시글 관련
   posts: {
+    getDetail: (postId: string) => apiCall(`/api/posts/${postId}/detail`),
+    incrementView: (postId: string) => 
+      apiCall(`/api/posts/${postId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ action: 'increment_view' }),
+        headers: { 'Content-Type': 'application/json' }
+      }),
     getForWidget: (boardId: string, limit = 5) =>
       apiCall(createUrl('/api/board-posts', { boardId, limit, type: 'widget' })),
     
@@ -138,6 +140,17 @@ export const api = {
       fetch(`/api/posts/${id}`, { method: 'DELETE' }).then(res => res.json()),
   },
 
+  // 메뉴 관련
+  menu: {
+    getItems: (parentId?: string) =>
+      apiCall(createUrl('/api/menu-items', parentId ? { parentId } : undefined)),
+  },
+
+  // 캘린더 관련
+  calendar: {
+    getEvents: () => apiCall('/api/calendar-events'),
+  },
+
   // 임시저장 관련
   drafts: {
     getAll: () => apiCall('/api/drafts'),
@@ -169,6 +182,39 @@ export const api = {
       }).then(res => res.json()),
     delete: (id: string) =>
       fetch(`/api/tags/${id}`, { method: 'DELETE' }).then(res => res.json()),
+  },
+
+  // 성경 관련
+  bible: {
+    getBooks: () => apiCall('/api/bible/books'),
+    getChapters: (book: number, version = 'kor_old') => 
+      apiCall(createUrl('/api/bible/chapters', { book: book.toString(), version })),
+    getVerseCount: (book: number, chapter: number, version = 'kor_old') => 
+      apiCall(createUrl('/api/bible/verse-count', { 
+        book: book.toString(), 
+        chapter: chapter.toString(), 
+        version 
+      })),
+    getVerses: (params: {
+      book: number;
+      chapter: number;
+      startVerse: number;
+      endVerse?: number;
+      version?: string;
+    }) => {
+      const queryParams: Record<string, string> = {
+        book: params.book.toString(),
+        chapter: params.chapter.toString(),
+        startVerse: params.startVerse.toString(),
+        version: params.version || 'kor_old'
+      };
+      
+      if (params.endVerse) {
+        queryParams.endVerse = params.endVerse.toString();
+      }
+      
+      return apiCall(createUrl('/api/bible/verses', queryParams));
+    },
   },
 };
 

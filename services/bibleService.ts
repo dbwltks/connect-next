@@ -1,4 +1,5 @@
 import { createClient } from "@/utils/supabase/client";
+import { api } from '@/lib/api';
 
 // 성경 전용 supabase 클라이언트 생성
 // 이제 createClient()를 사용하여 각 함수에서 직접 생성합니다
@@ -180,32 +181,23 @@ export async function getBibleVerses({
   endVerse?: number;
 }) {
   try {
-    const supabase = createClient();
-    const tableName = BIBLE_VERSIONS[version].table;
-
-    let query = supabase
-      .from(tableName)
-      .select("book, chapter, verse, btext")
-      .eq("book", book)
-      .eq("chapter", chapter);
-
-    if (endVerse && endVerse > startVerse) {
-      query = query.gte("verse", startVerse).lte("verse", endVerse);
-    } else {
-      query = query.eq("verse", startVerse);
-    }
-
-    query = query.order("verse", { ascending: true });
-
-    const { data, error } = await query;
-
-    if (error) {
-      throw error;
-    }
-
-    return data || [];
+    const result = await api.bible.getVerses({
+      book: book,
+      chapter: chapter,
+      startVerse: startVerse,
+      endVerse: endVerse,
+      version: version,
+    });
+    
+    // API에서 반환된 데이터를 기존 형식에 맞게 변환
+    const verses = (result.verses || []).map((verse: any) => ({
+      ...verse,
+      btext: verse.text || verse.btext
+    }));
+    
+    return verses;
   } catch (error) {
-    console.error("getBibleVerses 오류:", error);
+    console.error("getBibleVerses API 오류:", error);
     throw error;
   }
 }
@@ -213,32 +205,13 @@ export async function getBibleVerses({
 // 성경 장 수 조회 함수
 export async function getBibleChapters(
   book: number,
-  version: keyof typeof BIBLE_VERSIONS
+  version: keyof typeof BIBLE_VERSIONS = 'kor_old'
 ) {
   try {
-    const supabase = createClient();
-    const tableName = BIBLE_VERSIONS[version].table;
-
-    const { data, error } = await supabase
-      .from(tableName)
-      .select("chapter")
-      .eq("book", book)
-      .order("chapter", { ascending: false })
-      .limit(1);
-
-    if (error) {
-      throw error;
-    }
-
-    if (!data || data.length === 0) {
-      return [1];
-    }
-
-    const maxChapter = data[0].chapter;
-    const chapters = Array.from({ length: maxChapter }, (_, i) => i + 1);
-    return chapters;
+    const result = await api.bible.getChapters(book, version);
+    return result.chapters || [1];
   } catch (error) {
-    console.error("getBibleChapters 오류:", error);
+    console.error("getBibleChapters API 오류:", error);
     return [1];
   }
 }
@@ -247,31 +220,13 @@ export async function getBibleChapters(
 export async function getBibleVerseCount(
   book: number,
   chapter: number,
-  version: keyof typeof BIBLE_VERSIONS
+  version: keyof typeof BIBLE_VERSIONS = 'kor_old'
 ) {
   try {
-    const supabase = createClient();
-    const tableName = BIBLE_VERSIONS[version].table;
-
-    const { data, error } = await supabase
-      .from(tableName)
-      .select("verse")
-      .eq("book", book)
-      .eq("chapter", chapter)
-      .order("verse", { ascending: false })
-      .limit(1);
-
-    if (error) {
-      throw error;
-    }
-
-    if (!data || data.length === 0) {
-      return 31;
-    }
-
-    return data[0].verse;
+    const result = await api.bible.getVerseCount(book, chapter, version);
+    return result.verseCount || 31;
   } catch (error) {
-    console.error("getBibleVerseCount 오류:", error);
+    console.error("getBibleVerseCount API 오류:", error);
     return 31;
   }
 }
@@ -287,16 +242,18 @@ export function formatBibleVerses(
 
   const bookNameKor = BIBLE_BOOKS_KOR[book as keyof typeof BIBLE_BOOKS_KOR];
   const bookNameEng = BIBLE_BOOKS_ENG[book as keyof typeof BIBLE_BOOKS_ENG];
-  const bookName = `${bookNameKor}(${bookNameEng})`;
+  const bookName = getBibleBookName(book, version);
   const versionName = BIBLE_VERSIONS[version].name;
 
-  let html = `<ol class="list-decimal ml-6" style="font-size: 1em;" start="${verses[0].verse}">
-  <style>
-    ol li::marker {
-      font-size: 0.8em;
-      font-weight: bold;
-    }
-  </style>`;
+  const verseRange =
+    verses.length === 1
+      ? verses[0].verse
+      : `${verses[0].verse}-${verses[verses.length - 1].verse}`;
+
+  // 대역 있는 것과 동일한 레이아웃 사용
+  let html = `<span style="font-size: 0.8em; margin-bottom: 0rem;">${bookNameEng}</span><p style="margin-bottom: 0rem;"><span style="font-size: 1.4em;">${bookNameKor} ${chapter}:${verseRange}</span> <span style="font-size: 0.8em;">(${versionName})</span></p><hr>`;
+
+  html += `<ol class="list-decimal ml-6" style="font-size: 1em;" start="${verses[0].verse}">`;
 
   verses.forEach((verse, index) => {
     // NIV 영어 성경의 경우 HTML 태그 정리
@@ -309,17 +266,10 @@ export function formatBibleVerses(
       cleanText = cleanText.replace(/Or\s+/gi, "");
     }
 
-    html += `<li><strong>${cleanText}</strong><br></li>`;
+    html += `<li><strong>${cleanText}</strong></li>`;
   });
 
-  html += `</ol>`;
-
-  const verseRange =
-    verses.length === 1
-      ? verses[0].verse
-      : `${verses[0].verse}-${verses[verses.length - 1].verse}`;
-
-  html += `<p><em>- ${bookName} ${chapter}:${verseRange} (${versionName}) -</em></p>`;
+  html += `</ol><br><br>`;
 
   return html;
 }
@@ -382,7 +332,7 @@ export function formatBibleVersesWithSub(
     html += `<li>${liContent}</li>`;
   });
 
-  html += `</ol>`;
+  html += `</ol><br><br>`;
 
   return html;
 }

@@ -44,7 +44,6 @@ async function fetchWidgets(pageId?: string, retryCount = 0): Promise<IWidget[]>
     if (retryCount < maxRetries) {
       // 지수 백오프: 1초, 2초, 4초
       const delay = 1000 * Math.pow(2, retryCount);
-      console.log(`Retrying in ${delay}ms...`);
       
       await new Promise(resolve => setTimeout(resolve, delay));
       return fetchWidgets(pageId, retryCount + 1);

@@ -63,7 +63,6 @@ async function fetchBoardWidgetPosts(
   limit: number = 10,
   retryCount = 0
 ): Promise<{ posts: IBoardPost[]; menuUrlMap: Record<string, string> }> {
-  console.log(`🔍 Fetching board widget posts for pageId: ${pageId}, limit: ${limit}`);
   
   try {
     const result = await api.posts.getForWidget(pageId, limit);
@@ -76,7 +75,6 @@ async function fetchBoardWidgetPosts(
     console.error(`❌ Board widget fetch error:`, error);
     
     if (retryCount < 2) {
-      console.log(`🔄 Retrying... (attempt ${retryCount + 1})`);
       // 200ms 딜레이 후 재시도
       await new Promise(resolve => setTimeout(resolve, 200));
       return fetchBoardWidgetPosts(pageId, limit, retryCount + 1);

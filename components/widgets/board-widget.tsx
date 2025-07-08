@@ -9,12 +9,8 @@ interface BoardWidgetProps {
 }
 
 export function BoardWidget({ widget }: BoardWidgetProps) {
-  console.log("--- BoardWidget Debug ---");
-  console.log("Widget data:", widget);
 
   const pageId = widget.display_options?.page_id;
-  console.log("Extracted pageId:", pageId);
-  console.log("-------------------------");
 
   if (!pageId) {
     return (

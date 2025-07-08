@@ -48,7 +48,7 @@ import { api } from "@/lib/api";
 import { logDraftDelete } from "@/services/activityLogService";
 import {
   BIBLE_VERSIONS,
-  BIBLE_BOOKS,
+  BIBLE_BOOKS_KOR,
   getBibleVerses,
   getBibleChapters,
   getBibleVerseCount,
@@ -99,6 +99,11 @@ interface BoardWriteProps {
 function isContentEmpty(html: string) {
   if (!html) return true;
 
+  // 이미지가 있으면 내용이 있는 것으로 처리
+  if (/<img[^>]*>/i.test(html)) {
+    return false;
+  }
+
   // 더 엄격한 정리: 모든 HTML 태그와 공백 제거
   const cleaned = html
     .replace(/<p><br\s*\/?><\/p>/gi, "") // <p><br></p> 또는 <p><br/></p>
@@ -108,12 +113,6 @@ function isContentEmpty(html: string) {
     .replace(/&nbsp;/g, "") // &nbsp; 제거
     .replace(/\s+/g, "") // 모든 공백 제거
     .trim();
-
-  console.log("isContentEmpty 체크:", {
-    original: html,
-    cleaned: cleaned,
-    isEmpty: cleaned.length === 0,
-  });
 
   return cleaned.length === 0;
 }
@@ -359,6 +358,9 @@ export default function BoardWrite({
   const [isNotice, setIsNotice] = useState<boolean>(false);
   const [publishDate, setPublishDate] = useState<string>("");
   const [showAdminSettings, setShowAdminSettings] = useState<boolean>(false);
+  
+  // 현재 불러온 임시저장 ID 추적
+  const [loadedDraftId, setLoadedDraftId] = useState<string | null>(null);
 
   // 성경 관련 상태 추가
   const [showBibleInsert, setShowBibleInsert] = useState<boolean>(false);
@@ -366,14 +368,15 @@ export default function BoardWrite({
     useState<keyof typeof BIBLE_VERSIONS>("kor_old");
   const [selectedBibleSubVersion, setSelectedBibleSubVersion] = useState<
     keyof typeof BIBLE_VERSIONS | null
-  >(null); // 대역 번역본
-  const [showBothVersions, setShowBothVersions] = useState<boolean>(false); // 본문-대역 표시 여부
+  >("niv"); // 대역 번역본
+  const [showBothVersions, setShowBothVersions] = useState<boolean>(true); // 본문-대역 표시 여부
   const [selectedBibleBook, setSelectedBibleBook] = useState<number>(1);
   const [selectedBibleChapter, setSelectedBibleChapter] = useState<number>(1);
   const [selectedStartVerse, setSelectedStartVerse] = useState<number>(1);
   const [selectedEndVerse, setSelectedEndVerse] = useState<number>(1);
   const [availableChapters, setAvailableChapters] = useState<number[]>([]);
   const [availableVerses, setAvailableVerses] = useState<number>(1);
+  const [availableEndVerses, setAvailableEndVerses] = useState<number>(1);
   const [bibleLoading, setBibleLoading] = useState<boolean>(false);
 
   // 다른 장 포함 관련 상태
@@ -405,8 +408,12 @@ export default function BoardWrite({
   const [allTags, setAllTags] = useState<ITag[]>([]);
   const [showTagManagement, setShowTagManagement] = useState(false);
   const [editingTag, setEditingTag] = useState<ITag | null>(null);
-  const [newTag, setNewTag] = useState({ name: "", color: "#6B7280", description: "" });
-  
+  const [newTag, setNewTag] = useState({
+    name: "",
+    color: "#6B7280",
+    description: "",
+  });
+
   // 태그 검색 관련 상태 (성경구절 선택과 동일한 패턴)
   const [tagSearchValue, setTagSearchValue] = useState<string>("");
   const [tagSearchFocused, setTagSearchFocused] = useState<boolean>(false);
@@ -432,10 +439,8 @@ export default function BoardWrite({
 
   const loadTags = async () => {
     try {
-      console.log("태그 로드 시작...");
       const result = await api.tags.getAll();
       const tags = result.tags;
-      console.log("로드된 태그:", tags);
       setAllTags(tags);
     } catch (error) {
       console.error("태그 로드 실패:", error);
@@ -445,14 +450,14 @@ export default function BoardWrite({
   // 태그 추가
   const handleAddTag = async () => {
     if (!newTag.name.trim()) return;
-    
+
     try {
       const result = await api.tags.create({
         name: newTag.name,
-        color: newTag.color
+        color: newTag.color,
       });
       const createdTag = result.tag;
-      
+
       setAllTags([...allTags, createdTag]);
       setNewTag({ name: "", color: "#6B7280", description: "" });
       showToast({
@@ -476,9 +481,9 @@ export default function BoardWrite({
       // API를 통해 태그 업데이트
       const result = await api.tags.update(id, updates);
       const updatedTag = result.tag;
-      
+
       // 로컬 상태 업데이트
-      setAllTags(allTags.map(tag => tag.id === id ? updatedTag : tag));
+      setAllTags(allTags.map((tag) => (tag.id === id ? updatedTag : tag)));
       setEditingTag(null);
       showToast({
         title: "성공",
@@ -498,13 +503,13 @@ export default function BoardWrite({
   // 태그 삭제
   const handleDeleteTag = async (id: string) => {
     if (!confirm("정말로 이 태그를 삭제하시겠습니까?")) return;
-    
+
     try {
       // API를 통해 태그 삭제
       await api.tags.delete(id);
-      
+
       // 로컬 상태 업데이트
-      setAllTags(allTags.filter(tag => tag.id !== id));
+      setAllTags(allTags.filter((tag) => tag.id !== id));
       showToast({
         title: "성공",
         description: "태그가 삭제되었습니다.",
@@ -567,7 +572,10 @@ export default function BoardWrite({
           pageIdFromQuery = params.get("pageId");
         }
         // 우선순위: initialPageId > 쿼리 pageId > 첫 번째 게시판
-        if (initialPageId && (data || []).some((p: any) => p.id === initialPageId)) {
+        if (
+          initialPageId &&
+          (data || []).some((p: any) => p.id === initialPageId)
+        ) {
           setSelectedPageId(initialPageId);
         } else if (
           pageIdFromQuery &&
@@ -595,8 +603,14 @@ export default function BoardWrite({
       }
       const response = await api.drafts.getAll();
       const data = response.drafts || [];
+
+      // 현재 선택된 페이지의 임시저장(draft)만 필터링
+      const filteredData = (data || []).filter(
+        (d: any) => d.page_id === selectedPageId && d.status === "draft"
+      );
+
       setDrafts(
-        (data || []).map((d: any) => ({
+        filteredData.map((d: any) => ({
           key: d.id,
           data: {
             title: d.title || "",
@@ -625,7 +639,7 @@ export default function BoardWrite({
           },
         }))
       );
-      return data;
+      return filteredData;
     } catch (e) {
       console.error("임시등록 목록 불러오기 오류:", e);
       showToast({
@@ -708,6 +722,9 @@ export default function BoardWrite({
       const draft = drafts.find((d) => d.key === draftKey);
       if (!draft) throw new Error("임시등록을 찾을 수 없습니다.");
       const parsedData = draft.data;
+      
+      // 불러온 임시저장 ID 저장
+      setLoadedDraftId(draftKey || null);
       if (parsedData.title) setTitle(parsedData.title);
       if (parsedData.content) {
         setContent(parsedData.content);
@@ -776,7 +793,7 @@ export default function BoardWrite({
         setDescription(data.description || ""); // 상세 설명 로드
         setIsHidden(data.status === "hidden"); // 숨김 상태 반영
         setIsNotice(data.is_notice === true); // 공지사항 상태 반영
-        
+
         // 페이지 ID 설정 (수정 모드에서 기존 게시글의 페이지 선택)
         if (data.page_id) {
           setSelectedPageId(data.page_id);
@@ -834,9 +851,7 @@ export default function BoardWrite({
         if (data.tags) {
           try {
             parsedTags =
-              typeof data.tags === "string"
-                ? JSON.parse(data.tags)
-                : data.tags;
+              typeof data.tags === "string" ? JSON.parse(data.tags) : data.tags;
           } catch (error) {
             parsedTags = [];
             console.error("태그 정보 파싱 오류:", error);
@@ -909,20 +924,9 @@ export default function BoardWrite({
         uploadedAt: new Date().toISOString(),
       };
 
-      console.log("새 파일 추가:", {
-        name: newFile.name,
-        type: newFile.type,
-        size: newFile.size,
-        url: url.substring(0, 50) + "...", // URL 일부만 표시
-      });
-
       // 상태 업데이트
       setUploadedFiles((prevFiles) => {
         const updatedFiles = [...prevFiles, newFile];
-        console.log(
-          "업데이트된 파일 목록:",
-          updatedFiles.map((f) => f.name)
-        );
         return updatedFiles;
       });
 
@@ -1027,7 +1031,6 @@ export default function BoardWrite({
     );
   };
 
-  console.log("TipTapEditor에 넘기는 uploadedFiles:", uploadedFiles);
 
   // props → 내부 상태 동기화
   useEffect(() => {
@@ -1043,6 +1046,13 @@ export default function BoardWrite({
       setIsHidden(propInitialData.status === "hidden");
     }
   }, [propIsEditMode, propPostId, propInitialData]);
+
+  // 페이지 선택 변경 시 해당 페이지의 임시저장 목록 새로 불러오기
+  useEffect(() => {
+    if (selectedPageId && user?.id) {
+      loadDrafts();
+    }
+  }, [selectedPageId, user?.id]);
 
   // status를 인자로 받아 저장하는 함수
   // 임시 폴더의 파일들을 정식 폴더로 이동하고 URL 매핑 반환
@@ -1137,10 +1147,6 @@ export default function BoardWrite({
     setLoading(true);
 
     // 사용자 정보 확인 (useAuth에서 이미 가져옴)
-    console.log(
-      "[BoardWrite] 사용자 정보:",
-      JSON.stringify(user, null, 2)
-    );
 
     if (!user || !user.id) {
       console.error("[BoardWrite] 사용자 정보 또는 ID가 없음");
@@ -1154,7 +1160,6 @@ export default function BoardWrite({
       return;
     }
     const userId = user.id;
-    console.log("[BoardWrite] 사용할 userId:", userId);
     let newId = postId;
     try {
       // 게시글이 정식 발행되는 경우 임시 파일들을 정식 폴더로 이동
@@ -1222,14 +1227,6 @@ export default function BoardWrite({
         if (editorRef.current?.editor && finalContent !== html) {
           editorRef.current.editor.commands.setContent(finalContent);
         }
-
-        console.log("파일 이동 및 URL 교체 완료:", {
-          originalFilesCount: uploadedFiles.length,
-          movedFilesCount: finalUploadedFiles.length,
-          urlMappingCount: Object.keys(urlMapping).length,
-          contentChanged: finalContent !== html,
-          thumbnailChanged: finalThumbnailImage !== thumbnailImage,
-        });
       }
 
       // 게시글 저장(등록) 시 number 자동 할당
@@ -1247,21 +1244,6 @@ export default function BoardWrite({
           nextNumber = (maxData?.number || 0) + 1;
         } catch {}
       }
-      console.log("[BoardWrite] API 호출 전 데이터:", {
-        postId,
-        isEditMode,
-        title: title.substring(0, 20) + (title.length > 20 ? "..." : ""),
-        contentLength: html.length,
-        allowComments,
-        thumbnailImage: thumbnailImage ? "있음" : "없음",
-        uploadedFilesCount: uploadedFiles.length,
-        userId, // 중요: userId가 전달되는지 확인
-        pageId: selectedPageId,
-        categoryId,
-        status:
-          statusArg === "draft" ? "draft" : isHidden ? "hidden" : "published",
-        number: nextNumber,
-      });
 
       // 파일 데이터 JSON화
       const filesJson = JSON.stringify(uploadedFiles);
@@ -1274,7 +1256,8 @@ export default function BoardWrite({
         category_id: categoryId,
         allow_comments: allowComments,
         is_notice: isNotice, // 공지사항 설정 추가
-        status: statusArg === "draft" ? "draft" : isHidden ? "hidden" : "published",
+        status:
+          statusArg === "draft" ? "draft" : isHidden ? "hidden" : "published",
         published_at: publishDate
           ? (() => {
               try {
@@ -1291,20 +1274,19 @@ export default function BoardWrite({
             : null, // 수정 모드에서 게시일 미설정 시 기존 값 유지
         thumbnail_image: finalThumbnailImage,
         files: filesJson,
-        tags: JSON.stringify(selectedTags)
+        tags: JSON.stringify(selectedTags),
       };
 
-      // 수정 모드인 경우 ID 추가
-      if (isEditMode && postId) {
-        postData.id = postId;
+      // 수정 모드이거나 임시저장에서 불러온 경우 ID 추가
+      if ((isEditMode && postId) || loadedDraftId) {
+        postData.id = postId || loadedDraftId;
       }
 
-      const result = isEditMode 
+      const result = (isEditMode || loadedDraftId)
         ? await api.posts.update(postData)
         : await api.posts.create(postData);
 
-      console.log("[BoardWrite] API 결과:", result);
-      
+
       if (result.error) {
         throw new Error(result.error);
       }
@@ -1312,6 +1294,11 @@ export default function BoardWrite({
       const post = result.post;
       newId = post.id;
       setPostId(newId);
+      
+      // 임시저장에서 불러온 경우 ID 초기화
+      if (loadedDraftId) {
+        setLoadedDraftId(null);
+      }
     } catch (error: any) {
       console.error("게시글 저장 중 오류 발생:", error);
       setError("게시글 저장 중 오류가 발생했습니다.");
@@ -1342,6 +1329,11 @@ export default function BoardWrite({
           router.back();
         }, 1000);
       } else if (newId) {
+        // 임시저장에서 불러온 후 정식 등록한 경우 임시저장 목록 새로고침
+        if (loadedDraftId) {
+          await loadDrafts();
+        }
+        
         // 신규 작성 모드: 상세 페이지로 이동
         const params = new URLSearchParams(window.location.search);
         params.set("post", newId);
@@ -1381,7 +1373,6 @@ export default function BoardWrite({
             );
             if (firstImage) setThumbnailImage(firstImage.url);
           }
-          console.log("초기 파일 정보 로드됨:", parsedFiles);
         }
       } catch (error) {
         console.error("파일 정보 파싱 오류:", error);
@@ -1424,16 +1415,6 @@ export default function BoardWrite({
     const hasContentText = !isContentEmpty(html);
     const hasFiles = uploadedFiles.length > 0;
 
-    // 디버깅용 로그
-    console.log("hasContent 체크:", {
-      title: `"${title}"`,
-      hasTitle,
-      html: `"${html}"`,
-      hasContentText,
-      hasFiles,
-      uploadedFilesLength: uploadedFiles.length,
-      result: hasTitle || hasContentText || hasFiles,
-    });
 
     return hasTitle || hasContentText || hasFiles;
   }, [title, uploadedFiles]);
@@ -1602,7 +1583,8 @@ export default function BoardWrite({
               const chapterVerseCount = await getBibleVerseCount(
                 verseInfo.book,
                 chapter,
-                verseInfo.version || selectedBibleVersion
+                (verseInfo.version ||
+                  selectedBibleVersion) as keyof typeof BIBLE_VERSIONS
               );
               endVerse = chapterVerseCount;
             } else if (chapter === verseInfo.endChapter) {
@@ -1616,13 +1598,15 @@ export default function BoardWrite({
               const chapterVerseCount = await getBibleVerseCount(
                 verseInfo.book,
                 chapter,
-                verseInfo.version || selectedBibleVersion
+                (verseInfo.version ||
+                  selectedBibleVersion) as keyof typeof BIBLE_VERSIONS
               );
               endVerse = chapterVerseCount;
             }
 
             const mainVerses = await getBibleVerses({
-              version: verseInfo.version || selectedBibleVersion,
+              version: (verseInfo.version ||
+                selectedBibleVersion) as keyof typeof BIBLE_VERSIONS,
               book: verseInfo.book,
               chapter: chapter,
               startVerse: startVerse,
@@ -1637,7 +1621,8 @@ export default function BoardWrite({
             if (showBothVersions && selectedBibleSubVersion) {
               try {
                 const subVerses = await getBibleVerses({
-                  version: selectedBibleSubVersion,
+                  version:
+                    selectedBibleSubVersion as keyof typeof BIBLE_VERSIONS,
                   book: verseInfo.book,
                   chapter: chapter,
                   startVerse: startVerse,
@@ -1654,7 +1639,8 @@ export default function BoardWrite({
         } else {
           // 같은 장 내에서의 절 범위인 경우
           const mainVerses = await getBibleVerses({
-            version: verseInfo.version || selectedBibleVersion,
+            version: (verseInfo.version ||
+              selectedBibleVersion) as keyof typeof BIBLE_VERSIONS,
             book: verseInfo.book,
             chapter: verseInfo.chapter,
             startVerse: verseInfo.startVerse,
@@ -1672,7 +1658,7 @@ export default function BoardWrite({
           if (showBothVersions && selectedBibleSubVersion) {
             try {
               const subVerses = await getBibleVerses({
-                version: selectedBibleSubVersion,
+                version: selectedBibleSubVersion as keyof typeof BIBLE_VERSIONS,
                 book: verseInfo.book,
                 chapter: verseInfo.chapter,
                 startVerse: verseInfo.startVerse,
@@ -2030,7 +2016,6 @@ export default function BoardWrite({
                 type="button"
                 variant="outline"
                 onClick={() => {
-                  console.log("태그 관리 다이얼로그 열기");
                   setShowAdminSettings(false);
                   setShowTagManagement(true);
                   loadTags();
@@ -2122,8 +2107,6 @@ export default function BoardWrite({
             <div className="grid grid-cols-8 sm:flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
               {/* 관리자 설정 버튼 */}
               {(() => {
-                console.log("[BoardWrite] 현재 userRole:", isAdmin);
-                console.log("[BoardWrite] 관리자 버튼 표시 조건:", isAdmin);
                 return isAdmin;
               })() && (
                 <Button
@@ -2186,7 +2169,7 @@ export default function BoardWrite({
 
           {/* AdminSettingsDialog 팝업 렌더링 */}
           <AdminSettingsDialog />
-          
+
           {/* 태그 관리 다이얼로그 */}
           <Dialog open={showTagManagement} onOpenChange={setShowTagManagement}>
             <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
@@ -2196,7 +2179,7 @@ export default function BoardWrite({
                   태그를 추가, 수정, 삭제할 수 있습니다.
                 </DialogDescription>
               </DialogHeader>
-              
+
               {/* 새 태그 추가 */}
               <div className="space-y-4 border-b pb-4">
                 <h3 className="text-lg font-medium">새 태그 추가</h3>
@@ -2206,7 +2189,9 @@ export default function BoardWrite({
                     <Input
                       id="new-tag-name"
                       value={newTag.name}
-                      onChange={(e) => setNewTag({ ...newTag, name: e.target.value })}
+                      onChange={(e) =>
+                        setNewTag({ ...newTag, name: e.target.value })
+                      }
                       placeholder="태그 이름을 입력하세요"
                     />
                   </div>
@@ -2217,12 +2202,16 @@ export default function BoardWrite({
                         id="new-tag-color"
                         type="color"
                         value={newTag.color}
-                        onChange={(e) => setNewTag({ ...newTag, color: e.target.value })}
+                        onChange={(e) =>
+                          setNewTag({ ...newTag, color: e.target.value })
+                        }
                         className="w-20"
                       />
                       <Input
                         value={newTag.color}
-                        onChange={(e) => setNewTag({ ...newTag, color: e.target.value })}
+                        onChange={(e) =>
+                          setNewTag({ ...newTag, color: e.target.value })
+                        }
                         placeholder="#6B7280"
                       />
                     </div>
@@ -2232,7 +2221,9 @@ export default function BoardWrite({
                     <Input
                       id="new-tag-description"
                       value={newTag.description}
-                      onChange={(e) => setNewTag({ ...newTag, description: e.target.value })}
+                      onChange={(e) =>
+                        setNewTag({ ...newTag, description: e.target.value })
+                      }
                       placeholder="태그 설명을 입력하세요"
                     />
                   </div>
@@ -2241,13 +2232,18 @@ export default function BoardWrite({
                   </Button>
                 </div>
               </div>
-              
+
               {/* 기존 태그 목록 */}
               <div className="space-y-4">
-                <h3 className="text-lg font-medium">기존 태그 ({allTags.length}개)</h3>
+                <h3 className="text-lg font-medium">
+                  기존 태그 ({allTags.length}개)
+                </h3>
                 <div className="space-y-2 max-h-60 overflow-y-auto">
                   {allTags.map((tag) => (
-                    <div key={tag.id} className="flex items-center gap-3 p-3 border rounded-lg">
+                    <div
+                      key={tag.id}
+                      className="flex items-center gap-3 p-3 border rounded-lg"
+                    >
                       <div
                         className="w-4 h-4 rounded-full"
                         style={{ backgroundColor: tag.color }}
@@ -2256,19 +2252,34 @@ export default function BoardWrite({
                         <div className="flex-1 grid gap-2">
                           <Input
                             value={editingTag.name}
-                            onChange={(e) => setEditingTag({ ...editingTag, name: e.target.value })}
+                            onChange={(e) =>
+                              setEditingTag({
+                                ...editingTag,
+                                name: e.target.value,
+                              })
+                            }
                             className="text-sm"
                           />
                           <div className="flex gap-2">
                             <Input
                               type="color"
                               value={editingTag.color}
-                              onChange={(e) => setEditingTag({ ...editingTag, color: e.target.value })}
+                              onChange={(e) =>
+                                setEditingTag({
+                                  ...editingTag,
+                                  color: e.target.value,
+                                })
+                              }
                               className="w-16"
                             />
                             <Input
                               value={editingTag.description || ""}
-                              onChange={(e) => setEditingTag({ ...editingTag, description: e.target.value })}
+                              onChange={(e) =>
+                                setEditingTag({
+                                  ...editingTag,
+                                  description: e.target.value,
+                                })
+                              }
                               placeholder="설명"
                               className="text-sm"
                             />
@@ -2276,11 +2287,13 @@ export default function BoardWrite({
                           <div className="flex gap-2">
                             <Button
                               size="sm"
-                              onClick={() => handleUpdateTag(tag.id, {
-                                name: editingTag.name,
-                                color: editingTag.color,
-                                description: editingTag.description,
-                              })}
+                              onClick={() =>
+                                handleUpdateTag(tag.id, {
+                                  name: editingTag.name,
+                                  color: editingTag.color,
+                                  description: editingTag.description,
+                                })
+                              }
                             >
                               저장
                             </Button>
@@ -2298,7 +2311,9 @@ export default function BoardWrite({
                           <div className="flex-1">
                             <div className="font-medium">{tag.name}</div>
                             {tag.description && (
-                              <div className="text-sm text-gray-500">{tag.description}</div>
+                              <div className="text-sm text-gray-500">
+                                {tag.description}
+                              </div>
                             )}
                           </div>
                           <div className="flex gap-2">
@@ -2323,7 +2338,7 @@ export default function BoardWrite({
                   ))}
                 </div>
               </div>
-              
+
               <DialogFooter>
                 <Button
                   type="button"
@@ -2353,7 +2368,6 @@ export default function BoardWrite({
                     <Select
                       value={selectedBibleVersion}
                       onValueChange={(value) => {
-                        console.log(`🔄 번역본 선택: ${value}`);
                         setSelectedBibleVersion(
                           value as keyof typeof BIBLE_VERSIONS
                         );
@@ -2434,7 +2448,9 @@ export default function BoardWrite({
                       type="text"
                       placeholder={
                         selectedBibleBook
-                          ? (BIBLE_BOOKS as any)[selectedBibleBook]
+                          ? BIBLE_BOOKS_KOR[
+                              selectedBibleBook as keyof typeof BIBLE_BOOKS_KOR
+                            ]
                           : "성경 책 검색... (예: 창세기, 시편, 마태복음)"
                       }
                       value={bibleBookSearchValue}
@@ -2451,7 +2467,7 @@ export default function BoardWrite({
                   {/* 검색 결과 드롭다운 */}
                   {(bibleBookSearchFocused || bibleBookSearchValue) && (
                     <div className="absolute top-full left-0 right-0 z-50 border rounded-md max-h-60 overflow-y-auto bg-background shadow-lg">
-                      {Object.entries(BIBLE_BOOKS)
+                      {Object.entries(BIBLE_BOOKS_KOR)
                         .filter(
                           ([_, bookName]) =>
                             bibleBookSearchValue === "" ||
@@ -2470,9 +2486,6 @@ export default function BoardWrite({
                             }`}
                             onMouseDown={() => {
                               const newBookNum = parseInt(bookNum);
-                              console.log(
-                                `📚 성경 책 선택: ${bookNum} → ${newBookNum}`
-                              );
                               setSelectedBibleBook(newBookNum);
                               setBibleBookSearchValue("");
                               setBibleBookSearchFocused(false);
@@ -2488,7 +2501,7 @@ export default function BoardWrite({
                             {bookName}
                           </button>
                         ))}
-                      {Object.entries(BIBLE_BOOKS).filter(
+                      {Object.entries(BIBLE_BOOKS_KOR).filter(
                         ([_, bookName]) =>
                           bibleBookSearchValue === "" ||
                           bookName
@@ -2536,126 +2549,147 @@ export default function BoardWrite({
                   </div>
                 </div>
 
-                {/* 시작 장과 절 선택 */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">시작 장</Label>
-                    <Select
-                      value={selectedBibleChapter.toString()}
-                      onValueChange={(value) => {
-                        const newChapter = parseInt(value);
-                        setSelectedBibleChapter(newChapter);
-                        // 다른 장 포함이 비활성화된 경우 끝 장도 함께 변경
-                        if (!includeOtherChapter) {
-                          setSelectedEndChapter(newChapter);
-                        }
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-60 overflow-y-auto">
-                        {availableChapters.map((chapter) => (
-                          <SelectItem key={chapter} value={chapter.toString()}>
-                            {chapter}장
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">
-                      시작 절 (총 {availableVerses}절)
-                    </Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      max={availableVerses}
-                      value={selectedStartVerse}
-                      onChange={(e) => {
-                        const newStartVerse = parseInt(e.target.value) || 1;
-                        setSelectedStartVerse(newStartVerse);
-                        // 다른 장 포함이 비활성화된 경우 끝절도 함께 변경
-                        if (!includeOtherChapter) {
-                          setSelectedEndVerse(newStartVerse);
-                        }
-                      }}
-                      className="w-full"
-                      placeholder="시작 절"
-                    />
-                  </div>
-                </div>
-
-                {/* 끝 장과 절 선택 (다른 장 포함이 활성화된 경우만 표시) */}
-                {includeOtherChapter && (
-                  <div className="grid grid-cols-2 gap-4 border-t pt-4">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">끝 장</Label>
+                {/* 시작 장, 시작 절, 끝 절 선택 (한줄로 배치) */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">구절 선택</Label>
+                  <div className="flex gap-2 items-center">
+                    <div className="flex-1">
+                      <Label className="text-xs text-gray-600 mb-1 block">
+                        시작 장
+                      </Label>
                       <Select
-                        value={selectedEndChapter.toString()}
-                        onValueChange={(value) =>
-                          setSelectedEndChapter(parseInt(value))
-                        }
+                        value={selectedBibleChapter.toString()}
+                        onValueChange={(value) => {
+                          const newChapter = parseInt(value);
+                          setSelectedBibleChapter(newChapter);
+                          // 다른 장 포함이 비활성화된 경우 끝 장도 함께 변경
+                          if (!includeOtherChapter) {
+                            setSelectedEndChapter(newChapter);
+                          }
+                        }}
                       >
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="max-h-60 overflow-y-auto">
-                          {availableChapters
-                            .filter(
-                              (chapter) => chapter >= selectedBibleChapter
-                            )
-                            .map((chapter) => (
-                              <SelectItem
-                                key={chapter}
-                                value={chapter.toString()}
-                              >
-                                {chapter}장
-                              </SelectItem>
-                            ))}
+                          {availableChapters.map((chapter) => (
+                            <SelectItem
+                              key={chapter}
+                              value={chapter.toString()}
+                            >
+                              {chapter}장
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">끝 절</Label>
+                    <span className="text-sm text-gray-500 mt-5">:</span>
+                    <div className="flex-1">
+                      <Label className="text-xs text-gray-600 mb-1 block">
+                        시작절
+                      </Label>
                       <Input
                         type="number"
                         min="1"
-                        value={selectedEndVerse || ""}
-                        onChange={(e) =>
-                          setSelectedEndVerse(parseInt(e.target.value) || 0)
-                        }
-                        className="w-full"
-                        placeholder="끝 절"
+                        max={availableVerses}
+                        value={selectedStartVerse}
+                        onChange={(e) => {
+                          const newStartVerse = parseInt(e.target.value) || 1;
+                          setSelectedStartVerse(newStartVerse);
+                          // 다른 장 포함이 비활성화된 경우 끝절도 함께 변경
+                          if (!includeOtherChapter) {
+                            setSelectedEndVerse(newStartVerse);
+                          }
+                        }}
+                        className="w-full text-center"
+                        placeholder="시작절"
                       />
                     </div>
+                    {!includeOtherChapter && (
+                      <>
+                        <span className="text-sm text-gray-500 mt-5">~</span>
+                        <div className="flex-1">
+                          <Label className="text-xs text-gray-600 mb-1 block">
+                            끝절 (총{availableVerses}절)
+                          </Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            max={availableVerses}
+                            value={selectedEndVerse || ""}
+                            onChange={(e) => {
+                              setSelectedEndVerse(
+                                parseInt(e.target.value) || 0
+                              );
+                            }}
+                            className="w-full text-center"
+                            placeholder="끝절"
+                          />
+                        </div>
+                      </>
+                    )}
                   </div>
-                )}
+                  {!includeOtherChapter && (
+                    <p className="text-xs text-gray-500">
+                      끝절을 비워두면 시작절과 동일하게 처리됩니다.
+                    </p>
+                  )}
+                </div>
 
-                {/* 단일 장 내에서의 절 범위 선택 (다른 장 포함이 비활성화된 경우) */}
-                {!includeOtherChapter && (
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">끝 절</Label>
+                {/* 다른 장 포함 시 끝 장과 절 선택 */}
+                {includeOtherChapter && (
+                  <div className="space-y-2 border-t pt-4">
+                    <Label className="text-sm font-medium">끝 구절 선택</Label>
                     <div className="flex gap-2 items-center">
-                      <span className="text-sm text-gray-600 min-w-fit">
-                        {selectedStartVerse}절
-                      </span>
-                      <span className="text-sm text-gray-500">~</span>
-                      <Input
-                        type="number"
-                        min="1"
-                        value={selectedEndVerse || ""}
-                        onChange={(e) => {
-                          setSelectedEndVerse(parseInt(e.target.value) || 0);
-                        }}
-                        className="flex-1"
-                        placeholder="끝 절"
-                      />
+                      <div className="flex-1">
+                        <Label className="text-xs text-gray-600 mb-1 block">
+                          끝 장
+                        </Label>
+                        <Select
+                          value={selectedEndChapter.toString()}
+                          onValueChange={(value) =>
+                            setSelectedEndChapter(parseInt(value))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-60 overflow-y-auto">
+                            {availableChapters
+                              .filter(
+                                (chapter) => chapter >= selectedBibleChapter
+                              )
+                              .map((chapter) => (
+                                <SelectItem
+                                  key={chapter}
+                                  value={chapter.toString()}
+                                >
+                                  {chapter}장
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <span className="text-sm text-gray-500 mt-5">:</span>
+                      <div className="flex-1">
+                        <Label className="text-xs text-gray-600 mb-1 block">
+                          끝절 (총{endChapterVerses}절)
+                        </Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          max={endChapterVerses}
+                          value={selectedEndVerse || ""}
+                          onChange={(e) =>
+                            setSelectedEndVerse(parseInt(e.target.value) || 0)
+                          }
+                          className="w-full text-center"
+                          placeholder="끝절"
+                        />
+                      </div>
                     </div>
                     <p className="text-xs text-gray-500">
-                      빈칸으로 두면 시작절과 동일하게 처리됩니다.
+                      여러 장에 걸친 구절을 선택할 수 있습니다.
                     </p>
                   </div>
                 )}
@@ -2694,7 +2728,7 @@ export default function BoardWrite({
 
               {/* 선택된 성경구절 리스트 */}
               {selectedBibleVerses.length > 0 && (
-                <div className="mt-6 border-t pt-4">
+                <div className="border-t pt-4">
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="text-sm font-medium">
                       선택된 구절 목록 ({selectedBibleVerses.length}개)
@@ -2825,7 +2859,6 @@ export default function BoardWrite({
                   />
                 </div>
 
-
                 {/* TipTap 에디터 + 사이드바 영역 */}
                 <div className="lg:flex lg:gap-4">
                   {/* TipTap 에디터 */}
@@ -2911,7 +2944,7 @@ export default function BoardWrite({
                         <Tag size={16} />
                         태그 선택
                       </h3>
-                      
+
                       {/* 선택된 태그들 표시 */}
                       {selectedTags.length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-3">
@@ -2919,17 +2952,19 @@ export default function BoardWrite({
                             <div
                               key={tag.id}
                               className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs border"
-                              style={{ 
-                                backgroundColor: tag.color + "20", 
-                                color: tag.color, 
-                                borderColor: tag.color 
+                              style={{
+                                backgroundColor: tag.color + "20",
+                                color: tag.color,
+                                borderColor: tag.color,
                               }}
                             >
                               {tag.name}
                               <button
                                 type="button"
                                 onClick={() => {
-                                  setSelectedTags(selectedTags.filter(t => t.id !== tag.id));
+                                  setSelectedTags(
+                                    selectedTags.filter((t) => t.id !== tag.id)
+                                  );
                                 }}
                                 className="ml-1 hover:bg-red-500 hover:text-white rounded-full p-0.5"
                               >
@@ -2939,7 +2974,7 @@ export default function BoardWrite({
                           ))}
                         </div>
                       )}
-                      
+
                       {/* 태그 검색 입력 (성경구절 선택과 동일한 패턴) */}
                       <div className="space-y-2 relative">
                         <div className="relative">
@@ -2949,7 +2984,9 @@ export default function BoardWrite({
                             value={tagSearchValue}
                             onChange={(e) => setTagSearchValue(e.target.value)}
                             onFocus={() => setTagSearchFocused(true)}
-                            onBlur={() => setTimeout(() => setTagSearchFocused(false), 200)}
+                            onBlur={() =>
+                              setTimeout(() => setTagSearchFocused(false), 200)
+                            }
                             className="w-full"
                           />
                           <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -2966,7 +3003,12 @@ export default function BoardWrite({
                                     .toLowerCase()
                                     .includes(tagSearchValue.toLowerCase())
                               )
-                              .filter((tag) => !selectedTags.some(selectedTag => selectedTag.id === tag.id))
+                              .filter(
+                                (tag) =>
+                                  !selectedTags.some(
+                                    (selectedTag) => selectedTag.id === tag.id
+                                  )
+                              )
                               .map((tag) => (
                                 <button
                                   key={tag.id}
@@ -2986,7 +3028,9 @@ export default function BoardWrite({
                                   />
                                   <span>{tag.name}</span>
                                   {tag.description && (
-                                    <span className="text-gray-500 text-xs ml-1">- {tag.description}</span>
+                                    <span className="text-gray-500 text-xs ml-1">
+                                      - {tag.description}
+                                    </span>
                                   )}
                                   <Check
                                     className={`h-4 w-4 ml-auto opacity-0`}
@@ -3001,8 +3045,12 @@ export default function BoardWrite({
                                     .toLowerCase()
                                     .includes(tagSearchValue.toLowerCase())
                               )
-                              .filter((tag) => !selectedTags.some(selectedTag => selectedTag.id === tag.id))
-                              .length === 0 && (
+                              .filter(
+                                (tag) =>
+                                  !selectedTags.some(
+                                    (selectedTag) => selectedTag.id === tag.id
+                                  )
+                              ).length === 0 && (
                               <div className="px-3 py-2 text-muted-foreground text-sm">
                                 검색 결과가 없습니다.
                               </div>
@@ -3010,9 +3058,10 @@ export default function BoardWrite({
                           </div>
                         )}
                       </div>
-                      
+
                       <p className="text-xs text-gray-500 mt-2">
-                        최대 5개의 태그를 선택할 수 있습니다. ({selectedTags.length}/5)
+                        최대 5개의 태그를 선택할 수 있습니다. (
+                        {selectedTags.length}/5)
                       </p>
                     </div>
 

@@ -26,11 +26,12 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { createClient } from "@/utils/supabase/client";
 import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/auth-context";
 import { useTheme } from "next-themes";
+import { api } from "@/lib/api";
+import useSWR from "swr";
 
 interface User {
   id: string;
@@ -133,19 +134,39 @@ function useBodyScrollLock(isLocked: boolean) {
   }, [isLocked]);
 }
 
-export default function Header({ menuItems }: { menuItems: any[] }) {
+export default function Header() {
+  // auth-context에서 사용자 정보 가져오기
   const { user } = useAuth();
+  
+  // SWR을 사용한 헤더 메뉴 데이터 페칭
+  const { data: menuItems, error: menuError, isLoading: menuLoading } = useSWR(
+    'headerMenus',
+    () => api.menus.getHeaderMenus(),
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      dedupingInterval: 30000, // 30초간 중복 요청 방지
+      staleTime: 300000, // 5분간 캐시 유지
+    }
+  );
+
+  // user가 undefined이면 로딩 중
+  const isLoading = user === undefined || menuLoading;
 
   return (
     <header className="sticky top-0 z-[10] w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="xl:container px-4 xl:px-0 flex h-16 items-center">
-        <HeaderClient user={user} menuItems={menuItems} />
+        <HeaderClient 
+          user={user} 
+          menuItems={menuItems || []} 
+          isLoading={isLoading}
+        />
       </div>
     </header>
   );
 }
 
-function HeaderClient({ user, menuItems }: { user: any; menuItems: any[] }) {
+function HeaderClient({ user, menuItems, isLoading }: { user: any; menuItems: any[]; isLoading?: boolean }) {
   const { handleLogout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -340,8 +361,8 @@ function HeaderClient({ user, menuItems }: { user: any; menuItems: any[] }) {
       <div className="hidden md:flex items-center gap-2">
         <ThemeSwitcher />
         {/* SSR과 CSR 불일치 문제를 해결하기 위해 클라이언트 상태 확인 후 렌더링 */}
-        {!isClient ? (
-          // 서버에서는 일관된 불투명 버튼을 렌더링
+        {!isClient || isLoading ? (
+          // 서버에서는 일관된 불투명 버튼을 렌더링하거나 로딩 중
           <Button variant="ghost" size="icon" className="opacity-0">
             <span className="sr-only">로그인</span>
           </Button>

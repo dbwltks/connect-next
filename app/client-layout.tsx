@@ -11,14 +11,12 @@ import { swrGlobalConfig } from "@/config/swr-config";
 
 export default function ClientLayout({
   children,
-  menuItems,
   user,
   footerMenus,
   footerSettings,
   widgets,
 }: {
   children: React.ReactNode;
-  menuItems: any[];
   user: any;
   footerMenus: any[];
   footerSettings: any;
@@ -34,7 +32,7 @@ export default function ClientLayout({
           disableTransitionOnChange
         >
           <div className="min-h-screen flex flex-col">
-            <Header menuItems={menuItems} />
+            <Header />
             <main className="flex-1">{children}</main>
             <Footer menus={footerMenus} settings={footerSettings} />
             <Toaster />

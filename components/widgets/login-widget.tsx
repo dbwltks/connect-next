@@ -1,98 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/utils/supabase/client";
 import { IWidget } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { User, LogIn } from "lucide-react";
-
-interface AuthUser {
-  id: string;
-  email?: string;
-  user_metadata: {
-    full_name?: string;
-    avatar_url?: string;
-  };
-}
+import { LogIn } from "lucide-react";
+import { useAuth } from "@/contexts/auth-context";
 
 interface LoginWidgetProps {
   widget: IWidget;
 }
 
 export default function LoginWidget({ widget }: LoginWidgetProps) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [userData, setUserData] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
+  const { user, handleLogout } = useAuth();
   
+  const displayName = user?.username || "사용자";
 
-  useEffect(() => {
-    
-    const getSession = async () => {
-      setIsLoading(true);
-      const supabase = createClient();
-      
-      const {
-        data: { user },
-        error
-      } = await supabase.auth.getUser();
-      
-      if (!error && user) {
-        setUser(user as AuthUser);
-        // Fetch user data from users table
-        const { data: userProfile } = await supabase
-          .from("users")
-          .select("*")
-          .eq("id", user.id)
-          .single();
-        setUserData(userProfile);
-      } else {
-        setUser(null);
-        setUserData(null);
-      }
-      
-      setIsLoading(false);
-    };
-
-    getSession();
-
-    const supabase = createClient();
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        if (session?.user) {
-          setUser(session.user as AuthUser);
-          // Fetch user data from users table
-          const { data: userProfile } = await supabase
-            .from("users")
-            .select("*")
-            .eq("id", session.user.id)
-            .single();
-          setUserData(userProfile);
-        } else {
-          setUser(null);
-          setUserData(null);
-        }
-      }
-    );
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, []);
-
-  const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.refresh();
-  };
-
-  const displayName =
-    userData?.nickname || userData?.username || user?.email?.split("@")[0] || "사용자";
-
-  if (isLoading) {
+  // user가 undefined면 로딩 상태
+  if (user === undefined) {
     return (
       <div className="p-4 space-y-3">
         <div className="flex items-center space-x-3">
@@ -112,7 +37,7 @@ export default function LoginWidget({ widget }: LoginWidgetProps) {
           <div className="flex items-center space-x-3">
             <Avatar>
               <AvatarImage
-                src={userData?.avatar_url}
+                src={user.avatar_url}
                 alt={displayName}
               />
               <AvatarFallback>
