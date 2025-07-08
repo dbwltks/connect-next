@@ -2219,7 +2219,6 @@ export default function BoardWrite({
               {/* 기존 태그 목록 */}
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">기존 태그 ({allTags.length}개)</h3>
-                {console.log("다이얼로그에서 allTags:", allTags)}
                 <div className="space-y-2 max-h-60 overflow-y-auto">
                   {allTags.map((tag) => (
                     <div key={tag.id} className="flex items-center gap-3 p-3 border rounded-lg">
