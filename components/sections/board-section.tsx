@@ -1,7 +1,7 @@
 "use client";
 
 import "@/app/globals.css";
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import BoardWrite from "./board-write";
 import BoardDetail from "./board-detail";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -78,6 +78,7 @@ interface UserInfo {
 }
 
 import { Section } from "@/components/admin/section-manager";
+import useSWR from "swr";
 
 interface BoardSectionProps {
   section: Section;
@@ -519,6 +520,9 @@ export default function BoardSection({
 
   // 검색 상태는 이미 위에서 선언됨
 
+  // 인라인 상세보기용 상태
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+
   // 검색 핸들러 추가
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -527,43 +531,24 @@ export default function BoardSection({
     // 검색 시 데이터 새로 로딩
   };
 
-  // 직접 fetch 방식으로 데이터 관리
-  const [data, setData] = useState<any>(null);
-  const [error, setError] = useState<Error | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // 데이터 로딩 함수
-  const loadBoardData = useCallback(async () => {
-    if (!pageId) {
-      setIsLoading(false);
-      return;
+  // SWR을 사용한 데이터 관리
+  const { data, error, isLoading, mutate } = useSWR(
+    pageId && !selectedPostId ? ['boardData', pageId, categoryId, itemCount, page, searchType, searchTerm] : null,
+    () => fetchBoardData({
+      pageId: pageId!,
+      categoryId,
+      itemCount,
+      page,
+      searchType,
+      searchTerm,
+    }),
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      dedupingInterval: 5000, // 5초 내 중복 요청 방지
+      keepPreviousData: true, // 이전 데이터 유지로 깜빡임 방지
     }
-
-    try {
-      setIsLoading(true);
-      setError(null);
-      const result = await fetchBoardData({
-        pageId,
-        categoryId,
-        itemCount,
-        page,
-        searchType,
-        searchTerm,
-      });
-      setData(result);
-    } catch (err) {
-      console.error('Failed to load board data:', err);
-      setError(err as Error);
-      setData(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [pageId, categoryId, itemCount, page, searchType, searchTerm]);
-
-  // 컴포넌트 마운트 시와 의존성 변경 시 데이터 로딩
-  useEffect(() => {
-    loadBoardData();
-  }, [loadBoardData]);
+  );
 
   // 공지/고정글/일반글 분리
   const now = Date.now();
@@ -656,11 +641,19 @@ export default function BoardSection({
     }
   }
 
-  // 인라인 상세보기용 상태
-  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
-
   // 인라인 상세보기용 게시글 클릭 핸들러
   async function handlePostClick(postId: string) {
+    // 상태를 먼저 설정하여 즉시 UI 전환
+    setSelectedPostId(postId);
+    
+    // URL 업데이트
+    const params = new URLSearchParams(window.location.search);
+    params.set("post", postId);
+    const newUrl = `${pathname}?${params.toString()}`;
+    
+    // URL 변경 (비동기로 처리하여 UI 블로킹 방지)
+    router.push(newUrl, { scroll: false });
+    
     try {
       // 조회수 증가 - API 호출로 변경 (일단 주석 처리)
       // TODO: 조회수 증가 API 구현 필요
@@ -671,21 +664,12 @@ export default function BoardSection({
       */
     } catch (error) {
       // 무시
-    } finally {
-      // 쿼리스트링에 post=postId 추가하여 URL 업데이트
-      const params = new URLSearchParams(window.location.search);
-      params.set("post", postId);
-      const newUrl = `${pathname}?${params.toString()}`;
-
-      // URL 변경과 상태 업데이트를 동시에 수행
-      router.push(newUrl, { scroll: false });
-      setSelectedPostId(postId);
     }
   }
 
   // 게시글 작성 폼 표시 제어
   const handleWriteSuccess = () => {
-    loadBoardData(); // 최신 글 목록 반영
+    mutate(); // SWR 캐시 무효화하여 최신 글 목록 반영
   };
 
   // 상세에서 목록으로 돌아가기 (쿼리스트링에서 post 제거)
@@ -935,7 +919,7 @@ export default function BoardSection({
       >
         <h3 className="font-bold mb-2">데이터 로드 오류</h3>
         <p>{error.message}</p>
-        <Button variant="outline" className="mt-2" onClick={() => loadBoardData()}>
+        <Button variant="outline" className="mt-2" onClick={() => mutate()}>
           다시 시도
         </Button>
       </div>

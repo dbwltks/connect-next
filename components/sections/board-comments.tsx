@@ -185,15 +185,15 @@ export default function BoardComments({
         data: { session },
       } = await supabase.auth.getSession();
       if (session?.user) {
-        // users 테이블에서 username, role 받아오기
+        // users 테이블에서 username, nickname, role 받아오기
         const { data: profile } = await supabase
           .from("users")
-          .select("username, role")
+          .select("username, nickname, role")
           .eq("id", session.user.id)
           .single();
         return {
           id: session.user.id,
-          username: profile?.username || "익명",
+          username: profile?.nickname || profile?.username || "익명",
           email: session.user.email,
           role: profile?.role || undefined,
         };
@@ -264,7 +264,7 @@ export default function BoardComments({
   // 댓글 목록 불러온 후 user_id, reply_to 모두 users 테이블에서 avatar_url, username 조회
   useEffect(() => {
     async function loadUsersMap() {
-      // 댓글이 없으면 로그인 유저만 usersMap 조회
+      // 댓글 작성자들 + 현재 로그인한 사용자 ID 수집
       let userIds: string[] = [];
       if (comments.length === 0 && user?.id) {
         userIds = [user.id];
@@ -273,6 +273,7 @@ export default function BoardComments({
           new Set([
             ...comments.map((c) => c.user_id),
             ...comments.map((c) => c.reply_to),
+            ...(user?.id ? [user.id] : []), // 현재 로그인한 사용자 ID 추가
           ])
         ).filter((id): id is string => typeof id === "string");
       }

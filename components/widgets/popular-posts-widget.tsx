@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
 import { IWidget, IPage } from "@/types";
 import { Heart } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import React, { useState, useEffect, useCallback } from "react";
+import useSWR from "swr";
 
 interface Post {
   id: string;
@@ -27,9 +27,10 @@ async function fetchPopularPosts(
   sortBy: string
 ): Promise<{ posts: Post[]; menuUrlMap: Record<string, string> }> {
   const result = await api.popular.getPosts(itemCount, sortBy as 'views' | 'likes' | 'comments');
-  // API 응답이 { posts: [...] } 구조이므로 posts 추출
+  // API 응답이 { posts: [...], menuUrlMap: {...} } 구조
   const posts = result.posts || result || [];
-  return { posts, menuUrlMap: {} };
+  const menuUrlMap = result.menuUrlMap || {};
+  return { posts, menuUrlMap };
 }
 
 export default function PopularPostsWidget({
@@ -42,33 +43,18 @@ export default function PopularPostsWidget({
   // 메뉴 URL 계산 (boardlist-widget.tsx와 동일한 방식)
   const menuUrl = page?.slug || widget.display_options?.menu_url || "/";
 
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [menuUrlMap, setMenuUrlMap] = useState<Record<string, string>>({});
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  // 데이터 로딩 함수
-  const loadPopularPosts = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const data = await fetchPopularPosts(itemCount, sortBy);
-      setPosts(data.posts);
-      setMenuUrlMap(data.menuUrlMap);
-    } catch (err) {
-      console.error('Failed to load popular posts:', err);
-      setError(err as Error);
-      setPosts([]);
-      setMenuUrlMap({});
-    } finally {
-      setIsLoading(false);
+  // SWR을 사용한 데이터 페칭
+  const { data, error, isLoading } = useSWR(
+    ['popularPosts', itemCount, sortBy],
+    () => fetchPopularPosts(itemCount, sortBy),
+    {
+      keepPreviousData: true,
+      revalidateOnFocus: false,
     }
-  }, [itemCount, sortBy]);
+  );
 
-  // 컴포넌트 마운트 시와 의존성 변경 시 데이터 로딩
-  useEffect(() => {
-    loadPopularPosts();
-  }, [loadPopularPosts]);
+  const posts = data?.posts || [];
+  const menuUrlMap = data?.menuUrlMap || {};
 
   // 게시글별 메뉴 URL 매핑을 함수로 처리 - 쿼리스트링 방식으로 변경
   const getPostUrl = (post: Post) => {

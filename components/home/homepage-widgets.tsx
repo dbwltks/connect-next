@@ -18,13 +18,15 @@ import { OrganizationChartWidget } from "@/components/widgets/organization-chart
 import CalendarWidget from "@/components/widgets/calendar-widget";
 import SimpleCalendarWidget from "@/components/widgets/simple-calendar-widget";
 import { IWidget } from "@/types/index";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
+import useSWR from "swr";
 
 type LayoutStructure = "1-col" | "2-col-left" | "2-col-right" | "3-col";
 
 interface HomepageWidgetsProps {
   widgets?: IWidget[];
   pageId?: string;
+  page?: { slug?: string; url?: string };
 }
 
 import { api } from "@/lib/api";
@@ -57,41 +59,18 @@ export default function HomepageWidgets({
   widgets: initialWidgets,
   pageId,
 }: HomepageWidgetsProps) {
-  // 직접 fetch 방식으로 위젯 데이터 관리
-  const [widgets, setWidgets] = useState<IWidget[]>(initialWidgets || []);
-  const [error, setError] = useState<Error | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // 데이터 로딩 함수
-  const loadWidgets = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const data = await fetchWidgets(pageId);
-      setWidgets(data);
-    } catch (err) {
-      console.error("Failed to load widgets:", err);
-      setError(err as Error);
-      // fallback 데이터가 있으면 사용
-      if (initialWidgets) {
-        setWidgets(initialWidgets);
-      }
-    } finally {
-      setIsLoading(false);
+  // SWR을 사용한 위젯 데이터 관리
+  const { data: widgets, error, isLoading } = useSWR(
+    ['widgets', pageId],
+    () => fetchWidgets(pageId),
+    {
+      fallbackData: initialWidgets || [], // 초기 데이터를 fallback으로 사용
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      dedupingInterval: 10000, // 10초 내 중복 요청 방지
+      keepPreviousData: true, // 이전 데이터 유지로 깜빡임 방지
     }
-  }, [pageId, initialWidgets]);
-
-  // 컴포넌트 마운트 시와 pageId 변경 시 데이터 로딩
-  useEffect(() => {
-    loadWidgets();
-  }, [loadWidgets]);
-
-  // initialWidgets가 변경될 때 상태 업데이트
-  useEffect(() => {
-    if (initialWidgets && !isLoading) {
-      setWidgets(initialWidgets);
-    }
-  }, [initialWidgets, isLoading]);
+  );
 
   const renderWidget = (widget: IWidget) => {
     if (!widget.is_active) return null;
@@ -226,7 +205,7 @@ export default function HomepageWidgets({
           </p>
           <p className="text-xs text-red-600 mt-1">잠시 후 다시 시도됩니다.</p>
         </div>
-      ) : isLoading ? (
+      ) : isLoading && (!widgets || widgets.length === 0) ? (
         Array.from({ length: 2 }).map((_, index) => (
           <div key={index} className="flex flex-col">
             <div className="relative h-64 w-full flex-1 overflow-hidden rounded-xl border border-slate-100">
@@ -328,7 +307,7 @@ export default function HomepageWidgets({
 
   const mainContent = (
     <div className="grid grid-cols-12 gap-6">
-      {isLoading
+      {isLoading && (!widgets || widgets.length === 0)
         ? Array.from({ length: 3 }).map((_, index) => (
             <div
               key={index}

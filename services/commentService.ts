@@ -19,7 +19,7 @@ export async function fetchUsersMap(userIds: string[]) {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("users")
-    .select("id, username, avatar_url")
+    .select("id, username, nickname, avatar_url")
     .in("id", userIds);
   if (error) throw error;
   const usersMap: {
@@ -27,7 +27,7 @@ export async function fetchUsersMap(userIds: string[]) {
   } = {};
   (data || []).forEach((u: any) => {
     usersMap[u.id] = {
-      username: u.username,
+      username: u.nickname || u.username || '익명',
       avatar_url: u.avatar_url || null,
     };
   });

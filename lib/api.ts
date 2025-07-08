@@ -37,26 +37,6 @@ export const api = {
       apiCall(`/api/widget/${id}`),
   },
 
-  // 게시글 관련
-  posts: {
-    getForWidget: (boardId: string, limit = 5) =>
-      apiCall(createUrl('/api/board-posts', { boardId, limit, type: 'widget' })),
-    
-    getForMedia: (pageId: string, limit = 5) =>
-      apiCall(createUrl('/api/board-posts', { pageId, limit, type: 'media' })),
-    
-    getForSection: (pageId: string, limit = 10) =>
-      apiCall(createUrl('/api/board-posts', { pageId, limit, type: 'section' })),
-    
-    getForBoard: (params: {
-      pageId?: string;
-      categoryId?: string;
-      page?: number;
-      itemCount?: number;
-      searchType?: string;
-      searchTerm?: string;
-    }) => apiCall(createUrl('/api/board', params)),
-  },
 
   // 댓글 관련
   comments: {
@@ -79,6 +59,72 @@ export const api = {
   // 캘린더 관련
   calendar: {
     getEvents: () => apiCall('/api/calendar-events'),
+  },
+
+  // 게시글 관련 - 기존 함수에 추가
+  posts: {
+    getForWidget: (boardId: string, limit = 5) =>
+      apiCall(createUrl('/api/board-posts', { boardId, limit, type: 'widget' })),
+    
+    getForMedia: (pageId: string, limit = 5) =>
+      apiCall(createUrl('/api/board-posts', { pageId, limit, type: 'media' })),
+    
+    getForSection: (pageId: string, limit = 10) =>
+      apiCall(createUrl('/api/board-posts', { pageId, limit, type: 'section' })),
+    
+    getForBoard: (params: {
+      pageId?: string;
+      categoryId?: string;
+      page?: number;
+      itemCount?: number;
+      searchType?: string;
+      searchTerm?: string;
+    }) => apiCall(createUrl('/api/board', params)),
+
+    // 새로운 CRUD 함수들
+    create: (postData: any) => 
+      fetch('/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(postData)
+      }).then(res => res.json()),
+    
+    update: (postData: any) =>
+      fetch('/api/posts', {
+        method: 'PUT', 
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(postData)
+      }).then(res => res.json()),
+
+    getById: (id: string) => apiCall(`/api/posts/${id}`),
+    
+    delete: (id: string) =>
+      fetch(`/api/posts/${id}`, { method: 'DELETE' }).then(res => res.json()),
+  },
+
+  // 임시저장 관련
+  drafts: {
+    getAll: () => apiCall('/api/drafts'),
+    create: (draftData: any) =>
+      fetch('/api/drafts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(draftData)
+      }).then(res => res.json()),
+    delete: (id: string) =>
+      fetch(`/api/drafts/${id}`, { method: 'DELETE' }).then(res => res.json()),
+  },
+
+  // 태그 관련
+  tags: {
+    getAll: (search?: string) => 
+      apiCall(createUrl('/api/tags', search ? { search } : undefined)),
+    create: (tagData: any) =>
+      fetch('/api/tags', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(tagData)
+      }).then(res => res.json()),
   },
 };
 

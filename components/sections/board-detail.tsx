@@ -54,6 +54,7 @@ import GlassContainer from "@/components/ui/glass-container";
 import { useAuth } from "@/contexts/auth-context";
 import TipTapViewer from "@/components/ui/tiptap-viewer";
 import { logBoardPostDelete } from "@/services/activityLogService";
+import { ITag } from "@/types/index";
 
 interface BoardPost {
   id: string;
@@ -70,6 +71,7 @@ interface BoardPost {
   category_id?: string;
   thumbnail_image?: string | null;
   files?: string; // 첨부파일 정보(문자열로 저장된 JSON)
+  tags?: string; // 태그 정보(문자열로 저장된 JSON)
   status?: string;
   is_notice?: boolean;
 }
@@ -563,11 +565,17 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
         if (data.user_id) {
           const { data: user, error: userErr } = await supabase
             .from("users")
-            .select("username, avatar_url")
+            .select("username, nickname, avatar_url")
             .eq("id", data.user_id)
             .single();
-          if (!userErr && user) setAuthorInfo(user);
-          else setAuthorInfo(null);
+          if (!userErr && user) {
+            setAuthorInfo({
+              username: user.nickname || user.username || '익명',
+              avatar_url: user.avatar_url
+            });
+          } else {
+            setAuthorInfo(null);
+          }
         } else {
           setAuthorInfo(null);
         }
@@ -1753,6 +1761,31 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                   <span className="mx-2">·</span>
                   <span>조회 {post.views || post.view_count || 0}</span>
                 </div>
+                {/* 태그 표시 */}
+                {post.tags && (() => {
+                  try {
+                    const tags: ITag[] = JSON.parse(post.tags);
+                    return tags.length > 0 ? (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {tags.map((tag) => (
+                          <span
+                            key={tag.id}
+                            className="inline-flex items-center px-2 py-1 rounded-full text-xs border"
+                            style={{ 
+                              backgroundColor: tag.color + "20", 
+                              color: tag.color, 
+                              borderColor: tag.color 
+                            }}
+                          >
+                            {tag.name}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null;
+                  } catch {
+                    return null;
+                  }
+                })()}
               </div>
             </div>
             {/* 액션 버튼 - 모바일에서는 숨김 */}

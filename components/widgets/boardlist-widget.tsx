@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { IBoardPost, IPage, IWidget, IBoardWidgetOptions } from "@/types/index";
 import Link from "next/link";
-import React, { useState, useEffect, useCallback } from "react";
+import useSWR from "swr";
 import { api } from "@/lib/api";
 import {
   Calendar,
@@ -67,10 +67,10 @@ async function fetchBoardWidgetPosts(
   
   try {
     const result = await api.posts.getForWidget(pageId, limit);
-    // API 응답을 위젯이 기대하는 구조로 변환
+    // API 응답이 { posts: [...], menuUrlMap: {...} } 구조
     return { 
       posts: Array.isArray(result) ? result : result.posts || [],
-      menuUrlMap: {}
+      menuUrlMap: result.menuUrlMap || {}
     };
   } catch (error) {
     console.error(`❌ Board widget fetch error:`, error);
@@ -87,11 +87,6 @@ async function fetchBoardWidgetPosts(
 }
 
 export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
-  const [posts, setPosts] = useState<IBoardPost[]>([]);
-  const [menuUrlMap, setMenuUrlMap] = useState<Record<string, string>>({});
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-  
   // 페이지 ID와 표시할 게시물 수 계산
   const pageId = page?.id || widget.display_options?.page_id;
   let limit = 10; // 기본값
@@ -104,33 +99,18 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
     }
   }
 
-  // 데이터 로딩 함수
-  const loadBoardData = useCallback(async () => {
-    if (!pageId) {
-      setIsLoading(false);
-      return;
+  // SWR을 사용한 데이터 페칭
+  const { data, error, isLoading } = useSWR(
+    pageId ? ['boardWidgetPosts', pageId, limit] : null,
+    () => fetchBoardWidgetPosts(pageId!, limit),
+    {
+      keepPreviousData: true,
+      revalidateOnFocus: false,
     }
+  );
 
-    try {
-      setIsLoading(true);
-      setError(null);
-      const data = await fetchBoardWidgetPosts(pageId, limit);
-      setPosts(data.posts);
-      setMenuUrlMap(data.menuUrlMap);
-    } catch (err) {
-      console.error('Failed to load board data:', err);
-      setError(err as Error);
-      setPosts([]);
-      setMenuUrlMap({});
-    } finally {
-      setIsLoading(false);
-    }
-  }, [pageId, limit]);
-
-  // 컴포넌트 마운트 시와 pageId, limit 변경 시 데이터 로딩
-  useEffect(() => {
-    loadBoardData();
-  }, [loadBoardData]);
+  const posts = data?.posts || [];
+  const menuUrlMap = data?.menuUrlMap || {};
 
   // 템플릿 번호 가져오기 (문자열 또는 숫자 처리)
   const getTemplateNumber = (template: string | number | undefined): number => {

@@ -83,12 +83,12 @@ export async function GET(request: NextRequest) {
     if (userIds.length > 0) {
       const { data: users } = await supabase
         .from('users')
-        .select('id, username, avatar_url')
+        .select('id, username, nickname, avatar_url')
         .in('id', userIds);
         
       (users || []).forEach((user: any) => {
         authorInfoMap[user.id] = {
-          username: user.username || '익명',
+          username: user.nickname || user.username || '익명',
           avatar_url: user.avatar_url,
         };
       });

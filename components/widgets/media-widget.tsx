@@ -1,89 +1,28 @@
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { IPage, IWidget, IMediaWidgetOptions, IBoardPost } from "@/types/index";
+import { IWidget } from "@/types/index";
 import Link from "next/link";
 import React from "react";
 import { api } from "@/lib/api";
 import useSWR from "swr";
-import { createClient } from "@/utils/supabase/client";
 import { Heart } from "lucide-react";
 
 interface MediaWidgetProps {
   widget: IWidget;
+  page?: { slug?: string; url?: string };
 }
 
 // SWR 키와 페처 함수
 const fetchMediaData = async (pageId: string, maxItems: number = 5) => {
-  // 1. 게시글 데이터
-  const postsData = await api.posts.getForMedia(pageId, maxItems);
-  const posts = postsData.posts;
-  if (!posts || posts.length === 0) return { posts: [], menuUrl: null };
-
-  // 2. 각 게시글의 page_id로 메뉴 URL 찾기
-  const uniquePageIds = Array.from(
-    new Set(posts.map((post: any) => post.page_id))
-  );
-  const menuUrlMap: Record<string, string> = {};
-  const supabase = createClient();
-
-  for (const pId of uniquePageIds) {
-    console.log("메뉴 검색 중 - page_id:", pId);
-
-    // 먼저 모든 메뉴 데이터를 확인
-    const { data: allMenus, error: allError } = await supabase
-      .from("cms_menus")
-      .select("*");
-
-    console.log("전체 메뉴 데이터:", allMenus, allError);
-
-    // 특정 page_id로 검색
-    const { data: menuData, error: menuError } = await supabase
-      .from("cms_menus")
-      .select("*")
-      .eq("page_id", pId);
-
-    console.log("메뉴 검색 결과:", { pId, menuData, menuError });
-
-    if (!menuError && menuData && menuData.length > 0) {
-      menuUrlMap[pId] = (menuData[0] as any).url;
-    }
-  }
-
-  // 3. 좋아요 수 집계
-  const postIds = posts.map((p: any) => p.id);
-  let likeCounts: Record<string, number> = {};
-
-  if (postIds.length > 0) {
-    const { data: likeData, error: likeError } = await supabase
-      .from("board_like")
-      .select("post_id")
-      .in("post_id", postIds);
-
-    if (!likeError && likeData) {
-      likeCounts = (likeData || []).reduce(
-        (acc: Record<string, number>, like: any) => {
-          if (like.post_id) acc[like.post_id] = (acc[like.post_id] || 0) + 1;
-          return acc;
-        },
-        {}
-      );
-    }
-  }
-
-  // 4. posts에 likes_count 추가
-  const postsWithLikes = posts.map((post: any) => ({
-    ...post,
-    likes_count: likeCounts[post.id] || 0,
-  }));
-
-  // 5. 클라이언트에서 published_at 우선 정렬
-  const sortedPosts = [...postsWithLikes].sort((a: any, b: any) => {
-    // 날짜 정렬: published_at 우선, 없으면 created_at
+  // API를 통해 미디어 게시글 데이터 가져오기
+  const result = await api.posts.getForMedia(pageId, maxItems);
+  const posts = Array.isArray(result) ? result : result.posts || [];
+  
+  // 정렬: published_at 우선, 없으면 created_at
+  const sortedPosts = [...posts].sort((a: any, b: any) => {
     const aDate = new Date(a.published_at || a.created_at);
     const bDate = new Date(b.published_at || b.created_at);
     const timeDiff = bDate.getTime() - aDate.getTime();
 
-    // 날짜가 같으면 ID로 정렬
     if (timeDiff === 0) {
       return a.id.localeCompare(b.id);
     }
@@ -91,33 +30,14 @@ const fetchMediaData = async (pageId: string, maxItems: number = 5) => {
     return timeDiff;
   });
 
-  console.log("fetchMediaData - 최종 데이터:", {
-    postsCount: sortedPosts.length,
-    menuUrlMap,
-    uniquePageIds,
-    firstPostPageId: sortedPosts[0]?.page_id,
-    posts: sortedPosts.map((p: any) => ({
-      id: p.id,
-      title: p.title,
-      page_id: p.page_id,
-    })),
-  });
-
-  return { posts: sortedPosts, menuUrlMap };
+  return { posts: sortedPosts, menuUrlMap: result.menuUrlMap || {} };
 };
 
-export function MediaWidget({ widget }: MediaWidgetProps) {
+export function MediaWidget({ widget, page }: MediaWidgetProps) {
   const pageId = widget.display_options?.page_id;
   // 표시할 항목 개수 (기본값: 5개, 최대: 10개)
   const itemCount = widget.display_options?.item_count;
-  console.log("미디어 위젯 설정값:", {
-    item_count: itemCount,
-    display_options: widget.display_options,
-  });
-
   const maxItems = Math.min(parseInt(itemCount?.toString() || "5"), 10);
-
-  console.log("계산된 maxItems:", maxItems);
 
   const { data, error, isLoading } = useSWR(
     pageId ? ["mediaWidgetPosts", pageId, maxItems] : null,
@@ -209,15 +129,9 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
 
   // 게시글별 메뉴 URL 매핑을 함수로 처리 - 쿼리스트링 방식으로 변경
   const getPostUrl = (post: any) => {
-    const menuUrl = data?.menuUrlMap?.[post.page_id];
-    console.log("🔗 링크 생성:", {
-      post_id: post.id,
-      page_id: post.page_id,
-      menuUrlMap: data?.menuUrlMap,
-      menuUrl,
-      finalUrl: menuUrl ? `${menuUrl}?post=${post.id}` : `/?post=${post.id}`,
-    });
-    return menuUrl ? `${menuUrl}?post=${post.id}` : `/?post=${post.id}`;
+    const menuUrlMap = data?.menuUrlMap as Record<string, string> | undefined;
+    const menuUrl = menuUrlMap?.[post.page_id] || page?.slug || page?.url || '/';
+    return `${menuUrl}?post=${post.id}`;
   };
 
   // 데이터가 없는 경우
@@ -271,12 +185,6 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
           {/* Featured Video */}
           <div className="lg:col-span-3 col-span-2">
             <div className="border border-gray-100 hover:shadow-lg transition-all duration-500 transform hover:-translate-y-1 rounded-lg overflow-hidden">
-              {(() => {
-                const linkUrl = getPostUrl(data.posts[0]);
-                console.log("Featured Video 링크:", linkUrl);
-                console.log("post:", data.posts[0]);
-                return null;
-              })()}
               <Link href={getPostUrl(data.posts[0])}>
                 <div className="relative aspect-video bg-gradient-to-br from-gray-900 to-gray-700 group cursor-pointer">
                   {data.posts[0].thumbnail_image ? (
@@ -324,7 +232,6 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
                   </div>
                   <div className="pt-1 flex items-center justify-end space-x-3">
                     <span className="text-xs text-gray-500">
-                      {data.posts[0].author || "관리자"} ·{" "}
                       {new Date(data.posts[0].created_at).toLocaleDateString()}
                     </span>
                     <div className="flex items-center space-x-3 text-xs text-gray-500">
@@ -347,28 +254,11 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
 
           {/* Video List */}
           <div className="space-y-3 col-span-2">
-            {(() => {
-              console.log("전체 posts 개수:", data.posts.length);
-              console.log("slice(1) 후 개수:", data.posts.slice(1).length);
-              console.log("실제 posts 데이터:", data.posts);
-              return null;
-            })()}
-            {data.posts.length > 1 &&
-              data.posts.slice(1).map((post: any, index: number) => (
+            {data.posts.slice(1).map((post: any) => (
                 <div
                   key={post.id}
                   className="overflow-hidden bg-white border border-gray-100 hover:shadow-md transition-all duration-500 transform hover:-translate-y-1 rounded-lg w-full"
                 >
-                  {(() => {
-                    console.log(`렌더링 중인 post ${index + 1}:`, post.title);
-                    return null;
-                  })()}
-                  {(() => {
-                    const linkUrl = getPostUrl(post);
-                    console.log(`Video List 링크 ${index + 1}:`, linkUrl);
-                    console.log("post:", post);
-                    return null;
-                  })()}
                   <Link
                     href={getPostUrl(post)}
                     className="flex flex-row w-full group"
@@ -413,7 +303,6 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
                       </div>
                       <div className="pt-1 flex items-center justify-between">
                         <span className="text-[10px] text-gray-500">
-                          {post.author || "관리자"} ·{" "}
                           {new Date(post.created_at).toLocaleDateString()}
                         </span>
                         <div className="flex items-center space-x-2 text-[10px] text-gray-500">
@@ -431,9 +320,10 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
                   </Link>
                 </div>
               ))}
-
+            
+            {data.posts.length > 1 && (
             <Link
-              href={data?.menuUrlMap?.[Object.keys(data.menuUrlMap)[0]] || "/"}
+              href={page?.slug || page?.url || "/"}
               className="w-full bg-white py-2 px-4 border border-gray-200 rounded-md hover:shadow-lg transition-all duration-500 transform hover:-translate-y-1 text-sm flex items-center justify-center group"
             >
               {widget.display_options?.media_more_text || "더 많은 미디어 보기"}
@@ -452,6 +342,7 @@ export function MediaWidget({ widget }: MediaWidgetProps) {
                 <polyline points="9 18 15 12 9 6"></polyline>
               </svg>
             </Link>
+            )}
           </div>
         </div>
       </div>

@@ -29,12 +29,12 @@ export async function GET(request: NextRequest) {
         new Set(comments.map((comment: any) => comment.user_id).filter(Boolean))
       );
 
-      // 게시물 정보 조회
+      // 게시물 정보 조회 (page_id 포함)
       let postsMap = new Map();
       if (postIds.length > 0) {
         const { data: posts } = await supabase
           .from('board_posts')
-          .select('id, title')
+          .select('id, title, page_id')
           .in('id', postIds);
 
         postsMap = new Map(posts?.map((post) => [post.id, post]) || []);
@@ -45,20 +45,50 @@ export async function GET(request: NextRequest) {
       if (userIds.length > 0) {
         const { data: users } = await supabase
           .from('users')
-          .select('id, display_name, username')
+          .select('id, display_name, username, nickname')
           .in('id', userIds);
 
         usersMap = new Map(users?.map((user) => [user.id, user]) || []);
       }
 
-      commentsWithData = comments.map((comment: any) => ({
-        ...comment,
-        board_posts: postsMap.get(comment.post_id) || null,
-        users: usersMap.get(comment.user_id) || null,
-      }));
+      // 모든 댓글에 author 필드 추가 (사용자 정보가 없어도)
+      commentsWithData = comments.map((comment: any) => {
+        const user = usersMap.get(comment.user_id);
+        return {
+          ...comment,
+          board_posts: postsMap.get(comment.post_id) || null,
+          users: user || null,
+          author: user ? (user.nickname || user.username || '익명') : '익명',
+        };
+      });
     }
 
-    return NextResponse.json(commentsWithData);
+    // 메뉴 URL 매핑 정보 조회
+    let menuUrlMap: Record<string, string> = {};
+    if (commentsWithData && commentsWithData.length > 0) {
+      const pageIds = Array.from(
+        new Set(commentsWithData.map((comment: any) => comment.board_posts?.page_id).filter(Boolean))
+      );
+
+      if (pageIds.length > 0) {
+        const { data: menuItems } = await supabase
+          .from('cms_menus')
+          .select('page_id, url')
+          .in('page_id', pageIds)
+          .not('url', 'is', null);
+
+        if (menuItems) {
+          menuUrlMap = menuItems.reduce((acc: Record<string, string>, item: any) => {
+            if (item.page_id && item.url) {
+              acc[item.page_id] = item.url;
+            }
+            return acc;
+          }, {});
+        }
+      }
+    }
+
+    return NextResponse.json({ comments: commentsWithData, menuUrlMap });
   } catch (error) {
     console.error('Comments API error:', error);
     return NextResponse.json(

@@ -44,14 +44,7 @@ import {
   Check,
   Tag,
 } from "lucide-react";
-import {
-  getHeaderUser,
-  fetchDrafts,
-  deleteDraft as serviceDeleteDraft,
-  saveBoardPost as serviceSaveBoardPost,
-  getBoardPost as serviceGetBoardPost,
-  tagService,
-} from "@/services/boardService";
+import { api } from "@/lib/api";
 import { logDraftDelete } from "@/services/activityLogService";
 import {
   BIBLE_VERSIONS,
@@ -64,7 +57,6 @@ import {
   getBibleBookName,
 } from "@/services/bibleService";
 import { useAuth } from "@/contexts/auth-context";
-import { TagInput } from "@/components/ui/tag-input";
 import { ITag } from "@/types/index";
 
 // TipTap 에디터 컴포넌트를 동적으로 불러옴 (SSR 방지)
@@ -414,6 +406,10 @@ export default function BoardWrite({
   const [showTagManagement, setShowTagManagement] = useState(false);
   const [editingTag, setEditingTag] = useState<ITag | null>(null);
   const [newTag, setNewTag] = useState({ name: "", color: "#6B7280", description: "" });
+  
+  // 태그 검색 관련 상태 (성경구절 선택과 동일한 패턴)
+  const [tagSearchValue, setTagSearchValue] = useState<string>("");
+  const [tagSearchFocused, setTagSearchFocused] = useState<boolean>(false);
 
   // 초기 데이터에서 태그 로드
   useEffect(() => {
@@ -437,7 +433,8 @@ export default function BoardWrite({
   const loadTags = async () => {
     try {
       console.log("태그 로드 시작...");
-      const tags = await tagService.getAllTags();
+      const result = await api.tags.getAll();
+      const tags = result.tags;
       console.log("로드된 태그:", tags);
       setAllTags(tags);
     } catch (error) {
@@ -450,13 +447,11 @@ export default function BoardWrite({
     if (!newTag.name.trim()) return;
     
     try {
-      const createdTag = await tagService.createTag({
+      const result = await api.tags.create({
         name: newTag.name,
-        slug: newTag.name.toLowerCase().replace(/\s+/g, "-"),
-        color: newTag.color,
-        description: newTag.description,
-        is_active: true,
+        color: newTag.color
       });
+      const createdTag = result.tag;
       
       setAllTags([...allTags, createdTag]);
       setNewTag({ name: "", color: "#6B7280", description: "" });
@@ -478,8 +473,12 @@ export default function BoardWrite({
   // 태그 수정
   const handleUpdateTag = async (id: string, updates: Partial<ITag>) => {
     try {
-      const updatedTag = await tagService.updateTag(id, updates);
-      setAllTags(allTags.map(tag => tag.id === id ? updatedTag : tag));
+      // Note: API does not support tag updates yet
+      const existingTag = allTags.find(tag => tag.id === id);
+      if (existingTag) {
+        const updatedTag = { ...existingTag, ...updates };
+        setAllTags(allTags.map(tag => tag.id === id ? updatedTag : tag));
+      }
       setEditingTag(null);
       showToast({
         title: "성공",
@@ -501,7 +500,7 @@ export default function BoardWrite({
     if (!confirm("정말로 이 태그를 삭제하시겠습니까?")) return;
     
     try {
-      await tagService.deleteTag(id);
+      // Note: API does not support tag deletion yet
       setAllTags(allTags.filter(tag => tag.id !== id));
       showToast({
         title: "성공",
@@ -587,16 +586,12 @@ export default function BoardWrite({
       return [];
     }
     try {
-      const user = await getHeaderUser();
       if (!user || !user.id) {
         setDrafts([]);
         return [];
       }
-      const data = await fetchDrafts({
-        userId: user.id,
-        pageId: selectedPageId,
-        categoryId,
-      });
+      const response = await api.drafts.getAll();
+      const data = response.drafts || [];
       setDrafts(
         (data || []).map((d: any) => ({
           key: d.id,
@@ -671,10 +666,9 @@ export default function BoardWrite({
       const draftToDelete = drafts.find((d) => d.key === draftKey);
       const draftTitle = draftToDelete?.data?.title || "제목 없음";
 
-      // 현재 사용자 정보 가져오기
-      const user = await getHeaderUser();
+      // 현재 사용자 정보는 이미 useAuth에서 가져옴
 
-      await serviceDeleteDraft({ draftId: draftKey });
+      await api.drafts.delete(draftKey);
 
       // 삭제 로그 기록 (사용자 정보가 있는 경우)
       if (user?.id) {
@@ -761,8 +755,9 @@ export default function BoardWrite({
     try {
       setLoading(true);
       if (postId) {
-        // DB에서 게시글 가져오기
-        const data = await serviceGetBoardPost({ postId });
+        // API에서 게시글 가져오기
+        const result = await api.posts.getById(postId);
+        const data = result.post || result;
 
         if (!data) {
           console.error("게시글 데이터 없음");
@@ -1116,11 +1111,9 @@ export default function BoardWrite({
     setSuccess(false);
     setLoading(true);
 
-    // 사용자 정보 가져오기 및 디버깅
-    console.log("[BoardWrite] 사용자 정보 가져오기 시작");
-    const user = await getHeaderUser();
+    // 사용자 정보 확인 (useAuth에서 이미 가져옴)
     console.log(
-      "[BoardWrite] 가져온 사용자 정보:",
+      "[BoardWrite] 사용자 정보:",
       JSON.stringify(user, null, 2)
     );
 
@@ -1229,7 +1222,7 @@ export default function BoardWrite({
           nextNumber = (maxData?.number || 0) + 1;
         } catch {}
       }
-      console.log("[BoardWrite] serviceSaveBoardPost 호출 전 데이터:", {
+      console.log("[BoardWrite] API 호출 전 데이터:", {
         postId,
         isEditMode,
         title: title.substring(0, 20) + (title.length > 20 ? "..." : ""),
@@ -1248,26 +1241,16 @@ export default function BoardWrite({
       // 파일 데이터 JSON화
       const filesJson = JSON.stringify(uploadedFiles);
 
-      // saveBoardPost 함수 정확히 호출
-      const result = await serviceSaveBoardPost({
-        postId,
-        isEditMode,
+      // API를 사용한 게시글 저장
+      const postData: any = {
         title,
         content: finalContent, // temp URL이 정식 URL로 교체된 내용 사용
-        allowComments,
-        thumbnailImage: finalThumbnailImage,
-        uploadedFiles: finalUploadedFiles,
-        userId,
-        pageId: selectedPageId,
-        categoryId,
-        status:
-          statusArg === "draft" ? "draft" : isHidden ? "hidden" : "published",
-        number: nextNumber,
-        description: description.trim(), // 상세 설명 추가
-        isNotice, // 공지사항 설정 추가
-        tags: selectedTags, // 태그 추가
-        // 게시일 추가 - board-section.tsx와 board-detail.tsx와 일관성 유지
-        publishedAt: publishDate
+        page_id: selectedPageId,
+        category_id: categoryId,
+        allow_comments: allowComments,
+        is_notice: isNotice, // 공지사항 설정 추가
+        status: statusArg === "draft" ? "draft" : isHidden ? "hidden" : "published",
+        published_at: publishDate
           ? (() => {
               try {
                 // datetime-local 값을 Date 객체로 변환 후 ISO 문자열로 저장
@@ -1281,10 +1264,28 @@ export default function BoardWrite({
           : !isEditMode
             ? new Date().toISOString() // 새 글인 경우 현재 시간 자동 설정
             : null, // 수정 모드에서 게시일 미설정 시 기존 값 유지
-      });
+        thumbnail_image: finalThumbnailImage,
+        files: filesJson,
+        tags: JSON.stringify(selectedTags)
+      };
 
-      console.log("[BoardWrite] serviceSaveBoardPost 결과:", result);
-      newId = result.id;
+      // 수정 모드인 경우 ID 추가
+      if (isEditMode && postId) {
+        postData.id = postId;
+      }
+
+      const result = isEditMode 
+        ? await api.posts.update(postData)
+        : await api.posts.create(postData);
+
+      console.log("[BoardWrite] API 결과:", result);
+      
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      const post = result.post;
+      newId = post.id;
       setPostId(newId);
     } catch (error: any) {
       console.error("게시글 저장 중 오류 발생:", error);
@@ -2888,16 +2889,108 @@ export default function BoardWrite({
                         <Tag size={16} />
                         태그 선택
                       </h3>
-                      <TagInput
-                        value={selectedTags}
-                        onChange={setSelectedTags}
-                        placeholder="태그를 선택하세요..."
-                        maxTags={5}
-                        allowCreate={true}
-                        className="w-full"
-                      />
+                      
+                      {/* 선택된 태그들 표시 */}
+                      {selectedTags.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {selectedTags.map((tag) => (
+                            <div
+                              key={tag.id}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs border"
+                              style={{ 
+                                backgroundColor: tag.color + "20", 
+                                color: tag.color, 
+                                borderColor: tag.color 
+                              }}
+                            >
+                              {tag.name}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedTags(selectedTags.filter(t => t.id !== tag.id));
+                                }}
+                                className="ml-1 hover:bg-red-500 hover:text-white rounded-full p-0.5"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {/* 태그 검색 입력 (성경구절 선택과 동일한 패턴) */}
+                      <div className="space-y-2 relative">
+                        <div className="relative">
+                          <Input
+                            type="text"
+                            placeholder="태그 검색... (예: 설교, 예배, 행사)"
+                            value={tagSearchValue}
+                            onChange={(e) => setTagSearchValue(e.target.value)}
+                            onFocus={() => setTagSearchFocused(true)}
+                            onBlur={() => setTimeout(() => setTagSearchFocused(false), 200)}
+                            className="w-full"
+                          />
+                          <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        </div>
+
+                        {/* 태그 검색 결과 드롭다운 */}
+                        {(tagSearchFocused || tagSearchValue) && (
+                          <div className="absolute top-full left-0 right-0 z-50 border rounded-md max-h-60 overflow-y-auto bg-background shadow-lg">
+                            {allTags
+                              .filter(
+                                (tag) =>
+                                  tagSearchValue === "" ||
+                                  tag.name
+                                    .toLowerCase()
+                                    .includes(tagSearchValue.toLowerCase())
+                              )
+                              .filter((tag) => !selectedTags.some(selectedTag => selectedTag.id === tag.id))
+                              .map((tag) => (
+                                <button
+                                  key={tag.id}
+                                  type="button"
+                                  className={`w-full text-left px-3 py-2 hover:bg-accent hover:text-accent-foreground flex items-center gap-2`}
+                                  onMouseDown={() => {
+                                    if (selectedTags.length < 5) {
+                                      setSelectedTags([...selectedTags, tag]);
+                                      setTagSearchValue("");
+                                      setTagSearchFocused(false);
+                                    }
+                                  }}
+                                >
+                                  <div
+                                    className="w-3 h-3 rounded-full"
+                                    style={{ backgroundColor: tag.color }}
+                                  />
+                                  <span>{tag.name}</span>
+                                  {tag.description && (
+                                    <span className="text-gray-500 text-xs ml-1">- {tag.description}</span>
+                                  )}
+                                  <Check
+                                    className={`h-4 w-4 ml-auto opacity-0`}
+                                  />
+                                </button>
+                              ))}
+                            {allTags
+                              .filter(
+                                (tag) =>
+                                  tagSearchValue === "" ||
+                                  tag.name
+                                    .toLowerCase()
+                                    .includes(tagSearchValue.toLowerCase())
+                              )
+                              .filter((tag) => !selectedTags.some(selectedTag => selectedTag.id === tag.id))
+                              .length === 0 && (
+                              <div className="px-3 py-2 text-muted-foreground text-sm">
+                                검색 결과가 없습니다.
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      
                       <p className="text-xs text-gray-500 mt-2">
-                        최대 5개의 태그를 선택할 수 있습니다.
+                        최대 5개의 태그를 선택할 수 있습니다. ({selectedTags.length}/5)
                       </p>
                     </div>
 

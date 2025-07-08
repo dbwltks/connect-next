@@ -24,10 +24,10 @@ async function fetchRecentComments(
   itemCount: number
 ): Promise<{ comments: Comment[]; menuUrlMap: Record<string, string> }> {
   const result = await api.comments.getRecent(itemCount);
-  // API 응답을 위젯이 기대하는 구조로 변환
+  // API 응답이 { comments: [...], menuUrlMap: {...} } 구조
   return { 
     comments: Array.isArray(result) ? result : result.comments || [],
-    menuUrlMap: {}
+    menuUrlMap: result.menuUrlMap || {}
   };
 }
 

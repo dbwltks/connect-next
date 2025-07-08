@@ -47,26 +47,72 @@ export async function GET(request: NextRequest) {
         new Set(posts.map((post: any) => post.user_id).filter(Boolean))
       );
 
+      let userMap = new Map();
       if (userIds.length > 0) {
         const { data: users } = await supabase
           .from('users')
-          .select('id, email, username, display_name')
+          .select('id, email, username, nickname, display_name')
           .in('id', userIds);
 
-        const userMap = new Map(users?.map((user) => [user.id, user]) || []);
+        userMap = new Map(users?.map((user) => [user.id, user]) || []);
+      }
 
-        postsWithUsers = sortedPosts.map((post: any) => ({
+      // 좋아요 수 추가
+      const postsWithLikes = await Promise.all(
+        sortedPosts.map(async (post: any) => {
+          const { count } = await supabase
+            .from('board_like')
+            .select('*', { count: 'exact', head: true })
+            .eq('post_id', post.id);
+          
+          return {
+            ...post,
+            likes_count: count || 0  // likes_count 필드로 추가
+          };
+        })
+      );
+
+      // 모든 게시글에 author 필드 추가 (사용자 정보가 없어도)
+      postsWithUsers = postsWithLikes.map((post: any) => {
+        const user = userMap.get(post.user_id);
+        return {
           ...post,
-          users: userMap.get(post.user_id) || null,
-        }));
+          users: user || null,
+          author: user ? (user.nickname || user.username || '익명') : '익명',
+        };
+      });
+    }
+
+    // 메뉴 URL 매핑 정보 조회
+    let menuUrlMap: Record<string, string> = {};
+    if (postsWithUsers && postsWithUsers.length > 0) {
+      const pageIds = Array.from(
+        new Set(postsWithUsers.map((post: any) => post.page_id).filter(Boolean))
+      );
+
+      if (pageIds.length > 0) {
+        const { data: menuItems } = await supabase
+          .from('cms_menus')
+          .select('page_id, url')
+          .in('page_id', pageIds)
+          .not('url', 'is', null);
+
+        if (menuItems) {
+          menuUrlMap = menuItems.reduce((acc: Record<string, string>, item: any) => {
+            if (item.page_id && item.url) {
+              acc[item.page_id] = item.url;
+            }
+            return acc;
+          }, {});
+        }
       }
     }
 
     if (type === 'media') {
-      return NextResponse.json({ posts: postsWithUsers });
+      return NextResponse.json({ posts: postsWithUsers, menuUrlMap });
     }
 
-    return NextResponse.json(postsWithUsers);
+    return NextResponse.json({ posts: postsWithUsers, menuUrlMap });
   } catch (error) {
     console.error('Board posts API error:', error);
     return NextResponse.json(
