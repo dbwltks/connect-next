@@ -690,17 +690,7 @@ export default function BoardSection({
     // URL 변경 (비동기로 처리하여 UI 블로킹 방지)
     router.push(newUrl, { scroll: false });
 
-    try {
-      // 조회수 증가 - API 호출로 변경 (일단 주석 처리)
-      // TODO: 조회수 증가 API 구현 필요
-      /*
-      const response = await fetch(`/api/posts/${postId}/increment-view`, {
-        method: 'POST'
-      });
-      */
-    } catch (error) {
-      // 무시
-    }
+    // 조회수 증가는 board-detail에서 처리하므로 여기서는 제거
   }
 
   // 게시글 작성 폼 표시 제어

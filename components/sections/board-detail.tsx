@@ -549,6 +549,9 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
     }
   );
 
+  // 조회수 증가 추적을 위한 ref
+  const viewIncrementedRef = useRef<string | null>(null);
+
   // SWR 데이터에서 개별 상태로 분리
   useEffect(() => {
     if (postData?.post) {
@@ -564,8 +567,52 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
       setNextPost(postData.nextPost);
       setAttachments(postData.attachments || []);
       setLoading(false);
+
+      // 게시글 조회수 증가 (같은 게시글은 한 번만)
+      if (viewIncrementedRef.current !== postData.post.id) {
+        viewIncrementedRef.current = postData.post.id;
+        incrementViewCount(postData.post.id);
+      }
     }
   }, [postData]);
+
+  // 조회수 증가 함수
+  const incrementViewCount = async (postId: string) => {
+    // 먼저 UI에서 조회수를 즉시 증가 (낙관적 업데이트)
+    setPost(prev => prev ? { ...prev, views: (prev.views || 0) + 1 } : null);
+    
+    try {
+      const response = await fetch(`/api/posts/${postId}/increment-view`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        // 서버에서 받은 정확한 조회수로 업데이트
+        if (result.views) {
+          setPost(prev => prev ? { ...prev, views: result.views } : null);
+          // SWR 캐시도 업데이트
+          mutatePost(
+            (current: any) => current ? {
+              ...current,
+              post: { ...current.post, views: result.views }
+            } : current,
+            false
+          );
+        }
+      } else {
+        // 실패 시 원래 조회수로 롤백
+        setPost(prev => prev ? { ...prev, views: (prev.views || 1) - 1 } : null);
+      }
+    } catch (error) {
+      console.error('조회수 증가 실패:', error);
+      // 실패 시 원래 조회수로 롤백
+      setPost(prev => prev ? { ...prev, views: (prev.views || 1) - 1 } : null);
+    }
+  };
 
   // 에러 처리
   useEffect(() => {
