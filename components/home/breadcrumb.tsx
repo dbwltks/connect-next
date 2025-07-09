@@ -168,7 +168,7 @@ export default function Breadcrumb({
       <CardContent className="p-3">
         <nav aria-label="breadcrumb" className="text-sm">
           <ol className="flex flex-wrap items-center">
-            {breadcrumbs.map((item, index) => (
+            {breadcrumbs.map((item, index: any) => (
               <li key={index} className="flex items-center">
                 {index === 0 ? (
                   <Link

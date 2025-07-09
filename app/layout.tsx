@@ -12,14 +12,14 @@ const notoSansKr = Noto_Sans_KR({
 
 function buildMenuTree(items: any[]) {
   const rootItems = items.filter((item) => item.parent_id === null);
-  return rootItems.map((item) => ({
+  return rootItems.map((item: any) => ({
     ...item,
     submenu: findChildren(item.id, items),
   }));
 }
 function findChildren(parentId: string, items: any[]): any[] {
   const children = items.filter((item) => item.parent_id === parentId);
-  return children.map((child) => ({
+  return children.map((child: any) => ({
     ...child,
     submenu: findChildren(child.id, items),
   }));

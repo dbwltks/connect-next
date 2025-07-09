@@ -186,7 +186,7 @@ export default function ActivityLogsPage() {
           acc[log.resource_type] = (acc[log.resource_type] || 0) + 1;
           return acc;
         }, {})
-      ).map(([name, value]) => ({ name, value }));
+      ).map(([name, value]: any) => ({ name, value }));
 
       // 액션별 통계
       const actionStats = Object.entries(
@@ -194,7 +194,7 @@ export default function ActivityLogsPage() {
           acc[log.action] = (acc[log.action] || 0) + 1;
           return acc;
         }, {})
-      ).map(([name, value]) => ({ name, value }));
+      ).map(([name, value]: any) => ({ name, value }));
 
       setStats({
         daily: dailyStats,
@@ -202,7 +202,7 @@ export default function ActivityLogsPage() {
         actions: actionStats,
         total: allLogs.length,
         todayCount: dailyStats[6]?.count || 0,
-        users: new Set(allLogs.map((log: ActivityLog) => log.user_id)).size,
+        users: new Set(allLogs.map((log: any) => log.user_id)).size,
       });
     } catch (error) {
       console.error("통계 로드 실패:", error);
@@ -238,7 +238,7 @@ export default function ActivityLogsPage() {
       "IP 주소",
     ];
 
-    const csvData = logs.map((log) => [
+    const csvData = logs.map((log: any) => [
       format(new Date(log.created_at), "yyyy-MM-dd HH:mm:ss"),
       log.user?.name || log.user?.email || "알 수 없음",
       log.action,
@@ -248,7 +248,7 @@ export default function ActivityLogsPage() {
     ]);
 
     const csvContent = [headers, ...csvData]
-      .map((row) => row.map((cell) => `"${cell}"`).join(","))
+      .map((row: any) => row.map((cell: any) => `"${cell}"`).join(","))
       .join("\n");
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -545,7 +545,7 @@ export default function ActivityLogsPage() {
         <CardContent>
           {loading ? (
             <div className="space-y-2">
-              {[...Array(5)].map((_, i) => (
+              {[...Array(5)].map((_, i: any) => (
                 <Skeleton key={i} className="h-16 w-full" />
               ))}
             </div>
@@ -564,7 +564,7 @@ export default function ActivityLogsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {logs.map((log) => (
+                  {logs.map((log: any) => (
                     <TableRow key={log.id}>
                       <TableCell className="text-sm">
                         {format(new Date(log.created_at), "MM/dd HH:mm", {

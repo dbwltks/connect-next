@@ -354,7 +354,7 @@ export function OrganizationChartWidget({
   // 기본적으로 모든 노드 확장
   useEffect(() => {
     if (organizationData.length > 0) {
-      const allIds = organizationData.map((p: Person) => p.id);
+      const allIds = organizationData.map((p: any) => p.id);
       setExpandedNodes(new Set(allIds));
     }
   }, [organizationData]);
@@ -482,7 +482,7 @@ export function OrganizationChartWidget({
             <div
               className={`flex flex-wrap justify-center ${spacingClasses.gap} relative`}
             >
-              {person.children!.map((child, index) => (
+              {person.children!.map((child, index: any) => (
                 <div key={child.id} className="relative">
                   {/* 수평 연결선 - 여러 자식이 있을 때만 */}
                   {person.children!.length > 1 && (
@@ -530,7 +530,7 @@ export function OrganizationChartWidget({
 
         {showChildren && (
           <div className="flex flex-col gap-6 pt-12">
-            {person.children!.map((child, index) => (
+            {person.children!.map((child, index: any) => (
               <div key={child.id} className="relative">
                 <div className="absolute -left-6 top-12 w-6 h-px bg-gradient-to-r from-blue-400 to-blue-300"></div>
                 {index > 0 && (
@@ -578,7 +578,7 @@ export function OrganizationChartWidget({
 
     return (
       <div className="space-y-12">
-        {Object.entries(groupedByLevel).map(([level, people]) => (
+        {Object.entries(groupedByLevel).map(([level, people]: any) => (
           <div key={level}>
             <div className="text-center mb-8">
               <h3 className="text-2xl font-bold text-gray-800 mb-2 flex items-center justify-center gap-3">
@@ -590,7 +590,7 @@ export function OrganizationChartWidget({
               <div className="w-24 h-1 bg-gradient-to-r from-blue-400 to-purple-500 mx-auto rounded-full"></div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 justify-items-center">
-              {people.map((person: Person) => (
+              {people.map((person: any) => (
                 <div key={person.id} className="w-full max-w-xs">
                   {renderPersonCard(person)}
                 </div>
@@ -615,7 +615,7 @@ export function OrganizationChartWidget({
 
     return (
       <div className="space-y-16">
-        {Object.entries(groupedByLevel).map(([level, people]) => (
+        {Object.entries(groupedByLevel).map(([level, people]: any) => (
           <div key={level} className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             {people.map((person: Person, index: number) => (
               <div
@@ -880,7 +880,7 @@ export function OrganizationChartWidget({
         {chartStyle === CHART_STYLES.TREE && (
           <div className="overflow-x-auto">
             <div className="min-w-max">
-              {hierarchy.map((root) => renderTreeNode(root))}
+              {hierarchy.map((root: any) => renderTreeNode(root))}
             </div>
           </div>
         )}
@@ -888,7 +888,7 @@ export function OrganizationChartWidget({
         {chartStyle === CHART_STYLES.HORIZONTAL && (
           <div className="overflow-x-auto">
             <div className="min-w-max">
-              {hierarchy.map((root) => renderHorizontalNode(root))}
+              {hierarchy.map((root: any) => renderHorizontalNode(root))}
             </div>
           </div>
         )}
@@ -896,7 +896,7 @@ export function OrganizationChartWidget({
         {chartStyle === CHART_STYLES.COMPACT && (
           <div className="overflow-x-auto">
             <div className="min-w-max">
-              {hierarchy.map((root) => renderTreeNode(root))}
+              {hierarchy.map((root: any) => renderTreeNode(root))}
             </div>
           </div>
         )}

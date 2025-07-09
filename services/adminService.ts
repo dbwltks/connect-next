@@ -8,7 +8,7 @@ export async function fetchMenus() {
     .select("*")
     .order("order_num", { ascending: true });
   if (error) throw error;
-  return (data || []).map((item) => ({
+  return (data || []).map((item: any) => ({
     ...item,
     isActive: item.is_active,
     parentId: item.parent_id,
@@ -45,7 +45,7 @@ export async function fetchSections() {
 
     console.log("fetchSections 원본 데이터:", data);
 
-    const transformedData = (data || []).map((item) => ({
+    const transformedData = (data || []).map((item: any) => ({
       id: item.id,
       title: item.title,
       name: item.name,
@@ -76,7 +76,7 @@ export async function fetchPages() {
     .eq("is_active", true)
     .order("title", { ascending: true });
   if (error) throw error;
-  return (data || []).map((item) => ({
+  return (data || []).map((item: any) => ({
     id: item.id,
     title: item.title,
     slug: item.slug || "",
@@ -96,7 +96,7 @@ export async function fetchBanners() {
     .select("*")
     .order("order_num", { ascending: true });
   if (error) throw error;
-  return (data || []).map((item) => ({
+  return (data || []).map((item: any) => ({
     id: item.id,
     title: item.title,
     subtitle: item.subtitle || "",

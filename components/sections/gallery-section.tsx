@@ -21,7 +21,7 @@ export default function GallerySection({ section, className = '' }: GallerySecti
       <h2 className="text-2xl font-bold mb-2">{section.title || '갤러리'}</h2>
       <p className="text-muted-foreground mb-4">{section.description || '사진 갤러리입니다.'}</p>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {images.map((img, i) => (
+        {images.map((img, i: any) => (
           <div key={i} className="aspect-square bg-gray-100 rounded overflow-hidden shadow">
             <img src={img.url} alt={img.title} className="object-cover w-full h-full" />
             <div className="text-center text-xs mt-1">{img.title}</div>

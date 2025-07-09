@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 
     // 사용자 정보 조회해서 매핑 (auth.users에서만)
     const userIds = Array.from(
-      new Set(data?.map((log) => log.user_id).filter(Boolean))
+      new Set(data?.map((log: any) => log.user_id).filter(Boolean))
     );
 
     if (userIds.length === 0) {
@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
     }
 
     const logsWithUser =
-      data?.map((log) => ({
+      data?.map((log: any) => ({
         ...log,
         user: userMap.get(log.user_id) || {
           id: log.user_id,

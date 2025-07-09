@@ -222,10 +222,10 @@ const parseStyleString = (styleStr: string): any => {
   const declarations = styleStr.split(";").filter(Boolean);
 
   declarations.forEach((declaration) => {
-    const [property, value] = declaration.split(":").map((s) => s.trim());
+    const [property, value] = declaration.split(":").map((s: any) => s.trim());
     if (property && value) {
       // CSS 속성명을 camelCase로 변환
-      const camelProperty = property.replace(/-([a-z])/g, (_, letter) =>
+      const camelProperty = property.replace(/-([a-z])/g, (_: any, letter: string) =>
         letter.toUpperCase()
       );
       styles[camelProperty] = value;
@@ -1108,7 +1108,7 @@ const MenuBar = ({
                   { name: "나눔고딕", value: "Nanum Gothic, sans-serif" },
                   { name: "나눔명조", value: "Nanum Myeongjo, serif" },
                   { name: "나눔펜", value: "Nanum Pen Script, cursive" },
-                ].map((font) => (
+                ].map((font: any) => (
                   <Button
                     key={font.value}
                     type="button"
@@ -1173,7 +1173,7 @@ const MenuBar = ({
                     "#cfe2f3",
                     "#d9d2e9",
                     "#ead1dc",
-                  ].map((color) => (
+                  ].map((color: any) => (
                     <button
                       key={color}
                       type="button"
@@ -1213,7 +1213,7 @@ const MenuBar = ({
                     "#fed7d7", // 빨간색
                     "#fff3cd", // 주황색
                     "#e2e8f0", // 회색
-                  ].map((color) => (
+                  ].map((color: any) => (
                     <button
                       key={color}
                       type="button"
@@ -1660,7 +1660,7 @@ const FileManager = ({
 
   return (
     <div className="grid grid-cols-1 gap-2">
-      {uploadedFiles.map((file, index) => {
+      {uploadedFiles.map((file, index: any) => {
         const isImage = ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(
           (file.type || "").toLowerCase()
         );

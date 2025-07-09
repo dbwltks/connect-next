@@ -445,7 +445,7 @@ export default function MembersPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredMembers.map((member) => (
+                filteredMembers.map((member: any) => (
                   <TableRow key={member.id}>
                     <TableCell className="font-medium">
                       <div>

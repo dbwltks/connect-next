@@ -98,7 +98,7 @@ const fetchCarouselData = async (widget: IWidget): Promise<CarouselItem[]> => {
         return timeDiff;
       });
 
-      return sortedPosts.map((post) => ({
+      return sortedPosts.map((post: any) => ({
         id: post.id,
         image_url:
           post.thumbnail_image ||
@@ -321,7 +321,7 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
             className="flex transition-transform duration-500 ease-in-out h-full"
             style={{ transform: `translateX(-${currentIndex * 100}%)` }}
           >
-            {carouselItems.map((item, index) => (
+            {carouselItems.map((item, index: any) => (
               <div
                 key={item.id}
                 className="w-full h-full flex-shrink-0 relative"
@@ -386,7 +386,7 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
           {/* 도트 인디케이터 - 이미지 위에 오버레이 */}
           {showDots && carouselItems.length > 1 && (
             <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex space-x-1.5">
-              {carouselItems.map((_, index) => (
+              {carouselItems.map((_, index: any) => (
                 <button
                   key={index}
                   className={`rounded-full transition-all duration-300 ${
@@ -425,7 +425,7 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
             className="flex transition-transform duration-500 ease-in-out h-full"
             style={{ transform: `translateX(-${currentIndex * 100}%)` }}
           >
-            {carouselItems.map((item, index) => (
+            {carouselItems.map((item, index: any) => (
               <div
                 key={item.id}
                 className="w-full h-full flex-shrink-0 relative"
@@ -490,7 +490,7 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
           {/* 도트 인디케이터 - 이미지 위에 오버레이 */}
           {showDots && carouselItems.length > 1 && (
             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex space-x-1.5">
-              {carouselItems.map((_, index) => (
+              {carouselItems.map((_, index: any) => (
                 <button
                   key={index}
                   className={`rounded-full transition-all duration-300 ${
@@ -538,7 +538,7 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
               className="flex transition-transform duration-500 ease-in-out gap-4"
               style={{ transform: `translateX(-${currentIndex * 320}px)` }}
             >
-              {carouselItems.map((item, index) => (
+              {carouselItems.map((item, index: any) => (
                 <div
                   key={item.id}
                   className={`w-80 flex-shrink-0 rounded-lg overflow-hidden transition-shadow ${
@@ -628,7 +628,7 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
         {/* 도트 인디케이터 */}
         {showDots && carouselItems.length > 1 && (
           <div className="flex justify-center space-x-1.5 py-4">
-            {carouselItems.map((_, index) => (
+            {carouselItems.map((_, index: any) => (
               <button
                 key={index}
                 className={`rounded-full transition-all duration-300 ${

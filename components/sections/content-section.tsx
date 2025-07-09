@@ -42,6 +42,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/contexts/auth-context";
+import { useUserProfile } from "@/hooks/use-user-profile";
 
 // TipTap 에디터 컴포넌트
 const TipTapEditor = dynamic(() => import("@/components/ui/tiptap-editor"), {
@@ -176,8 +177,9 @@ export default function ContentSection({
   // const [editedTitle, setEditedTitle] = useState(section.title || ""); // 현재 UI에서 사용 안 함
   // const [editedDescription, setEditedDescription] = useState(section.description || ""); // 현재 UI에서 사용 안 함
   const { user } = useAuth();
+  const { profile } = useUserProfile(user);
   const [isClient, setIsClient] = useState(false);
-  const isAdmin = user?.role === "admin";
+  const isAdmin = profile?.role === "admin";
   const [isSaving, setIsSaving] = useState(false);
   const [previewTab, setPreviewTab] = useState<"desktop" | "mobile">("desktop");
   const [fullWidth, setFullWidth] = useState(section.full_width === true);
@@ -206,7 +208,7 @@ export default function ContentSection({
     } else if (contentType === "text") {
       contentHtmlOutput = currentContent
         .split("\n\n")
-        .map((p) => `<p>${p.replace(/\n/g, "<br>")}</p>`)
+        .map((p: any) => `<p>${p.replace(/\n/g, "<br>")}</p>`)
         .join("");
     } else if (contentType === "image") {
       contentHtmlOutput = `<img src="${currentContent}" alt="콘텐츠 이미지" style="max-width: 100%; height: auto;" />`;
@@ -226,10 +228,10 @@ export default function ContentSection({
           return false;
         }
       })
-      .map((sheet) => {
+      .map((sheet: any) => {
         try {
           return Array.from(sheet.cssRules)
-            .map((rule) => rule.cssText)
+            .map((rule: any) => rule.cssText)
             .join("\n");
         } catch (e) {
           return "";

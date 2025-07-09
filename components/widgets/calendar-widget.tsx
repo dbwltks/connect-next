@@ -190,7 +190,7 @@ export default function CalendarWidget({
         { id: "children", name: "유년부", manager: "", description: "" },
         { id: "other", name: "기타", manager: "", description: "" },
       ]
-    ).map((dept) => dept.name);
+    ).map((dept: any) => dept.name);
 
     const customDepartments = (settings.custom_departments || []).map(
       (dept) => dept.name
@@ -224,7 +224,7 @@ export default function CalendarWidget({
 
   // 필터링된 이벤트 가져오기
   const getFilteredEvents = () => {
-    return events.filter((event) => {
+    return events.filter((event: any) => {
       const categoryMatch =
         categoryFilter === "all" || event.category === categoryFilter;
       const departmentMatch =
@@ -369,7 +369,7 @@ export default function CalendarWidget({
     if (!confirm("정말로 이 일정을 삭제하시겠습니까?")) return;
 
     // 삭제할 이벤트 정보 미리 저장 (로그용)
-    const eventToDelete = events.find((event) => event.id === eventId);
+    const eventToDelete = events.find((event: any) => event.id === eventId);
     const eventTitle = eventToDelete?.title || "제목 없음";
     const logDetails = {
       start_date: eventToDelete?.start_date,
@@ -481,12 +481,12 @@ export default function CalendarWidget({
 
   const getEventsForDate = (date: Date) => {
     const dateString = date.toISOString().split("T")[0];
-    const dayEvents = getFilteredEvents().filter((event) => {
+    const dayEvents = getFilteredEvents().filter((event: any) => {
       return event.start_date === dateString;
     });
 
     // 시간순으로 정렬: 종일 일정 먼저, 그 다음 시간순
-    return dayEvents.sort((a, b) => {
+    return dayEvents.sort((a: any, b: any) => {
       // 종일 일정은 맨 위에
       if (a.is_all_day && !b.is_all_day) return -1;
       if (!a.is_all_day && b.is_all_day) return 1;
@@ -691,7 +691,7 @@ export default function CalendarWidget({
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {getAllCategories().map((category) => (
+                          {getAllCategories().map((category: any) => (
                             <SelectItem key={category.id} value={category.id}>
                               <div className="flex items-center gap-2">
                                 <div
@@ -717,7 +717,7 @@ export default function CalendarWidget({
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {getAllDepartments().map((dept) => (
+                          {getAllDepartments().map((dept: any) => (
                             <SelectItem key={dept} value={dept}>
                               {dept}
                             </SelectItem>
@@ -905,7 +905,7 @@ export default function CalendarWidget({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">전체</SelectItem>
-                    {getAllCategories().map((category) => (
+                    {getAllCategories().map((category: any) => (
                       <SelectItem key={category.id} value={category.id}>
                         <div className="flex items-center gap-2">
                           <div
@@ -933,7 +933,7 @@ export default function CalendarWidget({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">전체</SelectItem>
-                    {getAllDepartments().map((dept) => (
+                    {getAllDepartments().map((dept: any) => (
                       <SelectItem key={dept} value={dept}>
                         {dept}
                       </SelectItem>
@@ -1054,7 +1054,7 @@ export default function CalendarWidget({
     return (
       <div className="flex flex-col">
         <div className="grid grid-cols-7 gap-1 mb-2">
-          {["일", "월", "화", "수", "목", "금", "토"].map((day) => (
+          {["일", "월", "화", "수", "목", "금", "토"].map((day: any) => (
             <div
               key={day}
               className="p-2 text-center text-sm font-medium text-gray-600"
@@ -1064,7 +1064,7 @@ export default function CalendarWidget({
           ))}
         </div>
         <div className="grid grid-cols-7 gap-1">
-          {days.map((day, index) => {
+          {days.map((day, index: any) => {
             const isCurrentMonth = day.getMonth() === month;
             const isToday = day.toDateString() === new Date().toDateString();
             const dayEvents = getEventsForDate(day);
@@ -1084,7 +1084,7 @@ export default function CalendarWidget({
                   {day.getDate()}
                 </div>
                 <div className="space-y-0.5">
-                  {dayEvents.slice(0, 4).map((event) => (
+                  {dayEvents.slice(0, 4).map((event: any) => (
                     <div
                       key={event.id}
                       className="text-xs px-1 py-0.5 rounded cursor-pointer hover:opacity-80 relative group"
@@ -1145,7 +1145,7 @@ export default function CalendarWidget({
     return (
       <div className="flex flex-col">
         <div className="grid grid-cols-7 gap-2 mb-4">
-          {days.map((day, index) => {
+          {days.map((day, index: any) => {
             const isToday = day.toDateString() === new Date().toDateString();
             const dayEvents = getEventsForDate(day);
 
@@ -1167,7 +1167,7 @@ export default function CalendarWidget({
                   <div className="text-lg">{day.getDate()}</div>
                 </div>
                 <div className="space-y-1">
-                  {dayEvents.map((event) => (
+                  {dayEvents.map((event: any) => (
                     <div
                       key={event.id}
                       className="text-xs p-2 rounded cursor-pointer hover:opacity-80 relative group"
@@ -1223,16 +1223,16 @@ export default function CalendarWidget({
     return (
       <div>
         <div className="grid grid-cols-3 gap-4">
-          {months.map((month, index) => {
+          {months.map((month, index: any) => {
             const monthEvents = getFilteredEvents()
-              .filter((event) => {
+              .filter((event: any) => {
                 const eventDate = new Date(event.start_date);
                 return (
                   eventDate.getFullYear() === year &&
                   eventDate.getMonth() === index
                 );
               })
-              .sort((a, b) => {
+              .sort((a: any, b: any) => {
                 // 날짜순 먼저, 그 다음 시간순
                 const dateCompare = a.start_date.localeCompare(b.start_date);
                 if (dateCompare !== 0) return dateCompare;
@@ -1272,7 +1272,7 @@ export default function CalendarWidget({
                 </div>
                 {monthEvents.length > 0 && (
                   <div className="mt-2 space-y-1">
-                    {monthEvents.slice(0, 10).map((event) => (
+                    {monthEvents.slice(0, 10).map((event: any) => (
                       <div
                         key={event.id}
                         className="text-xs p-1 rounded"

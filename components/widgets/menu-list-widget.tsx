@@ -55,7 +55,7 @@ export default function MenuListWidget({ widget }: MenuListWidgetProps) {
       <aside className="p-4 bg-white rounded-lg backdrop-blur-sm border border-gray-50">
         <Skeleton className="h-6 w-32 mb-3" />
         <div className="space-y-1">
-          {[...Array(4)].map((_, i) => (
+          {[...Array(4)].map((_, i: any) => (
             <Skeleton key={i} className="h-8 w-full" />
           ))}
         </div>
@@ -113,7 +113,7 @@ export default function MenuListWidget({ widget }: MenuListWidgetProps) {
       )}
       <nav>
         <ul className="space-y-1">
-          {childMenus.map((menu) => {
+          {childMenus.map((menu: any) => {
             // 현재 경로가 메뉴 URL로 시작하는지 확인하여 하위 경로에서도 활성화되도록 함
             const isActive =
               pathname === menu.url || pathname.startsWith(menu.url + "/");

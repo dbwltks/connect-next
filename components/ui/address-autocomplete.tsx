@@ -163,7 +163,7 @@ export function AddressAutocomplete({
       {/* 자동완성 드롭다운 */}
       {showDropdown && predictions.length > 0 && (
         <div className="absolute z-10 w-full bg-white shadow-lg rounded-md border border-gray-200 mt-1 max-h-60 overflow-auto">
-          {predictions.map((prediction) => (
+          {predictions.map((prediction: any) => (
             <div
               key={prediction.place_id}
               className="px-4 py-2 hover:bg-gray-100 cursor-pointer"

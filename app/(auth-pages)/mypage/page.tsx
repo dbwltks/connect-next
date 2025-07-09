@@ -35,7 +35,7 @@ import {
 import { Slider } from "@/components/ui/slider";
 
 export default function MyPage() {
-  const { user, handleLogout } = useAuth();
+  const { user, signOut } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [postCount, setPostCount] = useState(0);
@@ -329,11 +329,11 @@ export default function MyPage() {
 
   // 아바타 삭제 핸들러
   const handleAvatarDelete = async () => {
-    if (!user || !user.avatar_url) return;
+    if (!user || !(user as any).avatar_url) return;
     setAvatarUploading(true);
     try {
       // Storage 파일 경로 추출
-      const url = user.avatar_url;
+      const url = (user as any).avatar_url;
       const matches = url.match(/profile-avatars\/(.+)$/);
       const filePath = matches ? `profile-avatars/${matches[1]}` : null;
       if (!filePath) throw new Error("파일 경로를 추출할 수 없습니다.");
@@ -410,7 +410,7 @@ export default function MyPage() {
   }, [user]);
 
   const handleLogoutClick = async () => {
-    await handleLogout();
+    await signOut();
     router.push("/login");
   };
 
@@ -445,12 +445,12 @@ export default function MyPage() {
                     src={
                       avatarDeleted
                         ? ""
-                        : (avatarPreview ?? user.avatar_url ?? "")
+                        : (avatarPreview ?? (user as any).avatar_url ?? "")
                     }
-                    alt={user.username}
+                    alt={(user as any).username}
                   />
                   <AvatarFallback className="text-2xl font-bold bg-muted">
-                    {user.username?.charAt(0).toUpperCase() || "U"}
+                    {(user as any).username?.charAt(0).toUpperCase() || "U"}
                   </AvatarFallback>
                 </Avatar>
                 {/* 이미지 변경/삭제 버튼 (마우스 오버 시 노출) */}
@@ -477,7 +477,7 @@ export default function MyPage() {
                     disabled={
                       avatarUploading ||
                       avatarDeleted ||
-                      (!avatarPreview && !user.avatar_url)
+                      (!avatarPreview && !(user as any).avatar_url)
                     }
                   >
                     이미지 삭제
@@ -491,7 +491,7 @@ export default function MyPage() {
               </div>
               <div className="flex-1 w-full">
                 <h2 className="text-2xl font-bold leading-tight mb-1">
-                  {user.username}
+                  {(user as any).username}
                 </h2>
                 <p className="text-muted-foreground text-sm mb-2">
                   {user.email}

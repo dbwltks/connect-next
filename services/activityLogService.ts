@@ -27,7 +27,10 @@ export interface ActivityLog {
     | "comment"
     | "draft"
     | "file"
-    | "system";
+    | "system"
+    | "permission"
+    | "role"
+    | "user_role";
   resource_id?: string;
   resource_title?: string;
   details?: Record<string, any>;
@@ -444,6 +447,148 @@ export const logCommentDelete = (
     level: LogLevel.WARN,
   });
 
+// 권한 관련 로그 생성 함수들
+export const logPermissionGrant = (
+  userId: string,
+  targetUserId: string,
+  permission: string,
+  details?: Record<string, any>
+) =>
+  createActivityLog({
+    userId,
+    action: "create",
+    resourceType: "permission",
+    resourceId: targetUserId,
+    resourceTitle: `권한 부여: ${permission}`,
+    details: {
+      ...details,
+      permission,
+      target_user_id: targetUserId,
+    },
+    level: LogLevel.WARN, // 권한 변경은 중요하므로 WARN
+  });
+
+export const logPermissionRevoke = (
+  userId: string,
+  targetUserId: string,
+  permission: string,
+  details?: Record<string, any>
+) =>
+  createActivityLog({
+    userId,
+    action: "delete",
+    resourceType: "permission",
+    resourceId: targetUserId,
+    resourceTitle: `권한 회수: ${permission}`,
+    details: {
+      ...details,
+      permission,
+      target_user_id: targetUserId,
+    },
+    level: LogLevel.WARN,
+  });
+
+export const logRoleChange = (
+  userId: string,
+  targetUserId: string,
+  oldRole: string,
+  newRole: string,
+  details?: Record<string, any>
+) =>
+  createActivityLog({
+    userId,
+    action: "update",
+    resourceType: "user_role",
+    resourceId: targetUserId,
+    resourceTitle: `역할 변경: ${oldRole} → ${newRole}`,
+    details: {
+      ...details,
+      old_role: oldRole,
+      new_role: newRole,
+      target_user_id: targetUserId,
+    },
+    level: LogLevel.WARN,
+  });
+
+export const logRoleCreate = (
+  userId: string,
+  roleId: string,
+  roleName: string,
+  details?: Record<string, any>
+) =>
+  createActivityLog({
+    userId,
+    action: "create",
+    resourceType: "role",
+    resourceId: roleId,
+    resourceTitle: `역할 생성: ${roleName}`,
+    details: {
+      ...details,
+      role_name: roleName,
+    },
+    level: LogLevel.INFO,
+  });
+
+export const logRoleUpdate = (
+  userId: string,
+  roleId: string,
+  roleName: string,
+  details?: Record<string, any>
+) =>
+  createActivityLog({
+    userId,
+    action: "update",
+    resourceType: "role",
+    resourceId: roleId,
+    resourceTitle: `역할 수정: ${roleName}`,
+    details: {
+      ...details,
+      role_name: roleName,
+    },
+    level: LogLevel.INFO,
+  });
+
+export const logRoleDelete = (
+  userId: string,
+  roleId: string,
+  roleName: string,
+  details?: Record<string, any>
+) =>
+  createActivityLog({
+    userId,
+    action: "delete",
+    resourceType: "role",
+    resourceId: roleId,
+    resourceTitle: `역할 삭제: ${roleName}`,
+    details: {
+      ...details,
+      role_name: roleName,
+    },
+    level: LogLevel.WARN,
+  });
+
+export const logPermissionReview = (
+  userId: string,
+  targetUserId: string,
+  action: string,
+  revokedPermissions: string[],
+  details?: Record<string, any>
+) =>
+  createActivityLog({
+    userId,
+    action: "update",
+    resourceType: "permission",
+    resourceId: targetUserId,
+    resourceTitle: `권한 리뷰: ${action}`,
+    details: {
+      ...details,
+      review_action: action,
+      revoked_permissions: revokedPermissions,
+      target_user_id: targetUserId,
+    },
+    level: LogLevel.WARN,
+  });
+
 // 활동 로그 조회 함수들
 export async function getActivityLogs({
   userId,
@@ -517,7 +662,7 @@ export async function getUserActivityStats(userId: string) {
 
     // 통계 집계
     const stats = data?.reduce(
-      (acc: Record<string, Record<string, number>>, log) => {
+      (acc: Record<string, Record<string, number>>, log: any) => {
         if (!acc[log.resource_type]) {
           acc[log.resource_type] = {};
         }

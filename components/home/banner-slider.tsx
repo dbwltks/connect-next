@@ -205,7 +205,7 @@ export default function BannerSlider({ banners }: BannerSliderProps) {
           modules={[Autoplay, Navigation, Pagination]}
           style={{ width: "100%", height: "100%" }}
         >
-          {banners.map((banner) => (
+          {banners.map((banner: any) => (
             <SwiperSlide key={banner.id}>{renderBanner(banner)}</SwiperSlide>
           ))}
 

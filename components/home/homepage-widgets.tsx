@@ -32,7 +32,10 @@ interface HomepageWidgetsProps {
 import { api } from "@/lib/api";
 
 // API를 통한 위젯 데이터 fetcher 함수
-async function fetchWidgets(pageId?: string, retryCount = 0): Promise<IWidget[]> {
+async function fetchWidgets(
+  pageId?: string,
+  retryCount = 0
+): Promise<IWidget[]> {
   const maxRetries = 3;
 
   try {
@@ -40,16 +43,16 @@ async function fetchWidgets(pageId?: string, retryCount = 0): Promise<IWidget[]>
     return result.data || [];
   } catch (error) {
     console.error(`Widget fetch attempt ${retryCount + 1} failed:`, error);
-    
+
     if (retryCount < maxRetries) {
       // 지수 백오프: 1초, 2초, 4초
       const delay = 1000 * Math.pow(2, retryCount);
-      
-      await new Promise(resolve => setTimeout(resolve, delay));
+
+      await new Promise((resolve) => setTimeout(resolve, delay));
       return fetchWidgets(pageId, retryCount + 1);
     }
-    
-    console.error('All retry attempts failed, returning empty array');
+
+    console.error("All retry attempts failed, returning empty array");
     return [];
   }
 }
@@ -59,17 +62,17 @@ export default function HomepageWidgets({
   pageId,
 }: HomepageWidgetsProps) {
   // SWR을 사용한 위젯 데이터 관리
-  const { data: widgets, error, isLoading } = useSWR(
-    ['widgets', pageId],
-    () => fetchWidgets(pageId),
-    {
-      fallbackData: initialWidgets || [], // 초기 데이터를 fallback으로 사용
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      dedupingInterval: 10000, // 10초 내 중복 요청 방지
-      keepPreviousData: true, // 이전 데이터 유지로 깜빡임 방지
-    }
-  );
+  const {
+    data: widgets,
+    error,
+    isLoading,
+  } = useSWR(["widgets", pageId], () => fetchWidgets(pageId), {
+    fallbackData: initialWidgets || [], // 초기 데이터를 fallback으로 사용
+    revalidateOnFocus: false,
+    revalidateOnReconnect: true,
+    dedupingInterval: 10000, // 10초 내 중복 요청 방지
+    keepPreviousData: true, // 이전 데이터 유지로 깜빡임 방지
+  });
 
   const renderWidget = (widget: IWidget) => {
     if (!widget.is_active) return null;
@@ -205,7 +208,7 @@ export default function HomepageWidgets({
           <p className="text-xs text-red-600 mt-1">잠시 후 다시 시도됩니다.</p>
         </div>
       ) : isLoading && (!widgets || widgets.length === 0) ? (
-        Array.from({ length: 2 }).map((_, index) => (
+        Array.from({ length: 2 }).map((_, index: any) => (
           <div key={index} className="flex flex-col">
             <div className="relative h-64 w-full flex-1 overflow-hidden rounded-xl border border-slate-100">
               {renderWidgetSkeleton()}
@@ -213,7 +216,7 @@ export default function HomepageWidgets({
           </div>
         ))
       ) : (
-        widgetsToRender.map((widget) => (
+        widgetsToRender.map((widget: any) => (
           <div
             key={widget.id}
             className="flex flex-col"
@@ -271,7 +274,7 @@ export default function HomepageWidgets({
     //       <div className="grid grid-cols-12 gap-6">
     //         <div className="col-span-12">
     //           <div className="grid grid-cols-12 gap-6">
-    //             {Array.from({ length: 4 }).map((_, index) => (
+    //             {Array.from({ length: 4 }).map((_, index: any) => (
     //               <div
     //                 key={index}
     //                 className="col-span-12 lg:col-span-6 flex flex-col"
@@ -307,7 +310,7 @@ export default function HomepageWidgets({
   const mainContent = (
     <div className="grid grid-cols-12 gap-6">
       {isLoading && (!widgets || widgets.length === 0)
-        ? Array.from({ length: 3 }).map((_, index) => (
+        ? Array.from({ length: 3 }).map((_, index: any) => (
             <div
               key={index}
               className="col-span-12 lg:col-span-4 flex flex-col"
@@ -317,7 +320,7 @@ export default function HomepageWidgets({
               </div>
             </div>
           ))
-        : main.map((widget) => (
+        : main.map((widget: any) => (
             <div
               key={widget.id}
               className={`${getWidgetWidthClass(widget.width)} flex flex-col`}
@@ -337,12 +340,12 @@ export default function HomepageWidgets({
   return (
     <>
       {/* 스트립 위젯들을 컨테이너 밖에서 렌더링 */}
-      {strips.map((stripWidget) => (
+      {strips.map((stripWidget: any) => (
         <div key={stripWidget.id}>{renderWidget(stripWidget)}</div>
       ))}
 
       {/* 기존 메인 레이아웃 */}
-      <div className="xl:container mx-auto pt-6 sm:px-8 md:px-12 lg:px-16 py-0 sm:py-6 xl:px-0">
+      <div className="xl:container mx-auto sm:px-8 md:px-12 lg:px-16 py-0 sm:py-6 xl:px-0">
         <div className="grid grid-cols-12 gap-6">
           {layoutStructure === "1-col" && (
             <div className="col-span-12 flex justify-center">

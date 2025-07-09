@@ -22,6 +22,8 @@ import {
   deleteComment as serviceDeleteComment,
   updateComment as serviceUpdateComment,
 } from "@/services/commentService";
+import { useAuth } from "@/contexts/auth-context";
+import { useUserProfile } from "@/hooks/use-user-profile";
 
 interface BoardComment {
   id: string;
@@ -218,22 +220,9 @@ export default function BoardComments({
       return null;
     }
   }
-  // useState로 user 저장 (CSR에서만)
-  const [user, setUser] = useState<any>(null);
-  useEffect(() => {
-    async function loadUser() {
-      const userData = await getHeaderUser();
-      setUser(userData);
-    }
-    loadUser();
-
-    const handler = async () => {
-      const userData = await getHeaderUser();
-      setUser(userData);
-    };
-    window.addEventListener("storage", handler);
-    return () => window.removeEventListener("storage", handler);
-  }, []);
+  // 사용자 정보 가져오기
+  const { user } = useAuth();
+  const { profile } = useUserProfile(user);
 
   // 댓글 아바타 맵 상태 추가
   const [avatarMap, setAvatarMap] = useState<{
@@ -267,12 +256,12 @@ export default function BoardComments({
       // 댓글 작성자들 + 현재 로그인한 사용자 ID 수집
       let userIds: string[] = [];
       if (comments.length === 0 && user?.id) {
-        userIds = [user.id];
+        userIds = [user?.id].filter((id): id is string => typeof id === "string");
       } else {
         userIds = Array.from(
           new Set([
-            ...comments.map((c) => c.user_id),
-            ...comments.map((c) => c.reply_to),
+            ...comments.map((c: any) => c.user_id),
+            ...comments.map((c: any) => c.reply_to),
             ...(user?.id ? [user.id] : []), // 현재 로그인한 사용자 ID 추가
           ])
         ).filter((id): id is string => typeof id === "string");
@@ -415,7 +404,7 @@ export default function BoardComments({
           depth === 0 ? "space-y-4" : "mt-2 space-y-4 border-t border-gray-200"
         }
       >
-        {tree.map((c: BoardComment & { replies: BoardComment[] }, index) => (
+        {tree.map((c: BoardComment & { replies: BoardComment[] }, index: any) => (
           <li
             key={c.id}
             className={`pt-4 ${index !== 0 ? "border-t border-gray-200" : ""} ${depth > 0 ? "ml-12" : ""}`}
@@ -491,13 +480,13 @@ export default function BoardComments({
                         <div className="flex items-center justify-between p-4">
                           <div className="flex items-center gap-2">
                             <UserAvatar
-                              userId={user.id}
-                              username={user.username}
+                              userId={user?.id || ""}
+                              username={profile?.username || ""}
                               size={6}
                               avatarMap={avatarMap}
                             />
                             <span className="font-medium text-sm">
-                              {user.username}
+                              {profile?.username}
                             </span>
                           </div>
                           <span className="text-xs text-gray-400">
@@ -577,7 +566,7 @@ export default function BoardComments({
                 </div>
                 <div className="flex items-center gap-3">
                   {/* 로그인 유저만 답글 버튼 노출 */}
-                  {user && user.username && (
+                  {user && profile?.username && (
                     <button
                       className="text-gray-500 hover:text-blue-600 text-xs flex items-center gap-1"
                       onClick={() => {
@@ -607,7 +596,7 @@ export default function BoardComments({
                 {activeMenuId === c.id && user && (
                   <div className="absolute right-0 top-full mt-1 bg-white shadow-md rounded-md py-1 z-10 w-24">
                     {/* 본인 댓글이면 수정/삭제, 관리자면 삭제만 */}
-                    {user.id === c.user_id && (
+                    {user?.id === c.user_id && (
                       <button
                         className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                         onClick={() => {
@@ -620,7 +609,7 @@ export default function BoardComments({
                         수정
                       </button>
                     )}
-                    {(user.id === c.user_id || user.role === "admin") && (
+                    {(user?.id === c.user_id || profile?.role === "admin") && (
                       <button
                         className="w-full text-left px-3 py-2 text-xs text-red-600 hover:bg-gray-100 flex items-center gap-2"
                         onClick={async () => {
@@ -659,13 +648,13 @@ export default function BoardComments({
                     <div className="flex items-center gap-2">
                       {/* 작성자(로그인 유저) 아바타/이름 */}
                       <UserAvatar
-                        userId={user.id}
-                        username={user.username}
+                        userId={user?.id || ""}
+                        username={profile?.username || ""}
                         size={6}
                         avatarMap={avatarMap}
                       />
                       <span className="font-medium text-sm">
-                        {user.username}
+                        {profile?.username}
                       </span>
                       {/* 답글 대상 username은 placeholder에서만 사용 */}
                       {c.parent_id &&
@@ -786,19 +775,19 @@ export default function BoardComments({
       )}
       <Toaster />
       {/* 댓글 입력 폼 - 로그인 유저만 */}
-      {user && user.username ? (
+      {user && profile?.username ? (
         <form onSubmit={handleSubmit} className="pt-6">
           <div className="border-2 border-gray-200 rounded-lg overflow-hidden">
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-2">
                 <UserAvatar
-                  userId={user.id}
-                  username={user.username}
+                  userId={user?.id || ""}
+                  username={profile?.username || ""}
                   size={8}
                   avatarMap={avatarMap}
                 />
-                <span className="font-medium text-sm">{user.username}</span>
-                {postAuthor?.user_id && user.id === postAuthor.user_id}
+                <span className="font-medium text-sm">{profile?.username}</span>
+                {postAuthor?.user_id && user?.id === postAuthor.user_id}
               </div>
               <span className="text-xs text-gray-400">
                 {comment.length}/1000

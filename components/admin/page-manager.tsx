@@ -117,7 +117,7 @@ export default function PageManager({ pageId, templateId }: PageManagerProps) {
 
       if (data && data.length > 0) {
         setSections(
-          data.map((item) => ({
+          data.map((item: any) => ({
             id: item.id,
             title: item.title,
             name: item.name,
@@ -155,7 +155,7 @@ export default function PageManager({ pageId, templateId }: PageManagerProps) {
 
       if (data && data.length > 0) {
         setCategories(
-          data.map((item) => ({
+          data.map((item: any) => ({
             id: item.id,
             title: item.title,
             name: item.title, // name 필드 추가 (title과 동일하게 매핑)
@@ -234,7 +234,7 @@ export default function PageManager({ pageId, templateId }: PageManagerProps) {
 
       // 로컬 상태 업데이트
       setPages(
-        pages.map((page) => (page.id === id ? { ...page, isActive } : page))
+        pages.map((page: any) => (page.id === id ? { ...page, isActive } : page))
       );
 
       toast({
@@ -487,7 +487,7 @@ export default function PageManager({ pageId, templateId }: PageManagerProps) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="_none">선택 안함</SelectItem>
-                  {sections.map((section) => (
+                  {sections.map((section: any) => (
                     <SelectItem key={section.id} value={section.id}>
                       {section.title}
                     </SelectItem>
@@ -518,7 +518,7 @@ export default function PageManager({ pageId, templateId }: PageManagerProps) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="_none">선택 안함</SelectItem>
-                  {filteredCategories.map((category) => (
+                  {filteredCategories.map((category: any) => (
                     <SelectItem key={category.id} value={category.id}>
                       {category.title}
                     </SelectItem>
@@ -644,7 +644,7 @@ export default function PageManager({ pageId, templateId }: PageManagerProps) {
             </TableHeader>
             <TableBody>
               {pages.length > 0 ? (
-                pages.map((page) => (
+                pages.map((page: any) => (
                   <TableRow key={page.id}>
                     <TableCell>
                       <div className="max-w-[200px] truncate font-mono text-xs">

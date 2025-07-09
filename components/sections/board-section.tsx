@@ -50,6 +50,7 @@ import { ko } from "date-fns/locale";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
+import { useUserProfile } from "@/hooks/use-user-profile";
 import { ITag } from "@/types/index";
 
 interface BoardPost {
@@ -189,7 +190,8 @@ export default function BoardSection({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { user } = useAuth();
-  const isAdmin = user?.role?.toLowerCase() === "admin";
+  const { profile } = useUserProfile(user);
+  const isAdmin = profile?.role === "admin";
 
   // section에서 필요한 정보 추출
   const title = menuTitle || section.title || "게시판";
@@ -879,7 +881,7 @@ export default function BoardSection({
   //       </div>
   //       <div className="rounded-lg border bg-white">
   //         <div className="p-2">
-  //           {Array.from({ length: 5 }).map((_, i) => (
+  //           {Array.from({ length: 5 }).map((_, i: any) => (
   //             <div key={i} className="flex items-center space-x-4 py-3">
   //               <Skeleton className="h-4 w-12" />
   //               <Skeleton className="h-4 flex-1" />
@@ -939,7 +941,7 @@ export default function BoardSection({
               <DropdownMenuContent align="start">
                 <DropdownMenuLabel>정렬 방식</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {sortOptions.map((option) => (
+                {sortOptions.map((option: any) => (
                   <DropdownMenuItem
                     key={option.value}
                     onClick={() => handleSortChange(option.value)}
@@ -1007,7 +1009,7 @@ export default function BoardSection({
                 <DropdownMenuContent align="end" className="w-[200px]">
                   <DropdownMenuLabel>표시할 항목</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  {Object.entries(columnLabels).map(([key, label]) => {
+                  {Object.entries(columnLabels).map(([key, label]: any) => {
                     const isNumber = key === "number";
                     return (
                       <DropdownMenuItem
@@ -1071,7 +1073,7 @@ export default function BoardSection({
             // 목록형 - 모바일에 최적화된 레이아웃
             <div className="bg-white dark:bg-gray-900">
               {/* 공지사항 */}
-              {sortedNotices.map((post) => (
+              {sortedNotices.map((post: any) => (
                 <div
                   key={post.id}
                   className="flex cursor-pointer items-start border-l-4 border-yellow-400 bg-yellow-50 dark:bg-yellow-900/30 p-3 rounded-md shadow-sm min-h-[88px]"
@@ -1129,7 +1131,7 @@ export default function BoardSection({
                   게시글이 없습니다.
                 </div>
               ) : (
-                sortedNormals.map((post) => (
+                sortedNormals.map((post: any) => (
                   <div
                     key={post.id}
                     className="flex cursor-pointer px-2 py-3 overflow-hidden border-t items-start border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 min-h-[80px]"
@@ -1213,7 +1215,7 @@ export default function BoardSection({
                     .filter(
                       (k) => visibleColumns[k as keyof typeof visibleColumns]
                     )
-                    .map((key) => (
+                    .map((key: any) => (
                       <col
                         key={key}
                         className={
@@ -1238,7 +1240,7 @@ export default function BoardSection({
                       .filter(
                         (k) => visibleColumns[k as keyof typeof visibleColumns]
                       )
-                      .map((key, idx, visibleKeys) => {
+                      .map((key, idx, visibleKeys: any) => {
                         const label =
                           key === "number"
                             ? "번호"
@@ -1284,7 +1286,7 @@ export default function BoardSection({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sortedNotices.map((post) => {
+                  {sortedNotices.map((post: any) => {
                     const visibleKeys = Object.keys(columnLabels).filter(
                       (k) => visibleColumns[k as keyof typeof visibleColumns]
                     );
@@ -1293,7 +1295,7 @@ export default function BoardSection({
                         key={post.id}
                         className="bg-yellow-50 dark:bg-yellow-900/30 border-b border-gray-100 dark:border-gray-800"
                       >
-                        {visibleKeys.map((key) => (
+                        {visibleKeys.map((key: any) => (
                           <TableCell
                             key={key}
                             className={`${
@@ -1377,7 +1379,7 @@ export default function BoardSection({
                       </TableCell>
                     </TableRow>
                   )}
-                  {sortedNormals.map((post, rowIdx) => {
+                  {sortedNormals.map((post, rowIdx: any) => {
                     const visibleKeys = Object.keys(columnLabels).filter(
                       (k) => visibleColumns[k as keyof typeof visibleColumns]
                     );
@@ -1386,7 +1388,7 @@ export default function BoardSection({
                         key={post.id}
                         className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
                       >
-                        {visibleKeys.map((key) => (
+                        {visibleKeys.map((key: any) => (
                           <TableCell
                             key={key}
                             className={`${
@@ -1472,7 +1474,7 @@ export default function BoardSection({
                   게시글이 없습니다.
                 </div>
               ) : (
-                [...sortedNotices, ...sortedNormals].map((post) => (
+                [...sortedNotices, ...sortedNormals].map((post: any) => (
                   <Card
                     key={post.id}
                     className="w-full h-80 min-h-[320px] flex flex-col overflow-hidden cursor-pointer rounded-xl border border-slate-200/5 transition-transform duration-400 group hover:scale-[1.01] v-card-scale hover:-translate-y-1"
@@ -1557,7 +1559,7 @@ export default function BoardSection({
                   className={page === 1 ? "pointer-events-none opacity-50" : ""}
                 />
               </PaginationItem>
-              {Array.from({ length: totalPages }).map((_, idx) => {
+              {Array.from({ length: totalPages }).map((_, idx: any) => {
                 // 모바일에서는 현재 페이지 주변의 페이지만 표시
                 const isCurrent = page === idx + 1;
                 const isNearCurrent = Math.abs(page - (idx + 1)) <= 1;

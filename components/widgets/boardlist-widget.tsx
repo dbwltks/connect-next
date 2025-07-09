@@ -144,7 +144,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
       case BOARD_TEMPLATE.COMPACT:
         return (
           <div className="space-y-2">
-            {Array.from({ length: skeletonCount }).map((_, index) => (
+            {Array.from({ length: skeletonCount }).map((_, index: any) => (
               <div
                 key={index}
                 className="flex items-center justify-between py-2"
@@ -190,7 +190,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
       case BOARD_TEMPLATE.NOTICE:
         return (
           <div className="space-y-4">
-            {Array.from({ length: skeletonCount }).map((_, index) => (
+            {Array.from({ length: skeletonCount }).map((_, index: any) => (
               <div
                 key={index}
                 className="p-4 border border-gray-200 rounded-lg"
@@ -209,7 +209,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
       default: // CLASSIC
         return (
           <div className="space-y-4">
-            {Array.from({ length: skeletonCount }).map((_, index) => (
+            {Array.from({ length: skeletonCount }).map((_, index: any) => (
               <div key={index} className="flex items-start space-x-4">
                 {showThumbnail && <Skeleton className="w-20 h-20 rounded" />}
                 <div className="flex-1 space-y-2">
@@ -259,7 +259,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
       case BOARD_TEMPLATE.COMPACT:
         return (
           <div className="space-y-3">
-            {posts.map((post) => (
+            {posts.map((post: any) => (
               <div
                 key={post.id}
                 className="cursor-pointer last:border-b-0 widget-scale"
@@ -286,7 +286,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
       case BOARD_TEMPLATE.CARD:
         return (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {posts.map((post) => (
+            {posts.map((post: any) => (
               <Link
                 key={post.id}
                 href={getPostUrl(post)}
@@ -323,7 +323,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
       case BOARD_TEMPLATE.GALLERY:
         return (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {posts.map((post) => (
+            {posts.map((post: any) => (
               <div
                 key={post.id}
                 className="rounded overflow-hidden border-gray-50 border widget-scale"
@@ -353,7 +353,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
 
         return (
           <div className="space-y-4">
-            {posts.map((post) => {
+            {posts.map((post: any) => {
               // 게시물 작성일이 오늘이면 NEW 표시
               const postDate = new Date(post.created_at);
               postDate.setHours(0, 0, 0, 0);
@@ -401,7 +401,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
       default:
         return (
           <div className="space-y-5 py-2">
-            {posts.map((post) => (
+            {posts.map((post: any) => (
               <div
                 key={post.id}
                 className="cursor-pointer flex items-start space-x-4 widget-scale"

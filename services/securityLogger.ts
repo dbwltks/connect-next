@@ -305,7 +305,7 @@ class SecurityLogger {
         userAgent,
         details: {
           requestData: requestString.substring(0, 1000), // 처음 1000자만
-          detectedPatterns: detectedPatterns.map((p) => p.source),
+          detectedPatterns: detectedPatterns.map((p: any) => p.source),
           reason: "Suspicious patterns detected in request",
         },
         timestamp: new Date(),
@@ -373,7 +373,7 @@ class SecurityLogger {
       const uniqueIPs = new Set<string>();
       const uniqueUsers = new Set<string>();
 
-      data.forEach((log) => {
+      data.forEach((log: any) => {
         // 타입별 통계
         eventsByType[log.event_type] = (eventsByType[log.event_type] || 0) + 1;
 

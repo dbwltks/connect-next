@@ -133,7 +133,7 @@ export const TagInput = forwardRef<HTMLInputElement, TagInputProps>(
       <div className={`relative ${className}`}>
         {/* 선택된 태그들 */}
         <div className="flex flex-wrap gap-2 mb-2">
-          {value.map((tag) => (
+          {value.map((tag: any) => (
             <Badge
               key={tag.id}
               variant="secondary"
@@ -186,7 +186,7 @@ export const TagInput = forwardRef<HTMLInputElement, TagInputProps>(
             {isLoading ? (
               <div className="p-2 text-sm text-gray-500">검색 중...</div>
             ) : suggestions.length > 0 ? (
-              suggestions.map((tag) => (
+              suggestions.map((tag: any) => (
                 <button
                   key={tag.id}
                   type="button"

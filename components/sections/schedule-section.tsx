@@ -25,7 +25,7 @@ export default function ScheduleSection({
         {section.description || "예정된 일정입니다."}
       </p>
       <ul className="divide-y divide-gray-200">
-        {schedules.map((sch, i) => (
+        {schedules.map((sch, i: any) => (
           <li key={i} className="py-3 flex items-start gap-4">
             <div className="font-mono text-sm text-blue-700 w-24 shrink-0">
               {sch.date}

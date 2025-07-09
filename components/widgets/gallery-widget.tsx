@@ -32,7 +32,7 @@ export function GalleryWidget({
               gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
             }}
           >
-            {posts.map((post) => (
+            {posts.map((post: any) => (
               <div
                 key={post.id}
                 className="group relative overflow-hidden rounded-lg aspect-square bg-gray-100"

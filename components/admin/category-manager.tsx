@@ -204,7 +204,7 @@ export default function CategoryManager({
       if (error) throw error;
       if (data && data.length > 0) {
         setSections(
-          data.map((item) => ({
+          data.map((item: any) => ({
             id: item.id,
             title: item.title,
             name: item.name,
@@ -246,7 +246,7 @@ export default function CategoryManager({
         const newItems = arrayMove(items, oldIndex, newIndex);
 
         // 순서 업데이트
-        return newItems.map((item, index) => ({
+        return newItems.map((item, index: any) => ({
           ...item,
           order: index,
         }));
@@ -257,7 +257,7 @@ export default function CategoryManager({
   // 카테고리 활성화/비활성화 토글
   const handleToggleCategory = (id: string, isActive: boolean) => {
     setCategories(
-      categories.map((category) =>
+      categories.map((category: any) =>
         category.id === id ? { ...category, isActive } : category
       )
     );
@@ -307,11 +307,11 @@ export default function CategoryManager({
       const { data: existingCategories } = await supabase
         .from("cms_categories")
         .select("id");
-      const existingIds = (existingCategories || []).map((c) => c.id);
+      const existingIds = (existingCategories || []).map((c: any) => c.id);
 
       // 2. 삭제/업데이트/추가 분리
-      const currentIds = categories.map((c) => c.id);
-      const idsToDelete = existingIds.filter((id) => !currentIds.includes(id));
+      const currentIds = categories.map((c: any) => c.id);
+      const idsToDelete = existingIds.filter((id: any) => !currentIds.includes(id));
 
       // 3. 삭제
       if (idsToDelete.length > 0) {
@@ -405,12 +405,12 @@ export default function CategoryManager({
             onDragEnd={handleDragEnd}
           >
             <SortableContext
-              items={categories.map((c) => c.id)}
+              items={categories.map((c: any) => c.id)}
               strategy={verticalListSortingStrategy}
             >
               {categories
                 .sort((a, b) => a.order - b.order)
-                .map((category) => (
+                .map((category: any) => (
                   <SortableItem
                     key={category.id}
                     category={category}
@@ -523,7 +523,7 @@ export default function CategoryManager({
                   <SelectValue placeholder="섹션 선택" />
                 </SelectTrigger>
                 <SelectContent>
-                  {sections.map((section) => (
+                  {sections.map((section: any) => (
                     <SelectItem key={section.id} value={section.id}>
                       {section.title}
                     </SelectItem>
@@ -562,7 +562,7 @@ export default function CategoryManager({
                 setCategories((prev) => {
                   const exists = prev.some((c) => c.id === newCategory.id);
                   if (exists) {
-                    return prev.map((c) =>
+                    return prev.map((c: any) =>
                       c.id === newCategory.id ? newCategory : c
                     );
                   } else {

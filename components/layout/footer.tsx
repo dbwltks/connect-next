@@ -204,7 +204,7 @@ export default function Footer({
               예배 시간
             </h3>
             <ul className="space-y-1">
-              {info.service_times.map((service: ServiceTime) => (
+              {(info.service_times || []).map((service: any) => (
                 <li
                   key={service.id}
                   className="text-xs text-gray-600 dark:text-gray-400 py-0.5"
@@ -225,7 +225,7 @@ export default function Footer({
             </h3>
             <ul className="space-y-2">
               {/* 주소 정보 */}
-              {info.addresses.map((address: Address) => (
+              {info.addresses.map((address: any) => (
                 <li key={address.id} className="flex items-start gap-1.5">
                   <MapPin className="h-3.5 w-3.5 text-blue-600 mt-0.5" />
                   <span className="text-xs text-gray-600 dark:text-gray-400">
@@ -240,7 +240,7 @@ export default function Footer({
               ))}
 
               {/* 전화번호 정보 */}
-              {info.phones.map((phone: Phone) => (
+              {info.phones.map((phone: any) => (
                 <li key={phone.id} className="flex items-center gap-1.5">
                   <Phone className="h-3.5 w-3.5 text-blue-600" />
                   <span className="text-xs text-gray-600 dark:text-gray-400">
@@ -281,22 +281,22 @@ export default function Footer({
                   // 1. 하위 메뉴가 있는 상위 메뉴 ID 목록 추출
                   const parentIdsWithChildren = new Set(
                     menus
-                      .filter((menu) => menu.parent_id)
-                      .map((menu) => menu.parent_id)
+                      .filter((menu: any) => menu.parent_id)
+                      .map((menu: any) => menu.parent_id)
                   );
 
                   // 2. 하위 메뉴가 있는 상위 메뉴들의 그룹 생성
                   const menuGroupsWithChildren = Array.from(
                     parentIdsWithChildren
                   )
-                    .map((parentId) => {
+                    .map((parentId: any) => {
                       const parentMenu = menus.find(
-                        (menu) => menu.id === parentId
+                        (menu: any) => menu.id === parentId
                       );
                       if (!parentMenu) return null;
 
                       const childMenus = menus.filter(
-                        (menu) => menu.parent_id === parentId
+                        (menu: any) => menu.parent_id === parentId
                       );
 
                       return {
@@ -316,10 +316,10 @@ export default function Footer({
                   // 3. 하위 메뉴가 없는 상위 메뉴들의 그룹 생성
                   const menuGroupsWithoutChildren = menus
                     .filter(
-                      (menu) =>
+                      (menu: any) =>
                         !menu.parent_id && !parentIdsWithChildren.has(menu.id)
                     )
-                    .map((menu) => ({
+                    .map((menu: any) => ({
                       parent: menu,
                       children: [] as FooterMenuItem[],
                     }));

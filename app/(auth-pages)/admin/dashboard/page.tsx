@@ -146,7 +146,7 @@ export default function AdminDashboardPage() {
           .filter(
             (log: ActivityLog) => new Date(log.created_at) >= subDays(today, 1)
           )
-          .map((log: ActivityLog) => log.user_id)
+          .map((log: any) => log.user_id)
       ).size;
 
       setStats({
@@ -198,12 +198,12 @@ export default function AdminDashboardPage() {
       }, {});
 
       setLogLevelData(
-        Object.entries(levelCounts).map(([name, value]) => ({ name, value }))
+        Object.entries(levelCounts).map(([name, value]: any) => ({ name, value }))
       );
 
       // 성능 데이터 (최근 20개)
       setPerformanceData(
-        perfMetrics.slice(-20).map((metric) => ({
+        perfMetrics.slice(-20).map((metric: any) => ({
           time: format(new Date(metric.timestamp), "HH:mm"),
           processingTime: metric.processing_time,
           throughput: metric.throughput,
@@ -432,7 +432,7 @@ export default function AdminDashboardPage() {
                       fill="#8884d8"
                       dataKey="value"
                     >
-                      {logLevelData.map((entry, index) => (
+                      {logLevelData.map((entry, index: any) => (
                         <Cell
                           key={`cell-${index}`}
                           fill={COLORS[index % COLORS.length]}

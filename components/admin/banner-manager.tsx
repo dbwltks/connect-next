@@ -469,7 +469,7 @@ export default function BannerManager() {
 
     if (menusData && Array.isArray(menusData)) {
       setMenus(
-        menusData.map((menu) => ({
+        menusData.map((menu: any) => ({
           id: menu.id,
           name: menu.title,
           url: menu.url,
@@ -558,11 +558,11 @@ export default function BannerManager() {
       const { data: existingBanners } = await supabase
         .from("cms_banners")
         .select("id");
-      const existingIds = (existingBanners || []).map((b) => b.id);
+      const existingIds = (existingBanners || []).map((b: any) => b.id);
 
       // 2. 삭제/업데이트/추가 분리
-      const currentIds = allBanners.map((b) => b.id);
-      const idsToDelete = existingIds.filter((id) => !currentIds.includes(id));
+      const currentIds = allBanners.map((b: any) => b.id);
+      const idsToDelete = existingIds.filter((id: any) => !currentIds.includes(id));
 
       // 3. 삭제
       if (idsToDelete.length > 0) {
@@ -672,14 +672,14 @@ export default function BannerManager() {
   const handleToggleBanner = (id: string, isActive: boolean) => {
     // 현재 표시 중인 배너 목록 업데이트
     setBanners(
-      banners.map((banner) =>
+      banners.map((banner: any) =>
         banner.id === id ? { ...banner, isActive } : banner
       )
     );
 
     // 전체 배너 목록도 업데이트
     setAllBanners(
-      allBanners.map((banner) =>
+      allBanners.map((banner: any) =>
         banner.id === id ? { ...banner, isActive } : banner
       )
     );
@@ -714,7 +714,7 @@ export default function BannerManager() {
                 onChange={(e) => handleMenuChange(e.target.value || null)}
               >
                 <option value="">메인 홈 (홈 배너)</option>
-                {menus.map((menu) => (
+                {menus.map((menu: any) => (
                   <option key={menu.id} value={menu.id}>
                     {menu.name} ({menu.url})
                   </option>
@@ -757,11 +757,11 @@ export default function BannerManager() {
               onDragEnd={handleDragEnd}
             >
               <SortableContext
-                items={banners.map((b) => b.id)}
+                items={banners.map((b: any) => b.id)}
                 strategy={verticalListSortingStrategy}
               >
                 {banners.length > 0 ? (
-                  banners.map((banner) => (
+                  banners.map((banner: any) => (
                     <SortableBannerItem
                       key={banner.id}
                       banner={banner}
@@ -1184,7 +1184,7 @@ export default function BannerManager() {
                   }
                 >
                   <option value="">전체 사이트 (공통 배너)</option>
-                  {menus.map((menu) => (
+                  {menus.map((menu: any) => (
                     <option key={menu.id} value={menu.id}>
                       {menu.name} ({menu.url})
                     </option>
@@ -1274,7 +1274,7 @@ export default function BannerManager() {
                   const updatedAllBanners = allBanners.some(
                     (b) => b.id === newBanner.id
                   )
-                    ? allBanners.map((b) =>
+                    ? allBanners.map((b: any) =>
                         b.id === newBanner.id ? newBanner : b
                       )
                     : [...allBanners, newBanner];

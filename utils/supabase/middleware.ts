@@ -35,8 +35,35 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // 관리자 페이지는 레이아웃에서 처리하도록 일시적으로 비활성화
+  // if (request.nextUrl.pathname.startsWith('/admin')) {
+  //   if (!user) {
+  //     const url = request.nextUrl.clone();
+  //     url.pathname = '/login';
+  //     return NextResponse.redirect(url);
+  //   }
+
+  //   // 관리자 권한 체크
+  //   const { data: userProfile, error } = await supabase
+  //     .from('users')
+  //     .select('role')
+  //     .eq('id', user.id)
+  //     .single();
+
+  //   console.log('[Middleware] 관리자 권한 체크:', { userProfile, error, userId: user.id });
+
+  //   if (error || !userProfile || userProfile.role !== 'admin') {
+  //     console.log('[Middleware] 관리자 권한 없음, 홈으로 리다이렉트');
+  //     const url = request.nextUrl.clone();
+  //     url.pathname = '/';
+  //     return NextResponse.redirect(url);
+  //   }
+
+  //   console.log('[Middleware] 관리자 권한 확인됨');
+  // }
+
   // 로그인이 필요한 보호된 경로들
-  const protectedPaths = ['/mypage', '/admin'];
+  const protectedPaths = ['/mypage'];
   const isProtectedPath = protectedPaths.some(path => request.nextUrl.pathname.startsWith(path));
 
   if (

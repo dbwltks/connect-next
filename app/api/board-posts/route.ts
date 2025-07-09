@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
           .select('id, email, username, nickname, display_name')
           .in('id', userIds);
 
-        userMap = new Map(users?.map((user) => [user.id, user]) || []);
+        userMap = new Map(users?.map((user: any) => [user.id, user]) || []);
       }
 
       // 좋아요 수 추가

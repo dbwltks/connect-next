@@ -2,6 +2,7 @@
 
 import { ThemeProvider } from "next-themes";
 import { SWRConfig } from "swr";
+import { usePathname } from "next/navigation";
 import Header from "@/components/layout/header";
 import Footer from "@/components/layout/footer";
 import { Toaster } from "@/components/ui/toaster";
@@ -22,6 +23,9 @@ export default function ClientLayout({
   footerSettings: any;
   widgets: any[];
 }) {
+  const pathname = usePathname();
+  const isAdminPage = pathname?.startsWith('/admin') || pathname?.startsWith('/mypage');
+
   return (
     <AuthProvider>
       <SWRConfig value={swrGlobalConfig}>
@@ -32,9 +36,9 @@ export default function ClientLayout({
           disableTransitionOnChange
         >
           <div className="min-h-screen flex flex-col">
-            <Header />
+            {!isAdminPage && <Header />}
             <main className="flex-1">{children}</main>
-            <Footer menus={footerMenus} settings={footerSettings} />
+            {!isAdminPage && <Footer menus={footerMenus} settings={footerSettings} />}
             <Toaster />
             <ScrollToTop />
           </div>

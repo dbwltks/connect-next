@@ -264,7 +264,7 @@ export default function SectionManager({
         const newItems = arrayMove(items, oldIndex, newIndex);
 
         // 순서 업데이트
-        return newItems.map((item, index) => ({
+        return newItems.map((item, index: any) => ({
           ...item,
           order: index,
         }));
@@ -275,7 +275,7 @@ export default function SectionManager({
   // 섹션 활성화/비활성화 토글
   const handleToggleSection = (id: string, isActive: boolean) => {
     setSections(
-      sections.map((section) =>
+      sections.map((section: any) =>
         section.id === id ? { ...section, isActive } : section
       )
     );
@@ -326,11 +326,11 @@ export default function SectionManager({
         .from("cms_sections")
         .select("id");
 
-      const existingIds = (existingSections || []).map((s) => s.id);
+      const existingIds = (existingSections || []).map((s: any) => s.id);
 
       // 삭제할 섹션과 추가/업데이트할 섹션 분류
-      const currentIds = sections.map((s) => s.id);
-      const idsToDelete = existingIds.filter((id) => !currentIds.includes(id));
+      const currentIds = sections.map((s: any) => s.id);
+      const idsToDelete = existingIds.filter((id: any) => !currentIds.includes(id));
 
       // 삭제할 섹션이 있으면 삭제
       if (idsToDelete.length > 0) {
@@ -417,7 +417,7 @@ export default function SectionManager({
         );
         if (exists) {
           // 기존 섹션 업데이트
-          return prevSections.map((section) =>
+          return prevSections.map((section: any) =>
             section.id === editingSection.id ? editingSection : section
           );
         } else {
@@ -589,12 +589,12 @@ export default function SectionManager({
                 onDragEnd={handleDragEnd}
               >
                 <SortableContext
-                  items={sections.map((s) => s.id)}
+                  items={sections.map((s: any) => s.id)}
                   strategy={verticalListSortingStrategy}
                 >
                   {sections
                     .sort((a, b) => a.order - b.order)
-                    .map((section) => (
+                    .map((section: any) => (
                       <SortableItem
                         key={section.id}
                         section={section}

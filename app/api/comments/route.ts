@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
           .select('id, title, page_id')
           .in('id', postIds);
 
-        postsMap = new Map(posts?.map((post) => [post.id, post]) || []);
+        postsMap = new Map(posts?.map((post: any) => [post.id, post]) || []);
       }
 
       // 사용자 정보 조회
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
           .select('id, display_name, username, nickname')
           .in('id', userIds);
 
-        usersMap = new Map(users?.map((user) => [user.id, user]) || []);
+        usersMap = new Map(users?.map((user: any) => [user.id, user]) || []);
       }
 
       // 모든 댓글에 author 필드 추가 (사용자 정보가 없어도)

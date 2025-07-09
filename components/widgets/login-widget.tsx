@@ -12,9 +12,9 @@ interface LoginWidgetProps {
 }
 
 export default function LoginWidget({ widget }: LoginWidgetProps) {
-  const { user, handleLogout } = useAuth();
+  const { user, signOut } = useAuth();
   
-  const displayName = user?.username || "사용자";
+  const displayName = (user as any)?.username || "사용자";
 
   // user가 undefined면 로딩 상태
   if (user === undefined) {
@@ -37,7 +37,7 @@ export default function LoginWidget({ widget }: LoginWidgetProps) {
           <div className="flex items-center space-x-3">
             <Avatar>
               <AvatarImage
-                src={user.avatar_url}
+                src={(user as any).avatar_url}
                 alt={displayName}
               />
               <AvatarFallback>
@@ -59,7 +59,7 @@ export default function LoginWidget({ widget }: LoginWidgetProps) {
               size="sm"
               variant="ghost"
               className="flex-1"
-              onClick={handleLogout}
+              onClick={signOut}
             >
               로그아웃
             </Button>

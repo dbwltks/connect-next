@@ -24,11 +24,12 @@ import {
   Moon,
   Laptop,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/auth-context";
+import { useUserProfile } from "@/hooks/use-user-profile";
 import { useTheme } from "next-themes";
 import { api } from "@/lib/api";
 import useSWR from "swr";
@@ -136,7 +137,8 @@ function useBodyScrollLock(isLocked: boolean) {
 
 export default function Header() {
   // auth-context에서 사용자 정보 가져오기
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  const { profile, loading: profileLoading } = useUserProfile(user);
   
   // SWR을 사용한 헤더 메뉴 데이터 페칭
   const { data: menuItems, error: menuError, isLoading: menuLoading } = useSWR(
@@ -150,14 +152,116 @@ export default function Header() {
     }
   );
 
-  // user가 undefined이면 로딩 중
-  const isLoading = user === undefined || menuLoading;
+  // 로딩 중 체크
+  const isLoading = loading || profileLoading || menuLoading;
+
+  // 스크롤 동작을 위한 상태 관리
+  const [isVisible, setIsVisible] = useState(true);
+  const [isScrollingDown, setIsScrollingDown] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isAtTop, setIsAtTop] = useState(true);
+  const lastScrollY = useRef(0);
+  const inactivityTimer = useRef<NodeJS.Timeout | null>(null);
+
+  // 모바일 화면 여부 확인
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768); // 768px 이하를 모바일로 간주
+    };
+
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // 스크롤 위치와 방향에 따라 헤더 표시 여부 결정
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // 맨 위에 있는지 확인
+      setIsAtTop(currentScrollY < 10);
+      
+      // 모바일에서만 스크롤 방향 체크
+      if (isMobile) {
+        // 맨 위에서는 항상 헤더 표시
+        if (currentScrollY < 10) {
+          setIsVisible(true);
+          setIsScrollingDown(false);
+        } else {
+          // 스크롤 방향 확인
+          if (currentScrollY > lastScrollY.current) {
+            // 아래로 스크롤 중
+            setIsScrollingDown(true);
+            setIsVisible(false);
+          } else {
+            // 위로 스크롤 중
+            setIsScrollingDown(false);
+            setIsVisible(true);
+          }
+        }
+      } else {
+        // 데스크톱에서는 항상 표시
+        setIsVisible(true);
+        setIsScrollingDown(false);
+      }
+
+      lastScrollY.current = currentScrollY;
+
+      // 비활성 타이머 재설정 (모바일에서만)
+      if (isMobile && !isAtTop) {
+        if (inactivityTimer.current) {
+          clearTimeout(inactivityTimer.current);
+        }
+
+        // 3초 후 헤더 숨기기 (스크롤이 멈춘 후)
+        inactivityTimer.current = setTimeout(() => {
+          if (window.scrollY > 10) {
+            setIsVisible(false);
+          }
+        }, 3000);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      if (inactivityTimer.current) {
+        clearTimeout(inactivityTimer.current);
+      }
+    };
+  }, [isMobile, isAtTop]);
+
+  // 모바일에서 fixed 헤더일 때 body padding 조정
+  useEffect(() => {
+    if (isMobile) {
+      document.body.style.paddingTop = '4rem'; // 64px (h-16)
+    } else {
+      document.body.style.paddingTop = '0';
+    }
+
+    return () => {
+      document.body.style.paddingTop = '0';
+    };
+  }, [isMobile]);
+
+  // 헤더 표시 여부 결정
+  const shouldShowHeader = !isMobile || isVisible;
 
   return (
-    <header className="sticky top-0 z-[10] w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className={`${
+      isMobile ? 'fixed' : 'sticky'
+    } top-0 z-[10] w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-all duration-300 ${
+      shouldShowHeader 
+        ? 'opacity-100 translate-y-0' 
+        : 'opacity-0 -translate-y-full pointer-events-none'
+    }`}>
       <div className="xl:container px-4 xl:px-0 flex h-16 items-center">
         <HeaderClient 
           user={user} 
+          profile={profile}
           menuItems={menuItems || []} 
           isLoading={isLoading}
         />
@@ -166,8 +270,8 @@ export default function Header() {
   );
 }
 
-function HeaderClient({ user, menuItems, isLoading }: { user: any; menuItems: any[]; isLoading?: boolean }) {
-  const { handleLogout } = useAuth();
+function HeaderClient({ user, profile, menuItems, isLoading }: { user: any; profile: any; menuItems: any[]; isLoading?: boolean }) {
+  const { signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { theme, setTheme } = useTheme();
@@ -327,14 +431,14 @@ function HeaderClient({ user, menuItems, isLoading }: { user: any; menuItems: an
             <Button variant="ghost" size="icon" className="opacity-0">
               <span className="sr-only">로그인</span>
             </Button>
-          ) : user ? (
+          ) : profile ? (
             // 클라이언트에서 사용자 정보가 있으면 UserMenu 렌더링
             <UserMenu 
-              user={user} 
+              user={profile} 
               onLogout={async () => {
                 setIsLoggingOut(true);
                 try {
-                  await handleLogout();
+                  await signOut();
                 } finally {
                   setIsLoggingOut(false);
                 }
@@ -366,14 +470,14 @@ function HeaderClient({ user, menuItems, isLoading }: { user: any; menuItems: an
           <Button variant="ghost" size="icon" className="opacity-0">
             <span className="sr-only">로그인</span>
           </Button>
-        ) : user ? (
+        ) : profile ? (
           // 클라이언트에서 사용자 정보가 있으면 UserMenu 렌더링
           <UserMenu 
-            user={user} 
+            user={profile} 
             onLogout={async () => {
               setIsLoggingOut(true);
               try {
-                await handleLogout();
+                await signOut();
               } finally {
                 setIsLoggingOut(false);
               }
@@ -519,7 +623,7 @@ function HeaderClient({ user, menuItems, isLoading }: { user: any; menuItems: an
                   </DropdownMenu>
                 </div>
               </div>
-              {user ? (
+              {profile ? (
                 <>
                   <Link
                     href="/mypage"
@@ -535,7 +639,7 @@ function HeaderClient({ user, menuItems, isLoading }: { user: any; menuItems: an
                   >
                     설정
                   </Link>
-                  {user.role?.toLowerCase() === "admin" && (
+                  {profile?.role === "admin" && (
                     <Link
                       href="/admin"
                       onClick={() => setIsMenuOpen(false)}
@@ -549,7 +653,7 @@ function HeaderClient({ user, menuItems, isLoading }: { user: any; menuItems: an
                       setIsLoggingOut(true);
                       setIsMenuOpen(false);
                       try {
-                        await handleLogout();
+                        await signOut();
                       } finally {
                         setIsLoggingOut(false);
                       }
@@ -612,7 +716,7 @@ function UserMenu({ user, onLogout, isLoggingOut }: { user: any; onLogout: () =>
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium">{user.username}</p>
             <p className="text-xs text-muted-foreground">
-              {user.role?.toLowerCase() === "admin" ? "관리자" : "일반 회원"}
+              {user?.role === "admin" ? "관리자" : "일반 회원"}
             </p>
           </div>
         </DropdownMenuLabel>
@@ -629,7 +733,7 @@ function UserMenu({ user, onLogout, isLoggingOut }: { user: any; onLogout: () =>
             <span>설정</span>
           </Link>
         </DropdownMenuItem>
-        {user.role?.toLowerCase() === "admin" && (
+        {user?.role === "admin" && (
           <DropdownMenuItem asChild>
             <Link href="/admin" className="cursor-pointer">
               <svg
@@ -669,7 +773,7 @@ function UserMenu({ user, onLogout, isLoggingOut }: { user: any; onLogout: () =>
 function MainMenu({ items }: { items: any[] }) {
   return (
     <ul className="flex space-x-1">
-      {items.map((item, index) => (
+      {items.map((item, index: any) => (
         <li
           key={`${item.href}-${item.title}-${index}`}
           className="relative group"

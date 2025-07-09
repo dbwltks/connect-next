@@ -68,7 +68,7 @@ export default function RecentCommentsWidget({
           <Skeleton className="h-5 w-20" />
         </div>
         <div className="px-4 py-2 space-y-3">
-          {[...Array(itemCount)].map((_, i) => (
+          {[...Array(itemCount)].map((_, i: any) => (
             <div key={i} className="space-y-2">
               <Skeleton className="h-4 w-full" />
               <Skeleton className="h-3 w-1/2" />
@@ -108,7 +108,7 @@ export default function RecentCommentsWidget({
       </div>
       {comments && comments.length > 0 ? (
         <ul className="px-4 py-2 space-y-2 widget-scale">
-          {comments.map((comment) => (
+          {comments.map((comment: any) => (
             <li key={comment.id} className="text-sm">
               <Link href={getCommentUrl(comment)} className="">
                 <p className="truncate">{comment.content}</p>

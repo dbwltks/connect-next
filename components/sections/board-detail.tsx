@@ -54,6 +54,7 @@ import {
 } from "@/components/ui/dialog";
 import GlassContainer from "@/components/ui/glass-container";
 import { useAuth } from "@/contexts/auth-context";
+import { useUserProfile } from "@/hooks/use-user-profile";
 import TipTapViewer from "@/components/ui/tiptap-viewer";
 import { logBoardPostDelete } from "@/services/activityLogService";
 import { ITag } from "@/types/index";
@@ -99,7 +100,8 @@ interface BoardDetailProps {
 
 export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
   const { user } = useAuth();
-  const isAdmin = user?.role?.toLowerCase() === "admin";
+  const { profile } = useUserProfile(user);
+  const isAdmin = profile?.role === "admin";
 
   // 글꼴 설정 메뉴 렌더링 함수
   const renderFontSettingsMenu = (
@@ -917,7 +919,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
   const toggleLike = async () => {
     if (!post) return;
 
-    if (!user || !user.username) {
+    if (!user || !(user as any).username) {
       showToast({
         title: "로그인 필요",
         description: (
@@ -1662,7 +1664,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                     }}
                   >
                     <div className="py-1">
-                      {attachments.map((attachment, index) => (
+                      {attachments.map((attachment, index: any) => (
                         <div
                           key={index}
                           className="flex items-center justify-between px-3 py-2 hover:bg-gray-50"
@@ -1721,7 +1723,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
               const tags: ITag[] = JSON.parse(post.tags);
               return tags && tags.length > 0 ? (
                 <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-100">
-                  {tags.map((tag, index) => (
+                  {tags.map((tag, index: any) => (
                     <Badge 
                       key={index} 
                       variant="secondary"
@@ -2023,7 +2025,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                               label: "스포카",
                               style: "font-spoqa",
                             },
-                          ].map((font) => (
+                          ].map((font: any) => (
                             <button
                               key={font.value}
                               onClick={(e) => changeFontFamily(font.value, e)}

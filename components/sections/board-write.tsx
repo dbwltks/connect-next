@@ -57,6 +57,7 @@ import {
   getBibleBookName,
 } from "@/services/bibleService";
 import { useAuth } from "@/contexts/auth-context";
+import { useUserProfile } from "@/hooks/use-user-profile";
 import { ITag } from "@/types/index";
 
 // TipTap 에디터 컴포넌트를 동적으로 불러옴 (SSR 방지)
@@ -190,7 +191,7 @@ const FileManager = ({
 
   return (
     <div className="grid grid-cols-1 gap-2">
-      {uploadedFiles.map((file, index) => {
+      {uploadedFiles.map((file, index: any) => {
         const isImage = ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(
           (file.type || "").toLowerCase()
         );
@@ -483,7 +484,7 @@ export default function BoardWrite({
       const updatedTag = result.tag;
 
       // 로컬 상태 업데이트
-      setAllTags(allTags.map((tag) => (tag.id === id ? updatedTag : tag)));
+      setAllTags(allTags.map((tag: any) => (tag.id === id ? updatedTag : tag)));
       setEditingTag(null);
       showToast({
         title: "성공",
@@ -527,7 +528,8 @@ export default function BoardWrite({
 
   // useAuth 훅 사용
   const { user } = useAuth();
-  const isAdmin = user?.role?.toLowerCase() === "admin";
+  const { profile } = useUserProfile(user);
+  const isAdmin = profile?.role === "admin";
 
   // Refs
   const editorRef = useRef<any>(null);
@@ -987,7 +989,7 @@ export default function BoardWrite({
             </p>
           ) : (
             <div className="space-y-3">
-              {drafts.map((draft) => (
+              {drafts.map((draft: any) => (
                 <div
                   key={draft.key}
                   className="border rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
@@ -2239,7 +2241,7 @@ export default function BoardWrite({
                   기존 태그 ({allTags.length}개)
                 </h3>
                 <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {allTags.map((tag) => (
+                  {allTags.map((tag: any) => (
                     <div
                       key={tag.id}
                       className="flex items-center gap-3 p-3 border rounded-lg"
@@ -2251,10 +2253,10 @@ export default function BoardWrite({
                       {editingTag?.id === tag.id ? (
                         <div className="flex-1 grid gap-2">
                           <Input
-                            value={editingTag.name}
+                            value={editingTag?.name || ""}
                             onChange={(e) =>
                               setEditingTag({
-                                ...editingTag,
+                                ...editingTag!,
                                 name: e.target.value,
                               })
                             }
@@ -2263,22 +2265,22 @@ export default function BoardWrite({
                           <div className="flex gap-2">
                             <Input
                               type="color"
-                              value={editingTag.color}
+                              value={editingTag?.color || ''}
                               onChange={(e) =>
-                                setEditingTag({
+                                setEditingTag(editingTag ? {
                                   ...editingTag,
                                   color: e.target.value,
-                                })
+                                } : null)
                               }
                               className="w-16"
                             />
                             <Input
-                              value={editingTag.description || ""}
+                              value={editingTag?.description || ""}
                               onChange={(e) =>
-                                setEditingTag({
+                                setEditingTag(editingTag ? {
                                   ...editingTag,
                                   description: e.target.value,
-                                })
+                                } : null)
                               }
                               placeholder="설명"
                               className="text-sm"
@@ -2289,9 +2291,9 @@ export default function BoardWrite({
                               size="sm"
                               onClick={() =>
                                 handleUpdateTag(tag.id, {
-                                  name: editingTag.name,
-                                  color: editingTag.color,
-                                  description: editingTag.description,
+                                  name: editingTag?.name || '',
+                                  color: editingTag?.color || '',
+                                  description: editingTag?.description || '',
                                 })
                               }
                             >
@@ -2410,7 +2412,7 @@ export default function BoardWrite({
                       <SelectContent>
                         {Object.entries(BIBLE_VERSIONS)
                           .filter(([key]) => key !== selectedBibleVersion) // 본문과 다른 번역본만 표시
-                          .map(([key, version]) => (
+                          .map(([key, version]: any) => (
                             <SelectItem key={key} value={key}>
                               {version.name}
                             </SelectItem>
@@ -2475,7 +2477,7 @@ export default function BoardWrite({
                               .toLowerCase()
                               .includes(bibleBookSearchValue.toLowerCase())
                         )
-                        .map(([bookNum, bookName]) => (
+                        .map(([bookNum, bookName]: any) => (
                           <button
                             key={bookNum}
                             type="button"
@@ -2572,7 +2574,7 @@ export default function BoardWrite({
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="max-h-60 overflow-y-auto">
-                          {availableChapters.map((chapter) => (
+                          {availableChapters.map((chapter: any) => (
                             <SelectItem
                               key={chapter}
                               value={chapter.toString()}
@@ -2659,7 +2661,7 @@ export default function BoardWrite({
                               .filter(
                                 (chapter) => chapter >= selectedBibleChapter
                               )
-                              .map((chapter) => (
+                              .map((chapter: any) => (
                                 <SelectItem
                                   key={chapter}
                                   value={chapter.toString()}
@@ -2744,7 +2746,7 @@ export default function BoardWrite({
                     </Button>
                   </div>
                   <div className="max-h-32 overflow-y-auto space-y-2">
-                    {selectedBibleVerses.map((verse, index) => (
+                    {selectedBibleVerses.map((verse, index: any) => (
                       <div
                         key={index}
                         className="flex items-center justify-between bg-muted p-2 rounded text-sm"
@@ -2831,7 +2833,7 @@ export default function BoardWrite({
                       <SelectSeparator />
                     </>
                   )}
-                  {boardPages.map((page) => (
+                  {boardPages.map((page: any) => (
                     <SelectItem key={page.id} value={page.id}>
                       {page.title}
                     </SelectItem>
@@ -2873,7 +2875,7 @@ export default function BoardWrite({
                         onUploadedFilesChange={handleUploadedFilesChange}
                         category={initialCategoryId}
                         pageId={selectedPageId}
-                        uploadedFiles={uploadedFiles.map((file) => ({
+                        uploadedFiles={uploadedFiles.map((file: any) => ({
                           ...file,
                           size: String(file.size || "크기 알 수 없음"),
                           type: String(file.type || ""),
@@ -2948,7 +2950,7 @@ export default function BoardWrite({
                       {/* 선택된 태그들 표시 */}
                       {selectedTags.length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-3">
-                          {selectedTags.map((tag) => (
+                          {selectedTags.map((tag: any) => (
                             <div
                               key={tag.id}
                               className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs border"
@@ -3009,7 +3011,7 @@ export default function BoardWrite({
                                     (selectedTag) => selectedTag.id === tag.id
                                   )
                               )
-                              .map((tag) => (
+                              .map((tag: any) => (
                                 <button
                                   key={tag.id}
                                   type="button"

@@ -4,7 +4,7 @@ import HomepageWidgets from "@/components/home/homepage-widgets";
 
 export default async function HomePage() {
   const supabase = await createClient();
-  
+
   let { data: widgets } = await supabase
     .from("cms_layout")
     .select("*")
@@ -17,7 +17,7 @@ export default async function HomePage() {
     <>
       <MainBanner menuId={null} />
       <main className="flex-1 flex flex-col gap-12">
-        <div className="mb-2">
+        <div className="my-6 sm:my-0">
           <HomepageWidgets widgets={widgets} />
         </div>
       </main>

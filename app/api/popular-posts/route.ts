@@ -135,7 +135,7 @@ export async function GET(request: NextRequest) {
           .select('id, email, username, nickname, display_name')
           .in('id', userIds);
 
-        userMap = new Map(users?.map((user) => [user.id, user]) || []);
+        userMap = new Map(users?.map((user: any) => [user.id, user]) || []);
       }
 
       // 모든 게시글에 author 필드 추가 (사용자 정보가 없어도)

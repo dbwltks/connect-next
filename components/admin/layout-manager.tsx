@@ -211,13 +211,13 @@ export default function LayoutManager(): JSX.Element {
 
       // 게시판 타입 페이지의 경우 최신글 데이터 가져오기 시도
       const boardPages =
-        data?.filter((page) => page.page_type === "board") || [];
+        data?.filter((page: any) => page.page_type === "board") || [];
       if (boardPages.length > 0) {
         try {
           // 각 게시판 페이지에 대한 더미 게시물 데이터 생성 (실제로는 API 호출 필요)
           const boardPostsMap: Record<string, any[]> = {};
 
-          boardPages.forEach((page) => {
+          boardPages.forEach((page: any) => {
             // 각 게시판 페이지에 대해 5-10개의 더미 게시물 생성
             const postCount = Math.floor(Math.random() * 6) + 5; // 5-10개
             const posts = [];
@@ -278,7 +278,7 @@ export default function LayoutManager(): JSX.Element {
       ];
       const allWidgets = data || [];
 
-      allWidgets.forEach((w) => {
+      allWidgets.forEach((w: any) => {
         if (w.column_position === 0) areas[0].widgets.push(w);
         else if (w.column_position === 2) areas[2].widgets.push(w);
         else areas[1].widgets.push(w); // main: 1 or null
@@ -547,9 +547,9 @@ export default function LayoutManager(): JSX.Element {
       if (error) throw error;
 
       // 상태 업데이트
-      const newLayoutAreas = layoutAreas.map((area) => ({
+      const newLayoutAreas = layoutAreas.map((area: any) => ({
         ...area,
-        widgets: area.widgets.filter((widget) => widget.id !== widgetId),
+        widgets: area.widgets.filter((widget: any) => widget.id !== widgetId),
       }));
 
       setLayoutAreas(newLayoutAreas);
@@ -688,9 +688,9 @@ export default function LayoutManager(): JSX.Element {
       }
 
       // 상태 업데이트
-      const newLayoutAreas = layoutAreas.map((area) => ({
+      const newLayoutAreas = layoutAreas.map((area: any) => ({
         ...area,
-        widgets: area.widgets.map((widget) =>
+        widgets: area.widgets.map((widget: any) =>
           widget.id === editingWidget.id ? editingWidget : widget
         ),
       }));
@@ -969,7 +969,7 @@ export default function LayoutManager(): JSX.Element {
                     <SelectValue placeholder="페이지 선택" />
                   </SelectTrigger>
                   <SelectContent>
-                    {pages.map((page) => (
+                    {pages.map((page: any) => (
                       <SelectItem key={page.id} value={page.id}>
                         {page.title}
                       </SelectItem>
@@ -1109,7 +1109,7 @@ export default function LayoutManager(): JSX.Element {
                     <SelectValue placeholder="페이지 선택" />
                   </SelectTrigger>
                   <SelectContent>
-                    {pages.map((page) => (
+                    {pages.map((page: any) => (
                       <SelectItem
                         key={page.id}
                         value={page.id}
@@ -1232,7 +1232,7 @@ export default function LayoutManager(): JSX.Element {
                     <SelectValue placeholder="페이지 선택" />
                   </SelectTrigger>
                   <SelectContent>
-                    {pages.map((page) => (
+                    {pages.map((page: any) => (
                       <SelectItem key={page.id} value={page.id}>
                         {page.title}
                       </SelectItem>
@@ -1319,7 +1319,7 @@ export default function LayoutManager(): JSX.Element {
                         <SelectValue placeholder="페이지 선택" />
                       </SelectTrigger>
                       <SelectContent>
-                        {pages.map((page) => (
+                        {pages.map((page: any) => (
                           <SelectItem key={page.id} value={page.id}>
                             {page.title}
                           </SelectItem>
@@ -1469,7 +1469,7 @@ export default function LayoutManager(): JSX.Element {
                   <SelectContent>
                     {menuItems
                       .filter((item) => !item.parent_id) // 최상위 메뉴만 필터링
-                      .map((menu) => (
+                      .map((menu: any) => (
                         <SelectItem key={menu.id} value={menu.id}>
                           {menu.title}
                         </SelectItem>
@@ -1926,7 +1926,7 @@ export default function LayoutManager(): JSX.Element {
                           <SelectValue placeholder="페이지 선택" />
                         </SelectTrigger>
                         <SelectContent>
-                          {pages.map((page) => (
+                          {pages.map((page: any) => (
                             <SelectItem key={page.id} value={page.id}>
                               {page.title}
                             </SelectItem>
@@ -3109,7 +3109,7 @@ export default function LayoutManager(): JSX.Element {
                       레이아웃에서 사용)
                     </p>
 
-                    {[0, 1, 2, 3, 4].map((level) => (
+                    {[0, 1, 2, 3, 4].map((level: any) => (
                       <div
                         key={level}
                         className="grid grid-cols-4 gap-2 items-center"
@@ -5107,7 +5107,7 @@ export default function LayoutManager(): JSX.Element {
                 <div className="divide-y">
                   {pagePosts
                     .slice(0, widget.width >= 6 ? 5 : 3)
-                    .map((post, index) => (
+                    .map((post, index: any) => (
                       <div
                         key={post.id}
                         className="p-3 hover:bg-gray-50 transition-colors"
@@ -5224,7 +5224,7 @@ export default function LayoutManager(): JSX.Element {
               <div className="grid grid-cols-3 gap-2">
                 {Array(6)
                   .fill(0)
-                  .map((_, index) => (
+                  .map((_, index: any) => (
                     <div
                       key={index}
                       className="aspect-square bg-gray-100 rounded overflow-hidden relative"
@@ -5481,7 +5481,7 @@ export default function LayoutManager(): JSX.Element {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="homepage">홈페이지 (기본)</SelectItem>
-                {pages.map((page) => (
+                {pages.map((page: any) => (
                   <SelectItem key={page.id} value={page.id}>
                     {page.title}
                   </SelectItem>
@@ -5758,7 +5758,7 @@ export default function LayoutManager(): JSX.Element {
         <div
           className={`grid gap-6 grid-cols-12 w-full max-w-screen-2xl mx-auto`}
         >
-          {layoutAreas.map((area) => {
+          {layoutAreas.map((area: any) => {
             let colSpanClass = area.id === "main" ? "col-span-8" : "col-span-2";
 
             return (
@@ -5799,7 +5799,7 @@ export default function LayoutManager(): JSX.Element {
                               </div>
                             ) : (
                               <div className="flex flex-wrap gap-4 w-full">
-                                {area.widgets.map((widget, index) => (
+                                {area.widgets.map((widget: any, index: number) => (
                                   <Draggable
                                     key={widget.id}
                                     draggableId={widget.id.toString()}
@@ -6140,7 +6140,7 @@ function MemberForm({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">없음</SelectItem>
-              {availableParents.map((parent) => (
+              {availableParents.map((parent: any) => (
                 <SelectItem key={parent.id} value={parent.id}>
                   {parent.name} ({parent.position})
                 </SelectItem>

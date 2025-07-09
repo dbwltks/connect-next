@@ -138,7 +138,7 @@ export default function FooterManager() {
   ) => {
     setSettings((prev) => ({
       ...prev,
-      service_times: prev.service_times.map((item) =>
+      service_times: prev.service_times.map((item: any) =>
         item.id === id ? { ...item, [field]: value } : item
       ),
     }));
@@ -190,7 +190,7 @@ export default function FooterManager() {
   ) => {
     setSettings((prev) => ({
       ...prev,
-      addresses: prev.addresses.map((item) =>
+      addresses: prev.addresses.map((item: any) =>
         item.id === id ? { ...item, [field]: value } : item
       ),
     }));
@@ -223,7 +223,7 @@ export default function FooterManager() {
   ) => {
     setSettings((prev) => ({
       ...prev,
-      phones: prev.phones.map((item) =>
+      phones: prev.phones.map((item: any) =>
         item.id === id ? { ...item, [field]: value } : item
       ),
     }));
@@ -273,7 +273,7 @@ export default function FooterManager() {
       });
 
       // service_times 검증 - 각 항목에 id가 없는 경우 추가
-      const validServiceTimes = settings.service_times.map((item) => {
+      const validServiceTimes = settings.service_times.map((item: any) => {
         if (!item.id) {
           return { ...item, id: crypto.randomUUID() };
         }
@@ -281,7 +281,7 @@ export default function FooterManager() {
       });
 
       // addresses 검증
-      const validAddresses = settings.addresses.map((item) => {
+      const validAddresses = settings.addresses.map((item: any) => {
         if (!item.id) {
           return { ...item, id: crypto.randomUUID() };
         }
@@ -289,7 +289,7 @@ export default function FooterManager() {
       });
 
       // phones 검증
-      const validPhones = settings.phones.map((item) => {
+      const validPhones = settings.phones.map((item: any) => {
         if (!item.id) {
           return { ...item, id: crypto.randomUUID() };
         }
@@ -546,7 +546,7 @@ export default function FooterManager() {
               </div>
             ) : (
               <div className="space-y-4">
-                {settings.addresses.map((address) => (
+                {settings.addresses.map((address: any) => (
                   <div key={address.id} className="flex items-start gap-2">
                     <div className="grid gap-4 sm:grid-cols-2 flex-1">
                       <div className="space-y-2">
@@ -618,7 +618,7 @@ export default function FooterManager() {
               </div>
             ) : (
               <div className="space-y-3">
-                {settings.phones.map((phone) => (
+                {settings.phones.map((phone: any) => (
                   <div key={phone.id} className="flex items-start gap-2">
                     <div className="grid gap-4 sm:grid-cols-2 flex-1">
                       <div className="space-y-2">
@@ -740,7 +740,7 @@ export default function FooterManager() {
             </div>
           ) : (
             <div className="space-y-4">
-              {settings.service_times.map((service, index) => (
+              {settings.service_times.map((service, index: any) => (
                 <div key={service.id} className="flex items-start gap-2">
                   <div className="grid gap-4 sm:grid-cols-2 flex-1">
                     <div className="space-y-2">

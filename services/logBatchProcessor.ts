@@ -103,7 +103,7 @@ class LogBatchProcessor {
       const startTime = performance.now();
 
       const { error } = await this.supabase.from("activity_logs").insert(
-        currentBatch.map((entry) => ({
+        currentBatch.map((entry: any) => ({
           user_id: entry.user_id,
           action: entry.action,
           resource_type: entry.resource_type,

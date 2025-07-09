@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
-import HideHeader from "@/components/layout/hide-header";
 
 export default function MyPageLayout({
   children,
@@ -33,7 +32,6 @@ export default function MyPageLayout({
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-      {/* <HideHeader /> */}
       <main className="container mx-auto px-4 py-8">{children}</main>
     </div>
   );

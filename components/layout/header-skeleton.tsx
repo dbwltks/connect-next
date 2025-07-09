@@ -14,7 +14,7 @@ export function HeaderSkeleton() {
           {/* 메뉴 영역 */}
           <nav className="flex-1 flex items-center justify-center">
             <div className="flex gap-8 items-center">
-              {[...Array(4)].map((_, i) => (
+              {[...Array(4)].map((_, i: any) => (
                 <Skeleton key={i} className="h-6 w-16" />
               ))}
             </div>

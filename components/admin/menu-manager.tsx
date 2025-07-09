@@ -208,7 +208,7 @@ function SortableMenuItem({
       {/* 하위 메뉴 항목 렌더링 - 최대 1단계까지만 하위 메뉴 허용 */}
       {hasChildren && depth === 0 && isExpanded && (
         <div className="ml-8 mt-2">
-          {item.children?.map((child) => (
+          {item.children?.map((child: any) => (
             <SortableMenuItem
               key={child.id}
               item={child}
@@ -414,13 +414,13 @@ export default function MenuManager() {
           };
 
           // 평면화된 메뉴 항목 업데이트
-          const updatedItems = flattenedItems.map((item) =>
+          const updatedItems = flattenedItems.map((item: any) =>
             item.id === parentItem.id ? updatedParent : item
           );
 
           // 전체 트리에서 parentItem이 속한 트리 구조를 재귀적으로 갱신
           const updateTree = (items: MenuItem[]): MenuItem[] => {
-            return items.map((item) => {
+            return items.map((item: any) => {
               if (item.id === parentItem.id) {
                 return updatedParent;
               } else if (item.children && item.children.length > 0) {
@@ -574,7 +574,7 @@ export default function MenuManager() {
       const filteredItems = items.filter((item) => item.id !== id);
 
       // 각 항목의 하위 항목도 검색하여 삭제
-      return filteredItems.map((item) => {
+      return filteredItems.map((item: any) => {
         if (item.children && item.children.length > 0) {
           return {
             ...item,
@@ -630,7 +630,7 @@ export default function MenuManager() {
           return [...prevItems, editingItem];
         } else {
           // 하위 메뉴로 추가
-          return prevItems.map((item) => {
+          return prevItems.map((item: any) => {
             if (item.id === editingItem.parentId) {
               return {
                 ...item,
@@ -643,7 +643,7 @@ export default function MenuManager() {
       } else {
         // 기존 메뉴 항목 업데이트
         const updateItem = (items: MenuItem[]): MenuItem[] => {
-          return items.map((item) => {
+          return items.map((item: any) => {
             if (item.id === editingItem.id) {
               return editingItem;
             }
@@ -693,7 +693,7 @@ export default function MenuManager() {
     }
 
     // 선택한 페이지 찾기
-    const selectedPage = (pages ?? []).find((page) => page.id === pageId);
+    const selectedPage = (pages ?? []).find((page: any) => page.id === pageId);
 
     if (selectedPage) {
       // pageId만 업데이트, url은 사용자가 직접 입력/수정한 값만 유지
@@ -766,7 +766,7 @@ export default function MenuManager() {
                   <SelectItem value="none">
                     선택 안함 (직접 URL 입력)
                   </SelectItem>
-                  {(pages ?? []).map((page) => (
+                  {(pages ?? []).map((page: any) => (
                     <SelectItem key={page.id} value={page.id}>
                       {page.title}
                     </SelectItem>
@@ -879,12 +879,12 @@ export default function MenuManager() {
               onDragOver={handleDragOver}
             >
               <SortableContext
-                items={menuItems.map((item) => item.id)}
+                items={menuItems.map((item: any) => item.id)}
                 strategy={verticalListSortingStrategy}
               >
                 {menuItems
                   .sort((a, b) => a.menuOrder - b.menuOrder)
-                  .map((item) => (
+                  .map((item: any) => (
                     <SortableMenuItem
                       key={item.id}
                       item={item}
@@ -1033,7 +1033,7 @@ export default function MenuManager() {
           // 기존 메뉴 ID 집합 생성 (삭제할 항목 확인용)
           const existingIds = new Set<string>();
           if (existingMenus && existingMenus.length > 0) {
-            existingMenus.forEach((menu) => {
+            existingMenus.forEach((menu: any) => {
               if (menu.id) existingIds.add(menu.id);
             });
           }

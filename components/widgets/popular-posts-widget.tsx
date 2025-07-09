@@ -70,7 +70,7 @@ export default function PopularPostsWidget({
           <Skeleton className="h-5 w-24" />
         </div>
         <div className="px-4 py-2 space-y-3">
-          {[...Array(itemCount)].map((_, i) => (
+          {[...Array(itemCount)].map((_, i: any) => (
             <div key={i} className="flex items-center space-x-3">
               <Skeleton className="h-4 w-4 rounded-sm" />
               <Skeleton className="h-4 flex-1" />
@@ -111,7 +111,7 @@ export default function PopularPostsWidget({
       </div>
       {posts && posts.length > 0 ? (
         <ul className="px-4 py-3 space-y-3">
-          {posts.map((post, index) => {
+          {posts.map((post, index: any) => {
             const rank = index + 1;
             let rankStyle = "text-gray-400 font-semibold";
             if (rank === 1)

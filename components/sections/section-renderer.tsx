@@ -22,7 +22,7 @@ const ContentSection = dynamic(() => import("./content-section"));
 //       <div className="h-8 w-1/3 bg-gray-200 rounded"></div>
 //       <div className="h-4 w-1/2 bg-gray-200 rounded"></div>
 //       <div className="space-y-3">
-//         {Array.from({ length: 3 }).map((_, i) => (
+//         {Array.from({ length: 3 }).map((_, i: any) => (
 //           <div key={i} className="h-20 w-full bg-gray-200 rounded"></div>
 //         ))}
 //       </div>

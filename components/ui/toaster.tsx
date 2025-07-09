@@ -53,7 +53,7 @@ const toastEventManager = {
       open?: boolean;
     }>
   ) {
-    this.toasts = this.toasts.map((t) =>
+    this.toasts = this.toasts.map((t: any) =>
       t.id === id ? { ...t, ...toast } : t
     );
     this.publish();

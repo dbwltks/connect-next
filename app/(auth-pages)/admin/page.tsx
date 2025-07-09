@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/contexts/auth-context";
+import { useUserProfile } from "@/hooks/use-user-profile";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import MainBanner from "@/components/home/main-banner";
@@ -22,17 +23,18 @@ import Link from "next/link";
 
 export default function AdminDashboard() {
   const { user } = useAuth();
+  const { profile, loading } = useUserProfile(user);
   const router = useRouter();
 
   useEffect(() => {
     if (!user) {
       router.replace("/(auth)/login?redirect=/(auth-pages)/admin");
-    } else if (user.role !== "admin") {
+    } else if (profile && profile.role !== "admin") {
       router.replace("/");
     }
-  }, [user, router]);
+  }, [user, profile, router]);
 
-  if (!user || user.role !== "admin") {
+  if (!user || loading || !profile || profile.role !== "admin") {
     return null; // 또는 로딩/권한없음 UI
   }
 
@@ -86,7 +88,7 @@ export default function AdminDashboard() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          {stats.map((stat) => (
+          {stats.map((stat: any) => (
             <Link key={stat.href} href={stat.href}>
               <Card className="cursor-pointer hover:shadow-md transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">

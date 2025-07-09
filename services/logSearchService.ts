@@ -219,9 +219,9 @@ class LogSearchService {
 
       return {
         totalLogs: filteredLogs.length,
-        uniqueUsers: new Set(filteredLogs.map((log) => log.user_id)).size,
-        errorCount: filteredLogs.filter((log) => log.level === 3).length,
-        warningCount: filteredLogs.filter((log) => log.level === 2).length,
+        uniqueUsers: new Set(filteredLogs.map((log: any) => log.user_id)).size,
+        errorCount: filteredLogs.filter((log: any) => log.level === 3).length,
+        warningCount: filteredLogs.filter((log: any) => log.level === 2).length,
         levelDistribution,
         actionDistribution,
         resourceDistribution,
@@ -311,17 +311,17 @@ class LogSearchService {
       );
 
       return {
-        users: Object.values(userCounts)
+        users: (Object.values(userCounts) as { id: string; name: string; count: number; }[])
           .sort((a: any, b: any) => b.count - a.count)
           .slice(0, 20),
         actions: Object.entries(actionCounts)
-          .map(([name, count]) => ({ name, count: count as number }))
+          .map(([name, count]: any) => ({ name, count: count as number }))
           .sort((a, b) => b.count - a.count),
         resourceTypes: Object.entries(resourceCounts)
-          .map(([name, count]) => ({ name, count: count as number }))
+          .map(([name, count]: any) => ({ name, count: count as number }))
           .sort((a, b) => b.count - a.count),
         levels: Object.entries(levelCounts)
-          .map(([level, count]) => ({
+          .map(([level, count]: any) => ({
             level: parseInt(level),
             name:
               ["DEBUG", "INFO", "WARN", "ERROR", "OFF"][parseInt(level)] ||
@@ -342,7 +342,7 @@ class LogSearchService {
   ): Array<{ date: string; count: number; errors: number }> {
     const timelineMap = new Map<string, { count: number; errors: number }>();
 
-    logs.forEach((log) => {
+    logs.forEach((log: any) => {
       const date = formatDate(parseISO(log.created_at), "yyyy-MM-dd");
 
       if (!timelineMap.has(date)) {
@@ -359,7 +359,7 @@ class LogSearchService {
     });
 
     return Array.from(timelineMap.entries())
-      .map(([date, data]) => ({ date, ...data }))
+      .map(([date, data]: any) => ({ date, ...data }))
       .sort((a, b) => a.date.localeCompare(b.date));
   }
 
@@ -425,7 +425,7 @@ class LogSearchService {
 
       if (error) throw error;
 
-      return (data || []).map((item) => ({
+      return (data || []).map((item: any) => ({
         id: item.id,
         name: item.name,
         query: JSON.parse(item.query),
@@ -461,7 +461,7 @@ class LogSearchService {
         "상세 정보",
       ];
 
-      const csvRows = result.logs.map((log) => [
+      const csvRows = result.logs.map((log: any) => [
         formatDate(parseISO(log.created_at), "yyyy-MM-dd HH:mm:ss"),
         log.user?.raw_user_meta_data?.name || log.user?.email || "알 수 없음",
         log.action,
@@ -473,8 +473,8 @@ class LogSearchService {
       ]);
 
       const csvContent = [headers, ...csvRows]
-        .map((row) =>
-          row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")
+        .map((row: any) =>
+          row.map((cell: any) => `"${String(cell).replace(/"/g, '""')}"`).join(",")
         )
         .join("\n");
 

@@ -38,7 +38,7 @@ const BIBLE_BOOKS_ENG = {
 
 export async function GET() {
   try {
-    const books = Object.entries(BIBLE_BOOKS_KOR).map(([id, korName]) => ({
+    const books = Object.entries(BIBLE_BOOKS_KOR).map(([id, korName]: any) => ({
       id: parseInt(id),
       korName,
       engName: BIBLE_BOOKS_ENG[parseInt(id) as keyof typeof BIBLE_BOOKS_ENG],

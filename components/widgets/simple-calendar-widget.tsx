@@ -181,7 +181,7 @@ export default function SimpleCalendarWidget({
       <CardContent className="p-4 pt-0">
         <div className="space-y-3">
           {displayEvents.length > 0 ? (
-            displayEvents.map((event: CalendarEvent) => (
+            displayEvents.map((event: any) => (
               <div
                 key={event.id}
                 className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer"

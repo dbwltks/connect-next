@@ -74,7 +74,7 @@ export function RealTimeLogsComponent() {
   // 보안 알림 확인
   const acknowledgeAlert = (alertId: string) => {
     setSecurityAlerts((prev) =>
-      prev.map((alert) =>
+      prev.map((alert: any) =>
         alert.id === alertId ? { ...alert, acknowledged: true } : alert
       )
     );
@@ -154,7 +154,7 @@ export function RealTimeLogsComponent() {
           table: "security_logs",
           filter: "severity.gte.3", // HIGH 이상만
         },
-        (payload) => {
+        (payload: any) => {
           const newAlert = {
             id: payload.new.id,
             type: payload.new.event_type,
@@ -190,7 +190,7 @@ export function RealTimeLogsComponent() {
           schema: "public",
           table: "activity_logs",
         },
-        (payload) => {
+        (payload: any) => {
           const newLog: LogEntry = {
             id: payload.new.id,
             timestamp: new Date(payload.new.created_at),
@@ -340,7 +340,7 @@ export function RealTimeLogsComponent() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2 max-h-60 overflow-y-auto">
-              {securityAlerts.slice(0, 10).map((alert) => (
+              {securityAlerts.slice(0, 10).map((alert: any) => (
                 <Alert
                   key={alert.id}
                   className={`${getSeverityColor(alert.severity)} ${
@@ -393,7 +393,7 @@ export function RealTimeLogsComponent() {
               </div>
             ) : (
               <div className="space-y-2">
-                {logs.map((log, index) => {
+                {logs.map((log, index: any) => {
                   const levelConfig = getLogLevelConfig(log.level);
                   const LevelIcon = levelConfig.icon;
 

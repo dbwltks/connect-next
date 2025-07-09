@@ -49,7 +49,7 @@ const fetchServerImages = async (buckets: string[]): Promise<ServerImage[]> => {
 
     if (!error && files) {
       // 이미지 파일만 필터링
-      const imageFiles = files.filter((file) => {
+      const imageFiles = files.filter((file: any) => {
         const ext = file.name.split(".").pop()?.toLowerCase();
         return (
           ext && ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(ext)
@@ -72,7 +72,7 @@ const fetchServerImages = async (buckets: string[]): Promise<ServerImage[]> => {
       }
 
       // 하위 폴더도 탐색 (1단계만)
-      const folders = files?.filter((item) => !item.name.includes(".")) || [];
+      const folders = files?.filter((item: any) => !item.name.includes(".")) || [];
       for (const folder of folders.slice(0, 10)) {
         // 최대 10개 폴더
         const { data: subFiles, error: subError } = await supabase.storage
@@ -83,7 +83,7 @@ const fetchServerImages = async (buckets: string[]): Promise<ServerImage[]> => {
           });
 
         if (!subError && subFiles) {
-          const subImageFiles = subFiles.filter((file) => {
+          const subImageFiles = subFiles.filter((file: any) => {
             const ext = file.name.split(".").pop()?.toLowerCase();
             return (
               ext && ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(ext)
@@ -239,7 +239,7 @@ export default function ImageBrowser({
           {!isLoading && !error && (
             <div className="flex-1 overflow-y-auto">
               <div className="grid grid-cols-4 md:grid-cols-6 gap-3">
-                {filteredImages.map((image, index) => (
+                {filteredImages.map((image, index: any) => (
                   <div
                     key={index}
                     className={`relative group cursor-pointer rounded-lg overflow-hidden border-2 transition-all ${

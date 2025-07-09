@@ -112,9 +112,9 @@ export default function AccountsPage() {
 
       // 사용자와 교인 정보 연결
       const usersWithMembers =
-        userData?.map((user) => {
+        userData?.map((user: any) => {
           const linkedMember =
-            memberData?.find((member) => member.user_id === user.id) || null;
+            memberData?.find((member: any) => member.user_id === user.id) || null;
           return { ...user, linked_member: linkedMember };
         }) || [];
 
@@ -491,7 +491,7 @@ export default function AccountsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredUsers.map((user) => (
+                filteredUsers.map((user: any) => (
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">
                       <div>{user.username}</div>
@@ -719,7 +719,7 @@ export default function AccountsPage() {
                 className="w-full p-2 border rounded-md"
               >
                 <option value="">교인을 선택하세요</option>
-                {unlinkedMembers.map((member) => (
+                {unlinkedMembers.map((member: any) => (
                   <option key={member.id} value={member.id}>
                     {member.first_name} {member.last_name}
                     {member.korean_name ? ` (${member.korean_name})` : ""}

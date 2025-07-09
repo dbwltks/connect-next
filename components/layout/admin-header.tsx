@@ -28,7 +28,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/auth-context";
 
 export default function AdminHeader() {
-  const { user, handleLogout } = useAuth();
+  const { user, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const router = useRouter();
 
@@ -42,7 +42,7 @@ export default function AdminHeader() {
   ];
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-white dark:bg-gray-800 shadow-sm">
+    <header data-admin-header className="sticky top-0 z-50 w-full border-b bg-white dark:bg-gray-800 shadow-sm">
       {/* 데스크톱 헤더 - md 이상에서 표시 */}
       <div className="container hidden md:flex h-16 items-center justify-between">
         {/* 로고 */}
@@ -79,11 +79,11 @@ export default function AdminHeader() {
                 >
                   <Avatar>
                     <AvatarImage
-                      src={user.avatar_url || ""}
-                      alt={user.username}
+                      src={(user as any).avatar_url || ""}
+                      alt={(user as any).username}
                     />
                     <AvatarFallback className="bg-primary text-primary-foreground">
-                      {user.username?.charAt(0).toUpperCase() || "A"}
+                      {(user as any).username?.charAt(0).toUpperCase() || "A"}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
@@ -91,7 +91,7 @@ export default function AdminHeader() {
               <DropdownMenuContent align="end">
                 <div className="flex items-center justify-start gap-2 p-2">
                   <div className="flex flex-col space-y-1 leading-none">
-                    <p className="font-medium">{user.username}</p>
+                    <p className="font-medium">{(user as any).username}</p>
                     <p className="text-xs text-muted-foreground">관리자</p>
                   </div>
                 </div>
@@ -105,7 +105,7 @@ export default function AdminHeader() {
                 <DropdownMenuItem
                   className="cursor-pointer"
                   onClick={() => {
-                    handleLogout();
+                    signOut();
                     router.push("/");
                   }}
                 >
@@ -161,11 +161,11 @@ export default function AdminHeader() {
                 >
                   <Avatar>
                     <AvatarImage
-                      src={user.avatar_url || ""}
-                      alt={user.username}
+                      src={(user as any).avatar_url || ""}
+                      alt={(user as any).username}
                     />
                     <AvatarFallback className="bg-primary text-primary-foreground">
-                      {user.username?.charAt(0).toUpperCase() || "A"}
+                      {(user as any).username?.charAt(0).toUpperCase() || "A"}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
@@ -173,7 +173,7 @@ export default function AdminHeader() {
               <DropdownMenuContent align="end">
                 <div className="flex items-center justify-start gap-2 p-2">
                   <div className="flex flex-col space-y-1 leading-none">
-                    <p className="font-medium">{user.username}</p>
+                    <p className="font-medium">{(user as any).username}</p>
                     <p className="text-xs text-muted-foreground">관리자</p>
                   </div>
                 </div>
@@ -188,7 +188,7 @@ export default function AdminHeader() {
                 <DropdownMenuItem
                   className="cursor-pointer"
                   onClick={() => {
-                    handleLogout();
+                    signOut();
                     router.push("/");
                   }}
                 >
@@ -216,7 +216,7 @@ export default function AdminHeader() {
             </div>
             <nav className="p-4">
               <ul className="space-y-2">
-                {navItems.map((item) => {
+                {navItems.map((item: any) => {
                   const Icon = item.icon;
                   return (
                     <li key={item.href}>

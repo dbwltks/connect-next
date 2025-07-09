@@ -90,7 +90,7 @@ export function MediaWidget({ widget, page }: MediaWidgetProps) {
 
           {/* Video List Skeleton */}
           <div className="space-y-3">
-            {[...Array(Math.max(maxItems - 1, 0))].map((_, index) => (
+            {[...Array(Math.max(maxItems - 1, 0))].map((_, index: any) => (
               <div
                 key={index}
                 className="border border-gray-100 rounded-lg overflow-hidden"
