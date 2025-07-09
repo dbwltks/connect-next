@@ -94,12 +94,17 @@ export async function GET(
         .single()
     ]);
 
-    // 6. 첨부파일 조회 (있다면)
-    const { data: attachments } = await supabase
-      .from('board_attachments')
-      .select('*')
-      .eq('post_id', postId)
-      .order('created_at', { ascending: true });
+    // 6. 첨부파일 조회 (posts 테이블의 files 필드에서)
+    let attachments = [];
+    if (post.files) {
+      try {
+        const filesData = JSON.parse(post.files);
+        attachments = Array.isArray(filesData) ? filesData : [];
+      } catch (error) {
+        console.error('첨부파일 파싱 오류:', error);
+        attachments = [];
+      }
+    }
 
     // 응답 데이터 구성
     const responseData = {

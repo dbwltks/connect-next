@@ -966,7 +966,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
   const toggleLike = async () => {
     if (!post) return;
 
-    if (!user || !(user as any).username) {
+    if (!user || !user.id) {
       showToast({
         title: "로그인 필요",
         description: (

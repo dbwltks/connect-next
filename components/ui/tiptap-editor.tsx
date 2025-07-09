@@ -2195,7 +2195,7 @@ const TipTapEditor = forwardRef(function TipTapEditor(
 
           // 파일 정보 추가
           if (typeof setUploadedFiles === "function") {
-            const newFile = {
+            const newFile: IFileInfo = {
               url: publicUrl,
               name: file.name,
               size: `${(file.size / 1024).toFixed(1)}KB`,
@@ -2238,6 +2238,7 @@ const TipTapEditor = forwardRef(function TipTapEditor(
       setUploadedFiles,
       category,
       pageId,
+      uploadedFiles,
     ]
   );
 
