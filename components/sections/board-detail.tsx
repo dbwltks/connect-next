@@ -542,9 +542,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
     currentPostId ? ['postDetail', currentPostId] : null,
     () => api.posts.getDetail(currentPostId!),
     {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      dedupingInterval: 5000,
+      // 전역 설정 사용
       errorRetryCount: 2,
     }
   );

@@ -156,7 +156,10 @@ export default function CategoryManager({
     error,
     isLoading: swrIsLoading,
     mutate,
-  } = useSWR("categories", fetchCategories, { revalidateOnFocus: true });
+  } = useSWR("categories", fetchCategories, { 
+    // 관리자는 실시간 데이터가 중요하므로 포커스 시 재검증 유지
+    revalidateOnFocus: true 
+  });
 
   // 데이터 로드 함수
   const loadCategories = async () => {

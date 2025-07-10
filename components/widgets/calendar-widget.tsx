@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { useAuth } from "@/contexts/auth-context";
+import { useUserProfile } from "@/hooks/use-user-profile";
 import { toast } from "@/hooks/use-toast";
 import {
   logCalendarEventCreate,
@@ -130,7 +131,8 @@ export default function CalendarWidget({
   settings = {},
 }: CalendarWidgetProps) {
   const { user } = useAuth();
-  const isAdmin = user?.role?.toLowerCase() === "admin";
+  const { profile } = useUserProfile(user);
+  const isAdmin = profile?.role === "admin";
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<"week" | "month" | "year">(
     settings.default_view || "month"

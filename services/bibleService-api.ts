@@ -1,4 +1,4 @@
-import { api } from '@/lib/api';
+import { api } from "@/lib/api";
 
 // 성경 버전 정보 (실제 DB 테이블 기준)
 export const BIBLE_VERSIONS = {
@@ -93,7 +93,7 @@ export async function getBibleVerses(params: {
       endVerse: params.endVerse,
       version: params.version,
     });
-    
+
     return result.verses || [];
   } catch (error) {
     console.error("getBibleVerses API 오류:", error);
@@ -104,7 +104,7 @@ export async function getBibleVerses(params: {
 // API 기반 성경 장 수 조회 함수
 export async function getBibleChapters(
   book: number,
-  version: keyof typeof BIBLE_VERSIONS = 'kor_old'
+  version: keyof typeof BIBLE_VERSIONS = "kor_old"
 ) {
   try {
     const result = await api.bible.getChapters(book, version);
@@ -119,7 +119,7 @@ export async function getBibleChapters(
 export async function getBibleVerseCount(
   book: number,
   chapter: number,
-  version: keyof typeof BIBLE_VERSIONS = 'kor_old'
+  version: keyof typeof BIBLE_VERSIONS = "kor_old"
 ) {
   try {
     const result = await api.bible.getVerseCount(book, chapter, version);
@@ -140,7 +140,9 @@ export function formatBibleVerses(
   if (!verses.length) return "";
 
   const bookInfo = BIBLE_BOOKS[book as keyof typeof BIBLE_BOOKS];
-  const bookName = bookInfo ? `${bookInfo.kor}(${bookInfo.eng})` : `Book ${book}`;
+  const bookName = bookInfo
+    ? `${bookInfo.kor}(${bookInfo.eng})`
+    : `Book ${book}`;
   const versionName = BIBLE_VERSIONS[version].name;
 
   let html = `<ol class="list-decimal ml-6" style="font-size: 1em;" start="${verses[0].verse}">
@@ -156,10 +158,11 @@ export function formatBibleVerses(
     let cleanText = verse.text;
     if (version === "niv") {
       cleanText = cleanText.replace(/<br\s*\/?>/gi, " ");
-      cleanText = cleanText.replace(/<sup>.*?<\/sup>/gi, "");
+      cleanText = cleanText.replace(/<sup>.*?<\/sup>/gi, " ");
       cleanText = cleanText.replace(/▷\s*/gi, "");
-      cleanText = cleanText.replace(/<i>.*?<\/i>/gi, "");
+      cleanText = cleanText.replace(/<i>.*?<\/i>/gi, " ");
       cleanText = cleanText.replace(/Or\s+/gi, "");
+      cleanText = cleanText.replace(/\s+/g, " ").trim();
     }
 
     html += `<li><strong>${cleanText}</strong><br></li>`;
@@ -167,9 +170,10 @@ export function formatBibleVerses(
 
   html += `</ol>`;
 
-  const verseRange = verses.length === 1 
-    ? verses[0].verse
-    : `${verses[0].verse}-${verses[verses.length - 1].verse}`;
+  const verseRange =
+    verses.length === 1
+      ? verses[0].verse
+      : `${verses[0].verse}-${verses[verses.length - 1].verse}`;
 
   html += `<p><em>- ${bookName} ${chapter}:${verseRange} (${versionName}) -</em></p>`;
 
@@ -194,9 +198,10 @@ export function formatBibleVersesWithSub(
   const mainVersionName = BIBLE_VERSIONS[mainVersion].name;
   const subVersionName = BIBLE_VERSIONS[subVersion].name;
 
-  const verseRange = mainVerses.length === 1 
-    ? mainVerses[0].verse
-    : `${mainVerses[0].verse}-${mainVerses[mainVerses.length - 1].verse}`;
+  const verseRange =
+    mainVerses.length === 1
+      ? mainVerses[0].verse
+      : `${mainVerses[0].verse}-${mainVerses[mainVerses.length - 1].verse}`;
 
   let html = `<span style="font-size: 0.8em; margin-bottom: 0rem;">${bookNameEng}</span><p style="margin-bottom: 0rem;"><span style="font-size: 1.4em;">${bookNameKor} ${chapter}:${verseRange}</span> <span style="font-size: 0.8em;">(${mainVersionName} / ${subVersionName})</span></p><hr>`;
 
@@ -210,10 +215,11 @@ export function formatBibleVersesWithSub(
     let mainText = mainVerse.text;
     if (mainVersion === "niv") {
       mainText = mainText.replace(/<br\s*\/?>/gi, " ");
-      mainText = mainText.replace(/<sup>.*?<\/sup>/gi, "");
+      mainText = mainText.replace(/<sup>.*?<\/sup>/gi, " ");
       mainText = mainText.replace(/▷\s*/gi, "");
-      mainText = mainText.replace(/<i>.*?<\/i>/gi, "");
+      mainText = mainText.replace(/<i>.*?<\/i>/gi, " ");
       mainText = mainText.replace(/Or\s+/gi, "");
+      mainText = mainText.replace(/\s+/g, " ").trim();
     }
 
     let liContent = `<strong>${mainText}</strong>`;
@@ -223,10 +229,11 @@ export function formatBibleVersesWithSub(
       let subText = subVerse.text;
       if (subVersion === "niv") {
         subText = subText.replace(/<br\s*\/?>/gi, " ");
-        subText = subText.replace(/<sup>.*?<\/sup>/gi, "");
-        subText = subText.replace(/<i>.*?<\/i>/gi, "");
+        subText = subText.replace(/<sup>.*?<\/sup>/gi, " ");
+        subText = subText.replace(/<i>.*?<\/i>/gi, " ");
         subText = subText.replace(/▷\s*/gi, "");
         subText = subText.replace(/Or\s+/gi, "");
+        subText = subText.replace(/\s+/g, " ").trim();
       }
       liContent += `<br><span style="color: #666666; font-size: 0.9em;">${subText}</span><br>`;
     }
@@ -246,9 +253,9 @@ export function getBibleBookName(
 ) {
   const bookInfo = BIBLE_BOOKS[book as keyof typeof BIBLE_BOOKS];
   if (!bookInfo) return `Book ${book}`;
-  
+
   // 한글 번역본은 한글 이름, 영어 번역본은 영어 이름 우선
-  if (version.startsWith('kor_')) {
+  if (version.startsWith("kor_")) {
     return bookInfo.kor;
   } else {
     return bookInfo.eng;

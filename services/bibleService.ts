@@ -1,5 +1,5 @@
 import { createClient } from "@/utils/supabase/client";
-import { api } from '@/lib/api';
+import { api } from "@/lib/api";
 
 // 성경 전용 supabase 클라이언트 생성
 // 이제 createClient()를 사용하여 각 함수에서 직접 생성합니다
@@ -188,13 +188,13 @@ export async function getBibleVerses({
       endVerse: endVerse,
       version: version,
     });
-    
+
     // API에서 반환된 데이터를 기존 형식에 맞게 변환
     const verses = (result.verses || []).map((verse: any) => ({
       ...verse,
-      btext: verse.text || verse.btext
+      btext: verse.text || verse.btext,
     }));
-    
+
     return verses;
   } catch (error) {
     console.error("getBibleVerses API 오류:", error);
@@ -205,7 +205,7 @@ export async function getBibleVerses({
 // 성경 장 수 조회 함수
 export async function getBibleChapters(
   book: number,
-  version: keyof typeof BIBLE_VERSIONS = 'kor_old'
+  version: keyof typeof BIBLE_VERSIONS = "kor_old"
 ) {
   try {
     const result = await api.bible.getChapters(book, version);
@@ -220,7 +220,7 @@ export async function getBibleChapters(
 export async function getBibleVerseCount(
   book: number,
   chapter: number,
-  version: keyof typeof BIBLE_VERSIONS = 'kor_old'
+  version: keyof typeof BIBLE_VERSIONS = "kor_old"
 ) {
   try {
     const result = await api.bible.getVerseCount(book, chapter, version);
@@ -259,11 +259,23 @@ export function formatBibleVerses(
     // NIV 영어 성경의 경우 HTML 태그 정리
     let cleanText = verse.btext;
     if (version === "niv") {
+      // 1. <br> 태그 제거
       cleanText = cleanText.replace(/<br\s*\/?>/gi, " ");
-      cleanText = cleanText.replace(/<sup>.*?<\/sup>/gi, "");
-      cleanText = cleanText.replace(/▷\s*/gi, "");
-      cleanText = cleanText.replace(/<i>.*?<\/i>/gi, "");
-      cleanText = cleanText.replace(/Or\s+/gi, "");
+      
+      // 2. ▷ 이후의 주석 부분 전체 제거 (줄바꿈이 있는 경우도 처리)
+      cleanText = cleanText.replace(/▷.*$/gi, "");
+      
+      // 3. <sup> 태그와 내용 제거
+      cleanText = cleanText.replace(/<sup[^>]*>.*?<\/sup>/gi, "");
+      
+      // 4. <i> 태그와 내용 제거  
+      cleanText = cleanText.replace(/<i[^>]*>.*?<\/i>/gi, "");
+      
+      // 5. "Or " 시작하는 대안 번역 제거
+      cleanText = cleanText.replace(/\s+Or\s+.*$/gi, "");
+      
+      // 6. 여러 공백을 하나로 통합하고 앞뒤 공백 제거
+      cleanText = cleanText.replace(/\s+/g, " ").trim();
     }
 
     html += `<li><strong>${cleanText}</strong></li>`;
@@ -307,11 +319,23 @@ export function formatBibleVersesWithSub(
     // 본문
     let mainText = mainVerse.btext;
     if (mainVersion === "niv") {
+      // 1. <br> 태그 제거
       mainText = mainText.replace(/<br\s*\/?>/gi, " ");
-      mainText = mainText.replace(/<sup>.*?<\/sup>/gi, "");
-      mainText = mainText.replace(/▷\s*/gi, "");
-      mainText = mainText.replace(/<i>.*?<\/i>/gi, "");
-      mainText = mainText.replace(/Or\s+/gi, "");
+      
+      // 2. ▷ 이후의 주석 부분 전체 제거
+      mainText = mainText.replace(/▷.*$/gi, "");
+      
+      // 3. <sup> 태그와 내용 제거
+      mainText = mainText.replace(/<sup[^>]*>.*?<\/sup>/gi, "");
+      
+      // 4. <i> 태그와 내용 제거  
+      mainText = mainText.replace(/<i[^>]*>.*?<\/i>/gi, "");
+      
+      // 5. "Or " 시작하는 대안 번역 제거
+      mainText = mainText.replace(/\s+Or\s+.*$/gi, "");
+      
+      // 6. 여러 공백을 하나로 통합하고 앞뒤 공백 제거
+      mainText = mainText.replace(/\s+/g, " ").trim();
     }
 
     let liContent = `<strong>${mainText}</strong>`;
@@ -320,11 +344,23 @@ export function formatBibleVersesWithSub(
     if (subVerse) {
       let subText = subVerse.btext;
       if (subVersion === "niv") {
+        // 1. <br> 태그 제거
         subText = subText.replace(/<br\s*\/?>/gi, " ");
-        subText = subText.replace(/<sup>.*?<\/sup>/gi, "");
-        subText = subText.replace(/▷\s*/gi, "");
-        subText = subText.replace(/<i>.*?<\/i>/gi, "");
-        subText = subText.replace(/Or\s+/gi, "");
+        
+        // 2. ▷ 이후의 주석 부분 전체 제거
+        subText = subText.replace(/▷.*$/gi, "");
+        
+        // 3. <sup> 태그와 내용 제거
+        subText = subText.replace(/<sup[^>]*>.*?<\/sup>/gi, "");
+        
+        // 4. <i> 태그와 내용 제거  
+        subText = subText.replace(/<i[^>]*>.*?<\/i>/gi, "");
+        
+        // 5. "Or " 시작하는 대안 번역 제거
+        subText = subText.replace(/\s+Or\s+.*$/gi, "");
+        
+        // 6. 여러 공백을 하나로 통합하고 앞뒤 공백 제거
+        subText = subText.replace(/\s+/g, " ").trim();
       }
       liContent += `<br><span style="color: #666666; font-size: 0.9em;">${subText}</span><br>`;
     }

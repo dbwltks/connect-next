@@ -135,9 +135,7 @@ export default function ImageBrowser({
     isOpen ? ["server-images", ...buckets] : null, // isOpen일 때만 fetch
     () => fetchServerImages(buckets),
     {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      dedupingInterval: 300000, // 5분간 중복 요청 방지
+      // 전역 설정 사용 (이미지 브라우저는 캐시 효과가 중요)
       errorRetryCount: 3,
       errorRetryInterval: 5000,
       onError: (error) => {

@@ -1,15 +1,15 @@
 import { SWRConfiguration } from 'swr';
 
-// SWR 설정 - 매번 새로운 데이터 가져오기
+// SWR 설정 - 캐시 최적화로 egress 사용량 절약
 export const swrGlobalConfig: SWRConfiguration = {
-  // 캐시 비활성화 - 매번 새로운 데이터 가져오기
-  revalidateOnFocus: true,
-  revalidateOnReconnect: true,
-  revalidateIfStale: true,
+  // 캐시 활성화 - 불필요한 요청 줄이기
+  revalidateOnFocus: false,    // 포커스 시 재검증 비활성화
+  revalidateOnReconnect: true, // 네트워크 재연결 시에만 재검증
+  revalidateIfStale: true,     // 오래된 데이터일 때만 재검증
   
-  // 캐시 설정 비활성화
-  dedupingInterval: 0,        // 중복 제거 간격 0으로 설정
-  keepPreviousData: false,    // 이전 데이터 유지하지 않음
+  // 캐시 설정 활성화
+  dedupingInterval: 60000,     // 1분간 중복 요청 방지
+  keepPreviousData: true,      // 이전 데이터 유지하여 로딩 개선
   
   // 에러 처리 설정
   errorRetryCount: 3,         // 재시도 횟수 늘림

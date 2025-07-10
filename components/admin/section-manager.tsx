@@ -179,7 +179,7 @@ export default function SectionManager({
     `sections-${pageId || "default"}-${templateId || "default"}`,
     fetchSections,
     {
-      revalidateOnFocus: false,
+      // 전역 설정 사용
       shouldRetryOnError: true,
       errorRetryCount: 3,
       errorRetryInterval: 2000,

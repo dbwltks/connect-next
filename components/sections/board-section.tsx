@@ -575,10 +575,7 @@ export default function BoardSection({
         sortOption: layout === "table" ? "latest" : sortOption,
       }),
     {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      dedupingInterval: 3000, // 3초로 단축
-      keepPreviousData: true,
+      // 전역 설정 사용
     }
   );
 

@@ -139,18 +139,16 @@ export default function Header() {
   // auth-context에서 사용자 정보 가져오기
   const { user, loading } = useAuth();
   const { profile, loading: profileLoading } = useUserProfile(user);
-  
+
   // SWR을 사용한 헤더 메뉴 데이터 페칭
-  const { data: menuItems, error: menuError, isLoading: menuLoading } = useSWR(
-    'headerMenus',
-    () => api.menus.getHeaderMenus(),
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      dedupingInterval: 30000, // 30초간 중복 요청 방지
-      staleTime: 300000, // 5분간 캐시 유지
-    }
-  );
+  const {
+    data: menuItems,
+    error: menuError,
+    isLoading: menuLoading,
+  } = useSWR("headerMenus", () => api.menus.getHeaderMenus(), {
+    // 전역 설정 사용
+    // staleTime: 300000, // 5분간 캐시 유지
+  });
 
   // 로딩 중 체크
   const isLoading = loading || profileLoading || menuLoading;
@@ -179,10 +177,10 @@ export default function Header() {
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      
+
       // 맨 위에 있는지 확인
       setIsAtTop(currentScrollY < 10);
-      
+
       // 모바일에서만 스크롤 방향 체크
       if (isMobile) {
         // 맨 위에서는 항상 헤더 표시
@@ -237,13 +235,13 @@ export default function Header() {
   // 모바일에서 fixed 헤더일 때 body padding 조정
   useEffect(() => {
     if (isMobile) {
-      document.body.style.paddingTop = '4rem'; // 64px (h-16)
+      document.body.style.paddingTop = "4rem"; // 64px (h-16)
     } else {
-      document.body.style.paddingTop = '0';
+      document.body.style.paddingTop = "0";
     }
 
     return () => {
-      document.body.style.paddingTop = '0';
+      document.body.style.paddingTop = "0";
     };
   }, [isMobile]);
 
@@ -251,18 +249,20 @@ export default function Header() {
   const shouldShowHeader = !isMobile || isVisible;
 
   return (
-    <header className={`${
-      isMobile ? 'fixed' : 'sticky'
-    } top-0 z-[10] w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-all duration-300 ${
-      shouldShowHeader 
-        ? 'opacity-100 translate-y-0' 
-        : 'opacity-0 -translate-y-full pointer-events-none'
-    }`}>
+    <header
+      className={`${
+        isMobile ? "fixed" : "sticky"
+      } top-0 z-[10] w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-all duration-300 ${
+        shouldShowHeader
+          ? "opacity-100 translate-y-0"
+          : "opacity-0 -translate-y-full pointer-events-none"
+      }`}
+    >
       <div className="xl:container px-4 xl:px-0 flex h-16 items-center">
-        <HeaderClient 
-          user={user} 
+        <HeaderClient
+          user={user}
           profile={profile}
-          menuItems={menuItems || []} 
+          menuItems={menuItems || []}
           isLoading={isLoading}
         />
       </div>
@@ -270,7 +270,17 @@ export default function Header() {
   );
 }
 
-function HeaderClient({ user, profile, menuItems, isLoading }: { user: any; profile: any; menuItems: any[]; isLoading?: boolean }) {
+function HeaderClient({
+  user,
+  profile,
+  menuItems,
+  isLoading,
+}: {
+  user: any;
+  profile: any;
+  menuItems: any[];
+  isLoading?: boolean;
+}) {
   const { signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -433,8 +443,8 @@ function HeaderClient({ user, profile, menuItems, isLoading }: { user: any; prof
             </Button>
           ) : profile ? (
             // 클라이언트에서 사용자 정보가 있으면 UserMenu 렌더링
-            <UserMenu 
-              user={profile} 
+            <UserMenu
+              user={profile}
               onLogout={async () => {
                 setIsLoggingOut(true);
                 try {
@@ -442,7 +452,7 @@ function HeaderClient({ user, profile, menuItems, isLoading }: { user: any; prof
                 } finally {
                   setIsLoggingOut(false);
                 }
-              }} 
+              }}
               isLoggingOut={isLoggingOut}
             />
           ) : (
@@ -472,8 +482,8 @@ function HeaderClient({ user, profile, menuItems, isLoading }: { user: any; prof
           </Button>
         ) : profile ? (
           // 클라이언트에서 사용자 정보가 있으면 UserMenu 렌더링
-          <UserMenu 
-            user={profile} 
+          <UserMenu
+            user={profile}
             onLogout={async () => {
               setIsLoggingOut(true);
               try {
@@ -481,7 +491,7 @@ function HeaderClient({ user, profile, menuItems, isLoading }: { user: any; prof
               } finally {
                 setIsLoggingOut(false);
               }
-            }} 
+            }}
             isLoggingOut={isLoggingOut}
           />
         ) : (
@@ -693,7 +703,15 @@ function HeaderClient({ user, profile, menuItems, isLoading }: { user: any; prof
 }
 
 // 사용자 메뉴 컴포넌트
-function UserMenu({ user, onLogout, isLoggingOut }: { user: any; onLogout: () => void; isLoggingOut: boolean }) {
+function UserMenu({
+  user,
+  onLogout,
+  isLoggingOut,
+}: {
+  user: any;
+  onLogout: () => void;
+  isLoggingOut: boolean;
+}) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>

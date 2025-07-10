@@ -102,8 +102,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
     pageId ? ['boardWidgetPosts', pageId, limit] : null,
     () => fetchBoardWidgetPosts(pageId!, limit),
     {
-      keepPreviousData: true,
-      revalidateOnFocus: false,
+      // 전역 설정 사용
     }
   );
 

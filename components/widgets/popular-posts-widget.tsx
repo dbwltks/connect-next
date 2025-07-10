@@ -48,8 +48,7 @@ export default function PopularPostsWidget({
     ['popularPosts', itemCount, sortBy],
     () => fetchPopularPosts(itemCount, sortBy),
     {
-      keepPreviousData: true,
-      revalidateOnFocus: false,
+      // 전역 설정 사용
     }
   );
 

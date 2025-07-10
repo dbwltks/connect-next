@@ -68,10 +68,7 @@ export default function HomepageWidgets({
     isLoading,
   } = useSWR(["widgets", pageId], () => fetchWidgets(pageId), {
     fallbackData: initialWidgets || [], // 초기 데이터를 fallback으로 사용
-    revalidateOnFocus: false,
-    revalidateOnReconnect: true,
-    dedupingInterval: 10000, // 10초 내 중복 요청 방지
-    keepPreviousData: true, // 이전 데이터 유지로 깜빡임 방지
+    // 전역 설정 사용
   });
 
   const renderWidget = (widget: IWidget) => {

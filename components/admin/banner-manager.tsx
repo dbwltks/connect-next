@@ -431,7 +431,7 @@ export default function BannerManager() {
     isLoading: isMenusLoading,
     mutate: mutateMenus,
   } = useSWR("admin-menus", fetchMenus, {
-    revalidateOnFocus: false,
+    // 전역 설정 사용
     shouldRetryOnError: true,
     errorRetryCount: 3,
     onError: (err) => console.error("메뉴 로딩 에러:", err),
@@ -442,7 +442,7 @@ export default function BannerManager() {
     isLoading: isBannersLoading,
     mutate: mutateBanners,
   } = useSWR(`admin-banners-${selectedMenuId || "all"}`, fetchBanners, {
-    revalidateOnFocus: false,
+    // 전역 설정 사용
     shouldRetryOnError: true,
     errorRetryCount: 3,
     onError: (err) => console.error("배너 로딩 에러:", err),
