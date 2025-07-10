@@ -2039,6 +2039,22 @@ const TipTapEditor = forwardRef(function TipTapEditor(
       if (!editor?.commands) return;
       const exists = uploadedFiles.some((file) => file.url === url);
       if (exists) return;
+
+      // 이미지 개수 제한 체크 (최대 10개)
+      const currentImageCount = uploadedFiles.filter(file => 
+        ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(
+          (file.type || file.url.split('.').pop() || '').toLowerCase()
+        )
+      ).length;
+      
+      if (currentImageCount >= 10) {
+        showToast({
+          title: "이미지 개수 초과",
+          description: "최대 10개의 이미지만 업로드할 수 있습니다.",
+          variant: "destructive",
+        });
+        return;
+      }
       const safeName = fileName || url.split("/").pop() || "image";
       const safeType =
         fileType || safeName.split(".").pop()?.toLowerCase() || "";
@@ -2101,6 +2117,37 @@ const TipTapEditor = forwardRef(function TipTapEditor(
       const files = event.target.files;
       if (!files || files.length === 0 || !editor) return;
 
+      // 이미지 개수 제한 체크 (최대 10개)
+      const currentImageCount = uploadedFiles.filter(file => 
+        ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(
+          (file.type || file.url.split('.').pop() || '').toLowerCase()
+        )
+      ).length;
+      
+      if (currentImageCount + files.length > 10) {
+        showToast({
+          title: "이미지 개수 초과",
+          description: `최대 10개의 이미지만 업로드할 수 있습니다. (현재: ${currentImageCount}개)`,
+          variant: "destructive",
+        });
+        event.target.value = "";
+        return;
+      }
+
+      // 파일 크기 체크 (최대 5MB)
+      const maxFileSize = 5 * 1024 * 1024; // 5MB
+      const oversizedFiles = Array.from(files).filter(file => file.size > maxFileSize);
+      
+      if (oversizedFiles.length > 0) {
+        showToast({
+          title: "파일 크기 초과",
+          description: `다음 파일들이 5MB를 초과합니다: ${oversizedFiles.map(f => f.name).join(', ')}`,
+          variant: "destructive",
+        });
+        event.target.value = "";
+        return;
+      }
+
       setIsUploadingImage(true);
       setUploadProgress(0);
 
@@ -2114,6 +2161,9 @@ const TipTapEditor = forwardRef(function TipTapEditor(
       const now = new Date();
       const yyyy = now.getFullYear();
       const mm = String(now.getMonth() + 1).padStart(2, "0");
+
+      // 업로드된 파일 정보를 저장할 배열
+      const newUploadedFiles: IFileInfo[] = [];
 
       // 각 파일을 순차적으로 업로드하고 즉시 삽입
       for (let i = 0; i < files.length; i++) {
@@ -2193,17 +2243,15 @@ const TipTapEditor = forwardRef(function TipTapEditor(
             })
             .run();
 
-          // 파일 정보 추가
-          if (typeof setUploadedFiles === "function") {
-            const newFile: IFileInfo = {
-              url: publicUrl,
-              name: file.name,
-              size: `${(file.size / 1024).toFixed(1)}KB`,
-              type: fileExt,
-              uploadedAt: new Date().toISOString(),
-            };
-            setUploadedFiles([...uploadedFiles, newFile]);
-          }
+          // 파일 정보를 배열에 추가
+          const newFile: IFileInfo = {
+            url: publicUrl,
+            name: file.name,
+            size: `${(file.size / 1024).toFixed(1)}KB`,
+            type: fileExt,
+            uploadedAt: new Date().toISOString(),
+          };
+          newUploadedFiles.push(newFile);
 
           // 개별 파일 업로드 완료 토스트
           showToast({
@@ -2219,6 +2267,12 @@ const TipTapEditor = forwardRef(function TipTapEditor(
             variant: "destructive",
           });
         }
+      }
+
+      // 모든 파일 업로드 완료 후 상태 업데이트
+      if (newUploadedFiles.length > 0 && typeof setUploadedFiles === "function") {
+        const allFiles = [...uploadedFiles, ...newUploadedFiles];
+        setUploadedFiles(allFiles);
       }
 
       setUploadProgress(100);
@@ -2248,12 +2302,29 @@ const TipTapEditor = forwardRef(function TipTapEditor(
       const files = event.target.files;
       if (!files || files.length === 0) return;
 
+      // 파일 크기 체크 (최대 5MB)
+      const maxFileSize = 5 * 1024 * 1024; // 5MB
+      const oversizedFiles = Array.from(files).filter(file => file.size > maxFileSize);
+      
+      if (oversizedFiles.length > 0) {
+        showToast({
+          title: "파일 크기 초과",
+          description: `다음 파일들이 5MB를 초과합니다: ${oversizedFiles.map(f => f.name).join(', ')}`,
+          variant: "destructive",
+        });
+        event.target.value = "";
+        return;
+      }
+
       setIsUploadingFile(true);
       setUploadProgress(0);
 
       const now = new Date();
       const yyyy = now.getFullYear();
       const mm = String(now.getMonth() + 1).padStart(2, "0");
+      
+      // 업로드된 파일 정보를 저장할 배열
+      const newUploadedFiles: IFileInfo[] = [];
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
@@ -2315,9 +2386,8 @@ const TipTapEditor = forwardRef(function TipTapEditor(
             uploadedAt: new Date().toISOString(),
           };
 
-          if (typeof setUploadedFiles === "function") {
-            setUploadedFiles([...uploadedFiles, fileInfo]);
-          }
+          // 파일 정보를 배열에 추가
+          newUploadedFiles.push(fileInfo);
 
           setUploadProgress(100);
           showToast({
@@ -2336,6 +2406,12 @@ const TipTapEditor = forwardRef(function TipTapEditor(
         }
       }
 
+      // 모든 파일 업로드 완료 후 상태 업데이트
+      if (newUploadedFiles.length > 0 && typeof setUploadedFiles === "function") {
+        const allFiles = [...uploadedFiles, ...newUploadedFiles];
+        setUploadedFiles(allFiles);
+      }
+
       setIsUploadingFile(false);
       setUploadProgress(0);
       setUploadingFileName("");
@@ -2350,10 +2426,27 @@ const TipTapEditor = forwardRef(function TipTapEditor(
       const files = event.target.files;
       if (!files || files.length === 0) return;
 
+      // 파일 크기 체크 (최대 5MB)
+      const maxFileSize = 5 * 1024 * 1024; // 5MB
+      const oversizedFiles = Array.from(files).filter(file => file.size > maxFileSize);
+      
+      if (oversizedFiles.length > 0) {
+        showToast({
+          title: "파일 크기 초과",
+          description: `다음 파일들이 5MB를 초과합니다: ${oversizedFiles.map(f => f.name).join(', ')}`,
+          variant: "destructive",
+        });
+        event.target.value = "";
+        return;
+      }
+
       // 날짜 변수 추가 (linter 오류 해결)
       const now = new Date();
       const yyyy = now.getFullYear();
       const mm = String(now.getMonth() + 1).padStart(2, "0");
+      
+      // 업로드된 파일 정보를 저장할 배열
+      const newUploadedFiles: IFileInfo[] = [];
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
@@ -2403,10 +2496,8 @@ const TipTapEditor = forwardRef(function TipTapEditor(
             type: fileExt,
             uploadedAt: new Date().toISOString(),
           };
-          if (typeof setUploadedFiles === "function")
-            setUploadedFiles(
-              uploadedFiles.filter((file) => file.url !== publicUrl)
-            );
+          // 파일 정보를 배열에 추가
+          newUploadedFiles.push(fileInfo);
           showToast({
             title: "파일 업로드 완료",
             description: `${file.name} 파일이 업로드되었습니다.`,
@@ -2420,6 +2511,13 @@ const TipTapEditor = forwardRef(function TipTapEditor(
           });
         }
       }
+      
+      // 모든 파일 업로드 완료 후 상태 업데이트
+      if (newUploadedFiles.length > 0 && typeof setUploadedFiles === "function") {
+        const allFiles = [...uploadedFiles, ...newUploadedFiles];
+        setUploadedFiles(allFiles);
+      }
+      
       // 파일 input 초기화
       event.target.value = "";
     },

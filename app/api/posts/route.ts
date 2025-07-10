@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { moveFilesFromTemp, IFileInfo } from '@/utils/fileUtils';
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,12 +31,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // published 상태일 때만 파일 이동 처리
+    let finalContent = content;
+    let finalFiles = files;
+    let finalThumbnailImage = thumbnail_image;
+
+    if (status === 'published') {
+      // 임시 파일들을 정식 위치로 이동
+      const { movedFiles, finalContent: updatedContent, moveThumbnailFromTemp } = 
+        await moveFilesFromTemp(files || [], content || '');
+      
+      finalContent = updatedContent;
+      finalFiles = movedFiles;
+      
+      // 썸네일 이미지도 이동
+      if (thumbnail_image) {
+        finalThumbnailImage = await moveThumbnailFromTemp(thumbnail_image);
+      }
+    }
+
     // 게시글 생성
     const { data: post, error } = await supabase
       .from('board_posts')
       .insert({
         title,
-        content,
+        content: finalContent,
         page_id,
         category_id,
         user_id: user.id,
@@ -44,9 +64,9 @@ export async function POST(request: NextRequest) {
         is_pinned,
         status,
         published_at: published_at || new Date().toISOString(),
-        thumbnail_image,
-        files,
-        tags,
+        thumbnail_image: finalThumbnailImage,
+        files: JSON.stringify(finalFiles),
+        tags: JSON.stringify(tags),
         views: 0
       })
       .select()
@@ -128,12 +148,31 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // published 상태일 때만 파일 이동 처리
+    let finalContent = content;
+    let finalFiles = files;
+    let finalThumbnailImage = thumbnail_image;
+
+    if (status === 'published') {
+      // 임시 파일들을 정식 위치로 이동
+      const { movedFiles, finalContent: updatedContent, moveThumbnailFromTemp } = 
+        await moveFilesFromTemp(files || [], content || '');
+      
+      finalContent = updatedContent;
+      finalFiles = movedFiles;
+      
+      // 썸네일 이미지도 이동
+      if (thumbnail_image) {
+        finalThumbnailImage = await moveThumbnailFromTemp(thumbnail_image);
+      }
+    }
+
     // 게시글 업데이트 (user_id는 기존 작성자 유지)
     const { data: post, error } = await supabase
       .from('board_posts')
       .update({
         title,
-        content,
+        content: finalContent,
         page_id,
         category_id,
         allow_comments,
@@ -141,9 +180,9 @@ export async function PUT(request: NextRequest) {
         is_pinned,
         status,
         published_at,
-        thumbnail_image,
-        files,
-        tags,
+        thumbnail_image: finalThumbnailImage,
+        files: JSON.stringify(finalFiles),
+        tags: JSON.stringify(tags),
         updated_at: new Date().toISOString()
         // user_id는 업데이트하지 않음 - 기존 작성자 유지
       })

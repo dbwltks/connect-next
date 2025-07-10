@@ -865,41 +865,71 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
         await logBoardPostDelete(user.id, post.id, postTitle, logDetails);
       }
 
-      // 4. SWR 캐시 무효화
+      // 4. SWR 캐시 무효화 - 완전한 버전
       try {
-        // 게시글 목록 캐시 무효화 (page_id가 있는 경우)
+        // 1. 현재 게시글 상세 캐시 무효화
+        await mutate(['postDetail', post.id]);
+        
+        // 2. 게시판 목록 캐시 무효화 (board-section에서 사용하는 배열 키)
         if (post.page_id) {
-          await mutate(`/api/board/posts/${post.page_id}`);
+          await mutate(
+            (key: any) => 
+              Array.isArray(key) && 
+              key[0] === 'boardData' && 
+              key[1] === post.page_id
+          );
+          
+          // 위젯용 게시글 목록 캐시 무효화
           await mutate(
             (key: any) =>
-              key &&
-              typeof key === "string" &&
-              key.includes(`/api/board/posts/${post.page_id}`)
+              Array.isArray(key) &&
+              key[0] === 'boardWidgetPosts' &&
+              key[1] === post.page_id
           );
         }
 
-        // 전체 게시글 목록 캐시 무효화
+        // 3. 전체 게시판 관련 API 캐시 무효화
         await mutate(
           (key: any) =>
-            key && typeof key === "string" && key.includes("/api/board/posts")
+            typeof key === 'string' && (
+              key.includes('/api/board') ||
+              key.includes('/api/board-posts')
+            )
         );
 
-        // 위젯 관련 캐시도 무효화
+        // 4. 인기 게시글 위젯 캐시 무효화
         await mutate(
-          (key: any) => key && typeof key === "string" && key.includes("widget")
+          (key: any) =>
+            Array.isArray(key) && key[0] === 'popularPosts'
+        );
+
+        // 5. 기타 위젯 관련 캐시 무효화
+        await mutate(
+          (key: any) => 
+            typeof key === 'string' && key.includes('widget')
+        );
+
+        // 6. 최근 댓글 위젯 캐시 무효화 (게시글 삭제시 연관 댓글도 사라짐)
+        await mutate(
+          (key: any) =>
+            Array.isArray(key) && key[0] === 'recentComments'
         );
 
       } catch (cacheError) {
         console.warn("캐시 무효화 중 오류:", cacheError);
       }
 
+      // 캐시 무효화 완료 후 알림 및 네비게이션
       alert("게시글과 첨부파일이 모두 삭제되었습니다.");
 
-      if (onBack) {
-        onBack();
-      } else {
-        router.back();
-      }
+      // 캐시 업데이트가 완료된 후 네비게이션
+      setTimeout(() => {
+        if (onBack) {
+          onBack();
+        } else {
+          router.back();
+        }
+      }, 100); // 짧은 딜레이로 캐시 무효화가 완료되도록 함
     } catch (error) {
       console.error("삭제 처리 중 오류:", error);
       alert("삭제 중 오류가 발생했습니다. 다시 시도해 주세요.");

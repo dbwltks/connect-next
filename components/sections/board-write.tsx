@@ -1164,72 +1164,10 @@ export default function BoardWrite({
     const userId = user.id;
     let newId = postId;
     try {
-      // 게시글이 정식 발행되는 경우 임시 파일들을 정식 폴더로 이동
+      // API에서 파일 이동을 처리하므로 클라이언트에서는 temp URL 그대로 전달
       let finalUploadedFiles = uploadedFiles;
       let finalThumbnailImage = thumbnailImage;
       let finalContent = html;
-
-      if (statusArg === "published") {
-        // 업로드된 파일들 이동 및 URL 매핑 얻기
-        const { movedFiles, urlMapping } =
-          await moveFilesFromTemp(uploadedFiles);
-        finalUploadedFiles = movedFiles;
-        setUploadedFiles(finalUploadedFiles);
-
-        // 썸네일 이미지도 temp에서 정식 폴더로 이동
-        if (thumbnailImage && thumbnailImage.includes("/temp/")) {
-          try {
-            const tempPath = thumbnailImage.split(
-              "/storage/v1/object/public/board/"
-            )[1];
-            const newPath = tempPath.replace("temp/", "");
-
-            // 파일 복사
-            const supabase = createClient();
-            const { data: downloadData, error: downloadError } =
-              await supabase.storage.from("board").download(tempPath);
-
-            if (!downloadError && downloadData) {
-              // 새 위치에 업로드
-              const { error: uploadError } = await supabase.storage
-                .from("board")
-                .upload(newPath, downloadData, { upsert: true });
-
-              if (!uploadError) {
-                // 새 URL 생성
-                const { data: publicUrlData } = supabase.storage
-                  .from("board")
-                  .getPublicUrl(newPath);
-
-                finalThumbnailImage = publicUrlData.publicUrl;
-                setThumbnailImage(finalThumbnailImage);
-
-                // 썸네일 URL 매핑에도 추가
-                urlMapping[thumbnailImage] = finalThumbnailImage;
-
-                // 임시 파일 삭제
-                await supabase.storage.from("board").remove([tempPath]);
-              }
-            }
-          } catch (error) {
-            console.error("썸네일 이미지 이동 중 오류:", error);
-            // 실패해도 계속 진행
-          }
-        }
-
-        // 에디터 내용에서 temp URL들을 정식 URL로 교체
-        finalContent = html;
-        for (const [oldUrl, newUrl] of Object.entries(urlMapping)) {
-          const escapedOldUrl = oldUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-          const regex = new RegExp(escapedOldUrl, "g");
-          finalContent = finalContent.replace(regex, newUrl);
-        }
-
-        // 에디터에도 업데이트된 내용 반영
-        if (editorRef.current?.editor && finalContent !== html) {
-          editorRef.current.editor.commands.setContent(finalContent);
-        }
-      }
 
       // 게시글 저장(등록) 시 number 자동 할당
       let nextNumber = 1;
@@ -1247,13 +1185,10 @@ export default function BoardWrite({
         } catch {}
       }
 
-      // 파일 데이터 JSON화
-      const filesJson = JSON.stringify(uploadedFiles);
-
       // API를 사용한 게시글 저장
       const postData: any = {
         title,
-        content: finalContent, // temp URL이 정식 URL로 교체된 내용 사용
+        content: finalContent, // API에서 파일 이동 및 URL 교체 처리
         page_id: selectedPageId,
         category_id: categoryId,
         allow_comments: allowComments,
@@ -1275,8 +1210,8 @@ export default function BoardWrite({
             ? new Date().toISOString() // 새 글인 경우 현재 시간 자동 설정
             : null, // 수정 모드에서 게시일 미설정 시 기존 값 유지
         thumbnail_image: finalThumbnailImage,
-        files: filesJson,
-        tags: JSON.stringify(selectedTags),
+        files: uploadedFiles, // 배열 그대로 전송
+        tags: selectedTags, // 배열 그대로 전송
       };
 
       // 수정 모드이거나 임시저장에서 불러온 경우 ID 추가
