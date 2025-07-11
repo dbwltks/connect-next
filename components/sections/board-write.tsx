@@ -1189,6 +1189,7 @@ export default function BoardWrite({
       const postData: any = {
         title,
         content: finalContent, // API에서 파일 이동 및 URL 교체 처리
+        description: description, // 상세설명 추가
         page_id: selectedPageId,
         category_id: categoryId,
         allow_comments: allowComments,

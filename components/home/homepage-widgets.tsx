@@ -342,7 +342,7 @@ export default function HomepageWidgets({
       ))}
 
       {/* 기존 메인 레이아웃 */}
-      <div className="xl:container mx-auto sm:px-8 md:px-12 lg:px-16 py-0 sm:py-6 xl:px-0">
+      <div className="lg:container mx-auto lg:px-6 py-0 lg:py-6">
         <div className="grid grid-cols-12 gap-6">
           {layoutStructure === "1-col" && (
             <div className="col-span-12 flex justify-center">

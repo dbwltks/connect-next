@@ -14,7 +14,7 @@ export default function ScrollToTop() {
   // 모바일 화면 여부 확인
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768); // 768px 이하를 모바일로 간주
+      setIsMobile(window.innerWidth < 1024); // 1024px 이하를 모바일로 간주
     };
 
     checkMobile();
@@ -27,11 +27,11 @@ export default function ScrollToTop() {
   useEffect(() => {
     const toggleVisibility = () => {
       const currentScrollY = window.scrollY;
-      
+
       // 스크롤이 300px 이상 내려갔을 때만 버튼 표시 가능
       if (currentScrollY > 300) {
         setIsVisible(true);
-        
+
         // 모바일에서만 스크롤 방향 체크
         if (isMobile) {
           // 스크롤 방향 확인
@@ -85,11 +85,11 @@ export default function ScrollToTop() {
 
   return (
     <>
-      <div 
-        className={`fixed bottom-32 right-4 sm:bottom-14 sm:right-4 z-10 transition-all duration-300 ${
-          shouldShowButton 
-            ? 'opacity-100 translate-y-0' 
-            : 'opacity-0 translate-y-8 pointer-events-none'
+      <div
+        className={`fixed bottom-32 right-4 lg:bottom-14 sm:right-4 z-10 transition-all duration-300 ${
+          shouldShowButton
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 translate-y-8 pointer-events-none"
         }`}
       >
         <GlassContainer

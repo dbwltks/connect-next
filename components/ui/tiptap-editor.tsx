@@ -39,6 +39,7 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from "react";
+import imageCompression from 'browser-image-compression';
 import {
   Bold,
   Italic,
@@ -2111,6 +2112,40 @@ const TipTapEditor = forwardRef(function TipTapEditor(
     }
   }, [content, editor]);
 
+  // 이미지 압축 함수
+  const compressImage = useCallback(async (file: File): Promise<File> => {
+    try {
+      const options = {
+        maxSizeMB: 1,          // 최대 1MB로 압축
+        maxWidthOrHeight: 1920, // 최대 해상도 1920px
+        useWebWorker: true,     // Web Worker 사용으로 성능 향상
+        fileType: 'image/webp', // WebP 형식으로 변환
+        quality: 0.8           // 품질 80%
+      };
+      
+      const compressedFile = await imageCompression(file, options);
+      
+      // 압축률 계산
+      const compressionRatio = ((file.size - compressedFile.size) / file.size * 100).toFixed(1);
+      
+      showToast({
+        title: "이미지 압축 완료",
+        description: `${file.name}: ${(file.size/1024/1024).toFixed(1)}MB → ${(compressedFile.size/1024/1024).toFixed(1)}MB (${compressionRatio}% 절약)`,
+        variant: "default",
+      });
+      
+      return compressedFile;
+    } catch (error) {
+      console.error('이미지 압축 실패:', error);
+      showToast({
+        title: "압축 실패",
+        description: `${file.name}: 원본 파일을 사용합니다.`,
+        variant: "default",
+      });
+      return file; // 압축 실패 시 원본 반환
+    }
+  }, []);
+
   // 이미지 업로드 핸들러
   const handleImageUpload = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -2134,14 +2169,14 @@ const TipTapEditor = forwardRef(function TipTapEditor(
         return;
       }
 
-      // 파일 크기 체크 (최대 5MB)
-      const maxFileSize = 5 * 1024 * 1024; // 5MB
-      const oversizedFiles = Array.from(files).filter(file => file.size > maxFileSize);
+      // 파일 크기 체크 (압축 후 기준으로 2MB로 조정)
+      const maxFileSize = 2 * 1024 * 1024; // 2MB (압축을 고려하여 조정)
+      const oversizedFiles = Array.from(files).filter(file => file.size > 10 * 1024 * 1024); // 10MB 이상은 압축해도 큰 파일
       
       if (oversizedFiles.length > 0) {
         showToast({
           title: "파일 크기 초과",
-          description: `다음 파일들이 5MB를 초과합니다: ${oversizedFiles.map(f => f.name).join(', ')}`,
+          description: `다음 파일들이 너무 큽니다 (10MB 초과): ${oversizedFiles.map(f => f.name).join(', ')}`,
           variant: "destructive",
         });
         event.target.value = "";
@@ -2165,52 +2200,67 @@ const TipTapEditor = forwardRef(function TipTapEditor(
       // 업로드된 파일 정보를 저장할 배열
       const newUploadedFiles: IFileInfo[] = [];
 
-      // 각 파일을 순차적으로 업로드하고 즉시 삽입
+      // 각 파일을 순차적으로 압축 후 업로드하고 즉시 삽입
       for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const fileExt = file.name.split(".").pop()?.toLowerCase() || "";
+        const originalFile = files[i];
+        const fileExt = originalFile.name.split(".").pop()?.toLowerCase() || "";
         const isImage = ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(fileExt);
         
         if (!isImage) continue;
 
         try {
-          setUploadingFileName(file.name);
+          setUploadingFileName(originalFile.name);
+          
+          // 압축 단계 (SVG는 압축하지 않음)
+          let processedFile = originalFile;
+          if (fileExt !== 'svg') {
+            showToast({
+              title: "이미지 압축 중",
+              description: `${originalFile.name} 압축 중...`,
+              variant: "default",
+            });
+            processedFile = await compressImage(originalFile);
+          }
+          
           const currentProgress = Math.round(((i + 1) / files.length) * 100);
           setUploadProgress(currentProgress);
 
           // 각 파일 업로드 진행 상태 토스트
           showToast({
             title: "이미지 업로드 중",
-            description: `${file.name} (${i + 1}/${files.length}) - ${currentProgress}%`,
+            description: `${processedFile.name} (${i + 1}/${files.length}) - ${currentProgress}%`,
             variant: "default",
           });
 
-          // 파일명 생성
+          // 파일명 생성 (압축된 파일은 WebP 확장자 사용)
           const timestamp = Date.now() + i;
-          const fileName = `${timestamp}-${Math.random().toString(36).substring(2, 11)}.${fileExt}`;
+          const finalExt = processedFile.type === 'image/webp' ? 'webp' : fileExt;
+          const fileName = `${timestamp}-${Math.random().toString(36).substring(2, 11)}.${finalExt}`;
           const filePath = `temp/images/${yyyy}/${mm}/${fileName}`;
 
           // Supabase에 업로드
           const supabase = createClient();
           const { data, error } = await supabase.storage
             .from("board")
-            .upload(filePath, file, {
+            .upload(filePath, processedFile, {
               cacheControl: "3600",
               upsert: true,
               metadata: {
-                originalName: file.name,
-                fileSize: file.size,
+                originalName: originalFile.name,
+                fileSize: processedFile.size,
+                originalFileSize: originalFile.size,
                 uploadTime: timestamp,
                 status: "",
                 category: category,
                 pageId: pageId,
+                compressed: fileExt !== 'svg' && processedFile.size < originalFile.size,
               },
             });
 
           if (error) {
             showToast({
               title: "이미지 업로드 실패",
-              description: `${file.name}: ${error.message}`,
+              description: `${originalFile.name}: ${error.message}`,
               variant: "destructive",
             });
             continue;
@@ -2225,7 +2275,7 @@ const TipTapEditor = forwardRef(function TipTapEditor(
           if (!publicUrl) {
             showToast({
               title: "URL 생성 실패",
-              description: `${file.name}: 이미지 URL을 가져오지 못했습니다.`,
+              description: `${originalFile.name}: 이미지 URL을 가져오지 못했습니다.`,
               variant: "destructive",
             });
             continue;
@@ -2238,17 +2288,17 @@ const TipTapEditor = forwardRef(function TipTapEditor(
               type: "image",
               attrs: {
                 src: publicUrl,
-                alt: file.name,
+                alt: originalFile.name,
               },
             })
             .run();
 
-          // 파일 정보를 배열에 추가
+          // 파일 정보를 배열에 추가 (압축된 파일 크기로 표시)
           const newFile: IFileInfo = {
             url: publicUrl,
-            name: file.name,
-            size: `${(file.size / 1024).toFixed(1)}KB`,
-            type: fileExt,
+            name: originalFile.name,
+            size: `${(processedFile.size / 1024).toFixed(1)}KB`,
+            type: finalExt,
             uploadedAt: new Date().toISOString(),
           };
           newUploadedFiles.push(newFile);
@@ -2256,14 +2306,14 @@ const TipTapEditor = forwardRef(function TipTapEditor(
           // 개별 파일 업로드 완료 토스트
           showToast({
             title: "이미지 업로드 완료",
-            description: `${file.name} 업로드 완료 (${i + 1}/${files.length})`,
+            description: `${originalFile.name} 업로드 완료 (${i + 1}/${files.length})`,
             variant: "default",
           });
 
         } catch (uploadError) {
           showToast({
             title: "이미지 업로드 예외 발생",
-            description: `${file.name}: ${uploadError instanceof Error ? uploadError.message : "알 수 없는 오류"}`,
+            description: `${originalFile.name}: ${uploadError instanceof Error ? uploadError.message : "알 수 없는 오류"}`,
             variant: "destructive",
           });
         }

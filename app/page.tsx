@@ -17,7 +17,7 @@ export default async function HomePage() {
     <>
       <MainBanner menuId={null} />
       <main className="flex-1 flex flex-col gap-12">
-        <div className="my-6 sm:my-0">
+        <div className="my-6 lg:my-0">
           <HomepageWidgets widgets={widgets} />
         </div>
       </main>

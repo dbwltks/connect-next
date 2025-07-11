@@ -8,6 +8,7 @@ export async function POST(request: NextRequest) {
     const {
       title,
       content,
+      description,
       page_id,
       category_id,
       allow_comments = true,
@@ -56,6 +57,7 @@ export async function POST(request: NextRequest) {
       .insert({
         title,
         content: finalContent,
+        description,
         page_id,
         category_id,
         user_id: user.id,
@@ -94,6 +96,7 @@ export async function PUT(request: NextRequest) {
       id,
       title,
       content,
+      description,
       page_id,
       category_id,
       allow_comments,
@@ -173,6 +176,7 @@ export async function PUT(request: NextRequest) {
       .update({
         title,
         content: finalContent,
+        description,
         page_id,
         category_id,
         allow_comments,

@@ -58,37 +58,57 @@ export async function GET(
       .select('*', { count: 'exact', head: true })
       .eq('post_id', postId);
 
-    // 4. 메뉴 정보 조회 (페이지 ID로)
+    // 4. 메뉴 정보 조회 (페이지 ID로, 우선순위: 하위메뉴 > 상위메뉴)
     let menuInfo = null;
     if (post.page_id) {
-      const { data: menu } = await supabase
+      // 먼저 하위메뉴에서 찾기 (parent_id가 있는 메뉴)
+      const { data: subMenu } = await supabase
         .from('cms_menus')
         .select('title, url')
         .eq('page_id', post.page_id)
-        .single();
-      menuInfo = menu;
+        .not('parent_id', 'is', null)
+        .eq('is_active', true)
+        .maybeSingle();
+      
+      if (subMenu) {
+        menuInfo = subMenu;
+      } else {
+        // 하위메뉴가 없으면 상위메뉴에서 찾기
+        const { data: parentMenu } = await supabase
+          .from('cms_menus')
+          .select('title, url')
+          .eq('page_id', post.page_id)
+          .is('parent_id', null)
+          .eq('is_active', true)
+          .maybeSingle();
+        menuInfo = parentMenu;
+      }
     }
 
-    // 5. 이전글/다음글 조회 (같은 페이지의 게시글들 중에서)
+    // 5. 이전글/다음글 조회 (게시일 우선, 생성일 보조 정렬)
+    const currentSortKey = post.published_at || post.created_at;
+    
     const [prevPostQuery, nextPostQuery] = await Promise.all([
-      // 이전글 (더 오래된 글)
+      // 이전글 (더 오래된 글) - 게시일 우선, 생성일 보조
       supabase
         .from('board_posts')
-        .select('id, title')
+        .select('id, title, published_at, created_at')
         .eq('page_id', post.page_id)
         .eq('status', 'published')
-        .lt('created_at', post.created_at)
+        .lt('published_at', currentSortKey)
+        .order('published_at', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(1)
         .single(),
       
-      // 다음글 (더 최신 글)  
+      // 다음글 (더 최신 글) - 게시일 우선, 생성일 보조
       supabase
         .from('board_posts')
-        .select('id, title')
+        .select('id, title, published_at, created_at')
         .eq('page_id', post.page_id)
         .eq('status', 'published')
-        .gt('created_at', post.created_at)
+        .gt('published_at', currentSortKey)
+        .order('published_at', { ascending: true })
         .order('created_at', { ascending: true })
         .limit(1)
         .single()

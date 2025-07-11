@@ -164,7 +164,7 @@ export default function Header() {
   // 모바일 화면 여부 확인
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768); // 768px 이하를 모바일로 간주
+      setIsMobile(window.innerWidth < 1024); // 768px 이하를 모바일로 간주
     };
 
     checkMobile();
@@ -374,7 +374,7 @@ function HeaderClient({
   return (
     <>
       {/* 데스크톱 헤더 - md 이상에서 표시 */}
-      <div className="hidden md:flex items-center ">
+      <div className="hidden lg:flex items-center ">
         <div className="flex items-center">
           <Link href="/" className="flex items-center">
             <div className="relative h-16 overflow-hidden flex items-center justify-center">
@@ -393,7 +393,7 @@ function HeaderClient({
       </div>
 
       {/* 모바일 헤더 - md 미만에서 표시 */}
-      <div className="flex items-center w-full h-16 md:hidden">
+      <div className="flex items-center w-full h-16 lg:hidden">
         {/* 좌측 햄버거 메뉴 - 고정 너비/높이, 중앙 정렬 */}
         <div className="w-[56px] h-16 flex justify-center items-center">
           <Button
@@ -467,12 +467,12 @@ function HeaderClient({
       </div>
 
       {/* 데스크톱 메뉴 */}
-      <nav className="hidden flex-1 items-center justify-center md:flex overflow-visible">
+      <nav className="hidden flex-1 items-center justify-center lg:flex overflow-visible">
         {renderMenu(menuItems)}
       </nav>
 
       {/* 데스크톱 우측 메뉴 */}
-      <div className="hidden md:flex items-center gap-2">
+      <div className="hidden lg:flex items-center gap-2">
         <ThemeSwitcher />
         {/* SSR과 CSR 불일치 문제를 해결하기 위해 클라이언트 상태 확인 후 렌더링 */}
         {!isClient || isLoading ? (

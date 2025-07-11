@@ -312,6 +312,10 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
   const [showMobileFontMenu, setShowMobileFontMenu] = useState(false);
   // 플로팅 버튼 표시 상태
   const [showFloatingButtons, setShowFloatingButtons] = useState(true);
+  // 스크롤 방향 감지를 위한 상태
+  const [lastScrollY, setLastScrollY] = useState(0);
+  // 스크롤 정지 타이머
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   // 작성자 여부 상태 추가
   const [isAuthor, setIsAuthor] = useState(false);
   // 작성자 아바타 상태 추가
@@ -364,47 +368,59 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
     setFontFamily(settings.family);
   }, []);
 
-  // 플로팅 버튼 자동 숨김/표시 기능
+  // 스크롤 방향에 따른 플로팅 버튼 제어 (모바일만)
   useEffect(() => {
-    let hideTimeout: NodeJS.Timeout;
+    const handleScroll = () => {
+      // 모바일 화면(1024px 미만)에서만 동작
+      if (window.innerWidth >= 1024) return;
 
-    const showButtons = () => {
-      setShowFloatingButtons(true);
-      // 기존 타이머가 있으면 클리어
-      if (hideTimeout) {
-        clearTimeout(hideTimeout);
+      const currentScrollY = window.scrollY;
+
+      // 기존 타이머 클리어
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
       }
-      // 3초 후 버튼 숨김
-      hideTimeout = setTimeout(() => {
+
+      // 상단 근처(100px 이내)에서는 항상 표시
+      if (currentScrollY < 100) {
+        setShowFloatingButtons(true);
+        setLastScrollY(currentScrollY);
+        return;
+      }
+
+      // 스크롤 방향 감지
+      if (currentScrollY > lastScrollY) {
+        // 아래로 스크롤 → 즉시 숨김
         setShowFloatingButtons(false);
+      } else {
+        // 위로 스크롤 → 즉시 표시
+        setShowFloatingButtons(true);
+      }
+
+      // 스크롤 정지 후 3초 뒤 숨김 타이머 설정
+      scrollTimeoutRef.current = setTimeout(() => {
+        if (currentScrollY >= 100) {
+          // 상단이 아닐 때만
+          setShowFloatingButtons(false);
+        }
       }, 3000);
+
+      setLastScrollY(currentScrollY);
     };
 
-    const handleUserActivity = () => {
-      showButtons();
-    };
+    // 스크롤 이벤트 등록
+    window.addEventListener("scroll", handleScroll, { passive: true });
 
-    // 사용자 활동 감지 이벤트들
-    const events = ["touchstart", "touchmove", "scroll", "click"];
-
-    events.forEach((event) => {
-      document.addEventListener(event, handleUserActivity);
-    });
-
-    // 초기 3초 후 숨김
-    hideTimeout = setTimeout(() => {
-      setShowFloatingButtons(false);
-    }, 3000);
+    // 초기값 설정
+    setLastScrollY(window.scrollY);
 
     return () => {
-      if (hideTimeout) {
-        clearTimeout(hideTimeout);
+      window.removeEventListener("scroll", handleScroll);
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
       }
-      events.forEach((event) => {
-        document.removeEventListener(event, handleUserActivity);
-      });
     };
-  }, []);
+  }, [lastScrollY]);
 
   // 더보기 메뉴 및 모바일 글꼴 메뉴 외부 클릭 감지
   useEffect(() => {
@@ -529,7 +545,6 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
         .order("created_at", { ascending: true })
         .limit(1);
 
-
       setNextPost(nextData && nextData.length > 0 ? nextData[0] : null);
     } catch (err) {
       console.error("이전/다음 글 가져오기 오류:", err);
@@ -538,8 +553,13 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
 
   // SWR을 사용한 게시글 데이터 페칭
   const currentPostId = postId || (params?.id as string);
-  const { data: postData, error: postError, isLoading: postLoading, mutate: mutatePost } = useSWR(
-    currentPostId ? ['postDetail', currentPostId] : null,
+  const {
+    data: postData,
+    error: postError,
+    isLoading: postLoading,
+    mutate: mutatePost,
+  } = useSWR(
+    currentPostId ? ["postDetail", currentPostId] : null,
     () => api.posts.getDetail(currentPostId!),
     {
       // 전역 설정 사용
@@ -554,10 +574,14 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
   useEffect(() => {
     if (postData?.post) {
       setPost(postData.post);
-      setAuthorInfo(postData.post.author ? {
-        username: postData.post.author.username,
-        avatar_url: postData.post.author.avatar_url
-      } : null);
+      setAuthorInfo(
+        postData.post.author
+          ? {
+              username: postData.post.author.username,
+              avatar_url: postData.post.author.avatar_url,
+            }
+          : null
+      );
       setLikeCount(postData.post.like_count || 0);
       setCommentCount(postData.post.comment_count || 0);
       setMenuInfo(postData.menuInfo);
@@ -577,13 +601,15 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
   // 조회수 증가 함수
   const incrementViewCount = async (postId: string) => {
     // 먼저 UI에서 조회수를 즉시 증가 (낙관적 업데이트)
-    setPost(prev => prev ? { ...prev, views: (prev.views || 0) + 1 } : null);
-    
+    setPost((prev) =>
+      prev ? { ...prev, views: (prev.views || 0) + 1 } : null
+    );
+
     try {
       const response = await fetch(`/api/posts/${postId}/increment-view`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
       });
 
@@ -591,24 +617,31 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
         const result = await response.json();
         // 서버에서 받은 정확한 조회수로 업데이트
         if (result.views) {
-          setPost(prev => prev ? { ...prev, views: result.views } : null);
+          setPost((prev) => (prev ? { ...prev, views: result.views } : null));
           // SWR 캐시도 업데이트
           mutatePost(
-            (current: any) => current ? {
-              ...current,
-              post: { ...current.post, views: result.views }
-            } : current,
+            (current: any) =>
+              current
+                ? {
+                    ...current,
+                    post: { ...current.post, views: result.views },
+                  }
+                : current,
             false
           );
         }
       } else {
         // 실패 시 원래 조회수로 롤백
-        setPost(prev => prev ? { ...prev, views: (prev.views || 1) - 1 } : null);
+        setPost((prev) =>
+          prev ? { ...prev, views: (prev.views || 1) - 1 } : null
+        );
       }
     } catch (error) {
-      console.error('조회수 증가 실패:', error);
+      console.error("조회수 증가 실패:", error);
       // 실패 시 원래 조회수로 롤백
-      setPost(prev => prev ? { ...prev, views: (prev.views || 1) - 1 } : null);
+      setPost((prev) =>
+        prev ? { ...prev, views: (prev.views || 1) - 1 } : null
+      );
     }
   };
 
@@ -628,13 +661,13 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
   // 사용자 권한 확인 및 좋아요 상태 확인
   useEffect(() => {
     if (!post || !currentPostId) return;
-    
+
     async function checkUserStatus() {
       try {
         const currentUser = await getHeaderUser();
         if (currentUser && post) {
           setIsAuthor(currentUser.id === post.user_id);
-          
+
           // 좋아요 상태 확인
           const supabase = createClient();
           const { data: likeData } = await supabase
@@ -642,14 +675,14 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
             .select("id")
             .eq("post_id", currentPostId)
             .eq("user_id", currentUser.id);
-          
+
           setLiked(Boolean(likeData && likeData.length > 0));
         }
       } catch (err) {
         console.error("사용자 상태 확인 오류:", err);
       }
     }
-    
+
     checkUserStatus();
   }, [post, currentPostId]);
 
@@ -868,22 +901,22 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
       // 4. SWR 캐시 무효화 - 완전한 버전
       try {
         // 1. 현재 게시글 상세 캐시 무효화
-        await mutate(['postDetail', post.id]);
-        
+        await mutate(["postDetail", post.id]);
+
         // 2. 게시판 목록 캐시 무효화 (board-section에서 사용하는 배열 키)
         if (post.page_id) {
           await mutate(
-            (key: any) => 
-              Array.isArray(key) && 
-              key[0] === 'boardData' && 
+            (key: any) =>
+              Array.isArray(key) &&
+              key[0] === "boardData" &&
               key[1] === post.page_id
           );
-          
+
           // 위젯용 게시글 목록 캐시 무효화
           await mutate(
             (key: any) =>
               Array.isArray(key) &&
-              key[0] === 'boardWidgetPosts' &&
+              key[0] === "boardWidgetPosts" &&
               key[1] === post.page_id
           );
         }
@@ -891,30 +924,24 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
         // 3. 전체 게시판 관련 API 캐시 무효화
         await mutate(
           (key: any) =>
-            typeof key === 'string' && (
-              key.includes('/api/board') ||
-              key.includes('/api/board-posts')
-            )
+            typeof key === "string" &&
+            (key.includes("/api/board") || key.includes("/api/board-posts"))
         );
 
         // 4. 인기 게시글 위젯 캐시 무효화
         await mutate(
-          (key: any) =>
-            Array.isArray(key) && key[0] === 'popularPosts'
+          (key: any) => Array.isArray(key) && key[0] === "popularPosts"
         );
 
         // 5. 기타 위젯 관련 캐시 무효화
         await mutate(
-          (key: any) => 
-            typeof key === 'string' && key.includes('widget')
+          (key: any) => typeof key === "string" && key.includes("widget")
         );
 
         // 6. 최근 댓글 위젯 캐시 무효화 (게시글 삭제시 연관 댓글도 사라짐)
         await mutate(
-          (key: any) =>
-            Array.isArray(key) && key[0] === 'recentComments'
+          (key: any) => Array.isArray(key) && key[0] === "recentComments"
         );
-
       } catch (cacheError) {
         console.warn("캐시 무효화 중 오류:", cacheError);
       }
@@ -1049,7 +1076,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
         setLikeCount((prev) => prev + 1);
         setLiked(true);
       }
-      
+
       // SWR 데이터 갱신
       mutatePost();
     } catch (err) {
@@ -1109,8 +1136,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                 if (profile) {
                   return user as User;
                 }
-              } catch (error) {
-              }
+              } catch (error) {}
             }
           } catch (error) {
             console.error("저장된 사용자 정보 파싱 오류:", error);
@@ -1158,7 +1184,6 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
     if (!post?.content) {
       return;
     }
-
 
     const extractedAttachments: IAttachment[] = [];
 
@@ -1337,7 +1362,6 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
   // 게시글에 연결된 첨부파일 가져오기
   async function fetchAttachments(postId: string, content?: string) {
     try {
-
       // 게시글 내용에서 파일 URL 추출
       const contentToProcess = content || post?.content;
       if (contentToProcess) {
@@ -1376,7 +1400,6 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
             fileUrls.push(url);
           }
         }
-
 
         // 파일 URL에서 첨부파일 정보 추출
         const extractedAttachments: IAttachment[] = [];
@@ -1525,9 +1548,9 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
         <ToastViewport />
       </ToastProvider>
 
-      <div className="curs py-4 sm:py-0 mx-0 sm:mx-auto w-full max-w-full overflow-hidden bg-white relative sm:pb-0 border border-slate-100 sm:rounded-xl sm:mt-2">
+      <div className="curs py-4 lg:py-0 mx-0 lg:mx-auto w-full overflow-hidden bg-white relative lg:pb-0 border border-slate-100 lg:rounded-xl lg:mt-2">
         {/* 수정, 삭제 버튼과 이전글, 다음글, 목록 버튼 한 줄에 배치 - 모바일에서는 숨김 */}
-        <div className="hidden sm:flex justify-between items-center p-4 border-b border-gray-100 space-x-2">
+        <div className="hidden lg:flex justify-between items-center p-4 border-b border-gray-100 space-x-2">
           {/* 수정, 삭제 버튼 - 작성자인 경우에만 표시 */}
           <div className="flex gap-2">
             {isAdmin && (
@@ -1616,7 +1639,6 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
               {post.title}
             </CardTitle>
           </div>
-
 
           {/* 유저/메타데이터 + 액션 버튼 한 줄 */}
           <div className="flex items-start my-6 border-b border-gray-200 pb-6 justify-between">
@@ -1793,30 +1815,31 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
           </div>
 
           {/* 태그 표시 */}
-          {post.tags && (() => {
-            try {
-              const tags: ITag[] = JSON.parse(post.tags);
-              return tags && tags.length > 0 ? (
-                <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-100">
-                  {tags.map((tag, index: any) => (
-                    <Badge 
-                      key={index} 
-                      variant="secondary"
-                      className="text-xs px-2 py-1"
-                      style={{
-                        backgroundColor: tag.color || '#e5e7eb',
-                        color: tag.color ? '#ffffff' : '#374151'
-                      }}
-                    >
-                      {tag.name}
-                    </Badge>
-                  ))}
-                </div>
-              ) : null;
-            } catch (e) {
-              return null;
-            }
-          })()}
+          {post.tags &&
+            (() => {
+              try {
+                const tags: ITag[] = JSON.parse(post.tags);
+                return tags && tags.length > 0 ? (
+                  <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-100">
+                    {tags.map((tag, index: any) => (
+                      <Badge
+                        key={index}
+                        variant="secondary"
+                        className="text-xs px-2 py-1"
+                        style={{
+                          backgroundColor: tag.color || "#e5e7eb",
+                          color: tag.color ? "#ffffff" : "#374151",
+                        }}
+                      >
+                        {tag.name}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : null;
+              } catch (e) {
+                return null;
+              }
+            })()}
         </CardContent>
 
         <CardFooter className="px-0 sm:px-6 pt-0 pb-0 border-t-0">
@@ -1834,7 +1857,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
 
         {/* 모바일 이전/다음 플로팅 버튼 */}
         <div
-          className={`fixed bottom-20 left-0 right-0 sm:hidden z-40 flex justify-between px-4 pointer-events-none transition-all duration-500 ease-in-out ${
+          className={`fixed bottom-20 left-0 right-0 lg:hidden z-40 flex justify-between px-4 pointer-events-none transition-all duration-500 ease-in-out ${
             showFloatingButtons
               ? "opacity-100 translate-y-0"
               : "opacity-0 translate-y-4"
@@ -1876,7 +1899,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
         </div>
 
         {/* 모바일 하단 고정 네비게이션 */}
-        <div className="fixed bottom-0 left-0 right-0 sm:hidden z-50 bg-white border-t border-gray-200">
+        <div className="fixed bottom-0 left-0 right-0 lg:hidden z-50 bg-white border-t border-gray-200">
           {/* 통합된 하단 메뉴바 */}
           <div className="flex items-center justify-between px-8 py-3">
             {/* 목록으로 버튼 */}
@@ -1935,7 +1958,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
 
               {/* 모바일 글꼴 설정 다이얼로그 */}
               {showMobileFontMenu && (
-                <div className="fixed inset-0 z-50 sm:hidden">
+                <div className="fixed inset-0 z-50 lg:hidden">
                   {/* 배경 오버레이 */}
                   <div
                     className="absolute inset-0 bg-black/50"
