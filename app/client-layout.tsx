@@ -24,7 +24,7 @@ export default function ClientLayout({
   widgets: any[];
 }) {
   const pathname = usePathname();
-  const isAdminPage = pathname?.startsWith('/admin') || pathname?.startsWith('/mypage');
+  const isAdminPage = pathname?.startsWith('/admin');
 
   return (
     <AuthProvider>

@@ -1,23 +1,8 @@
-import { createClient } from "@/utils/supabase/server";
-import { redirect } from "next/navigation";
-
-export default async function AuthPagesLayout({
+export default function AuthPagesLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  
-  // 서버에서 사용자 인증 확인
-  const {
-    data: { user },
-    error
-  } = await supabase.auth.getUser();
-
-  // 비로그인 사용자는 로그인 페이지로 리다이렉션
-  if (error || !user) {
-    redirect("/login");
-  }
-
+  // 인증 검증은 각 페이지에서 클라이언트 사이드로 처리
   return <>{children}</>;
 }

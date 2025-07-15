@@ -79,8 +79,8 @@ export default function AdminHeader() {
                 >
                   <Avatar>
                     <AvatarImage
-                      src={(user as any).avatar_url || ""}
-                      alt={(user as any).username}
+                      src={(user as any)?.avatar_url}
+                      alt={(user as any)?.username}
                     />
                     <AvatarFallback className="bg-primary text-primary-foreground">
                       {(user as any).username?.charAt(0).toUpperCase() || "A"}
@@ -161,8 +161,8 @@ export default function AdminHeader() {
                 >
                   <Avatar>
                     <AvatarImage
-                      src={(user as any).avatar_url || ""}
-                      alt={(user as any).username}
+                      src={(user as any)?.avatar_url}
+                      alt={(user as any)?.username}
                     />
                     <AvatarFallback className="bg-primary text-primary-foreground">
                       {(user as any).username?.charAt(0).toUpperCase() || "A"}

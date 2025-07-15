@@ -435,7 +435,7 @@ function HeaderClient({
         </div>
 
         {/* 우측 로그인/사용자 메뉴 - 고정 너비 적용 */}
-        <div className="w-[70px] flex justify-end">
+        <div className="w-[56px] flex justify-center">
           {!isClient ? (
             // 서버에서는 일관된 불투명 버튼을 렌더링
             <Button variant="ghost" size="icon" className="opacity-0">
@@ -722,9 +722,12 @@ function UserMenu({
           disabled={isLoggingOut}
         >
           <Avatar>
-            <AvatarImage src={user.avatar_url || ""} alt={user.username} />
+            <AvatarImage 
+              src={user?.avatar_url} 
+              alt={user?.username || 'User'}
+            />
             <AvatarFallback className="bg-primary text-primary-foreground">
-              {user.username?.charAt(0).toUpperCase() || "U"}
+              {user?.username?.charAt(0).toUpperCase() || "U"}
             </AvatarFallback>
           </Avatar>
         </Button>

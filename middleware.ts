@@ -12,9 +12,9 @@ export const config = {
      * - _next/static (정적 파일)
      * - _next/image (이미지 최적화 파일) 
      * - favicon.ico (파비콘 파일)
-     * - admin (관리자 페이지는 레이아웃에서 처리)
+     * - mypage (마이페이지는 클라이언트에서 처리)
      * 필요한 경우 더 많은 경로를 포함하도록 이 패턴을 수정하세요.
      */
-    '/((?!_next/static|_next/image|favicon.ico|admin|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|mypage|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

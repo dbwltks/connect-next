@@ -5,11 +5,21 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "*.supabase.co",
-        port: "",
-        pathname: "/storage/v1/object/public/**",
+        hostname: "**.supabase.co",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "api.dicebear.com",
+        pathname: "/**",
       },
     ],
+    domains: ["api.dicebear.com"],
+    unoptimized: true,
+  },
+  // 페이지 이동 시 스크롤을 맨 위로
+  experimental: {
+    scrollRestoration: false,
   },
   // 캐시 클리어를 위한 빌드 시간 추가
   generateBuildId: async () => {

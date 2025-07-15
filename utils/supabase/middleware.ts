@@ -63,7 +63,7 @@ export async function updateSession(request: NextRequest) {
   // }
 
   // 로그인이 필요한 보호된 경로들
-  const protectedPaths = ['/mypage'];
+  const protectedPaths = ['/admin'];
   const isProtectedPath = protectedPaths.some(path => request.nextUrl.pathname.startsWith(path));
 
   if (
@@ -72,9 +72,11 @@ export async function updateSession(request: NextRequest) {
     !request.nextUrl.pathname.startsWith('/login') &&
     !request.nextUrl.pathname.startsWith('/auth')
   ) {
+    console.log(`[Middleware] 인증되지 않은 사용자가 보호된 경로 접근: ${request.nextUrl.pathname}`);
     // 사용자가 없고 보호된 경로에 접근하려는 경우 로그인 페이지로 리디렉션
     const url = request.nextUrl.clone();
     url.pathname = '/login';
+    url.searchParams.set('redirectTo', request.nextUrl.pathname);
     return NextResponse.redirect(url);
   }
 
