@@ -46,14 +46,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Calendar as CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import {
   ArrowLeft,
   Users,
   DollarSign,
-  Calendar,
+  Calendar as CalendarIcon,
   UserCheck,
   Plus,
   Edit,
@@ -931,7 +930,7 @@ export default function ProgramDetailPage() {
     { id: "overview", label: "개요", icon: BarChart3 },
     ...(program.features.includes("participants") ? [{ id: "participants", label: "참여자", icon: Users }] : []),
     ...(program.features.includes("finance") ? [{ id: "finance", label: "재정", icon: DollarSign }] : []),
-    ...(program.features.includes("calendar") ? [{ id: "calendar", label: "일정", icon: Calendar }] : []),
+    ...(program.features.includes("calendar") ? [{ id: "calendar", label: "일정", icon: CalendarIcon }] : []),
     ...(program.features.includes("attendance") ? [{ id: "attendance", label: "출석", icon: UserCheck }] : []),
     ...(program.features.includes("checklist") ? [{ id: "checklist", label: "확인사항", icon: CheckCircle }] : []),
     ...(program.features.includes("teams") ? [{ id: "teams", label: "팀 관리", icon: Users }] : []),
@@ -2171,7 +2170,7 @@ export default function ProgramDetailPage() {
                   <div className="flex items-center space-x-3">
                     {feature === "participants" && <Users className="h-5 w-5 text-blue-500" />}
                     {feature === "finance" && <DollarSign className="h-5 w-5 text-green-500" />}
-                    {feature === "calendar" && <Calendar className="h-5 w-5 text-purple-500" />}
+                    {feature === "calendar" && <CalendarIcon className="h-5 w-5 text-purple-500" />}
                     {feature === "attendance" && <UserCheck className="h-5 w-5 text-orange-500" />}
                     {feature === "checklist" && <ClipboardList className="h-5 w-5 text-red-500" />}
                     {feature === "teams" && <Users className="h-5 w-5 text-indigo-500" />}
