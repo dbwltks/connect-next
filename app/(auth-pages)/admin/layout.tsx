@@ -16,6 +16,7 @@ import {
   Shield,
   ChevronRight,
   LogOut,
+  Briefcase,
 } from "lucide-react";
 import {
   Sidebar,
@@ -99,6 +100,7 @@ function AppSidebar() {
         },
       ],
     },
+    { name: "프로그램 관리", href: "/admin/programs", icon: Briefcase },
     { name: "일정 관리", href: "/admin/events", icon: Calendar },
     { name: "공지사항", href: "/admin/announcements", icon: FileText },
     { name: "기도 요청", href: "/admin/prayers", icon: MessageSquare },

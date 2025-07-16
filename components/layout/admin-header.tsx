@@ -23,6 +23,7 @@ import {
   MessageSquare,
   Menu,
   UserPlus,
+  Briefcase,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/auth-context";
