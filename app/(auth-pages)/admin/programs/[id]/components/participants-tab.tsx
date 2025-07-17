@@ -288,7 +288,20 @@ export default function ParticipantsTab({ programId }: ParticipantsTabProps) {
   const handleDelete = async (id: string) => {
     if (confirm('정말로 이 참가자를 삭제하시겠습니까?')) {
       try {
+        // 1. 참가자 삭제
         await participantsApi.delete(id, programId);
+        
+        // 2. 해당 참가자가 속한 팀에서도 제거
+        const programData = await loadProgramData(programId);
+        if (programData?.team_members) {
+          const updatedTeamMembers = programData.team_members.filter(
+            (tm: any) => tm.participantId !== id
+          );
+          
+          // 팀 멤버 목록 업데이트
+          await saveProgramFeatureData(programId, 'team_members', updatedTeamMembers);
+        }
+        
         loadParticipants();
         alert('참가자가 삭제되었습니다.');
       } catch (error) {

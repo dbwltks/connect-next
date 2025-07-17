@@ -26,6 +26,7 @@ export type Member = {
   first_name: string;
   last_name: string;
   korean_name?: string;
+  birth_date?: string;
   gender?: string;
   email?: string;
   phone?: string;
@@ -57,6 +58,7 @@ export type MemberFormData = {
   first_name: string;
   last_name: string;
   korean_name: string;
+  birth_date: string;
   gender: string;
   email: string;
   phone: string;
@@ -206,6 +208,18 @@ export default function MemberForm({
             />
           </div>
           <div className="space-y-2">
+            <Label htmlFor="birth_date">생년월일</Label>
+            <Input
+              id="birth_date"
+              name="birth_date"
+              type="date"
+              value={formData.birth_date}
+              onChange={handleInputChange}
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
             <Label htmlFor="gender">성별</Label>
             <select
               id="gender"
@@ -219,6 +233,7 @@ export default function MemberForm({
               <option value="female">여성</option>
             </select>
           </div>
+          <div></div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
@@ -237,7 +252,11 @@ export default function MemberForm({
               id="phone"
               name="phone"
               value={formData.phone}
-              onChange={handleInputChange}
+              onChange={(e) => {
+                const value = e.target.value.replace(/[^0-9]/g, '');
+                handleFieldChange('phone', value);
+              }}
+              placeholder="숫자만 입력하세요"
             />
           </div>
         </div>

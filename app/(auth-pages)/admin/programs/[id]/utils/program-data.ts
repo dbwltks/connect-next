@@ -29,6 +29,7 @@ export interface ProgramData {
   finances?: any[];
   events?: any[];
   attendance?: any[];
+  checklist_setting?: any[];
   checklist?: any[];
   teams?: any[];
   team_members?: any[];
@@ -334,7 +335,8 @@ export async function saveProgramFeatureData(
       updated_at: new Date().toISOString()
     };
 
-    console.log(`저장 시도: ${featureName}, programId: ${programId}, 데이터 개수: ${Array.isArray(data) ? data.length : 'N/A'}`);
+    console.log(`저장 시도: ${featureName}, programId: ${programId}, 데이터:`, data);
+    console.log(`데이터 타입: ${typeof data}, 배열인가: ${Array.isArray(data)}, 개수: ${Array.isArray(data) ? data.length : 'N/A'}`);
 
     const { error } = await supabase
       .from('programs')

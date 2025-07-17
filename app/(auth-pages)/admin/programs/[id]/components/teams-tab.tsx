@@ -106,9 +106,23 @@ export default function TeamsTab({ programId }: TeamsTabProps) {
             setTeams(programData.teams);
           }
           
-          // 팀원 데이터 로드  
+          // 팀원 데이터 로드 및 정리
           if (programData.team_members && Array.isArray(programData.team_members)) {
-            setTeamMembers(programData.team_members);
+            // 참가자 ID 목록 생성
+            const participantIds = participantsData.map(p => p.id);
+            
+            // 실제 존재하는 참가자만 팀 멤버로 유지
+            const validTeamMembers = programData.team_members.filter(
+              (tm: TeamMember) => participantIds.includes(tm.participantId)
+            );
+            
+            // orphaned team members가 있었다면 DB 업데이트
+            if (validTeamMembers.length !== programData.team_members.length) {
+              console.log(`정리된 팀 멤버: ${programData.team_members.length - validTeamMembers.length}명의 orphaned members 제거`);
+              await saveProgramFeatureData(programId, 'team_members', validTeamMembers);
+            }
+            
+            setTeamMembers(validTeamMembers);
           }
           
           // 역할 데이터 로드
@@ -424,6 +438,10 @@ export default function TeamsTab({ programId }: TeamsTabProps) {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {teams.map((team) => {
           const teamMembersList = teamMembers.filter(tm => tm.teamId === team.id);
+          // 실제 존재하는 참가자만 필터링
+          const validTeamMembers = teamMembersList.filter(tm => 
+            participants.some(p => p.id === tm.participantId)
+          );
           
           return (
             <Card key={team.id} className="border-0 shadow-sm">
@@ -461,11 +479,11 @@ export default function TeamsTab({ programId }: TeamsTabProps) {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-medium text-gray-700">
-                      팀원 ({teamMembersList.length}명)
+                      팀원 ({validTeamMembers.length}명)
                     </p>
                   </div>
                   <div className="space-y-2">
-                    {teamMembersList.map((member) => {
+                    {validTeamMembers.map((member) => {
                       const participant = participants.find(p => p.id === member.participantId);
                       if (!participant) return null;
                       
@@ -536,22 +554,46 @@ export default function TeamsTab({ programId }: TeamsTabProps) {
                             value={teamMemberSearch[team.id]?.searchValue || ''}
                             onChange={(e) => {
                               const value = e.target.value;
-                              const filteredParticipants = value.length >= 1 ? 
-                                participants.filter(p => 
-                                  p.name.toLowerCase().includes(value.toLowerCase())
-                                ) : [];
                               
-                              setTeamMemberSearch(prev => ({
-                                ...prev,
-                                [team.id]: {
-                                  ...prev[team.id],
-                                  searchValue: value,
-                                  searchOpen: value.length >= 1 && filteredParticipants.length > 0,
-                                  allMembers: filteredParticipants,
-                                  selectedMember: null,
-                                  selectedRole: 'member' // 기본값을 팀원으로 설정
-                                }
-                              }));
+                              if (value.length >= 1) {
+                                // 검색된 참가자들
+                                const searchedParticipants = participants.filter(p => 
+                                  p.name.toLowerCase().includes(value.toLowerCase())
+                                );
+                                
+                                // 현재 팀의 참가자 ID 목록
+                                const currentTeamMemberIds = validTeamMembers.map(tm => tm.participantId);
+                                
+                                // 중복 상태 표시
+                                const participantsWithStatus = searchedParticipants.map(participant => ({
+                                  ...participant,
+                                  isInCurrentTeam: currentTeamMemberIds.includes(participant.id)
+                                }));
+                                
+                                setTeamMemberSearch(prev => ({
+                                  ...prev,
+                                  [team.id]: {
+                                    ...prev[team.id],
+                                    searchValue: value,
+                                    searchOpen: participantsWithStatus.length > 0,
+                                    allMembers: participantsWithStatus,
+                                    selectedMember: null,
+                                    selectedRole: 'member'
+                                  }
+                                }));
+                              } else {
+                                setTeamMemberSearch(prev => ({
+                                  ...prev,
+                                  [team.id]: {
+                                    ...prev[team.id],
+                                    searchValue: value,
+                                    searchOpen: false,
+                                    allMembers: [],
+                                    selectedMember: null,
+                                    selectedRole: 'member'
+                                  }
+                                }));
+                              }
                             }}
                           />
                           
@@ -561,20 +603,33 @@ export default function TeamsTab({ programId }: TeamsTabProps) {
                               {teamMemberSearch[team.id].allMembers.map((participant) => (
                                 <div 
                                   key={participant.id} 
-                                  className="p-2 cursor-pointer hover:bg-gray-50 border-b last:border-b-0"
+                                  className={`p-2 border-b last:border-b-0 ${
+                                    participant.isInCurrentTeam 
+                                      ? 'bg-red-50 cursor-not-allowed opacity-60' 
+                                      : 'cursor-pointer hover:bg-gray-50'
+                                  }`}
                                   onClick={() => {
-                                    setTeamMemberSearch(prev => ({
-                                      ...prev,
-                                      [team.id]: {
-                                        ...prev[team.id],
-                                        selectedMember: participant,
-                                        searchOpen: false,
-                                        searchValue: participant.name
-                                      }
-                                    }));
+                                    if (!participant.isInCurrentTeam) {
+                                      setTeamMemberSearch(prev => ({
+                                        ...prev,
+                                        [team.id]: {
+                                          ...prev[team.id],
+                                          selectedMember: participant,
+                                          searchOpen: false,
+                                          searchValue: participant.name
+                                        }
+                                      }));
+                                    }
                                   }}
                                 >
-                                  <p className="text-sm font-medium">{participant.name}</p>
+                                  <div className="flex items-center justify-between">
+                                    <p className="text-sm font-medium">{participant.name}</p>
+                                    {participant.isInCurrentTeam && (
+                                      <Badge variant="destructive" className="text-xs">
+                                        이미 팀원
+                                      </Badge>
+                                    )}
+                                  </div>
                                 </div>
                               ))}
                             </div>
@@ -608,11 +663,14 @@ export default function TeamsTab({ programId }: TeamsTabProps) {
                         <Button 
                           size="sm" 
                           className="h-8 px-3 text-xs"
-                          disabled={!teamMemberSearch[team.id]?.selectedMember}
+                          disabled={
+                            !teamMemberSearch[team.id]?.selectedMember || 
+                            teamMemberSearch[team.id]?.selectedMember?.isInCurrentTeam
+                          }
                           onClick={() => {
                             const participant = teamMemberSearch[team.id]?.selectedMember;
                             const roleId = teamMemberSearch[team.id]?.selectedRole || 'member';
-                            if (participant) {
+                            if (participant && !participant.isInCurrentTeam) {
                               addParticipantToTeam(team.id, participant.id, roleId);
                             }
                           }}

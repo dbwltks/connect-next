@@ -449,6 +449,7 @@ function HeaderClient({
                 setIsLoggingOut(true);
                 try {
                   await signOut();
+                  window.location.href = "/";
                 } finally {
                   setIsLoggingOut(false);
                 }
@@ -488,6 +489,7 @@ function HeaderClient({
               setIsLoggingOut(true);
               try {
                 await signOut();
+                window.location.href = "/";
               } finally {
                 setIsLoggingOut(false);
               }
@@ -664,6 +666,7 @@ function HeaderClient({
                       setIsMenuOpen(false);
                       try {
                         await signOut();
+                        window.location.href = "/";
                       } finally {
                         setIsLoggingOut(false);
                       }

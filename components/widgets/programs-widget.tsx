@@ -56,6 +56,7 @@ import {
   Trash2,
   Edit,
   Settings,
+  CheckCircle,
 } from "lucide-react";
 import {
   format,
@@ -71,6 +72,7 @@ import {
   parseISO,
 } from "date-fns";
 import { ko } from "date-fns/locale";
+import ChecklistTab from "@/app/(auth-pages)/admin/programs/[id]/components/checklist-tab";
 import {
   eventsApi,
   financeApi,
@@ -173,6 +175,15 @@ export default function ProgramsWidget({
   const [selectedProgramData, setSelectedProgramData] =
     useState<Program | null>(null);
   const [allPrograms, setAllPrograms] = useState<Program[]>(programs);
+  
+  // 디버깅용 로그
+  console.log('ProgramsWidget - props.programs:', programs);
+  console.log('ProgramsWidget - allPrograms:', allPrograms);
+
+  // props 변경 시 상태 업데이트
+  useEffect(() => {
+    setAllPrograms(programs);
+  }, [programs]);
   const [activeTab, setActiveTab] = useState<string>("calendar");
   const [loading, setLoading] = useState(true);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
@@ -183,6 +194,11 @@ export default function ProgramsWidget({
   const [editingEventData, setEditingEventData] = useState<Event | null>(null);
   const [userRole, setUserRole] = useState<string>("guest"); // admin, team_leader, member, guest
   const [userTeamId, setUserTeamId] = useState<string | null>(null);
+
+  // 관리자 권한 확인 함수 (admin, tier0, tier1만 설정/추가/수정/삭제 가능)
+  const hasAdminPermission = () => {
+    return userRole === 'admin' || userRole === 'tier0' || userRole === 'tier1';
+  };
   // 장소 관리 상태
   const [isLocationSettingsOpen, setIsLocationSettingsOpen] = useState(false);
   const [savedLocations, setSavedLocations] = useState<string[]>([]);
@@ -717,27 +733,32 @@ export default function ProgramsWidget({
       { key: "calendar", label: "일정" },
       { key: "participants", label: "참가자" },
       { key: "finance", label: "재정" },
+      { key: "checklist", label: "확인사항" },
       { key: "overview", label: "개요" },
     ];
 
     const tabPermissions = widget?.settings?.tab_permissions || {};
     
-    // 탭별 권한 설정이 있는 경우 해당 권한을 확인
-    if (Object.keys(tabPermissions).length > 0) {
-      // 서브 탭 권한 확인
-      const filteredTabs = availableTabs.filter(tab => {
-        const tabPermission = tabPermissions[tab.key];
-        return !tabPermission || tabPermission.includes(userRole);
-      });
+    // 권한 확인 로직 - 모든 탭이 권한 설정에 영향을 받음
+    const filteredTabs = availableTabs.filter(tab => {
+      const tabPermission = tabPermissions[tab.key];
       
-      return {
-        availableTabs: filteredTabs,
-      };
-    }
+      // 권한 설정이 있는 경우 해당 권한 확인
+      if (Object.keys(tabPermissions).length > 0) {
+        // 권한 설정이 없는 탭은 접근 불가
+        if (!tabPermission) {
+          return false;
+        }
+        // 권한 설정이 있는 탭은 사용자 역할이 포함되어야 접근 가능
+        return tabPermission.includes(userRole);
+      }
+      
+      // 전체 권한 설정이 없는 경우 모든 탭 접근 가능
+      return true;
+    });
     
-    // 탭별 권한 설정이 없는 경우 모든 탭 접근 가능
     return {
-      availableTabs: availableTabs,
+      availableTabs: filteredTabs,
     };
   };
 
@@ -1305,7 +1326,7 @@ export default function ProgramsWidget({
 
   // 재정 행 클릭 핸들러
   const handleFinanceRowClick = (finance: any) => {
-    if (userRole === 'admin' || userRole === 'tier0' || userRole === 'tier1') {
+    if (hasAdminPermission()) {
       setSelectedFinanceForAction(finance);
       setIsFinanceActionDialogOpen(true);
     }
@@ -1591,6 +1612,7 @@ export default function ProgramsWidget({
                 {tab.key === "calendar" && <Calendar size={16} />}
                 {tab.key === "participants" && <Users size={16} />}
                 {tab.key === "finance" && <DollarSign size={16} />}
+                {tab.key === "checklist" && <CheckCircle size={16} />}
                 {tab.key === "overview" && <Eye size={16} />}
                 {tab.label}
               </TabsTrigger>
@@ -1645,7 +1667,7 @@ export default function ProgramsWidget({
                       // 일정 탭 권한이 없거나 사용자가 접근 가능한 경우 버튼 표시
                       if (!calendarPermission || calendarPermission.includes(userRole)) {
                         // 추가로 관리자나 고위 tier만 일정 추가 가능하도록 제한
-                        return userRole === "admin" || userRole === "tier0" || userRole === "tier1";
+                        return hasAdminPermission();
                       }
                       
                       return false;
@@ -2081,7 +2103,7 @@ export default function ProgramsWidget({
                           닫기
                         </Button>
                         {/* 삭제 버튼 - 권한 기반으로 표시 */}
-                        {(userRole === "admin" || userRole === "tier0" || userRole === "tier1") && selectedEvent && (
+                        {hasAdminPermission() && selectedEvent && (
                           <Button
                             variant="destructive"
                             onClick={() => handleDeleteEvent(selectedEvent.id)}
@@ -2092,7 +2114,7 @@ export default function ProgramsWidget({
                           </Button>
                         )}
                         {/* 수정 버튼 - 권한 기반으로 표시 */}
-                        {(userRole === "admin" || userRole === "tier0" || userRole === "tier1") && (
+                        {hasAdminPermission() && (
                           <Button
                           onClick={() => {
                             if (selectedEvent) {
@@ -2409,14 +2431,6 @@ export default function ProgramsWidget({
                                               {team.name}
                                             </Badge>
                                           )}
-                                          {program && (
-                                            <Badge
-                                              variant="outline"
-                                              className="text-xs"
-                                            >
-                                              {program.name}
-                                            </Badge>
-                                          )}
                                         </div>
                                       </div>
                                     </div>
@@ -2456,7 +2470,7 @@ export default function ProgramsWidget({
                         )}
                       </div>
                       <div className="flex justify-between">
-                        {(userRole === 'admin' || userRole === 'tier0' || userRole === 'tier1') && (
+                        {hasAdminPermission() && (
                           <Button
                             onClick={() => {
                               // 선택된 날짜의 현재 시간으로 설정
@@ -2638,7 +2652,7 @@ export default function ProgramsWidget({
                                     >
                                       <div className="flex justify-between items-start">
                                         <div className="flex-1">
-                                          <div className="flex items-center gap-2 mb-1">
+                                          <div className="flex items-center gap-2 mb-2">
                                             <h3
                                               className={`font-semibold ${timeStatus.status === "past" ? "text-gray-600" : ""}`}
                                             >
@@ -2655,58 +2669,36 @@ export default function ProgramsWidget({
                                                 {team.name}
                                               </span>
                                             )}
-                                            {program && (
-                                              <Badge
-                                                variant="outline"
-                                                className="text-xs"
-                                              >
-                                                {program.name}
-                                              </Badge>
-                                            )}
                                           </div>
-                                          <div className="text-sm text-gray-600 space-y-1">
-                                            <div className="flex items-center gap-4">
-                                              <span className="flex items-center">
-                                                <Calendar
-                                                  size={14}
-                                                  className="mr-1"
-                                                />
+                                          <div className="space-y-2">
+                                            <div className="flex items-center gap-1">
+                                              <Calendar size={16} className="text-gray-600" />
+                                              <span className="font-medium text-sm">
                                                 {format(
                                                   eventDate,
                                                   "yyyy년 MM월 dd일 (EEE)",
                                                   { locale: ko }
                                                 )}
                                               </span>
-                                              <span className="flex items-center">
-                                                <Clock
-                                                  size={14}
-                                                  className="mr-1"
-                                                />
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                              <Clock size={16} className="text-gray-600" />
+                                              <span className="font-medium text-sm">
                                                 {format(eventDate, "HH:mm")}
                                                 {endDate &&
                                                   ` - ${format(endDate, "HH:mm")}`}
                                               </span>
-                                              {event.location && (
-                                                <span className="flex items-center">
-                                                  <MapPin
-                                                    size={14}
-                                                    className="mr-1"
-                                                  />
+                                            </div>
+                                            {event.location && (
+                                              <div className="flex items-center gap-1">
+                                                <MapPin size={16} className="text-gray-600" />
+                                                <span className="font-medium text-sm">
                                                   {event.location}
                                                 </span>
-                                              )}
-                                            </div>
-                                            {team && (
-                                              <div className="flex items-center">
-                                                <Users
-                                                  size={14}
-                                                  className="mr-1"
-                                                />
-                                                담당팀: {team.name}
                                               </div>
                                             )}
                                             {event.description && (
-                                              <p className="text-gray-500">
+                                              <p className="text-gray-500 text-sm mt-2">
                                                 {event.description}
                                               </p>
                                             )}
@@ -3120,7 +3112,7 @@ export default function ProgramsWidget({
                       <h3 className="text-lg font-semibold">
                         최근 거래 내역
                       </h3>
-                      {(userRole === 'admin' || userRole === 'tier0' || userRole === 'tier1') && (
+                      {hasAdminPermission() && (
                         <div className="flex gap-2">
                           <Button 
                             onClick={() => setIsFinanceCategorySettingsOpen(true)}
@@ -3515,6 +3507,33 @@ export default function ProgramsWidget({
                 </TabsContent>
               )}
 
+              {/* 확인사항 탭 */}
+              {tabConfig.availableTabs.some(tab => tab.key === "checklist") && (
+                <TabsContent value="checklist" className="p-4">
+                  <div className="space-y-6">
+                    {allPrograms.map((program) => (
+                      <Card key={program.id}>
+                        <CardHeader>
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <CheckCircle size={20} />
+                            {program.name} - 확인사항
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <ChecklistTab programId={program.id} />
+                        </CardContent>
+                      </Card>
+                    ))}
+                    {allPrograms.length === 0 && (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <CheckCircle size={48} className="mx-auto mb-4 text-gray-300" />
+                        <p>등록된 프로그램이 없습니다.</p>
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+              )}
+
               {/* 개요 탭 */}
               {tabConfig.availableTabs.some(tab => tab.key === "overview") && (
                 <TabsContent value="overview" className="p-4">
@@ -3621,14 +3640,6 @@ export default function ProgramsWidget({
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-1">
                                   <h4 className="font-medium">{event.title}</h4>
-                                  {program && (
-                                    <Badge
-                                      variant="outline"
-                                      className="text-xs"
-                                    >
-                                      {program.name}
-                                    </Badge>
-                                  )}
                                 </div>
                                 <div className="text-sm text-gray-600">
                                   {format(eventDate, "MM월 dd일 (EEE) HH:mm", {

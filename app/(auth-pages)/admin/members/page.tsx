@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,8 +21,34 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Pencil, Trash2, Plus, Search, X } from "lucide-react";
+import {
+  Pencil,
+  Trash2,
+  Plus,
+  Search,
+  X,
+  ChevronUp,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { toast } from "@/components/ui/toaster";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import MemberForm, { Member, MemberFormData } from "@/components/member-form";
 
 export default function MembersPage() {
@@ -33,10 +59,21 @@ export default function MembersPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [currentMember, setCurrentMember] = useState<Member | null>(null);
+
+  // 페이지네이션 상태
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+
+  // 정렬 상태
+  const [sortField, setSortField] = useState<"name" | "korean_name" | "email">(
+    "name"
+  );
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [formData, setFormData] = useState<MemberFormData>({
     first_name: "",
     last_name: "",
     korean_name: "",
+    birth_date: "",
     gender: "",
     email: "",
     phone: "",
@@ -98,6 +135,7 @@ export default function MembersPage() {
       first_name: "",
       last_name: "",
       korean_name: "",
+      birth_date: "",
       gender: "",
       email: "",
       phone: "",
@@ -132,6 +170,7 @@ export default function MembersPage() {
             first_name: formData.first_name,
             last_name: formData.last_name,
             korean_name: formData.korean_name || null,
+            birth_date: formData.birth_date || null,
             gender: formData.gender || null,
             email: formData.email || null,
             phone: formData.phone || null,
@@ -221,6 +260,7 @@ export default function MembersPage() {
           first_name: formData.first_name,
           last_name: formData.last_name,
           korean_name: formData.korean_name || null,
+          birth_date: formData.birth_date || null,
           gender: formData.gender || null,
           email: formData.email || null,
           phone: formData.phone || null,
@@ -297,6 +337,7 @@ export default function MembersPage() {
       first_name: member.first_name,
       last_name: member.last_name,
       korean_name: member.korean_name || "",
+      birth_date: member.birth_date || "",
       gender: member.gender || "",
       email: member.email || "",
       phone: member.phone || "",
@@ -341,6 +382,77 @@ export default function MembersPage() {
     );
   });
 
+  // 정렬된 멤버 목록
+  const sortedMembers = [...filteredMembers].sort((a, b) => {
+    let aValue: string;
+    let bValue: string;
+
+    switch (sortField) {
+      case "name":
+        aValue = `${a.first_name} ${a.last_name}`.toLowerCase();
+        bValue = `${b.first_name} ${b.last_name}`.toLowerCase();
+        break;
+      case "korean_name":
+        aValue = (a.korean_name || "").toLowerCase();
+        bValue = (b.korean_name || "").toLowerCase();
+        break;
+      case "email":
+        aValue = (a.email || "").toLowerCase();
+        bValue = (b.email || "").toLowerCase();
+        break;
+      default:
+        aValue = `${a.first_name} ${a.last_name}`.toLowerCase();
+        bValue = `${b.first_name} ${b.last_name}`.toLowerCase();
+    }
+
+    if (sortDirection === "asc") {
+      return aValue.localeCompare(bValue);
+    } else {
+      return bValue.localeCompare(aValue);
+    }
+  });
+
+  // 페이지네이션 계산
+  const totalPages = Math.ceil(sortedMembers.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedMembers = sortedMembers.slice(startIndex, endIndex);
+
+  // 검색어 변경 시 첫 페이지로 이동
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  // 페이지당 항목 수 변경 시 첫 페이지로 이동
+  const handleItemsPerPageChange = (value: string) => {
+    setItemsPerPage(parseInt(value));
+    setCurrentPage(1);
+  };
+
+  // 정렬 함수
+  const handleSort = (field: "name" | "korean_name" | "email") => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+    setCurrentPage(1);
+  };
+
+  // 정렬 아이콘 컴포넌트
+  const SortIcon = ({ field }: { field: "name" | "korean_name" | "email" }) => {
+    if (sortField !== field) {
+      return <div className="w-4 h-4 opacity-0" />; // 투명한 공간
+    }
+    return sortDirection === "asc" ? (
+      <ChevronUp className="w-4 h-4 text-muted-foreground" />
+    ) : (
+      <ChevronDown className="w-4 h-4 text-muted-foreground" />
+    );
+  };
+
   const getMembershipStatusText = (status: string) => {
     switch (status) {
       case "active":
@@ -368,6 +480,17 @@ export default function MembersPage() {
         return "text-gray-600";
       default:
         return "";
+    }
+  };
+
+  const getGenderText = (gender: string) => {
+    switch (gender) {
+      case "male":
+        return "남성";
+      case "female":
+        return "여성";
+      default:
+        return "-";
     }
   };
 
@@ -402,13 +525,13 @@ export default function MembersPage() {
             type="text"
             placeholder="이름, 이메일, 전화번호로 검색..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="pl-8 h-10"
           />
           {searchTerm && (
             <button
               type="button"
-              onClick={() => setSearchTerm("")}
+              onClick={() => handleSearchChange("")}
               className="absolute right-2.5 top-2.5"
             >
               <X className="h-4 w-4 text-gray-500" />
@@ -417,44 +540,92 @@ export default function MembersPage() {
         </div>
       </div>
 
+      {/* 페이지당 항목 수 선택 */}
+      <div className="mb-4 flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <Select
+            value={itemsPerPage.toString()}
+            onValueChange={handleItemsPerPageChange}
+          >
+            <SelectTrigger className="w-20">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10개</SelectItem>
+              <SelectItem value="20">20개</SelectItem>
+              <SelectItem value="30">30개</SelectItem>
+              <SelectItem value="40">40개</SelectItem>
+              <SelectItem value="50">50개</SelectItem>
+              <SelectItem value="100">100개</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="text-sm text-muted-foreground">
+          총 {sortedMembers.length}명 중 {startIndex + 1}-
+          {Math.min(endIndex, sortedMembers.length)}명 표시
+        </div>
+      </div>
+
       <div className="overflow-x-auto">
         <div className="rounded-md border min-w-full md:min-w-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="whitespace-nowrap">이름</TableHead>
-                <TableHead className="hidden sm:table-cell">
-                  한글 이름
+                <TableHead
+                  className="whitespace-nowrap cursor-pointer hover:bg-muted/50 select-none transition-colors"
+                  onClick={() => handleSort("name")}
+                >
+                  <div className="flex items-center gap-1">
+                    영문 이름
+                    <SortIcon field="name" />
+                  </div>
                 </TableHead>
-                <TableHead className="hidden md:table-cell">이메일</TableHead>
+                <TableHead
+                  className="hidden sm:table-cell cursor-pointer hover:bg-muted/50 select-none transition-colors"
+                  onClick={() => handleSort("korean_name")}
+                >
+                  <div className="flex items-center gap-1">
+                    한글 이름
+                    <SortIcon field="korean_name" />
+                  </div>
+                </TableHead>
+                <TableHead
+                  className="hidden md:table-cell cursor-pointer hover:bg-muted/50 select-none transition-colors"
+                  onClick={() => handleSort("email")}
+                >
+                  <div className="flex items-center gap-1">
+                    이메일
+                    <SortIcon field="email" />
+                  </div>
+                </TableHead>
                 <TableHead className="hidden sm:table-cell">전화번호</TableHead>
-                <TableHead className="hidden lg:table-cell">
-                  멤버십 상태
-                </TableHead>
-                <TableHead className="hidden lg:table-cell">주소</TableHead>
-                <TableHead className="text-right md:text-left">작업</TableHead>
+                <TableHead className="hidden lg:table-cell">성별</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredMembers.length === 0 ? (
+              {paginatedMembers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-4">
+                  <TableCell colSpan={5} className="text-center py-4">
                     {searchTerm
                       ? "검색 결과가 없습니다."
                       : "등록된 교인이 없습니다."}
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredMembers.map((member: any) => (
-                  <TableRow key={member.id}>
+                paginatedMembers.map((member: any) => (
+                  <TableRow
+                    key={member.id}
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => openEdit(member)}
+                  >
                     <TableCell className="font-medium">
                       <div>
                         {member.first_name} {member.last_name}
                       </div>
-                      <div className="sm:hidden text-xs text-gray-500">
+                      <div className="sm:hidden text-xs text-muted-foreground">
                         {member.korean_name || ""}
                       </div>
-                      <div className="md:hidden text-xs text-gray-500">
+                      <div className="md:hidden text-xs text-muted-foreground">
                         {member.email || ""}
                       </div>
                     </TableCell>
@@ -468,32 +639,7 @@ export default function MembersPage() {
                       {member.phone || "-"}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
-                      {member.membership_status}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell">
-                      {member.address
-                        ? `${member.address.city}, ${member.address.province}`
-                        : "-"}
-                    </TableCell>
-                    <TableCell className="text-right md:text-left">
-                      <div className="flex items-center justify-end md:justify-start gap-1 md:gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEdit(member)}
-                          className="h-8 w-8"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openDelete(member)}
-                          className="h-8 w-8"
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </div>
+                      {getGenderText(member.gender)}
                     </TableCell>
                   </TableRow>
                 ))
@@ -503,12 +649,92 @@ export default function MembersPage() {
         </div>
       </div>
 
+      {/* 페이지네이션 */}
+      {totalPages > 1 && (
+        <div className="mt-4">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setCurrentPage(Math.max(1, currentPage - 1));
+                  }}
+                  className={
+                    currentPage === 1
+                      ? "pointer-events-none opacity-50"
+                      : "cursor-pointer"
+                  }
+                />
+              </PaginationItem>
+
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum;
+                if (totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (currentPage <= 3) {
+                  pageNum = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  pageNum = currentPage - 2 + i;
+                }
+
+                return (
+                  <PaginationItem key={pageNum}>
+                    <PaginationLink
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setCurrentPage(pageNum);
+                      }}
+                      isActive={currentPage === pageNum}
+                    >
+                      {pageNum}
+                    </PaginationLink>
+                  </PaginationItem>
+                );
+              })}
+
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setCurrentPage(Math.min(totalPages, currentPage + 1));
+                  }}
+                  className={
+                    currentPage === totalPages
+                      ? "pointer-events-none opacity-50"
+                      : "cursor-pointer"
+                  }
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
+
       {/* 통합된 회원 다이얼로그 */}
       <Dialog open={openMemberDialog} onOpenChange={setOpenMemberDialog}>
         <DialogContent className="w-[95%] sm:max-w-[700px] md:max-w-[800px] max-h-[90vh] sm:max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {isEditing ? "교인 정보 수정" : "새 교인 추가"}
+            <DialogTitle className="flex items-center justify-between">
+              <span>{isEditing ? "교인 정보 수정" : "새 교인 추가"}</span>
+              {isEditing && currentMember && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    setOpenMemberDialog(false);
+                    openDelete(currentMember);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  삭제
+                </Button>
+              )}
             </DialogTitle>
             <DialogDescription>
               {isEditing
