@@ -12,6 +12,20 @@ export interface ProgramData {
   features: string[];
   settings?: any;
   participants?: any[];
+  participants_setting?: {
+    fieldSettings?: {
+      name: boolean;
+      email: boolean;
+      phone: boolean;
+      birth_date: boolean;
+      gender: boolean;
+      status: boolean;
+      category: boolean;
+      notes: boolean;
+    };
+    statuses?: string[];
+    categories?: string[];
+  };
   finances?: any[];
   events?: any[];
   attendance?: any[];

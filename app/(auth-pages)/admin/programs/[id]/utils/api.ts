@@ -10,7 +10,7 @@ export interface Participant {
   name: string;
   email?: string;
   phone?: string;
-  age?: number;
+  birth_date?: string;
   gender?: string;
   status: string;
   registered_at: string;
@@ -23,7 +23,10 @@ export interface FinanceRecord {
   id: string;
   type: 'income' | 'expense';
   category: string;
+  vendor?: string;
+  itemName?: string;
   amount: number;
+  paidBy?: string;
   description?: string;
   date: string;
   program_id: string;
@@ -89,81 +92,30 @@ export const membersApi = {
     
     console.log('검색 쿼리:', query);
     
-    // 다양한 필드명으로 검색 시도
-    const searchPatterns = [
-      // 한글/영어 이름 필드들
-      `kor.ilike.%${query}%,eng.ilike.%${query}%,email.ilike.%${query}%,phone.ilike.%${query}%`,
-      `name_kor.ilike.%${query}%,name_eng.ilike.%${query}%,email.ilike.%${query}%,phone_number.ilike.%${query}%`,
-      `korean_name.ilike.%${query}%,english_name.ilike.%${query}%,email_address.ilike.%${query}%,mobile.ilike.%${query}%`,
-      // 일반적인 필드명들
-      `name.ilike.%${query}%,email.ilike.%${query}%,phone.ilike.%${query}%`,
-      `full_name.ilike.%${query}%,email.ilike.%${query}%,phone_number.ilike.%${query}%`,
-      `user_name.ilike.%${query}%,email_address.ilike.%${query}%,mobile.ilike.%${query}%`,
-      `display_name.ilike.%${query}%,contact_email.ilike.%${query}%,contact_phone.ilike.%${query}%`
-    ];
-    
-    // members 테이블에서 검색
-    for (const pattern of searchPatterns) {
-      try {
-        console.log('검색 패턴 시도:', pattern);
-        const { data, error } = await supabase
-          .from('members')
-          .select('*')
-          .or(pattern)
-          .limit(10);
-
-        if (!error && data && data.length > 0) {
-          console.log('검색 성공:', data);
-          return data;
-        }
-      } catch (error) {
-        console.log('패턴 실패, 다음 시도:', error);
-        continue;
-      }
+    if (!query || query.trim().length === 0) {
+      return [];
     }
     
-    // 텍스트 검색으로도 시도
     try {
-      console.log('텍스트 검색 시도...');
+      // 실제 데이터베이스 컬럼명을 사용한 검색
       const { data, error } = await supabase
         .from('members')
         .select('*')
-        .textSearch('fts', query)
+        .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,korean_name.ilike.%${query}%,email.ilike.%${query}%,phone.ilike.%${query}%`)
+        .order('first_name', { ascending: true })
         .limit(10);
 
-      if (!error && data && data.length > 0) {
-        console.log('텍스트 검색 성공:', data);
-        return data;
+      if (error) {
+        console.error('검색 에러:', error);
+        return [];
       }
+
+      console.log('검색 성공:', data);
+      return data || [];
     } catch (error) {
-      console.log('텍스트 검색 실패:', error);
+      console.error('검색 실패:', error);
+      return [];
     }
-
-    // 단순 like 검색
-    try {
-      console.log('단순 검색 시도...');
-      const { data, error } = await supabase
-        .from('members')
-        .select('*')
-        .limit(20);
-
-      if (!error && data) {
-        console.log('전체 데이터 샘플:', data.slice(0, 3));
-        // 클라이언트 사이드에서 필터링
-        const filtered = data.filter((member: any) => {
-          const searchTerm = query.toLowerCase();
-          return Object.values(member).some(value => 
-            value && String(value).toLowerCase().includes(searchTerm)
-          );
-        });
-        console.log('클라이언트 필터링 결과:', filtered);
-        return filtered.slice(0, 10);
-      }
-    } catch (error) {
-      console.error('단순 검색도 실패:', error);
-    }
-
-    return [];
   }
 };
 

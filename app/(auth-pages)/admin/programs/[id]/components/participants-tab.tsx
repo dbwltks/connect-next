@@ -10,9 +10,12 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, Plus, Edit, Trash2, Phone, Mail, Search } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
+import { Users, Plus, Edit, Trash2, Phone, Mail, Search, Settings } from "lucide-react";
 import { participantsApi, categoriesApi, membersApi, type Participant } from "../utils/api";
-import ParticipantSettings from "./participant-settings";
+import { saveProgramFeatureData, loadProgramData } from "../utils/program-data";
 
 
 interface ParticipantsTabProps {
@@ -23,6 +26,7 @@ export default function ParticipantsTab({ programId }: ParticipantsTabProps) {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [selectedParticipant, setSelectedParticipant] = useState<Participant | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
@@ -30,11 +34,13 @@ export default function ParticipantsTab({ programId }: ParticipantsTabProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [newCategory, setNewCategory] = useState('');
+  const [newStatus, setNewStatus] = useState('');
   const [fieldSettings, setFieldSettings] = useState({
     name: true,
     email: true,
     phone: true,
-    age: true,
+    birth_date: true,
     gender: true,
     status: true,
     category: true,
@@ -44,12 +50,23 @@ export default function ParticipantsTab({ programId }: ParticipantsTabProps) {
     name: '',
     email: '',
     phone: '',
-    age: '',
+    birth_date: '',
     gender: '',
     status: '신청',
     category: '일반',
     notes: ''
   });
+
+  const fieldLabels = {
+    name: '이름',
+    email: '이메일',
+    phone: '연락처',
+    birth_date: '생년월일',
+    gender: '성별',
+    status: '상태',
+    category: '카테고리',
+    notes: '비고'
+  };
 
   const loadParticipants = async () => {
     try {
@@ -71,6 +88,85 @@ export default function ParticipantsTab({ programId }: ParticipantsTabProps) {
     }
   };
 
+  const loadSettings = async () => {
+    try {
+      const programData = await loadProgramData(programId);
+      if (programData?.participants_setting) {
+        const settings = programData.participants_setting;
+        if (settings.fieldSettings) {
+          setFieldSettings(settings.fieldSettings);
+        }
+        if (settings.statuses) {
+          setStatuses(settings.statuses);
+        }
+        if (settings.categories) {
+          setCategories(settings.categories);
+        }
+      }
+    } catch (error) {
+      console.error('설정 로드 실패:', error);
+    }
+  };
+
+  const saveSettings = async () => {
+    try {
+      const settings = {
+        fieldSettings,
+        statuses,
+        categories
+      };
+      await saveProgramFeatureData(programId, 'participants_setting', settings);
+    } catch (error) {
+      console.error('설정 저장 실패:', error);
+      alert('설정 저장에 실패했습니다.');
+    }
+  };
+
+  const handleAddCategory = async () => {
+    if (!newCategory.trim() || categories.includes(newCategory.trim())) {
+      return;
+    }
+    const updatedCategories = [...categories, newCategory.trim()];
+    setCategories(updatedCategories);
+    setNewCategory('');
+    await saveSettings();
+  };
+
+  const handleDeleteCategory = async (categoryName: string) => {
+    if (confirm(`정말로 "${categoryName}" 카테고리를 삭제하시겠습니까?`)) {
+      const updatedCategories = categories.filter(c => c !== categoryName);
+      setCategories(updatedCategories);
+      await saveSettings();
+    }
+  };
+
+  const handleAddStatus = async () => {
+    if (!newStatus.trim() || statuses.includes(newStatus.trim())) {
+      return;
+    }
+    const updatedStatuses = [...statuses, newStatus.trim()];
+    setStatuses(updatedStatuses);
+    setNewStatus('');
+    await saveSettings();
+  };
+
+  const handleDeleteStatus = async (status: string) => {
+    if (confirm(`정말로 "${status}" 상태를 삭제하시겠습니까?`)) {
+      const updatedStatuses = statuses.filter(s => s !== status);
+      setStatuses(updatedStatuses);
+      await saveSettings();
+    }
+  };
+
+  const handleFieldToggle = async (field: keyof typeof fieldSettings) => {
+    const updatedSettings = {
+      ...fieldSettings,
+      [field]: !fieldSettings[field]
+    };
+    setFieldSettings(updatedSettings);
+    await saveSettings();
+  };
+
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
     if (query.trim().length < 2) {
@@ -81,7 +177,30 @@ export default function ParticipantsTab({ programId }: ParticipantsTabProps) {
 
     try {
       const results = await membersApi.search(query);
-      setSearchResults(results);
+      
+      // 이미 참가자로 등록된 사람들의 이메일/전화번호/이름 목록
+      const existingEmails = participants.map(p => p.email?.toLowerCase()).filter(Boolean);
+      const existingPhones = participants.map(p => p.phone).filter(Boolean);
+      const existingNames = participants.map(p => p.name.toLowerCase());
+      
+      // 중복 체크 및 상태 추가
+      const resultsWithStatus = results.map(member => {
+        const memberEmail = member.email?.toLowerCase();
+        const memberPhone = member.phone;
+        const memberName = (member.korean_name || `${member.first_name} ${member.last_name}`.trim()).toLowerCase();
+        
+        const isDuplicate = 
+          (memberEmail && existingEmails.includes(memberEmail)) ||
+          (memberPhone && existingPhones.includes(memberPhone)) ||
+          (memberName && existingNames.includes(memberName));
+        
+        return {
+          ...member,
+          isDuplicate
+        };
+      });
+      
+      setSearchResults(resultsWithStatus);
       setShowSearchResults(true);
     } catch (error) {
       setSearchResults([]);
@@ -90,12 +209,15 @@ export default function ParticipantsTab({ programId }: ParticipantsTabProps) {
   };
 
   const handleSelectMember = (member: any) => {
+    // 한글 이름 우선, 없으면 영어 이름 조합
+    const displayName = member.korean_name || `${member.first_name} ${member.last_name}`.trim();
+    
     setFormData({
-      name: member.kor || member.name_kor || member.korean_name || member.eng || member.name_eng || member.english_name || member.name || member.full_name || member.user_name || member.display_name || '',
-      email: member.email || member.email_address || member.contact_email || '',
-      phone: member.phone || member.phone_number || member.mobile || member.contact_phone || '',
-      age: member.age?.toString() || '',
-      gender: member.gender || member.sex || '',
+      name: displayName,
+      email: member.email || '',
+      phone: member.phone || '',
+      birth_date: member.birth_date || '',
+      gender: member.gender || '',
       status: '신청',
       category: '일반',
       notes: ''
@@ -118,7 +240,7 @@ export default function ParticipantsTab({ programId }: ParticipantsTabProps) {
           name: formData.name,
           email: formData.email || undefined,
           phone: formData.phone || undefined,
-          age: formData.age ? parseInt(formData.age) : undefined,
+          birth_date: formData.birth_date || undefined,
           gender: formData.gender || undefined,
           status: formData.status,
           category: formData.category,
@@ -130,7 +252,7 @@ export default function ParticipantsTab({ programId }: ParticipantsTabProps) {
           name: formData.name,
           email: formData.email || undefined,
           phone: formData.phone || undefined,
-          age: formData.age ? parseInt(formData.age) : undefined,
+          birth_date: formData.birth_date || undefined,
           gender: formData.gender || undefined,
           status: formData.status,
           category: formData.category,
@@ -153,7 +275,7 @@ export default function ParticipantsTab({ programId }: ParticipantsTabProps) {
       name: participant.name,
       email: participant.email || '',
       phone: participant.phone || '',
-      age: participant.age?.toString() || '',
+      birth_date: participant.birth_date || '',
       gender: participant.gender || '',
       status: participant.status,
       category: participant.category || '일반',
@@ -180,7 +302,7 @@ export default function ParticipantsTab({ programId }: ParticipantsTabProps) {
       name: '',
       email: '',
       phone: '',
-      age: '',
+      birth_date: '',
       gender: '',
       status: '신청',
       category: '일반',
@@ -210,7 +332,7 @@ export default function ParticipantsTab({ programId }: ParticipantsTabProps) {
 
   useEffect(() => {
     loadParticipants();
-    loadCategories();
+    loadSettings();
   }, [programId]);
 
   if (loading) {
@@ -231,10 +353,146 @@ export default function ParticipantsTab({ programId }: ParticipantsTabProps) {
           참가자 관리 ({Array.isArray(participants) ? participants.length : 0}명)
         </CardTitle>
         <div className="flex gap-2">
-          <ParticipantSettings onSettingsChange={loadCategories} />
+          <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>참가자 관리 설정</DialogTitle>
+              </DialogHeader>
+              
+              <Tabs defaultValue="fields" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="fields">필드 설정</TabsTrigger>
+                  <TabsTrigger value="categories">카테고리</TabsTrigger>
+                  <TabsTrigger value="statuses">상태</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="fields" className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">표시 필드 설정</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      {Object.entries(fieldLabels).map(([field, label]) => (
+                        <div key={field} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={field}
+                            checked={fieldSettings[field as keyof typeof fieldSettings]}
+                            onCheckedChange={() => handleFieldToggle(field as keyof typeof fieldSettings)}
+                            disabled={field === 'name'} // 이름은 필수 필드
+                          />
+                          <Label htmlFor={field} className={field === 'name' ? 'text-muted-foreground' : ''}>
+                            {label} {field === 'name' && '(필수)'}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      선택된 필드만 참가자 추가/수정 폼과 테이블에 표시됩니다.
+                    </p>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="categories" className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">카테고리 관리</h3>
+                    <div className="flex gap-2 mb-3">
+                      <Input
+                        placeholder="새 카테고리 이름"
+                        value={newCategory}
+                        onChange={(e) => setNewCategory(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddCategory();
+                          }
+                        }}
+                      />
+                      <Button onClick={handleAddCategory} disabled={!newCategory.trim()}>
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>현재 카테고리</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {categories.map((category) => (
+                          <div key={category} className="flex items-center gap-1">
+                            <Badge variant="secondary">{category}</Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                              onClick={() => handleDeleteCategory(category)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="statuses" className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">상태 관리</h3>
+                    <div className="flex gap-2 mb-3">
+                      <Input
+                        placeholder="새 상태 이름"
+                        value={newStatus}
+                        onChange={(e) => setNewStatus(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddStatus();
+                          }
+                        }}
+                      />
+                      <Button onClick={handleAddStatus} disabled={!newStatus.trim()}>
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>현재 상태</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {statuses.map((status) => (
+                          <div key={status} className="flex items-center gap-1">
+                            <Badge variant="outline">{status}</Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                              onClick={() => handleDeleteStatus(status)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
+
+              <div className="flex justify-end pt-4">
+                <Button onClick={() => setIsSettingsOpen(false)}>
+                  완료
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
             setIsDialogOpen(open);
-            if (!open) resetForm();
+            if (!open) {
+              resetForm();
+              setSearchQuery('');
+              setShowSearchResults(false);
+            }
           }}>
             <DialogTrigger asChild>
               <Button onClick={() => setIsDialogOpen(true)}>
@@ -246,6 +504,7 @@ export default function ParticipantsTab({ programId }: ParticipantsTabProps) {
             <DialogHeader>
               <DialogTitle>{isEdit ? '참가자 수정' : '참가자 추가'}</DialogTitle>
             </DialogHeader>
+            
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* 멤버 검색 */}
               <div className="space-y-2 relative">
@@ -267,16 +526,29 @@ export default function ParticipantsTab({ programId }: ParticipantsTabProps) {
                         searchResults.map((member, index) => (
                           <div
                             key={index}
-                            className="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
-                            onClick={() => handleSelectMember(member)}
+                            className={`p-3 border-b last:border-b-0 ${
+                              member.isDuplicate 
+                                ? 'bg-red-50 cursor-not-allowed opacity-60' 
+                                : 'hover:bg-gray-50 cursor-pointer'
+                            }`}
+                            onClick={() => !member.isDuplicate && handleSelectMember(member)}
                           >
-                            <div className="font-medium">
-                              {member.kor || member.name_kor || member.korean_name || member.eng || member.name_eng || member.english_name || member.name || member.full_name || member.user_name || member.display_name || '이름 없음'}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {(member.email || member.email_address || member.contact_email) && <span>{member.email || member.email_address || member.contact_email}</span>}
-                              {(member.email || member.email_address || member.contact_email) && (member.phone || member.phone_number || member.mobile || member.contact_phone) && <span> • </span>}
-                              {(member.phone || member.phone_number || member.mobile || member.contact_phone) && <span>{member.phone || member.phone_number || member.mobile || member.contact_phone}</span>}
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="font-medium">
+                                  {member.korean_name || `${member.first_name} ${member.last_name}`.trim() || '이름 없음'}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  {member.email && <span>{member.email}</span>}
+                                  {member.email && member.phone && <span> • </span>}
+                                  {member.phone && <span>{member.phone}</span>}
+                                </div>
+                              </div>
+                              {member.isDuplicate && (
+                                <Badge variant="destructive" className="text-xs">
+                                  이미 등록됨
+                                </Badge>
+                              )}
                             </div>
                           </div>
                         ))
@@ -344,14 +616,14 @@ export default function ParticipantsTab({ programId }: ParticipantsTabProps) {
               </div>
 
               <div className="grid grid-cols-3 gap-4">
-                {fieldSettings.age && (
+                {fieldSettings.birth_date && (
                   <div>
-                    <Label htmlFor="age">나이</Label>
+                    <Label htmlFor="birth_date">생년월일</Label>
                     <Input
-                      id="age"
-                      type="number"
-                      value={formData.age}
-                      onChange={(e) => setFormData({...formData, age: e.target.value})}
+                      id="birth_date"
+                      type="date"
+                      value={formData.birth_date}
+                      onChange={(e) => setFormData({...formData, birth_date: e.target.value})}
                     />
                   </div>
                 )}
@@ -425,7 +697,7 @@ export default function ParticipantsTab({ programId }: ParticipantsTabProps) {
                 <TableHead>이름</TableHead>
                 {fieldSettings.category && <TableHead>카테고리</TableHead>}
                 {(fieldSettings.email || fieldSettings.phone) && <TableHead>연락처</TableHead>}
-                {(fieldSettings.age || fieldSettings.gender) && <TableHead>나이/성별</TableHead>}
+                {(fieldSettings.birth_date || fieldSettings.gender) && <TableHead>생년월일/성별</TableHead>}
                 {fieldSettings.status && <TableHead>상태</TableHead>}
                 {fieldSettings.notes && <TableHead>비고</TableHead>}
                 <TableHead>등록일</TableHead>
@@ -459,12 +731,12 @@ export default function ParticipantsTab({ programId }: ParticipantsTabProps) {
                       </div>
                     </TableCell>
                   )}
-                  {(fieldSettings.age || fieldSettings.gender) && (
+                  {(fieldSettings.birth_date || fieldSettings.gender) && (
                     <TableCell>
-                      {fieldSettings.age && fieldSettings.gender && participant.age && participant.gender ? (
-                        `${participant.age}세 ${participant.gender}`
+                      {fieldSettings.birth_date && fieldSettings.gender && participant.birth_date && participant.gender ? (
+                        `${participant.birth_date} ${participant.gender}`
                       ) : (
-                        fieldSettings.age && participant.age ? `${participant.age}세` : 
+                        fieldSettings.birth_date && participant.birth_date ? participant.birth_date : 
                         fieldSettings.gender && participant.gender ? participant.gender : '-'
                       )}
                     </TableCell>

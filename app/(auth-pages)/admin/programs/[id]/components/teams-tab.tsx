@@ -84,6 +84,9 @@ export default function TeamsTab({ programId }: TeamsTabProps) {
     tier: 1,
     color: "#3B82F6"
   });
+  
+  // 편집 중인 역할들의 임시 상태
+  const [editingRoles, setEditingRoles] = useState<{[roleId: string]: Partial<TeamRole>}>({});
 
 
   // 데이터 로드
@@ -269,17 +272,37 @@ export default function TeamsTab({ programId }: TeamsTabProps) {
     }
   };
 
-  // 역할 수정
-  const handleUpdateRole = async (roleId: string, updates: Partial<TeamRole>) => {
+  // 역할 임시 수정 (로컬 상태만 변경)
+  const handleRoleEdit = (roleId: string, updates: Partial<TeamRole>) => {
+    setEditingRoles(prev => ({
+      ...prev,
+      [roleId]: {
+        ...prev[roleId],
+        ...updates
+      }
+    }));
+  };
+
+  // 역할 수정 저장
+  const handleSaveRole = async (roleId: string) => {
     try {
+      const roleUpdates = editingRoles[roleId];
+      if (!roleUpdates) return;
+      
       const updatedRoles = teamRoles.map(role =>
-        role.id === roleId ? { ...role, ...updates } : role
+        role.id === roleId ? { ...role, ...roleUpdates } : role
       );
       
       const success = await saveProgramFeatureData(programId, 'team_roles', updatedRoles);
       
       if (success) {
         setTeamRoles(updatedRoles);
+        // 편집 상태에서 제거
+        setEditingRoles(prev => {
+          const newState = { ...prev };
+          delete newState[roleId];
+          return newState;
+        });
       } else {
         alert('역할 수정에 실패했습니다.');
       }
@@ -289,7 +312,47 @@ export default function TeamsTab({ programId }: TeamsTabProps) {
     }
   };
 
+  // 역할 수정 취소
+  const handleCancelRoleEdit = (roleId: string) => {
+    setEditingRoles(prev => {
+      const newState = { ...prev };
+      delete newState[roleId];
+      return newState;
+    });
+  };
 
+  // 현재 표시할 역할 값 가져오기 (편집 중이면 편집 값, 아니면 원본 값)
+  const getRoleDisplayValue = (role: TeamRole, field: keyof TeamRole) => {
+    const editingRole = editingRoles[role.id];
+    if (editingRole && field in editingRole) {
+      return editingRole[field];
+    }
+    return role[field];
+  };
+
+
+
+  // 팀원 삭제
+  const removeParticipantFromTeam = async (teamId: string, participantId: string) => {
+    if (confirm("정말로 이 팀원을 팀에서 제거하시겠습니까?")) {
+      try {
+        const updatedMembers = teamMembers.filter(tm => 
+          !(tm.teamId === teamId && tm.participantId === participantId)
+        );
+        
+        const success = await saveProgramFeatureData(programId, 'team_members', updatedMembers);
+        
+        if (success) {
+          setTeamMembers(updatedMembers);
+        } else {
+          alert('팀원 제거에 실패했습니다.');
+        }
+      } catch (error) {
+        console.error('팀원 제거 실패:', error);
+        alert('팀원 제거에 실패했습니다.');
+      }
+    }
+  };
 
   // 참가자를 팀에 추가하는 함수  
   const addParticipantToTeam = async (teamId: string, participantId: string, roleId: string) => {
@@ -335,14 +398,6 @@ export default function TeamsTab({ programId }: TeamsTabProps) {
     }
   };
 
-  // 사용 가능한 참가자 필터링 (이미 해당 팀에 속하지 않은 참가자)
-  const getAvailableParticipants = (teamId: string) => {
-    const teamParticipantIds = teamMembers
-      .filter(tm => tm.teamId === teamId)
-      .map(tm => tm.participantId);
-    
-    return participants.filter(p => !teamParticipantIds.includes(p.id));
-  };
 
 
   return (
@@ -432,51 +487,58 @@ export default function TeamsTab({ programId }: TeamsTabProps) {
                               </Badge>
                             )}
                           </div>
-                          <Select
-                            value={member.roleId}
-                            onValueChange={(newRoleId) => handleRoleChange(team.id, member.participantId, newRoleId)}
-                          >
-                            <SelectTrigger className="w-20 h-6 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {teamRoles.map(role => (
-                                <SelectItem key={role.id} value={role.id}>
-                                  {role.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <div className="flex items-center gap-2">
+                            <Select
+                              value={member.roleId}
+                              onValueChange={(newRoleId) => handleRoleChange(team.id, member.participantId, newRoleId)}
+                            >
+                              <SelectTrigger className="w-20 h-6 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {teamRoles.map(role => (
+                                  <SelectItem key={role.id} value={role.id}>
+                                    {role.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeParticipantFromTeam(team.id, member.participantId)}
+                              className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </div>
                       );
                     })}
                     
-                    {/* 팀원 추가 입력창 */}
+                    {/* 팀원 추가 - 간단한 한 줄 UI */}
                     <div className="border-t pt-3 mt-3">
-                      <div className="relative">
-                        {/* 클릭 외부 영역 감지를 위한 오버레이 */}
-                        {teamMemberSearch[team.id]?.searchOpen && (
-                          <div 
-                            className="fixed inset-0 z-10"
-                            onClick={() => setTeamMemberSearch(prev => ({
-                              ...prev,
-                              [team.id]: { ...prev[team.id], searchOpen: false }
-                            }))}
-                          />
-                        )}
-                        <div className="relative">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 relative">
+                          {/* 클릭 외부 영역 감지를 위한 오버레이 */}
+                          {teamMemberSearch[team.id]?.searchOpen && (
+                            <div 
+                              className="fixed inset-0 z-10"
+                              onClick={() => setTeamMemberSearch(prev => ({
+                                ...prev,
+                                [team.id]: { ...prev[team.id], searchOpen: false }
+                              }))}
+                            />
+                          )}
                           <Input 
-                            placeholder="참가자 검색..." 
-                            className="h-8 text-sm pr-20"
+                            placeholder="참가자 이름 검색..." 
+                            className="h-8 text-sm"
                             value={teamMemberSearch[team.id]?.searchValue || ''}
                             onChange={(e) => {
                               const value = e.target.value;
-                              const availableParticipants = getAvailableParticipants(team.id);
                               const filteredParticipants = value.length >= 1 ? 
-                                availableParticipants.filter(p => 
-                                  p.name.toLowerCase().includes(value.toLowerCase()) ||
-                                  (p.email && p.email.toLowerCase().includes(value.toLowerCase())) ||
-                                  (p.phone && p.phone.includes(value))
+                                participants.filter(p => 
+                                  p.name.toLowerCase().includes(value.toLowerCase())
                                 ) : [];
                               
                               setTeamMemberSearch(prev => ({
@@ -486,86 +548,41 @@ export default function TeamsTab({ programId }: TeamsTabProps) {
                                   searchValue: value,
                                   searchOpen: value.length >= 1 && filteredParticipants.length > 0,
                                   allMembers: filteredParticipants,
-                                  selectedMember: null
+                                  selectedMember: null,
+                                  selectedRole: 'member' // 기본값을 팀원으로 설정
                                 }
                               }));
                             }}
-                            onFocus={() => {
-                              const currentValue = teamMemberSearch[team.id]?.searchValue || '';
-                              if (currentValue.length >= 1) {
-                                const availableParticipants = getAvailableParticipants(team.id);
-                                const filteredParticipants = availableParticipants.filter(p => 
-                                  p.name.toLowerCase().includes(currentValue.toLowerCase()) ||
-                                  (p.email && p.email.toLowerCase().includes(currentValue.toLowerCase())) ||
-                                  (p.phone && p.phone.includes(currentValue))
-                                );
-                                setTeamMemberSearch(prev => ({
-                                  ...prev,
-                                  [team.id]: { 
-                                    ...prev[team.id], 
-                                    searchOpen: filteredParticipants.length > 0,
-                                    allMembers: filteredParticipants
-                                  }
-                                }));
-                              }
-                            }}
                           />
-                          <UserPlus className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                           
                           {/* 검색 결과 드롭다운 */}
                           {teamMemberSearch[team.id]?.searchOpen && teamMemberSearch[team.id]?.allMembers?.length > 0 && (
-                            <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border rounded-lg shadow-lg max-h-48 overflow-auto">
-                              {teamMemberSearch[team.id].allMembers.map((participant) => {
-                                const isSelected = teamMemberSearch[team.id]?.selectedMember?.id === participant.id;
-                                return (
-                                  <div 
-                                    key={participant.id} 
-                                    className={`border-b last:border-b-0 cursor-pointer hover:bg-gray-50 ${isSelected ? 'bg-blue-50' : ''}`}
-                                    onClick={() => {
-                                      setTeamMemberSearch(prev => ({
-                                        ...prev,
-                                        [team.id]: {
-                                          ...prev[team.id],
-                                          selectedMember: participant,
-                                          searchOpen: false,
-                                          searchValue: participant.name
-                                        }
-                                      }));
-                                    }}
-                                  >
-                                    <div className="p-2">
-                                      <p className="text-sm font-medium">{participant.name}</p>
-                                      <p className="text-xs text-gray-500">
-                                        {participant.phone || ''} • {participant.email || ''}
-                                      </p>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                          
-                          {/* 검색 결과 없음 */}
-                          {teamMemberSearch[team.id]?.searchOpen && teamMemberSearch[team.id]?.allMembers?.length === 0 && (teamMemberSearch[team.id]?.searchValue?.length >= 2) && (
-                            <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border rounded-lg shadow-lg p-2">
-                              <div className="text-xs text-gray-500">검색된 멤버가 없습니다.</div>
+                            <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border rounded-lg shadow-lg max-h-40 overflow-auto">
+                              {teamMemberSearch[team.id].allMembers.map((participant) => (
+                                <div 
+                                  key={participant.id} 
+                                  className="p-2 cursor-pointer hover:bg-gray-50 border-b last:border-b-0"
+                                  onClick={() => {
+                                    setTeamMemberSearch(prev => ({
+                                      ...prev,
+                                      [team.id]: {
+                                        ...prev[team.id],
+                                        selectedMember: participant,
+                                        searchOpen: false,
+                                        searchValue: participant.name
+                                      }
+                                    }));
+                                  }}
+                                >
+                                  <p className="text-sm font-medium">{participant.name}</p>
+                                </div>
+                              ))}
                             </div>
                           )}
                         </div>
-                      </div>
-                      
-                      {/* 역할 선택과 추가 버튼을 한줄로 */}
-                      <div className="mt-2 flex items-center gap-2">
-                        <div className="flex-1">
-                          <Input 
-                            placeholder="선택된 멤버" 
-                            className="h-7 text-xs"
-                            value={teamMemberSearch[team.id]?.selectedMember?.name || ''}
-                            readOnly
-                          />
-                        </div>
+                        
                         <Select 
-                          value={teamMemberSearch[team.id]?.selectedRole || ''}
+                          value={teamMemberSearch[team.id]?.selectedRole || 'member'}
                           onValueChange={(roleId) => {
                             setTeamMemberSearch(prev => ({
                               ...prev,
@@ -576,8 +593,8 @@ export default function TeamsTab({ programId }: TeamsTabProps) {
                             }));
                           }}
                         >
-                          <SelectTrigger className="w-20 h-7 text-xs">
-                            <SelectValue placeholder="역할" />
+                          <SelectTrigger className="w-20 h-8 text-xs">
+                            <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
                             {teamRoles.map(role => (
@@ -587,18 +604,20 @@ export default function TeamsTab({ programId }: TeamsTabProps) {
                             ))}
                           </SelectContent>
                         </Select>
+                        
                         <Button 
                           size="sm" 
-                          className="h-7 px-3 text-xs"
-                          disabled={!teamMemberSearch[team.id]?.selectedMember || !teamMemberSearch[team.id]?.selectedRole}
+                          className="h-8 px-3 text-xs"
+                          disabled={!teamMemberSearch[team.id]?.selectedMember}
                           onClick={() => {
                             const participant = teamMemberSearch[team.id]?.selectedMember;
-                            const roleId = teamMemberSearch[team.id]?.selectedRole;
-                            if (participant && roleId) {
+                            const roleId = teamMemberSearch[team.id]?.selectedRole || 'member';
+                            if (participant) {
                               addParticipantToTeam(team.id, participant.id, roleId);
                             }
                           }}
                         >
+                          <UserPlus className="h-3 w-3 mr-1" />
                           추가
                         </Button>
                       </div>
@@ -672,51 +691,76 @@ export default function TeamsTab({ programId }: TeamsTabProps) {
             <div>
               <h3 className="text-lg font-medium mb-3">역할 관리</h3>
               <div className="space-y-2 mb-4">
-                {teamRoles.map(role => (
-                  <div key={role.id} className="flex items-center justify-between p-3 border rounded">
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="color"
-                        value={role.color}
-                        onChange={(e) => handleUpdateRole(role.id, { color: e.target.value })}
-                        className="w-8 h-8 p-0 border-0"
-                      />
-                      <Input
-                        value={role.name}
-                        onChange={(e) => handleUpdateRole(role.id, { name: e.target.value })}
-                        className="w-24 h-8"
-                      />
-                      <Select 
-                        value={role.tier.toString()} 
-                        onValueChange={(value) => handleUpdateRole(role.id, { tier: parseInt(value) })}
-                      >
-                        <SelectTrigger className="w-20 h-8">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="0">T0</SelectItem>
-                          <SelectItem value="1">T1</SelectItem>
-                          <SelectItem value="2">T2</SelectItem>
-                          <SelectItem value="3">T3</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {role.id === "leader" || role.id === "member" ? (
-                        <Badge variant="secondary" className="text-xs">기본</Badge>
-                      ) : (
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => handleDeleteRole(role.id)}
-                          className="h-8 w-8 p-0"
+                {teamRoles.map(role => {
+                  const isEditing = role.id in editingRoles;
+                  const hasChanges = isEditing && Object.keys(editingRoles[role.id] || {}).length > 0;
+                  
+                  return (
+                    <div key={role.id} className="flex items-center justify-between p-3 border rounded">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="color"
+                          value={getRoleDisplayValue(role, 'color') as string}
+                          onChange={(e) => handleRoleEdit(role.id, { color: e.target.value })}
+                          className="w-8 h-8 p-0 border-0"
+                        />
+                        <Input
+                          value={getRoleDisplayValue(role, 'name') as string}
+                          onChange={(e) => handleRoleEdit(role.id, { name: e.target.value })}
+                          className="w-24 h-8"
+                        />
+                        <Select 
+                          value={(getRoleDisplayValue(role, 'tier') as number).toString()} 
+                          onValueChange={(value) => handleRoleEdit(role.id, { tier: parseInt(value) })}
                         >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      )}
+                          <SelectTrigger className="w-20 h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="0">T0</SelectItem>
+                            <SelectItem value="1">T1</SelectItem>
+                            <SelectItem value="2">T2</SelectItem>
+                            <SelectItem value="3">T3</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {hasChanges && (
+                          <>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleCancelRoleEdit(role.id)}
+                              className="h-8 px-2 text-xs"
+                            >
+                              취소
+                            </Button>
+                            <Button 
+                              variant="default" 
+                              size="sm" 
+                              onClick={() => handleSaveRole(role.id)}
+                              className="h-8 px-2 text-xs"
+                            >
+                              저장
+                            </Button>
+                          </>
+                        )}
+                        {role.id === "leader" || role.id === "member" ? (
+                          <Badge variant="secondary" className="text-xs">기본</Badge>
+                        ) : (
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handleDeleteRole(role.id)}
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               
               <div className="border-t pt-4">

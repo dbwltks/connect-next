@@ -5,6 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -15,15 +23,28 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Calendar,
+  CalendarDays,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -33,6 +54,7 @@ import {
   Eye,
   Plus,
   Trash2,
+  Edit,
   Settings,
 } from "lucide-react";
 import {
@@ -94,7 +116,10 @@ interface FinanceRecord {
   id: string;
   type: "income" | "expense";
   category: string;
+  vendor?: string;
+  itemName?: string;
   amount: number;
+  paidBy?: string;
   description?: string;
   date: string;
   program_id: string;
@@ -168,6 +193,75 @@ export default function ProgramsWidget({
   const [isDayEventsModalOpen, setIsDayEventsModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedDateEvents, setSelectedDateEvents] = useState<Event[]>([]);
+  
+  // 재정 추가 모달 상태
+  const [isFinanceModalOpen, setIsFinanceModalOpen] = useState(false);
+  const [newFinance, setNewFinance] = useState({
+    type: "expense" as "income" | "expense",
+    category: "",
+    vendor: "",
+    itemName: "",
+    amount: "",
+    paidBy: "",
+    description: "",
+    date: format(new Date(), "yyyy-MM-dd"),
+  });
+  
+  // 재정 카테고리 관리 상태
+  const [isFinanceCategorySettingsOpen, setIsFinanceCategorySettingsOpen] = useState(false);
+  const [financeCategories, setFinanceCategories] = useState<string[]>([
+    "교육비", "식비", "교통비", "숙박비", "후원금", "참가비", "기타"
+  ]);
+  const [newFinanceCategory, setNewFinanceCategory] = useState("");
+  const [editingCategoryIndex, setEditingCategoryIndex] = useState<number | null>(null);
+  const [editingCategoryValue, setEditingCategoryValue] = useState("");
+  
+  // 거래처 관리 상태
+  const [financeVendors, setFinanceVendors] = useState<string[]>([
+    "직접 구매", "온라인 주문", "현지 업체", "협력 업체"
+  ]);
+  const [newFinanceVendor, setNewFinanceVendor] = useState("");
+  const [editingVendorIndex, setEditingVendorIndex] = useState<number | null>(null);
+  const [editingVendorValue, setEditingVendorValue] = useState("");
+  
+  // 재정 수정 상태
+  const [editingFinance, setEditingFinance] = useState<string | null>(null);
+  const [editFinanceData, setEditFinanceData] = useState({
+    type: "expense" as "income" | "expense",
+    category: "",
+    vendor: "",
+    itemName: "",
+    amount: "",
+    paidBy: "",
+    description: "",
+    date: "",
+  });
+  
+  // 재정 필터 상태
+  const [financeFilters, setFinanceFilters] = useState({
+    dateRange: "all" as "all" | "today" | "week" | "month" | "custom",
+    customDateType: "single" as "single" | "range",
+    selectedDate: undefined as Date | undefined,
+    selectedDateRange: undefined as { from: Date | undefined; to: Date | undefined } | undefined,
+    startDate: "",
+    endDate: "",
+    type: "all" as "all" | "income" | "expense",
+    category: "all",
+    vendor: "all",
+    paidBy: "all",
+  });
+  
+  // 캘린더 팝오버 상태
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  
+  // 페이지네이션 상태
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  
+  // 선택된 재정 행 상태
+  const [selectedFinanceId, setSelectedFinanceId] = useState<string | null>(null);
+  const [isFinanceActionDialogOpen, setIsFinanceActionDialogOpen] = useState(false);
+  const [selectedFinanceForAction, setSelectedFinanceForAction] = useState<any>(null);
   
   // events_settings 구조: { locations: string[], defaultDuration: number, ... }
   const [newEvent, setNewEvent] = useState({
@@ -346,13 +440,16 @@ export default function ProgramsWidget({
           // events JSON 필드에서 직접 가져오기
           setEvents(Array.isArray(data.events) ? data.events : []);
 
-          // 재정 데이터 별도 로드 (별도 테이블이므로)
-          try {
-            const programFinances = await financeApi.getAll(selectedProgram);
-            setFinances(programFinances || []);
-          } catch (financeError) {
-            console.error("재정 데이터 로드 실패:", financeError);
-            setFinances([]);
+          // 재정 데이터 programs 테이블의 finances 필드에서 로드
+          setFinances(Array.isArray(data.finances) ? data.finances : []);
+          
+          // finance_settings에서 카테고리와 거래처 로드
+          const financeSettings = data.finance_settings || {};
+          if (Array.isArray(financeSettings.categories)) {
+            setFinanceCategories(financeSettings.categories);
+          }
+          if (Array.isArray(financeSettings.vendors)) {
+            setFinanceVendors(financeSettings.vendors);
           }
         }
       } catch (error) {
@@ -385,7 +482,86 @@ export default function ProgramsWidget({
   })();
 
   const filteredParticipants = participants;
-  const filteredFinances = finances;
+  
+  // 재정 필터링
+  const filteredFinances = finances.filter((finance) => {
+    // 날짜 필터
+    if (financeFilters.dateRange !== "all") {
+      const financeDate = parseISO(finance.date);
+      const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      
+      switch (financeFilters.dateRange) {
+        case "today":
+          const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
+          if (financeDate < todayStart || financeDate > todayEnd) return false;
+          break;
+        case "week":
+          const weekStart = startOfWeek(today, { weekStartsOn: 0 });
+          const weekEnd = endOfWeek(today, { weekStartsOn: 0 });
+          if (financeDate < weekStart || financeDate > weekEnd) return false;
+          break;
+        case "month":
+          const monthStart = startOfMonth(today);
+          const monthEnd = endOfMonth(today);
+          if (financeDate < monthStart || financeDate > monthEnd) return false;
+          break;
+        case "custom":
+          if (financeFilters.customDateType === "single" && financeFilters.selectedDate) {
+            const selectedDay = new Date(financeFilters.selectedDate.getFullYear(), financeFilters.selectedDate.getMonth(), financeFilters.selectedDate.getDate());
+            const financeDay = new Date(financeDate.getFullYear(), financeDate.getMonth(), financeDate.getDate());
+            if (financeDay.getTime() !== selectedDay.getTime()) return false;
+          } else if (financeFilters.customDateType === "range" && financeFilters.selectedDateRange?.from && financeFilters.selectedDateRange?.to) {
+            const rangeStart = financeFilters.selectedDateRange.from;
+            const rangeEnd = financeFilters.selectedDateRange.to;
+            if (financeDate < rangeStart || financeDate > rangeEnd) return false;
+          } else if (financeFilters.startDate && financeFilters.endDate) {
+            // 백업: 기존 문자열 날짜 사용
+            const customStart = parseISO(financeFilters.startDate);
+            const customEnd = parseISO(financeFilters.endDate);
+            if (financeDate < customStart || financeDate > customEnd) return false;
+          }
+          break;
+      }
+    }
+    
+    // 타입 필터
+    if (financeFilters.type !== "all" && finance.type !== financeFilters.type) {
+      return false;
+    }
+    
+    // 카테고리 필터
+    if (financeFilters.category !== "all" && finance.category !== financeFilters.category) {
+      return false;
+    }
+    
+    // 거래처 필터
+    if (financeFilters.vendor !== "all" && finance.vendor !== financeFilters.vendor) {
+      return false;
+    }
+    
+    // 거래자 필터
+    if (financeFilters.paidBy !== "all" && finance.paidBy !== financeFilters.paidBy) {
+      return false;
+    }
+    
+    return true;
+  });
+
+  // 페이지네이션된 재정 데이터
+  const totalItems = filteredFinances.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedFinances = filteredFinances
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(startIndex, endIndex);
+
+  // 필터 변경 시 페이지 리셋
+  const resetPageAndSetFilter = (filterUpdate: any) => {
+    setCurrentPage(1);
+    setFinanceFilters((prev) => ({ ...prev, ...filterUpdate }));
+  };
 
   // 주간 보기 날짜 계산
   const weekDays = eachDayOfInterval({
@@ -832,6 +1008,426 @@ export default function ProgramsWidget({
       loadLocationsFromProgram();
     }
   }, [selectedProgram]);
+
+  // 재정 데이터 추가 함수
+  const handleAddFinance = async () => {
+    if (!selectedProgram || !newFinance.amount || !newFinance.category) {
+      alert('필수 항목을 모두 입력해주세요.');
+      return;
+    }
+
+    try {
+      const supabase = createClient();
+      
+      // 현재 프로그램의 재정 데이터 가져오기
+      const { data: programData, error: fetchError } = await supabase
+        .from('programs')
+        .select('finances')
+        .eq('id', selectedProgram)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const currentFinances = Array.isArray(programData?.finances) ? programData.finances : [];
+      
+      let updatedFinances;
+      
+      if (editingFinance) {
+        // 수정 모드
+        updatedFinances = currentFinances.map((finance: any) => {
+          if (finance.id === editingFinance) {
+            return {
+              ...finance,
+              type: newFinance.type,
+              category: newFinance.category,
+              vendor: newFinance.vendor,
+              itemName: newFinance.itemName,
+              amount: parseFloat(newFinance.amount),
+              paidBy: newFinance.paidBy,
+              description: newFinance.description,
+              date: newFinance.date,
+              updated_at: new Date().toISOString(),
+            };
+          }
+          return finance;
+        });
+      } else {
+        // 추가 모드
+        const newFinanceRecord = {
+          id: `finance_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          type: newFinance.type,
+          category: newFinance.category,
+          vendor: newFinance.vendor,
+          itemName: newFinance.itemName,
+          amount: parseFloat(newFinance.amount),
+          paidBy: newFinance.paidBy,
+          description: newFinance.description,
+          date: newFinance.date,
+          created_at: new Date().toISOString(),
+        };
+        updatedFinances = [...currentFinances, newFinanceRecord];
+      }
+
+      // programs 테이블의 finances 필드 업데이트
+      const { error } = await supabase
+        .from('programs')
+        .update({ finances: updatedFinances })
+        .eq('id', selectedProgram);
+
+      if (error) throw error;
+
+      // 로컬 상태 업데이트
+      setFinances(updatedFinances);
+      
+      const isEdit = !!editingFinance;
+      
+      // 폼 초기화
+      setNewFinance({
+        type: "expense",
+        category: "",
+        vendor: "",
+        itemName: "",
+        amount: "",
+        paidBy: "",
+        description: "",
+        date: format(new Date(), "yyyy-MM-dd"),
+      });
+      setEditingFinance(null);
+      
+      setIsFinanceModalOpen(false);
+      alert(isEdit ? '재정 데이터가 수정되었습니다.' : '재정 데이터가 추가되었습니다.');
+    } catch (error) {
+      console.error('재정 처리 실패:', error);
+      alert('재정 처리에 실패했습니다.');
+    }
+  };
+
+  // finance_settings 업데이트 함수
+  const updateFinanceSettings = async (updates: any) => {
+    if (!selectedProgram) return;
+
+    try {
+      const supabase = createClient();
+      
+      // 현재 finance_settings 가져오기
+      const { data: currentData, error: fetchError } = await supabase
+        .from('programs')
+        .select('finance_settings')
+        .eq('id', selectedProgram)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const currentSettings = currentData?.finance_settings || {};
+      const updatedSettings = {
+        ...currentSettings,
+        ...updates
+      };
+
+      // finance_settings 업데이트
+      const { error } = await supabase
+        .from('programs')
+        .update({ finance_settings: updatedSettings })
+        .eq('id', selectedProgram);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Finance settings 업데이트 실패:', error);
+      throw error;
+    }
+  };
+
+  // 재정 카테고리 추가
+  const addFinanceCategory = async () => {
+    if (!newFinanceCategory.trim() || financeCategories.includes(newFinanceCategory.trim())) {
+      return;
+    }
+
+    try {
+      const updatedCategories = [...financeCategories, newFinanceCategory.trim()];
+      
+      // finance_settings 업데이트
+      await updateFinanceSettings({ categories: updatedCategories });
+      
+      setFinanceCategories(updatedCategories);
+      setNewFinanceCategory("");
+    } catch (error) {
+      console.error('카테고리 추가 실패:', error);
+      alert('카테고리 추가에 실패했습니다.');
+    }
+  };
+
+  // 재정 카테고리 삭제
+  const removeFinanceCategory = async (category: string) => {
+    if (financeCategories.length <= 1) {
+      alert('최소 하나의 카테고리는 필요합니다.');
+      return;
+    }
+
+    try {
+      const updatedCategories = financeCategories.filter(cat => cat !== category);
+      await updateFinanceSettings({ categories: updatedCategories });
+      setFinanceCategories(updatedCategories);
+    } catch (error) {
+      console.error('카테고리 삭제 실패:', error);
+      alert('카테고리 삭제에 실패했습니다.');
+    }
+  };
+
+  // 카테고리 수정 시작
+  const startEditCategory = (index: number, category: string) => {
+    setEditingCategoryIndex(index);
+    setEditingCategoryValue(category);
+  };
+
+  // 카테고리 수정 취소
+  const cancelEditCategory = () => {
+    setEditingCategoryIndex(null);
+    setEditingCategoryValue("");
+  };
+
+  // 카테고리 수정 저장
+  const saveEditCategory = async () => {
+    if (editingCategoryIndex === null || !editingCategoryValue.trim()) {
+      return;
+    }
+
+    // 중복 체크 (자기 자신 제외)
+    const isDuplicate = financeCategories.some((cat, index) => 
+      index !== editingCategoryIndex && cat === editingCategoryValue.trim()
+    );
+
+    if (isDuplicate) {
+      alert('이미 존재하는 카테고리명입니다.');
+      return;
+    }
+
+    try {
+      const updatedCategories = [...financeCategories];
+      updatedCategories[editingCategoryIndex] = editingCategoryValue.trim();
+      
+      await updateFinanceSettings({ categories: updatedCategories });
+      
+      setFinanceCategories(updatedCategories);
+      setEditingCategoryIndex(null);
+      setEditingCategoryValue("");
+    } catch (error) {
+      console.error('카테고리 수정 실패:', error);
+      alert('카테고리 수정에 실패했습니다.');
+    }
+  };
+
+  // 거래처 추가
+  const addFinanceVendor = async () => {
+    if (!newFinanceVendor.trim() || financeVendors.includes(newFinanceVendor.trim())) {
+      return;
+    }
+
+    try {
+      const updatedVendors = [...financeVendors, newFinanceVendor.trim()];
+      await updateFinanceSettings({ vendors: updatedVendors });
+      setFinanceVendors(updatedVendors);
+      setNewFinanceVendor("");
+    } catch (error) {
+      console.error('거래처 추가 실패:', error);
+      alert('거래처 추가에 실패했습니다.');
+    }
+  };
+
+  // 재정 삭제 함수
+  const handleDeleteFinance = async (financeId: string) => {
+    if (!selectedProgram || !confirm('정말로 이 거래 내역을 삭제하시겠습니까?')) {
+      return;
+    }
+
+    try {
+      const supabase = createClient();
+      
+      // 현재 프로그램의 재정 데이터 가져오기
+      const { data: programData, error: fetchError } = await supabase
+        .from('programs')
+        .select('finances')
+        .eq('id', selectedProgram)
+        .single();
+      
+      if (fetchError) throw fetchError;
+
+      const currentFinances = Array.isArray(programData?.finances) ? programData.finances : [];
+      const updatedFinances = currentFinances.filter((finance: any) => finance.id !== financeId);
+
+      // programs 테이블의 finances 필드 업데이트
+      const { error } = await supabase
+        .from('programs')
+        .update({ finances: updatedFinances })
+        .eq('id', selectedProgram);
+
+      if (error) throw error;
+
+      // 로컬 상태 업데이트
+      setFinances(updatedFinances);
+    } catch (error) {
+      console.error('재정 삭제 실패:', error);
+      alert('재정 삭제에 실패했습니다.');
+    }
+  };
+
+  // 재정 수정 시작
+  const handleEditFinance = (finance: any) => {
+    setEditingFinance(finance.id);
+    setNewFinance({
+      type: finance.type,
+      category: finance.category,
+      vendor: finance.vendor || "",
+      itemName: finance.itemName || "",
+      amount: finance.amount.toString(),
+      paidBy: finance.paidBy || "",
+      description: finance.description || "",
+      date: finance.date,
+    });
+    setIsFinanceModalOpen(true);
+  };
+
+  // 재정 수정 취소
+  const handleCancelEditFinance = () => {
+    setEditingFinance(null);
+    setSelectedFinanceId(null);
+    setEditFinanceData({
+      type: "expense",
+      category: "",
+      vendor: "",
+      itemName: "",
+      amount: "",
+      paidBy: "",
+      description: "",
+      date: "",
+    });
+  };
+
+  // 재정 행 클릭 핸들러
+  const handleFinanceRowClick = (finance: any) => {
+    if (userRole === 'admin' || userRole === 'tier0' || userRole === 'tier1') {
+      setSelectedFinanceForAction(finance);
+      setIsFinanceActionDialogOpen(true);
+    }
+  };
+
+  // 재정 수정 저장
+  const handleSaveEditFinance = async () => {
+    if (!selectedProgram || !editingFinance || !editFinanceData.amount || !editFinanceData.category) {
+      alert('필수 항목을 모두 입력해주세요.');
+      return;
+    }
+
+    try {
+      const supabase = createClient();
+      
+      // 현재 프로그램의 재정 데이터 가져오기
+      const { data: programData, error: fetchError } = await supabase
+        .from('programs')
+        .select('finances')
+        .eq('id', selectedProgram)
+        .single();
+      
+      if (fetchError) throw fetchError;
+
+      const currentFinances = Array.isArray(programData?.finances) ? programData.finances : [];
+      
+      const updatedFinances = currentFinances.map((finance: any) => {
+        if (finance.id === editingFinance) {
+          return {
+            ...finance,
+            type: editFinanceData.type,
+            category: editFinanceData.category,
+            vendor: editFinanceData.vendor,
+            itemName: editFinanceData.itemName,
+            amount: parseFloat(editFinanceData.amount),
+            paidBy: editFinanceData.paidBy,
+            description: editFinanceData.description,
+            date: editFinanceData.date,
+            updated_at: new Date().toISOString(),
+          };
+        }
+        return finance;
+      });
+
+      // programs 테이블의 finances 필드 업데이트
+      const { error } = await supabase
+        .from('programs')
+        .update({ finances: updatedFinances })
+        .eq('id', selectedProgram);
+
+      if (error) throw error;
+
+      // 로컬 상태 업데이트
+      setFinances(updatedFinances);
+      
+      // 수정 모드 종료
+      handleCancelEditFinance();
+      
+      alert('재정 데이터가 수정되었습니다.');
+    } catch (error) {
+      console.error('재정 수정 실패:', error);
+      alert('재정 수정에 실패했습니다.');
+    }
+  };
+
+  // 거래처 삭제
+  const removeFinanceVendor = async (vendor: string) => {
+    if (financeVendors.length <= 1) {
+      alert('최소 하나의 거래처는 필요합니다.');
+      return;
+    }
+
+    try {
+      const updatedVendors = financeVendors.filter(v => v !== vendor);
+      await updateFinanceSettings({ vendors: updatedVendors });
+      setFinanceVendors(updatedVendors);
+    } catch (error) {
+      console.error('거래처 삭제 실패:', error);
+      alert('거래처 삭제에 실패했습니다.');
+    }
+  };
+
+  // 거래처 수정 시작
+  const startEditVendor = (index: number, vendor: string) => {
+    setEditingVendorIndex(index);
+    setEditingVendorValue(vendor);
+  };
+
+  // 거래처 수정 취소
+  const cancelEditVendor = () => {
+    setEditingVendorIndex(null);
+    setEditingVendorValue("");
+  };
+
+  // 거래처 수정 저장
+  const saveEditVendor = async () => {
+    if (editingVendorIndex === null || !editingVendorValue.trim()) {
+      return;
+    }
+
+    // 중복 체크 (자기 자신 제외)
+    const isDuplicate = financeVendors.some((vendor, index) => 
+      index !== editingVendorIndex && vendor === editingVendorValue.trim()
+    );
+
+    if (isDuplicate) {
+      alert('이미 존재하는 거래처명입니다.');
+      return;
+    }
+
+    try {
+      const updatedVendors = [...financeVendors];
+      updatedVendors[editingVendorIndex] = editingVendorValue.trim();
+      await updateFinanceSettings({ vendors: updatedVendors });
+      setFinanceVendors(updatedVendors);
+      setEditingVendorIndex(null);
+      setEditingVendorValue("");
+    } catch (error) {
+      console.error('거래처 수정 실패:', error);
+      alert('거래처 수정에 실패했습니다.');
+    }
+  };
 
   // 날짜 클릭 시 해당 날짜의 모든 일정 보기
   const handleDateClick = (date: Date) => {
@@ -1859,7 +2455,40 @@ export default function ProgramsWidget({
                           </div>
                         )}
                       </div>
-                      <div className="flex justify-end">
+                      <div className="flex justify-between">
+                        {(userRole === 'admin' || userRole === 'tier0' || userRole === 'tier1') && (
+                          <Button
+                            onClick={() => {
+                              // 선택된 날짜의 현재 시간으로 설정
+                              if (selectedDate) {
+                                const now = new Date();
+                                const selectedDateTime = new Date(selectedDate);
+                                
+                                // 선택된 날짜에 현재 시간 적용
+                                selectedDateTime.setHours(now.getHours());
+                                selectedDateTime.setMinutes(now.getMinutes());
+                                
+                                const oneHourLater = addHours(selectedDateTime, 1);
+                                
+                                setNewEvent({
+                                  title: "",
+                                  description: "",
+                                  start_date: format(selectedDateTime, "yyyy-MM-dd'T'HH:mm"),
+                                  end_date: format(oneHourLater, "yyyy-MM-dd'T'HH:mm"),
+                                  location: "",
+                                  program_id: selectedProgram || "",
+                                  team_id: "",
+                                });
+                                
+                                setIsDayEventsModalOpen(false);
+                                setIsEventModalOpen(true);
+                              }
+                            }}
+                          >
+                            <Plus className="mr-2 h-4 w-4" />
+                            일정 추가
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           onClick={() => setIsDayEventsModalOpen(false)}
@@ -2462,7 +3091,7 @@ export default function ProgramsWidget({
                       <CardContent className="p-4">
                         <div className="text-sm text-gray-600">총 수입</div>
                         <div className="text-2xl font-bold text-green-600">
-                          ₩{totalIncome.toLocaleString()}
+                          ${totalIncome.toLocaleString()} CAD
                         </div>
                       </CardContent>
                     </Card>
@@ -2470,7 +3099,7 @@ export default function ProgramsWidget({
                       <CardContent className="p-4">
                         <div className="text-sm text-gray-600">총 지출</div>
                         <div className="text-2xl font-bold text-red-600">
-                          ₩{totalExpense.toLocaleString()}
+                          ${totalExpense.toLocaleString()} CAD
                         </div>
                       </CardContent>
                     </Card>
@@ -2480,68 +3109,407 @@ export default function ProgramsWidget({
                         <div
                           className={`text-2xl font-bold ${balance >= 0 ? "text-blue-600" : "text-red-600"}`}
                         >
-                          ₩{balance.toLocaleString()}
+                          ${balance.toLocaleString()} CAD
                         </div>
                       </CardContent>
                     </Card>
                   </div>
 
                   <div>
-                    <h3 className="text-lg font-semibold mb-3">
-                      최근 거래 내역
-                    </h3>
-                    <div className="space-y-2">
-                      {filteredFinances
-                        .sort(
-                          (a, b) =>
-                            new Date(b.date).getTime() -
-                            new Date(a.date).getTime()
-                        )
-                        .slice(0, 10)
-                        .map((finance) => {
-                          const program = programs.find(
-                            (p) => p.id === finance.program_id
-                          );
-                          return (
-                            <div
-                              key={finance.id}
-                              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                            >
-                              <div>
-                                <h4 className="font-medium">
-                                  {finance.description}
-                                </h4>
-                                <div className="text-sm text-gray-600 flex items-center gap-2">
-                                  <span>{finance.category}</span>
-                                  {program && (
-                                    <Badge
-                                      variant="outline"
-                                      className="text-xs"
-                                    >
-                                      {program.name}
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <div
-                                  className={`font-medium ${
-                                    finance.type === "income"
-                                      ? "text-green-600"
-                                      : "text-red-600"
-                                  }`}
-                                >
-                                  {finance.type === "income" ? "+" : "-"}₩
-                                  {finance.amount.toLocaleString()}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  {format(parseISO(finance.date), "MM/dd")}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-lg font-semibold">
+                        최근 거래 내역
+                      </h3>
+                      {(userRole === 'admin' || userRole === 'tier0' || userRole === 'tier1') && (
+                        <div className="flex gap-2">
+                          <Button 
+                            onClick={() => setIsFinanceCategorySettingsOpen(true)}
+                            size="sm"
+                            variant="outline"
+                          >
+                            <Settings className="mr-2 h-4 w-4" />
+                            설정
+                          </Button>
+                          <Button 
+                            onClick={() => {
+                              setEditingFinance(null);
+                              setNewFinance({
+                                type: "expense",
+                                category: "",
+                                vendor: "",
+                                itemName: "",
+                                amount: "",
+                                paidBy: "",
+                                description: "",
+                                date: format(new Date(), "yyyy-MM-dd"),
+                              });
+                              setIsFinanceModalOpen(true);
+                            }}
+                            size="sm"
+                          >
+                            <Plus className="mr-2 h-4 w-4" />
+                            거래 추가
+                          </Button>
+                        </div>
+                      )}
                     </div>
+                    
+                    {/* 필터 UI */}
+                    <div className="flex justify-between items-center mb-4">
+                      <div className="flex gap-2 flex-wrap">
+                      {/* 날짜 필터 */}
+                      <Select
+                        value={financeFilters.dateRange}
+                        onValueChange={(value: "all" | "today" | "week" | "month" | "custom") => {
+                          resetPageAndSetFilter({ 
+                            dateRange: value,
+                            selectedDate: undefined,
+                            selectedDateRange: undefined,
+                            startDate: "",
+                            endDate: ""
+                          });
+                        }}
+                      >
+                        <SelectTrigger className="w-[120px]">
+                          <SelectValue placeholder="날짜" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">전체 기간</SelectItem>
+                          <SelectItem value="today">오늘</SelectItem>
+                          <SelectItem value="week">이번 주</SelectItem>
+                          <SelectItem value="month">이번 달</SelectItem>
+                          <SelectItem value="custom">사용자 정의</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      
+                      {/* 사용자 정의 날짜 선택 */}
+                      {financeFilters.dateRange === "custom" && (
+                        <>
+                          {/* 단일/기간 선택 */}
+                          <Select
+                            value={financeFilters.customDateType}
+                            onValueChange={(value: "single" | "range") =>
+                              resetPageAndSetFilter({ 
+                                customDateType: value,
+                                selectedDate: undefined,
+                                selectedDateRange: undefined
+                              })
+                            }
+                          >
+                            <SelectTrigger className="w-[100px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="single">단일 날짜</SelectItem>
+                              <SelectItem value="range">기간</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          
+                          {/* 캘린더 팝오버 */}
+                          <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className="w-[240px] justify-start text-left font-normal"
+                              >
+                                <CalendarDays className="mr-2 h-4 w-4" />
+                                {financeFilters.customDateType === "single" ? (
+                                  financeFilters.selectedDate ? (
+                                    format(financeFilters.selectedDate, "yyyy년 MM월 dd일")
+                                  ) : (
+                                    "날짜를 선택하세요"
+                                  )
+                                ) : (
+                                  financeFilters.selectedDateRange?.from ? (
+                                    financeFilters.selectedDateRange.to ? (
+                                      `${format(financeFilters.selectedDateRange.from, "MM/dd")} - ${format(financeFilters.selectedDateRange.to, "MM/dd")}`
+                                    ) : (
+                                      format(financeFilters.selectedDateRange.from, "MM/dd")
+                                    )
+                                  ) : (
+                                    "기간을 선택하세요"
+                                  )
+                                )}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              {financeFilters.customDateType === "single" ? (
+                                <CalendarComponent
+                                  mode="single"
+                                  selected={financeFilters.selectedDate}
+                                  onSelect={(date: Date | undefined) => {
+                                    resetPageAndSetFilter({ selectedDate: date });
+                                    if (date) {
+                                      setIsDatePickerOpen(false);
+                                    }
+                                  }}
+                                  numberOfMonths={1}
+                                />
+                              ) : (
+                                <CalendarComponent
+                                  mode="range"
+                                  selected={financeFilters.selectedDateRange}
+                                  onSelect={(range: any) => {
+                                    resetPageAndSetFilter({ selectedDateRange: range });
+                                  }}
+                                  numberOfMonths={2}
+                                />
+                              )}
+                            </PopoverContent>
+                          </Popover>
+                          
+                          {/* 선택된 날짜 초기화 버튼 */}
+                          {(financeFilters.selectedDate || financeFilters.selectedDateRange?.from) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                resetPageAndSetFilter({ 
+                                  selectedDate: undefined,
+                                  selectedDateRange: undefined
+                                });
+                              }}
+                            >
+                              초기화
+                            </Button>
+                          )}
+                        </>
+                      )}
+                      
+                      <Select
+                        value={financeFilters.type}
+                        onValueChange={(value: "all" | "income" | "expense") =>
+                          resetPageAndSetFilter({ type: value })
+                        }
+                      >
+                        <SelectTrigger className="w-[120px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">전체</SelectItem>
+                          <SelectItem value="income">수입</SelectItem>
+                          <SelectItem value="expense">지출</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      
+                      <Select
+                        value={financeFilters.category}
+                        onValueChange={(value) =>
+                          resetPageAndSetFilter({ category: value })
+                        }
+                      >
+                        <SelectTrigger className="w-[140px]">
+                          <SelectValue placeholder="카테고리" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">전체 카테고리</SelectItem>
+                          {financeCategories.map((category) => (
+                            <SelectItem key={category} value={category}>
+                              {category}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      
+                      <Select
+                        value={financeFilters.vendor}
+                        onValueChange={(value) =>
+                          resetPageAndSetFilter({ vendor: value })
+                        }
+                      >
+                        <SelectTrigger className="w-[140px]">
+                          <SelectValue placeholder="거래처" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">전체 거래처</SelectItem>
+                          {financeVendors.map((vendor) => (
+                            <SelectItem key={vendor} value={vendor}>
+                              {vendor}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      
+                      <Select
+                        value={financeFilters.paidBy}
+                        onValueChange={(value) =>
+                          resetPageAndSetFilter({ paidBy: value })
+                        }
+                      >
+                        <SelectTrigger className="w-[140px]">
+                          <SelectValue placeholder="거래자" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">전체 거래자</SelectItem>
+                          {Array.from(new Set(finances.map(f => f.paidBy).filter(Boolean))).map((paidBy) => (
+                            <SelectItem key={paidBy} value={paidBy!}>
+                              {paidBy}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      </div>
+                      
+                      {/* 항목 수 선택 */}
+                      <div className="flex items-center gap-2">
+                        <Select
+                          value={itemsPerPage.toString()}
+                          onValueChange={(value) => {
+                            setItemsPerPage(parseInt(value));
+                            setCurrentPage(1);
+                          }}
+                        >
+                          <SelectTrigger className="w-[80px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="10">10</SelectItem>
+                            <SelectItem value="20">20</SelectItem>
+                            <SelectItem value="30">30</SelectItem>
+                            <SelectItem value="40">40</SelectItem>
+                            <SelectItem value="50">50</SelectItem>
+                            <SelectItem value="100">100</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="border rounded-lg">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>날짜</TableHead>
+                            <TableHead>구분</TableHead>
+                            <TableHead>카테고리</TableHead>
+                            <TableHead>거래처</TableHead>
+                            <TableHead>품명</TableHead>
+                            <TableHead>거래자</TableHead>
+                            <TableHead>내용</TableHead>
+                            <TableHead className="text-right">금액</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {paginatedFinances.map((finance) => {
+                              const program = programs.find(
+                                (p) => p.id === finance.program_id
+                              );
+                              
+                              return (
+                                <TableRow 
+                                  key={finance.id}
+                                  className="cursor-pointer transition-colors hover:bg-gray-50"
+                                  onClick={() => handleFinanceRowClick(finance)}
+                                >
+                                  <TableCell className="text-sm">
+                                    {format(parseISO(finance.date), "MM/dd")}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge 
+                                      variant={finance.type === "income" ? "default" : "secondary"}
+                                      className={finance.type === "income" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}
+                                    >
+                                      {finance.type === "income" ? "수입" : "지출"}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-sm text-gray-600">
+                                    {finance.category}
+                                  </TableCell>
+                                  <TableCell className="text-sm text-gray-600">
+                                    {finance.vendor || "-"}
+                                  </TableCell>
+                                  <TableCell className="text-sm text-gray-600">
+                                    {finance.itemName || "-"}
+                                  </TableCell>
+                                  <TableCell className="text-sm text-gray-600">
+                                    {finance.paidBy || "-"}
+                                  </TableCell>
+                                  <TableCell className="font-medium">
+                                    {finance.description}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <span
+                                      className={`font-medium ${
+                                        finance.type === "income"
+                                          ? "text-green-600"
+                                          : "text-red-600"
+                                      }`}
+                                    >
+                                      {finance.type === "income" ? "+" : "-"}$
+                                      {finance.amount.toLocaleString()} CAD
+                                    </span>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          {filteredFinances.length === 0 && (
+                            <TableRow>
+                              <TableCell 
+                                colSpan={8} 
+                                className="text-center py-8 text-gray-500"
+                              >
+                                등록된 거래 내역이 없습니다.
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    
+                    {/* 페이지네이션 컨트롤 */}
+                    <div className="flex items-center justify-center px-4 py-3 bg-white border-t">
+                        <Pagination>
+                          <PaginationContent>
+                            <PaginationItem>
+                              <PaginationPrevious
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setCurrentPage(Math.max(1, currentPage - 1));
+                                }}
+                                className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
+                              />
+                            </PaginationItem>
+                            
+                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                              let pageNum;
+                              if (totalPages <= 5) {
+                                pageNum = i + 1;
+                              } else if (currentPage <= 3) {
+                                pageNum = i + 1;
+                              } else if (currentPage >= totalPages - 2) {
+                                pageNum = totalPages - 4 + i;
+                              } else {
+                                pageNum = currentPage - 2 + i;
+                              }
+                              
+                              return (
+                                <PaginationItem key={pageNum}>
+                                  <PaginationLink
+                                    href="#"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      setCurrentPage(pageNum);
+                                    }}
+                                    isActive={currentPage === pageNum}
+                                  >
+                                    {pageNum}
+                                  </PaginationLink>
+                                </PaginationItem>
+                              );
+                            })}
+                            
+                            <PaginationItem>
+                              <PaginationNext
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setCurrentPage(Math.min(totalPages, currentPage + 1));
+                                }}
+                                className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
+                              />
+                            </PaginationItem>
+                          </PaginationContent>
+                        </Pagination>
+                      </div>
                   </div>
                 </div>
                 </TabsContent>
@@ -2609,7 +3577,7 @@ export default function ProgramsWidget({
                                   <span
                                     className={`font-medium ${programBalance >= 0 ? "text-blue-600" : "text-red-600"}`}
                                   >
-                                    ₩{programBalance.toLocaleString()}
+                                    ${programBalance.toLocaleString()} CAD
                                   </span>
                                 </div>
                               </div>
@@ -2682,6 +3650,470 @@ export default function ProgramsWidget({
               )}
         </Tabs>
       </Card>
+
+      {/* 재정 추가 모달 */}
+      <Dialog open={isFinanceModalOpen} onOpenChange={(open) => {
+        if (!open) {
+          setEditingFinance(null);
+        }
+        setIsFinanceModalOpen(open);
+      }}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{editingFinance ? "거래 수정" : "거래 추가"}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="finance-type">거래 유형 *</Label>
+              <Select
+                value={newFinance.type}
+                onValueChange={(value: "income" | "expense") =>
+                  setNewFinance((prev) => ({ ...prev, type: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="거래 유형을 선택하세요" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="income">수입</SelectItem>
+                  <SelectItem value="expense">지출</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="finance-category">카테고리 *</Label>
+              <Select
+                value={newFinance.category}
+                onValueChange={(value) =>
+                  setNewFinance((prev) => ({ ...prev, category: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="카테고리를 선택하세요" />
+                </SelectTrigger>
+                <SelectContent>
+                  {financeCategories.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="finance-vendor">거래처</Label>
+              <Select
+                value={newFinance.vendor}
+                onValueChange={(value) =>
+                  setNewFinance((prev) => ({ ...prev, vendor: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="거래처를 선택하세요" />
+                </SelectTrigger>
+                <SelectContent>
+                  {financeVendors.map((vendor) => (
+                    <SelectItem key={vendor} value={vendor}>
+                      {vendor}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="finance-itemName">품명</Label>
+              <Input
+                id="finance-itemName"
+                value={newFinance.itemName}
+                onChange={(e) =>
+                  setNewFinance((prev) => ({ ...prev, itemName: e.target.value }))
+                }
+                placeholder="품명을 입력하세요"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="finance-amount">금액 *</Label>
+              <Input
+                id="finance-amount"
+                type="number"
+                value={newFinance.amount}
+                onChange={(e) =>
+                  setNewFinance((prev) => ({ ...prev, amount: e.target.value }))
+                }
+                placeholder="금액을 입력하세요"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="finance-paidBy">거래자(결제자)</Label>
+              <Input
+                id="finance-paidBy"
+                value={newFinance.paidBy}
+                onChange={(e) =>
+                  setNewFinance((prev) => ({ ...prev, paidBy: e.target.value }))
+                }
+                placeholder="결제한 사람을 입력하세요"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="finance-description">설명</Label>
+              <Textarea
+                id="finance-description"
+                value={newFinance.description}
+                onChange={(e) =>
+                  setNewFinance((prev) => ({ ...prev, description: e.target.value }))
+                }
+                placeholder="거래 설명을 입력하세요"
+                rows={3}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="finance-date">날짜 *</Label>
+              <Input
+                id="finance-date"
+                type="date"
+                value={newFinance.date}
+                onChange={(e) =>
+                  setNewFinance((prev) => ({ ...prev, date: e.target.value }))
+                }
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsFinanceModalOpen(false);
+                setEditingFinance(null);
+              }}
+            >
+              취소
+            </Button>
+            <Button onClick={handleAddFinance}>{editingFinance ? "수정" : "추가"}</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 재정 카테고리 및 거래처 설정 모달 */}
+      <Dialog open={isFinanceCategorySettingsOpen} onOpenChange={setIsFinanceCategorySettingsOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>재정 설정</DialogTitle>
+          </DialogHeader>
+          <Tabs defaultValue="categories" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="categories">카테고리</TabsTrigger>
+              <TabsTrigger value="vendors">거래처</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="categories" className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Input
+                    value={newFinanceCategory}
+                    onChange={(e) => setNewFinanceCategory(e.target.value)}
+                    placeholder="카테고리명을 입력하세요"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        addFinanceCategory();
+                      }
+                    }}
+                  />
+                  <Button onClick={addFinanceCategory} disabled={!newFinanceCategory.trim()}>
+                    추가
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>기존 카테고리</Label>
+                <div className="max-h-60 overflow-y-auto space-y-1">
+                  {financeCategories.length === 0 ? (
+                    <p className="text-sm text-gray-500 py-2">등록된 카테고리가 없습니다.</p>
+                  ) : (
+                    financeCategories.map((category, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-2 bg-gray-50 rounded"
+                      >
+                        {editingCategoryIndex === index ? (
+                          <div className="flex gap-2 flex-1">
+                            <Input
+                              value={editingCategoryValue}
+                              onChange={(e) => setEditingCategoryValue(e.target.value)}
+                              className="text-sm"
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  saveEditCategory();
+                                } else if (e.key === "Escape") {
+                                  setEditingCategoryIndex(null);
+                                  setEditingCategoryValue("");
+                                }
+                              }}
+                              autoFocus
+                            />
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={saveEditCategory}
+                              className="h-6 w-6 p-0 text-green-600 hover:text-green-800"
+                            >
+                              ✓
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setEditingCategoryIndex(null);
+                                setEditingCategoryValue("");
+                              }}
+                              className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700"
+                            >
+                              ×
+                            </Button>
+                          </div>
+                        ) : (
+                          <>
+                            <span className="text-sm">{category}</span>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingCategoryIndex(index);
+                                  setEditingCategoryValue(category);
+                                }}
+                                className="h-6 w-6 p-0 text-blue-500 hover:text-blue-700"
+                              >
+                                ✎
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeFinanceCategory(category)}
+                                className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                              >
+                                ×
+                              </Button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="vendors" className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Input
+                    value={newFinanceVendor}
+                    onChange={(e) => setNewFinanceVendor(e.target.value)}
+                    placeholder="거래처명을 입력하세요"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        addFinanceVendor();
+                      }
+                    }}
+                  />
+                  <Button onClick={addFinanceVendor} disabled={!newFinanceVendor.trim()}>
+                    추가
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>기존 거래처</Label>
+                <div className="max-h-60 overflow-y-auto space-y-1">
+                  {financeVendors.length === 0 ? (
+                    <p className="text-sm text-gray-500 py-2">등록된 거래처가 없습니다.</p>
+                  ) : (
+                    financeVendors.map((vendor, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-2 bg-gray-50 rounded"
+                      >
+                        {editingVendorIndex === index ? (
+                          <div className="flex gap-2 flex-1">
+                            <Input
+                              value={editingVendorValue}
+                              onChange={(e) => setEditingVendorValue(e.target.value)}
+                              className="text-sm"
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  saveEditVendor();
+                                } else if (e.key === "Escape") {
+                                  setEditingVendorIndex(null);
+                                  setEditingVendorValue("");
+                                }
+                              }}
+                              autoFocus
+                            />
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={saveEditVendor}
+                              className="h-6 w-6 p-0 text-green-600 hover:text-green-800"
+                            >
+                              ✓
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setEditingVendorIndex(null);
+                                setEditingVendorValue("");
+                              }}
+                              className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700"
+                            >
+                              ×
+                            </Button>
+                          </div>
+                        ) : (
+                          <>
+                            <span className="text-sm">{vendor}</span>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingVendorIndex(index);
+                                  setEditingVendorValue(vendor);
+                                }}
+                                className="h-6 w-6 p-0 text-blue-500 hover:text-blue-700"
+                              >
+                                ✎
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeFinanceVendor(vendor)}
+                                className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                              >
+                                ×
+                              </Button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+          
+          <div className="flex justify-end mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setIsFinanceCategorySettingsOpen(false)}
+            >
+              닫기
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 재정 수정/삭제 액션 다이얼로그 */}
+      <Dialog open={isFinanceActionDialogOpen} onOpenChange={setIsFinanceActionDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>거래 내역 관리</DialogTitle>
+            <DialogDescription>
+              선택한 거래 내역을 수정하거나 삭제할 수 있습니다.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedFinanceForAction && (
+            <div className="space-y-4">
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-500">날짜:</span>
+                    <span className="ml-2 font-medium">
+                      {format(parseISO(selectedFinanceForAction.date), "yyyy년 MM월 dd일")}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">구분:</span>
+                    <Badge 
+                      className={`ml-2 ${selectedFinanceForAction.type === "income" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
+                    >
+                      {selectedFinanceForAction.type === "income" ? "수입" : "지출"}
+                    </Badge>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">카테고리:</span>
+                    <span className="ml-2 font-medium">{selectedFinanceForAction.category}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">거래처:</span>
+                    <span className="ml-2 font-medium">{selectedFinanceForAction.vendor || "-"}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">품명:</span>
+                    <span className="ml-2 font-medium">{selectedFinanceForAction.itemName || "-"}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">거래자:</span>
+                    <span className="ml-2 font-medium">{selectedFinanceForAction.paidBy || "-"}</span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-gray-500">내용:</span>
+                    <span className="ml-2 font-medium">{selectedFinanceForAction.description}</span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-gray-500">금액:</span>
+                    <span className={`ml-2 font-bold text-lg ${selectedFinanceForAction.type === "income" ? "text-green-600" : "text-red-600"}`}>
+                      {selectedFinanceForAction.type === "income" ? "+" : "-"}$
+                      {selectedFinanceForAction.amount.toLocaleString()} CAD
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex gap-3 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    handleEditFinance(selectedFinanceForAction);
+                    setIsFinanceActionDialogOpen(false);
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <Edit className="h-4 w-4" />
+                  수정
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    setIsFinanceActionDialogOpen(false);
+                    handleDeleteFinance(selectedFinanceForAction.id);
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  삭제
+                </Button>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsFinanceActionDialogOpen(false)}>
+              닫기
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
