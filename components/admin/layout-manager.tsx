@@ -39,9 +39,17 @@ import {
 } from "../widgets/organization-chart-widget";
 import CalendarWidget from "../widgets/calendar-widget";
 import SimpleCalendarWidget from "../widgets/simple-calendar-widget";
+import ProgramsWidget from "../widgets/programs-widget";
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Trash2, MoveVertical, Settings, Eye, GripVertical, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  MoveVertical,
+  Settings,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { IWidget } from "@/types";
 
 // 위젯 타입 정의 (IWidget으로 대체)
@@ -115,6 +123,7 @@ const WIDGET_TYPES = [
   { id: "organization-chart", name: "조직도" },
   { id: "calendar", name: "캘린더" },
   { id: "simple-calendar", name: "간단 캘린더" },
+  { id: "programs", name: "프로그램 위젯" },
 ];
 
 export default function LayoutManager(): JSX.Element {
@@ -133,6 +142,7 @@ export default function LayoutManager(): JSX.Element {
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [banners, setBanners] = useState<any[]>([]);
   const [pages, setPages] = useState<any[]>([]);
+  const [programs, setPrograms] = useState<any[]>([]);
   const [boardPosts, setBoardPosts] = useState<{ [key: string]: any[] }>({});
   const [selectedPageId, setSelectedPageId] = useState<string | null>(null); // null은 홈페이지
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -149,6 +159,7 @@ export default function LayoutManager(): JSX.Element {
     fetchMenuItems();
     fetchBanners();
     fetchPages();
+    fetchPrograms();
   }, []);
 
   // 페이지 또는 레이아웃 구조 변경 시 위젯 데이터 다시 로드
@@ -202,6 +213,7 @@ export default function LayoutManager(): JSX.Element {
 
   // 페이지 가져오기
   const fetchPages = async () => {
+    console.log("fetchPages 함수 호출됨");
     try {
       const supabase = createClient();
       const { data, error } = await supabase.from("cms_pages").select("*");
@@ -249,6 +261,25 @@ export default function LayoutManager(): JSX.Element {
       }
     } catch (error) {
       console.error("페이지를 불러오는 중 오류가 발생했습니다:", error);
+    }
+  };
+
+  // 프로그램 데이터 가져오기
+  const fetchPrograms = async () => {
+    console.log("fetchPrograms 함수 호출됨");
+    try {
+      const supabase = createClient();
+      const { data: programsData, error: programsError } = await supabase
+        .from("programs")
+        .select("*");
+      if (programsError) {
+        console.error("프로그램 데이터 로드 실패:", programsError);
+      } else {
+        console.log("프로그램 데이터 로드 성공:", programsData);
+        setPrograms(programsData || []);
+      }
+    } catch (error) {
+      console.error("프로그램을 불러오는 중 오류가 발생했습니다:", error);
     }
   };
 
@@ -1946,30 +1977,48 @@ export default function LayoutManager(): JSX.Element {
                       <div className="flex items-center justify-between">
                         <Label>이미지 관리</Label>
                         <div className="text-xs text-gray-500">
-                          데스크톱 {(editingWidget.settings?.desktop_images || []).length}개 | 모바일 {(editingWidget.settings?.mobile_images || []).length}개
+                          데스크톱{" "}
+                          {
+                            (editingWidget.settings?.desktop_images || [])
+                              .length
+                          }
+                          개 | 모바일{" "}
+                          {(editingWidget.settings?.mobile_images || []).length}
+                          개
                         </div>
                       </div>
-
 
                       {/* 데스크톱/모바일 이미지 관리 탭 */}
                       <Tabs defaultValue="desktop" className="w-full">
                         <TabsList className="grid w-full grid-cols-2">
-                          <TabsTrigger value="desktop">데스크톱 이미지</TabsTrigger>
-                          <TabsTrigger value="mobile">모바일 이미지</TabsTrigger>
+                          <TabsTrigger value="desktop">
+                            데스크톱 이미지
+                          </TabsTrigger>
+                          <TabsTrigger value="mobile">
+                            모바일 이미지
+                          </TabsTrigger>
                         </TabsList>
 
                         {/* 데스크톱 이미지 탭 */}
                         <TabsContent value="desktop" className="space-y-3 pt-4">
                           <div className="flex items-center justify-between">
-                            <p className="text-sm text-gray-600">데스크톱에서 표시될 이미지들을 관리합니다</p>
+                            <p className="text-sm text-gray-600">
+                              데스크톱에서 표시될 이미지들을 관리합니다
+                            </p>
                             <div className="text-xs text-blue-600 font-medium">
-                              {(editingWidget.settings?.desktop_images || []).length}개 이미지
+                              {
+                                (editingWidget.settings?.desktop_images || [])
+                                  .length
+                              }
+                              개 이미지
                             </div>
                           </div>
-                          
+
                           {/* 데스크톱 이미지 추가 버튼들 */}
                           <div className="bg-blue-50 p-3 rounded-lg space-y-2">
-                            <Label className="text-sm font-medium text-blue-800">데스크톱 이미지 추가/변경</Label>
+                            <Label className="text-sm font-medium text-blue-800">
+                              데스크톱 이미지 추가/변경
+                            </Label>
                             <div className="flex items-center gap-2">
                               <Button
                                 type="button"
@@ -1987,7 +2036,8 @@ export default function LayoutManager(): JSX.Element {
                                 }}
                                 className="flex-1"
                                 disabled={
-                                  (editingWidget.settings?.custom_images || []).length >= 8
+                                  (editingWidget.settings?.custom_images || [])
+                                    .length >= 8
                                 }
                               >
                                 서버 이미지 브라우저
@@ -2008,14 +2058,17 @@ export default function LayoutManager(): JSX.Element {
                                 }}
                                 disabled={
                                   carouselUploading ||
-                                  (editingWidget.settings?.custom_images || []).length >= 8
+                                  (editingWidget.settings?.custom_images || [])
+                                    .length >= 8
                                 }
                                 className="flex-1"
                               >
-                                {carouselUploading ? "업로드 중..." : "파일 업로드"}
+                                {carouselUploading
+                                  ? "업로드 중..."
+                                  : "파일 업로드"}
                               </Button>
                             </div>
-                            
+
                             {/* URL 입력 */}
                             <div className="flex gap-2">
                               <Input
@@ -2023,14 +2076,19 @@ export default function LayoutManager(): JSX.Element {
                                 placeholder="이미지 URL을 입력하세요"
                                 className="text-sm"
                                 onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    const url = (e.target as HTMLInputElement).value.trim();
+                                  if (e.key === "Enter") {
+                                    const url = (
+                                      e.target as HTMLInputElement
+                                    ).value.trim();
                                     if (url) {
-                                      const currentImages = editingWidget.settings?.custom_images || [];
+                                      const currentImages =
+                                        editingWidget.settings?.custom_images ||
+                                        [];
                                       if (currentImages.length >= 8) {
                                         toast({
                                           title: "이미지 개수 제한",
-                                          description: "최대 8개까지만 추가할 수 있습니다.",
+                                          description:
+                                            "최대 8개까지만 추가할 수 있습니다.",
                                           variant: "destructive",
                                         });
                                         return;
@@ -2046,13 +2104,17 @@ export default function LayoutManager(): JSX.Element {
                                         ...editingWidget,
                                         settings: {
                                           ...editingWidget.settings,
-                                          custom_images: [...currentImages, newImage],
+                                          custom_images: [
+                                            ...currentImages,
+                                            newImage,
+                                          ],
                                         },
                                       });
-                                      (e.target as HTMLInputElement).value = '';
+                                      (e.target as HTMLInputElement).value = "";
                                       toast({
                                         title: "새 슬라이드 추가 성공",
-                                        description: "URL에서 새 슬라이드가 추가되었습니다.",
+                                        description:
+                                          "URL에서 새 슬라이드가 추가되었습니다.",
                                       });
                                     }
                                   }
@@ -2063,14 +2125,18 @@ export default function LayoutManager(): JSX.Element {
                                 size="sm"
                                 variant="outline"
                                 onClick={(e) => {
-                                  const input = (e.target as HTMLElement).previousElementSibling as HTMLInputElement;
+                                  const input = (e.target as HTMLElement)
+                                    .previousElementSibling as HTMLInputElement;
                                   const url = input?.value.trim();
                                   if (url) {
-                                    const currentImages = editingWidget.settings?.desktop_images || [];
+                                    const currentImages =
+                                      editingWidget.settings?.desktop_images ||
+                                      [];
                                     if (currentImages.length >= 8) {
                                       toast({
                                         title: "이미지 개수 제한",
-                                        description: "최대 8개까지만 추가할 수 있습니다.",
+                                        description:
+                                          "최대 8개까지만 추가할 수 있습니다.",
                                         variant: "destructive",
                                       });
                                       return;
@@ -2085,17 +2151,24 @@ export default function LayoutManager(): JSX.Element {
                                       ...editingWidget,
                                       settings: {
                                         ...editingWidget.settings,
-                                        desktop_images: [...currentImages, newImage],
+                                        desktop_images: [
+                                          ...currentImages,
+                                          newImage,
+                                        ],
                                       },
                                     });
-                                    input.value = '';
+                                    input.value = "";
                                     toast({
                                       title: "새 슬라이드 추가 성공",
-                                      description: "URL에서 새 슬라이드가 추가되었습니다.",
+                                      description:
+                                        "URL에서 새 슬라이드가 추가되었습니다.",
                                     });
                                   }
                                 }}
-                                disabled={(editingWidget.settings?.custom_images || []).length >= 8}
+                                disabled={
+                                  (editingWidget.settings?.custom_images || [])
+                                    .length >= 8
+                                }
                               >
                                 추가
                               </Button>
@@ -2104,11 +2177,16 @@ export default function LayoutManager(): JSX.Element {
 
                           {/* 데스크톱 이미지 미리보기 */}
                           <div className="space-y-2">
-                            <Label className="text-sm font-medium text-blue-800">데스크톱 이미지 미리보기</Label>
+                            <Label className="text-sm font-medium text-blue-800">
+                              데스크톱 이미지 미리보기
+                            </Label>
                             <div className="bg-white p-3 rounded-lg border border-blue-200">
-                              {(editingWidget.settings?.desktop_images || []).length > 0 ? (
+                              {(editingWidget.settings?.desktop_images || [])
+                                .length > 0 ? (
                                 <div className="grid grid-cols-3 gap-2">
-                                  {(editingWidget.settings?.desktop_images || []).map((img: any, index: number) => (
+                                  {(
+                                    editingWidget.settings?.desktop_images || []
+                                  ).map((img: any, index: number) => (
                                     <div
                                       key={`desktop-preview-${index}`}
                                       className="relative group cursor-pointer rounded-lg overflow-hidden border-2 border-blue-200 hover:border-blue-400 transition-all aspect-video"
@@ -2125,13 +2203,16 @@ export default function LayoutManager(): JSX.Element {
                                     >
                                       <img
                                         src={img.image_url}
-                                        alt={img.title || `데스크톱 이미지 ${index + 1}`}
+                                        alt={
+                                          img.title ||
+                                          `데스크톱 이미지 ${index + 1}`
+                                        }
                                         className="w-full h-full object-cover"
                                       />
                                       <div className="absolute bottom-1 left-1 bg-blue-600 text-white text-xs px-1.5 py-0.5 rounded">
                                         {index + 1}
                                       </div>
-                                      
+
                                       {/* 왼쪽 이동 버튼 */}
                                       <Button
                                         type="button"
@@ -2141,8 +2222,14 @@ export default function LayoutManager(): JSX.Element {
                                         disabled={index === 0}
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          const images = [...(editingWidget.settings?.desktop_images || [])];
-                                          [images[index], images[index - 1]] = [images[index - 1], images[index]];
+                                          const images = [
+                                            ...(editingWidget.settings
+                                              ?.desktop_images || []),
+                                          ];
+                                          [images[index], images[index - 1]] = [
+                                            images[index - 1],
+                                            images[index],
+                                          ];
                                           setEditingWidget({
                                             ...editingWidget,
                                             settings: {
@@ -2154,18 +2241,31 @@ export default function LayoutManager(): JSX.Element {
                                       >
                                         <ChevronLeft className="h-3 w-3" />
                                       </Button>
-                                      
+
                                       {/* 오른쪽 이동 버튼 */}
                                       <Button
                                         type="button"
                                         size="icon"
                                         variant="secondary"
                                         className="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 hover:bg-white"
-                                        disabled={index === (editingWidget.settings?.desktop_images || []).length - 1}
+                                        disabled={
+                                          index ===
+                                          (
+                                            editingWidget.settings
+                                              ?.desktop_images || []
+                                          ).length -
+                                            1
+                                        }
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          const images = [...(editingWidget.settings?.desktop_images || [])];
-                                          [images[index], images[index + 1]] = [images[index + 1], images[index]];
+                                          const images = [
+                                            ...(editingWidget.settings
+                                              ?.desktop_images || []),
+                                          ];
+                                          [images[index], images[index + 1]] = [
+                                            images[index + 1],
+                                            images[index],
+                                          ];
                                           setEditingWidget({
                                             ...editingWidget,
                                             settings: {
@@ -2187,7 +2287,8 @@ export default function LayoutManager(): JSX.Element {
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           const updatedImages = [
-                                            ...(editingWidget.settings?.desktop_images || []),
+                                            ...(editingWidget.settings
+                                              ?.desktop_images || []),
                                           ];
                                           updatedImages.splice(index, 1);
                                           setEditingWidget({
@@ -2206,27 +2307,38 @@ export default function LayoutManager(): JSX.Element {
                                 </div>
                               ) : (
                                 <div className="text-center text-gray-500 py-8">
-                                  <p className="text-sm">데스크톱용 이미지가 없습니다</p>
-                                  <p className="text-xs mt-1">위에서 이미지를 추가해주세요</p>
+                                  <p className="text-sm">
+                                    데스크톱용 이미지가 없습니다
+                                  </p>
+                                  <p className="text-xs mt-1">
+                                    위에서 이미지를 추가해주세요
+                                  </p>
                                 </div>
                               )}
                             </div>
                           </div>
-
                         </TabsContent>
 
                         {/* 모바일 이미지 탭 */}
                         <TabsContent value="mobile" className="space-y-3 pt-4">
                           <div className="flex items-center justify-between">
-                            <p className="text-sm text-gray-600">모바일에서 표시될 이미지들을 관리합니다</p>
+                            <p className="text-sm text-gray-600">
+                              모바일에서 표시될 이미지들을 관리합니다
+                            </p>
                             <div className="text-xs text-green-600 font-medium">
-                              {(editingWidget.settings?.mobile_images || []).length}개 이미지
+                              {
+                                (editingWidget.settings?.mobile_images || [])
+                                  .length
+                              }
+                              개 이미지
                             </div>
                           </div>
-                          
+
                           {/* 모바일 이미지 추가 버튼들 */}
                           <div className="bg-green-50 p-3 rounded-lg space-y-2">
-                            <Label className="text-sm font-medium text-green-800">모바일 이미지 추가/변경</Label>
+                            <Label className="text-sm font-medium text-green-800">
+                              모바일 이미지 추가/변경
+                            </Label>
                             <div className="flex items-center gap-2">
                               <Button
                                 type="button"
@@ -2244,7 +2356,8 @@ export default function LayoutManager(): JSX.Element {
                                 }}
                                 className="flex-1"
                                 disabled={
-                                  (editingWidget.settings?.custom_images || []).length >= 8
+                                  (editingWidget.settings?.custom_images || [])
+                                    .length >= 8
                                 }
                               >
                                 서버 이미지 브라우저
@@ -2265,14 +2378,17 @@ export default function LayoutManager(): JSX.Element {
                                 }}
                                 disabled={
                                   carouselUploading ||
-                                  (editingWidget.settings?.custom_images || []).length >= 8
+                                  (editingWidget.settings?.custom_images || [])
+                                    .length >= 8
                                 }
                                 className="flex-1"
                               >
-                                {carouselUploading ? "업로드 중..." : "파일 업로드"}
+                                {carouselUploading
+                                  ? "업로드 중..."
+                                  : "파일 업로드"}
                               </Button>
                             </div>
-                            
+
                             {/* URL 입력 */}
                             <div className="flex gap-2">
                               <Input
@@ -2280,14 +2396,19 @@ export default function LayoutManager(): JSX.Element {
                                 placeholder="이미지 URL을 입력하세요"
                                 className="text-sm"
                                 onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    const url = (e.target as HTMLInputElement).value.trim();
+                                  if (e.key === "Enter") {
+                                    const url = (
+                                      e.target as HTMLInputElement
+                                    ).value.trim();
                                     if (url) {
-                                      const currentImages = editingWidget.settings?.mobile_images || [];
+                                      const currentImages =
+                                        editingWidget.settings?.mobile_images ||
+                                        [];
                                       if (currentImages.length >= 8) {
                                         toast({
                                           title: "이미지 개수 제한",
-                                          description: "최대 8개까지만 추가할 수 있습니다.",
+                                          description:
+                                            "최대 8개까지만 추가할 수 있습니다.",
                                           variant: "destructive",
                                         });
                                         return;
@@ -2302,13 +2423,17 @@ export default function LayoutManager(): JSX.Element {
                                         ...editingWidget,
                                         settings: {
                                           ...editingWidget.settings,
-                                          mobile_images: [...currentImages, newImage],
+                                          mobile_images: [
+                                            ...currentImages,
+                                            newImage,
+                                          ],
                                         },
                                       });
-                                      (e.target as HTMLInputElement).value = '';
+                                      (e.target as HTMLInputElement).value = "";
                                       toast({
                                         title: "새 슬라이드 추가 성공",
-                                        description: "URL에서 새 슬라이드가 추가되었습니다.",
+                                        description:
+                                          "URL에서 새 슬라이드가 추가되었습니다.",
                                       });
                                     }
                                   }
@@ -2319,14 +2444,18 @@ export default function LayoutManager(): JSX.Element {
                                 size="sm"
                                 variant="outline"
                                 onClick={(e) => {
-                                  const input = (e.target as HTMLElement).previousElementSibling as HTMLInputElement;
+                                  const input = (e.target as HTMLElement)
+                                    .previousElementSibling as HTMLInputElement;
                                   const url = input?.value.trim();
                                   if (url) {
-                                    const currentImages = editingWidget.settings?.custom_images || [];
+                                    const currentImages =
+                                      editingWidget.settings?.custom_images ||
+                                      [];
                                     if (currentImages.length >= 8) {
                                       toast({
                                         title: "이미지 개수 제한",
-                                        description: "최대 8개까지만 추가할 수 있습니다.",
+                                        description:
+                                          "최대 8개까지만 추가할 수 있습니다.",
                                         variant: "destructive",
                                       });
                                       return;
@@ -2342,17 +2471,24 @@ export default function LayoutManager(): JSX.Element {
                                       ...editingWidget,
                                       settings: {
                                         ...editingWidget.settings,
-                                        custom_images: [...currentImages, newImage],
+                                        custom_images: [
+                                          ...currentImages,
+                                          newImage,
+                                        ],
                                       },
                                     });
-                                    input.value = '';
+                                    input.value = "";
                                     toast({
                                       title: "새 슬라이드 추가 성공",
-                                      description: "URL에서 새 슬라이드가 추가되었습니다.",
+                                      description:
+                                        "URL에서 새 슬라이드가 추가되었습니다.",
                                     });
                                   }
                                 }}
-                                disabled={(editingWidget.settings?.custom_images || []).length >= 8}
+                                disabled={
+                                  (editingWidget.settings?.custom_images || [])
+                                    .length >= 8
+                                }
                               >
                                 추가
                               </Button>
@@ -2361,11 +2497,16 @@ export default function LayoutManager(): JSX.Element {
 
                           {/* 모바일 이미지 미리보기 */}
                           <div className="space-y-2">
-                            <Label className="text-sm font-medium text-green-800">모바일 이미지 미리보기</Label>
+                            <Label className="text-sm font-medium text-green-800">
+                              모바일 이미지 미리보기
+                            </Label>
                             <div className="bg-white p-3 rounded-lg border border-green-200">
-                              {(editingWidget.settings?.mobile_images || []).length > 0 ? (
+                              {(editingWidget.settings?.mobile_images || [])
+                                .length > 0 ? (
                                 <div className="grid grid-cols-4 gap-2">
-                                  {(editingWidget.settings?.mobile_images || []).map((img: any, index: number) => (
+                                  {(
+                                    editingWidget.settings?.mobile_images || []
+                                  ).map((img: any, index: number) => (
                                     <div
                                       key={`mobile-preview-${index}`}
                                       className="relative group cursor-pointer rounded-lg overflow-hidden border-2 border-green-200 hover:border-green-400 transition-all aspect-square"
@@ -2382,13 +2523,16 @@ export default function LayoutManager(): JSX.Element {
                                     >
                                       <img
                                         src={img.image_url}
-                                        alt={img.title || `모바일 이미지 ${index + 1}`}
+                                        alt={
+                                          img.title ||
+                                          `모바일 이미지 ${index + 1}`
+                                        }
                                         className="w-full h-full object-cover"
                                       />
                                       <div className="absolute bottom-1 left-1 bg-green-600 text-white text-xs px-1.5 py-0.5 rounded">
                                         {index + 1}
                                       </div>
-                                      
+
                                       {/* 왼쪽 이동 버튼 */}
                                       <Button
                                         type="button"
@@ -2398,8 +2542,14 @@ export default function LayoutManager(): JSX.Element {
                                         disabled={index === 0}
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          const images = [...(editingWidget.settings?.mobile_images || [])];
-                                          [images[index], images[index - 1]] = [images[index - 1], images[index]];
+                                          const images = [
+                                            ...(editingWidget.settings
+                                              ?.mobile_images || []),
+                                          ];
+                                          [images[index], images[index - 1]] = [
+                                            images[index - 1],
+                                            images[index],
+                                          ];
                                           setEditingWidget({
                                             ...editingWidget,
                                             settings: {
@@ -2411,18 +2561,31 @@ export default function LayoutManager(): JSX.Element {
                                       >
                                         <ChevronLeft className="h-3 w-3" />
                                       </Button>
-                                      
+
                                       {/* 오른쪽 이동 버튼 */}
                                       <Button
                                         type="button"
                                         size="icon"
                                         variant="secondary"
                                         className="absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 hover:bg-white"
-                                        disabled={index === (editingWidget.settings?.mobile_images || []).length - 1}
+                                        disabled={
+                                          index ===
+                                          (
+                                            editingWidget.settings
+                                              ?.mobile_images || []
+                                          ).length -
+                                            1
+                                        }
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          const images = [...(editingWidget.settings?.mobile_images || [])];
-                                          [images[index], images[index + 1]] = [images[index + 1], images[index]];
+                                          const images = [
+                                            ...(editingWidget.settings
+                                              ?.mobile_images || []),
+                                          ];
+                                          [images[index], images[index + 1]] = [
+                                            images[index + 1],
+                                            images[index],
+                                          ];
                                           setEditingWidget({
                                             ...editingWidget,
                                             settings: {
@@ -2444,7 +2607,8 @@ export default function LayoutManager(): JSX.Element {
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           const updatedImages = [
-                                            ...(editingWidget.settings?.mobile_images || []),
+                                            ...(editingWidget.settings
+                                              ?.mobile_images || []),
                                           ];
                                           updatedImages.splice(index, 1);
                                           setEditingWidget({
@@ -2463,13 +2627,16 @@ export default function LayoutManager(): JSX.Element {
                                 </div>
                               ) : (
                                 <div className="text-center text-gray-500 py-8">
-                                  <p className="text-sm">모바일용 이미지가 없습니다</p>
-                                  <p className="text-xs mt-1">위에서 이미지를 추가해주세요</p>
+                                  <p className="text-sm">
+                                    모바일용 이미지가 없습니다
+                                  </p>
+                                  <p className="text-xs mt-1">
+                                    위에서 이미지를 추가해주세요
+                                  </p>
                                 </div>
                               )}
                             </div>
                           </div>
-
                         </TabsContent>
                       </Tabs>
 
@@ -2482,11 +2649,13 @@ export default function LayoutManager(): JSX.Element {
                           const file = e.target.files?.[0];
                           if (!file) return;
 
-                          const currentMode = editingWidget.settings?.currentMode || "desktop";
-                          const currentImages = currentMode === "desktop" 
-                            ? (editingWidget.settings?.desktop_images || [])
-                            : (editingWidget.settings?.mobile_images || []);
-                          
+                          const currentMode =
+                            editingWidget.settings?.currentMode || "desktop";
+                          const currentImages =
+                            currentMode === "desktop"
+                              ? editingWidget.settings?.desktop_images || []
+                              : editingWidget.settings?.mobile_images || [];
+
                           if (currentImages.length >= 8) {
                             toast({
                               title: "이미지 개수 제한",
@@ -2502,8 +2671,12 @@ export default function LayoutManager(): JSX.Element {
                             const fileExt = file.name.split(".").pop();
                             const fileName = `carousel-${Date.now()}.${fileExt}`;
                             const filePath = `carousel/${fileName}`;
-                            console.log("업로드 시도:", { fileName, filePath, fileSize: file.size });
-                            
+                            console.log("업로드 시도:", {
+                              fileName,
+                              filePath,
+                              fileSize: file.size,
+                            });
+
                             const { error: uploadError } =
                               await supabase.storage
                                 .from("admin")
@@ -2526,11 +2699,19 @@ export default function LayoutManager(): JSX.Element {
                               link_url: "",
                             };
 
-                            const updatedSettings = { ...editingWidget.settings };
+                            const updatedSettings = {
+                              ...editingWidget.settings,
+                            };
                             if (currentMode === "desktop") {
-                              updatedSettings.desktop_images = [...currentImages, newImage];
+                              updatedSettings.desktop_images = [
+                                ...currentImages,
+                                newImage,
+                              ];
                             } else {
-                              updatedSettings.mobile_images = [...currentImages, newImage];
+                              updatedSettings.mobile_images = [
+                                ...currentImages,
+                                newImage,
+                              ];
                             }
                             updatedSettings.currentMode = undefined;
 
@@ -2580,14 +2761,18 @@ export default function LayoutManager(): JSX.Element {
                       <DialogContent className="max-w-md">
                         <DialogHeader>
                           <DialogTitle>
-                            {editingWidget.settings.editMode === "mobile" ? "모바일" : "데스크톱"} 이미지{" "}
-                            {(editingWidget.settings.selectedImageIndex ?? 0) + 1} 설정
+                            {editingWidget.settings.editMode === "mobile"
+                              ? "모바일"
+                              : "데스크톱"}{" "}
+                            이미지{" "}
+                            {(editingWidget.settings.selectedImageIndex ?? 0) +
+                              1}{" "}
+                            설정
                           </DialogTitle>
                           <DialogDescription>
-                            {editingWidget.settings.editMode === "mobile" 
+                            {editingWidget.settings.editMode === "mobile"
                               ? "모바일 기기에서 표시될 이미지를 편집합니다"
-                              : "데스크톱에서 표시될 이미지를 편집합니다"
-                            }
+                              : "데스크톱에서 표시될 이미지를 편집합니다"}
                           </DialogDescription>
                         </DialogHeader>
 
@@ -2597,12 +2782,12 @@ export default function LayoutManager(): JSX.Element {
                             <img
                               src={
                                 editingWidget.settings.editMode === "mobile"
-                                  ? (editingWidget.settings.custom_images[
+                                  ? editingWidget.settings.custom_images[
                                       editingWidget.settings.selectedImageIndex
-                                    ]?.mobile_image_url || 
+                                    ]?.mobile_image_url ||
                                     editingWidget.settings.custom_images[
                                       editingWidget.settings.selectedImageIndex
-                                    ]?.image_url)
+                                    ]?.image_url
                                   : editingWidget.settings.custom_images[
                                       editingWidget.settings.selectedImageIndex
                                     ]?.image_url
@@ -2712,12 +2897,31 @@ export default function LayoutManager(): JSX.Element {
                               />
                             </div>
 
-                            <div className={editingWidget.settings.editMode === "desktop" ? "p-3 bg-blue-50 rounded-lg border-2 border-blue-200" : ""}>
-                              <Label className={editingWidget.settings.editMode === "desktop" ? "text-sm font-semibold text-blue-800" : "text-sm"}>
-                                데스크톱 이미지 URL {editingWidget.settings.editMode === "desktop" ? "(현재 편집 중)" : ""}
+                            <div
+                              className={
+                                editingWidget.settings.editMode === "desktop"
+                                  ? "p-3 bg-blue-50 rounded-lg border-2 border-blue-200"
+                                  : ""
+                              }
+                            >
+                              <Label
+                                className={
+                                  editingWidget.settings.editMode === "desktop"
+                                    ? "text-sm font-semibold text-blue-800"
+                                    : "text-sm"
+                                }
+                              >
+                                데스크톱 이미지 URL{" "}
+                                {editingWidget.settings.editMode === "desktop"
+                                  ? "(현재 편집 중)"
+                                  : ""}
                               </Label>
                               <Input
-                                className={editingWidget.settings.editMode === "desktop" ? "text-xs font-mono border-blue-300 focus:border-blue-500" : "text-xs font-mono"}
+                                className={
+                                  editingWidget.settings.editMode === "desktop"
+                                    ? "text-xs font-mono border-blue-300 focus:border-blue-500"
+                                    : "text-xs font-mono"
+                                }
                                 value={
                                   editingWidget.settings.custom_images[
                                     editingWidget.settings.selectedImageIndex
@@ -2746,12 +2950,31 @@ export default function LayoutManager(): JSX.Element {
                               />
                             </div>
 
-                            <div className={editingWidget.settings.editMode === "mobile" ? "p-3 bg-green-50 rounded-lg border-2 border-green-200" : ""}>
-                              <Label className={editingWidget.settings.editMode === "mobile" ? "text-sm font-semibold text-green-800" : "text-sm"}>
-                                모바일 이미지 URL {editingWidget.settings.editMode === "mobile" ? "(현재 편집 중)" : ""}
+                            <div
+                              className={
+                                editingWidget.settings.editMode === "mobile"
+                                  ? "p-3 bg-green-50 rounded-lg border-2 border-green-200"
+                                  : ""
+                              }
+                            >
+                              <Label
+                                className={
+                                  editingWidget.settings.editMode === "mobile"
+                                    ? "text-sm font-semibold text-green-800"
+                                    : "text-sm"
+                                }
+                              >
+                                모바일 이미지 URL{" "}
+                                {editingWidget.settings.editMode === "mobile"
+                                  ? "(현재 편집 중)"
+                                  : ""}
                               </Label>
                               <Input
-                                className={editingWidget.settings.editMode === "mobile" ? "text-xs font-mono border-green-300 focus:border-green-500" : "text-xs font-mono"}
+                                className={
+                                  editingWidget.settings.editMode === "mobile"
+                                    ? "text-xs font-mono border-green-300 focus:border-green-500"
+                                    : "text-xs font-mono"
+                                }
                                 value={
                                   editingWidget.settings.custom_images[
                                     editingWidget.settings.selectedImageIndex
@@ -2778,7 +3001,13 @@ export default function LayoutManager(): JSX.Element {
                                   });
                                 }}
                               />
-                              <p className={editingWidget.settings.editMode === "mobile" ? "text-xs mt-1 text-green-700" : "text-xs mt-1 text-gray-500"}>
+                              <p
+                                className={
+                                  editingWidget.settings.editMode === "mobile"
+                                    ? "text-xs mt-1 text-green-700"
+                                    : "text-xs mt-1 text-gray-500"
+                                }
+                              >
                                 비워두면 데스크톱 이미지와 동일하게 표시됩니다
                               </p>
                             </div>
@@ -4880,9 +5109,11 @@ export default function LayoutManager(): JSX.Element {
           {editingWidget.type === "simple-calendar" && (
             <div className="space-y-4">
               <h4 className="font-medium text-sm">간단 캘린더 설정</h4>
-              
+
               <div className="space-y-2">
-                <Label htmlFor="simple-calendar-event-count">표시할 일정 개수</Label>
+                <Label htmlFor="simple-calendar-event-count">
+                  표시할 일정 개수
+                </Label>
                 <Input
                   id="simple-calendar-event-count"
                   type="number"
@@ -4894,19 +5125,25 @@ export default function LayoutManager(): JSX.Element {
                       ...editingWidget,
                       settings: {
                         ...editingWidget.settings,
-                        event_count: Math.max(1, Math.min(50, parseInt(e.target.value) || 10)),
+                        event_count: Math.max(
+                          1,
+                          Math.min(50, parseInt(e.target.value) || 10)
+                        ),
                       },
                     })
                   }
                   placeholder="일정 개수 입력"
                 />
                 <p className="text-xs text-gray-500">
-                  각 탭(다가올 일정, 지난 일정)에 표시할 일정의 개수를 설정합니다. (1-50개)
+                  각 탭(다가올 일정, 지난 일정)에 표시할 일정의 개수를
+                  설정합니다. (1-50개)
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="simple-calendar-default-tab">기본 표시 탭</Label>
+                <Label htmlFor="simple-calendar-default-tab">
+                  기본 표시 탭
+                </Label>
                 <Select
                   value={editingWidget.settings?.default_tab || "upcoming"}
                   onValueChange={(value) =>
@@ -4936,7 +5173,9 @@ export default function LayoutManager(): JSX.Element {
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="show-category-colors"
-                    checked={editingWidget.settings?.show_category_colors ?? true}
+                    checked={
+                      editingWidget.settings?.show_category_colors ?? true
+                    }
                     onCheckedChange={(checked) =>
                       setEditingWidget({
                         ...editingWidget,
@@ -4947,7 +5186,9 @@ export default function LayoutManager(): JSX.Element {
                       })
                     }
                   />
-                  <Label htmlFor="show-category-colors">카테고리 색상 표시</Label>
+                  <Label htmlFor="show-category-colors">
+                    카테고리 색상 표시
+                  </Label>
                 </div>
                 <p className="text-xs text-gray-500 ml-6">
                   일정 왼쪽에 카테고리를 나타내는 색상 점을 표시합니다.
@@ -4967,7 +5208,9 @@ export default function LayoutManager(): JSX.Element {
                       })
                     }
                   />
-                  <Label htmlFor="show-all-day-badge">종일 일정 배지 표시</Label>
+                  <Label htmlFor="show-all-day-badge">
+                    종일 일정 배지 표시
+                  </Label>
                 </div>
                 <p className="text-xs text-gray-500 ml-6">
                   종일 일정에 "종일" 배지를 표시합니다.
@@ -4991,6 +5234,565 @@ export default function LayoutManager(): JSX.Element {
                 </div>
                 <p className="text-xs text-gray-500 ml-6">
                   다가올 일정/지난 일정 전환 탭 버튼을 표시합니다.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* 프로그램 위젯 전용 설정 */}
+          {editingWidget.type === "programs" && (
+            <div className="space-y-4">
+              <h4 className="font-medium text-sm">프로그램 위젯 설정</h4>
+
+              <Tabs defaultValue="basic" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="basic">기본 설정</TabsTrigger>
+                  <TabsTrigger value="tabs">탭 설정</TabsTrigger>
+                  <TabsTrigger value="advanced">고급 설정</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="basic" className="space-y-4">
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">프로그램 선택</Label>
+                    <Select
+                      value={editingWidget.settings?.selected_program || ""}
+                      onValueChange={(value) =>
+                        setEditingWidget({
+                          ...editingWidget,
+                          settings: {
+                            ...editingWidget.settings,
+                            selected_program: value,
+                          },
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="프로그램을 선택하세요" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {programs?.map((program) => (
+                          <SelectItem key={program.id} value={program.id}>
+                            {program.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500">
+                      위젯에서 표시할 프로그램을 선택합니다.
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">기본 탭</Label>
+                    <Select
+                      value={editingWidget.settings?.default_tab || "overview"}
+                      onValueChange={(value) =>
+                        setEditingWidget({
+                          ...editingWidget,
+                          settings: {
+                            ...editingWidget.settings,
+                            default_tab: value,
+                          },
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="기본 탭 선택" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="overview">개요</SelectItem>
+                        <SelectItem value="calendar">일정</SelectItem>
+                        <SelectItem value="participants">참가자</SelectItem>
+                        <SelectItem value="finance">재정</SelectItem>
+                        <SelectItem value="teams">팀</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500">
+                      위젯이 처음 로드될 때 기본으로 표시할 탭을 선택합니다.
+                    </p>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="tabs" className="space-y-4">
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">
+                      공통 탭에 표시할 기능
+                    </Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { key: "calendar", label: "일정" },
+                        { key: "participants", label: "참가자" },
+                        { key: "finance", label: "재정" },
+                        { key: "overview", label: "개요" },
+                      ].map((tab) => (
+                        <div
+                          key={tab.key}
+                          className="flex items-center space-x-2"
+                        >
+                          <Checkbox
+                            id={`common-${tab.key}`}
+                            checked={
+                              editingWidget.settings?.common_tabs?.includes(
+                                tab.key
+                              ) || false
+                            }
+                            onCheckedChange={(checked) => {
+                              const currentTabs =
+                                editingWidget.settings?.common_tabs || [];
+                              const newTabs = checked
+                                ? [...currentTabs, tab.key]
+                                : currentTabs.filter(
+                                    (t: string) => t !== tab.key
+                                  );
+                              setEditingWidget({
+                                ...editingWidget,
+                                settings: {
+                                  ...editingWidget.settings,
+                                  common_tabs: newTabs,
+                                },
+                              });
+                            }}
+                          />
+                          <Label
+                            htmlFor={`common-${tab.key}`}
+                            className="text-sm font-normal"
+                          >
+                            {tab.label}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      공통 탭에서 표시할 기능들을 선택합니다.
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">
+                      팀 탭에 표시할 기능
+                    </Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { key: "calendar", label: "일정" },
+                        { key: "participants", label: "참가자" },
+                        { key: "finance", label: "재정" },
+                        { key: "overview", label: "개요" },
+                      ].map((tab) => (
+                        <div
+                          key={tab.key}
+                          className="flex items-center space-x-2"
+                        >
+                          <Checkbox
+                            id={`team-${tab.key}`}
+                            checked={
+                              editingWidget.settings?.team_tabs?.includes(
+                                tab.key
+                              ) || false
+                            }
+                            onCheckedChange={(checked) => {
+                              const currentTabs =
+                                editingWidget.settings?.team_tabs || [];
+                              const newTabs = checked
+                                ? [...currentTabs, tab.key]
+                                : currentTabs.filter(
+                                    (t: string) => t !== tab.key
+                                  );
+                              setEditingWidget({
+                                ...editingWidget,
+                                settings: {
+                                  ...editingWidget.settings,
+                                  team_tabs: newTabs,
+                                },
+                              });
+                            }}
+                          />
+                          <Label
+                            htmlFor={`team-${tab.key}`}
+                            className="text-sm font-normal"
+                          >
+                            {tab.label}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      팀 탭에서 표시할 기능들을 선택합니다.
+                    </p>
+                  </div>
+
+                  {/* 팀 선택 설정 */}
+                  {editingWidget.settings?.selected_program && (
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium">
+                        표시할 팀 선택
+                      </Label>
+                      <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto border rounded p-3">
+                        {(() => {
+                          const selectedProgram = programs.find(
+                            (p) => p.id === editingWidget.settings?.selected_program
+                          );
+                          const teams = selectedProgram?.teams || [];
+                          
+                          if (teams.length === 0) {
+                            return (
+                              <p className="text-sm text-gray-500 text-center py-4">
+                                선택된 프로그램에 등록된 팀이 없습니다.
+                              </p>
+                            );
+                          }
+
+                          return teams.map((team: any) => (
+                            <div
+                              key={team.id}
+                              className="flex items-center space-x-2"
+                            >
+                              <Checkbox
+                                id={`team-select-${team.id}`}
+                                checked={
+                                  editingWidget.settings?.selected_teams?.includes(
+                                    team.id
+                                  ) || false
+                                }
+                                onCheckedChange={(checked) => {
+                                  const currentTeams =
+                                    editingWidget.settings?.selected_teams || [];
+                                  const newTeams = checked
+                                    ? [...currentTeams, team.id]
+                                    : currentTeams.filter(
+                                        (t: string) => t !== team.id
+                                      );
+                                  setEditingWidget({
+                                    ...editingWidget,
+                                    settings: {
+                                      ...editingWidget.settings,
+                                      selected_teams: newTeams,
+                                    },
+                                  });
+                                }}
+                              />
+                              <Label
+                                htmlFor={`team-select-${team.id}`}
+                                className="text-sm font-normal flex-1"
+                              >
+                                {team.name}
+                                {team.description && (
+                                  <span className="text-xs text-gray-500 block">
+                                    {team.description}
+                                  </span>
+                                )}
+                              </Label>
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const selectedProgram = programs.find(
+                              (p) => p.id === editingWidget.settings?.selected_program
+                            );
+                            const teams = selectedProgram?.teams || [];
+                            const allTeamIds = teams.map((team: any) => team.id);
+                            setEditingWidget({
+                              ...editingWidget,
+                              settings: {
+                                ...editingWidget.settings,
+                                selected_teams: allTeamIds,
+                              },
+                            });
+                          }}
+                        >
+                          전체 선택
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditingWidget({
+                              ...editingWidget,
+                              settings: {
+                                ...editingWidget.settings,
+                                selected_teams: [],
+                              },
+                            });
+                          }}
+                        >
+                          전체 해제
+                        </Button>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        팀 탭에서 표시할 팀들을 선택합니다. 선택하지 않으면 모든 팀이 표시됩니다.
+                      </p>
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="advanced" className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="programs-default-main-tab">
+                      기본 상위 탭
+                    </Label>
+                    <Select
+                      value={
+                        editingWidget.settings?.default_main_tab || "common"
+                      }
+                      onValueChange={(value) =>
+                        setEditingWidget({
+                          ...editingWidget,
+                          settings: {
+                            ...editingWidget.settings,
+                            default_main_tab: value,
+                          },
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="기본 상위 탭 선택" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="common">공통</SelectItem>
+                        <SelectItem value="team">팀</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500">
+                      위젯이 처음 로드될 때 기본으로 표시할 상위 탭을
+                      선택합니다.
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="programs-tab-permissions">
+                      탭별 권한 설정
+                    </Label>
+                    <p className="text-xs text-gray-500">
+                      각 탭에 접근할 수 있는 사용자 권한을 설정합니다. 선택하지 않으면 모든 사용자가 접근할 수 있습니다.
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-4 p-4 bg-blue-50 rounded-lg">
+                    <div className="space-y-4">
+                      <Label className="text-sm font-medium">탭별 권한 설정</Label>
+                        
+                        {/* 탭 설정 */}
+                        <div className="space-y-3">
+                          <Label className="text-sm font-medium text-gray-700">탭 접근 권한</Label>
+                          {['calendar', 'participants', 'finance', 'overview'].map((subTab) => (
+                            <div key={subTab} className="space-y-2">
+                              <Label className="text-sm font-medium">
+                                {subTab === 'calendar' ? '일정' : 
+                                 subTab === 'participants' ? '참가자' : 
+                                 subTab === 'finance' ? '재정' : '개요'} 탭
+                              </Label>
+                              <div className="grid grid-cols-2 gap-2">
+                                {['admin', 'tier0', 'tier1', 'tier2', 'tier3', 'guest'].map((role) => (
+                                  <div key={role} className="flex items-center space-x-2">
+                                    <input
+                                      type="checkbox"
+                                      id={`${subTab}-${role}`}
+                                      checked={
+                                        editingWidget.settings?.tab_permissions?.[subTab]?.includes(role) || false
+                                      }
+                                      onChange={(e) => {
+                                        const currentPermissions = editingWidget.settings?.tab_permissions || {};
+                                        const currentTabPermissions = currentPermissions[subTab] || [];
+                                        const newTabPermissions = e.target.checked
+                                          ? [...currentTabPermissions, role]
+                                          : currentTabPermissions.filter((r: string) => r !== role);
+                                        
+                                        setEditingWidget({
+                                          ...editingWidget,
+                                          settings: {
+                                            ...editingWidget.settings,
+                                            tab_permissions: {
+                                              ...currentPermissions,
+                                              [subTab]: newTabPermissions
+                                            }
+                                          }
+                                        });
+                                      }}
+                                    />
+                                    <Label htmlFor={`${subTab}-${role}`} className="text-xs">
+                                      {role === 'admin' ? '관리자' : 
+                                       role === 'tier0' ? 'Tier 0' : 
+                                       role === 'tier1' ? 'Tier 1' : 
+                                       role === 'tier2' ? 'Tier 2' : 
+                                       role === 'tier3' ? 'Tier 3' : '게스트'}
+                                    </Label>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* 빠른 설정 버튼 */}
+                        <div className="flex gap-2 pt-3 border-t">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const allPermissions = {
+                                calendar: ['admin', 'tier0', 'tier1', 'tier2', 'tier3', 'guest'],
+                                participants: ['admin', 'tier0', 'tier1', 'tier2'],
+                                finance: ['admin', 'tier0', 'tier1'],
+                                overview: ['admin', 'tier0', 'tier1', 'tier2', 'tier3', 'guest']
+                              };
+                              
+                              setEditingWidget({
+                                ...editingWidget,
+                                settings: {
+                                  ...editingWidget.settings,
+                                  tab_permissions: allPermissions
+                                }
+                              });
+                            }}
+                          >
+                            기본 권한 설정
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const adminOnlyPermissions = {
+                                calendar: ['admin', 'tier0'],
+                                participants: ['admin', 'tier0'],
+                                finance: ['admin', 'tier0'],
+                                overview: ['admin', 'tier0']
+                              };
+                              
+                              setEditingWidget({
+                                ...editingWidget,
+                                settings: {
+                                  ...editingWidget.settings,
+                                  tab_permissions: adminOnlyPermissions
+                                }
+                              });
+                            }}
+                          >
+                            관리자만
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setEditingWidget({
+                                ...editingWidget,
+                                settings: {
+                                  ...editingWidget.settings,
+                                  tab_permissions: {}
+                                }
+                              });
+                            }}
+                          >
+                            모든 권한 해제
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                </TabsContent>
+              </Tabs>
+
+              <div className="space-y-2">
+                <Label htmlFor="programs-subtitle">부제목</Label>
+                <Input
+                  id="programs-subtitle"
+                  value={editingWidget.settings?.subtitle || ""}
+                  onChange={(e) =>
+                    setEditingWidget({
+                      ...editingWidget,
+                      settings: {
+                        ...editingWidget.settings,
+                        subtitle: e.target.value,
+                      },
+                    })
+                  }
+                  placeholder="프로그램별 주요 정보를 한눈에 확인하세요"
+                />
+                <p className="text-xs text-gray-500">
+                  위젯 하단에 표시될 부제목을 설정합니다.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="programs-selected-program">
+                  선택된 프로그램
+                </Label>
+                <Select
+                  value={editingWidget.settings?.selected_program || ""}
+                  onValueChange={(value) =>
+                    setEditingWidget({
+                      ...editingWidget,
+                      settings: {
+                        ...editingWidget.settings,
+                        selected_program: value,
+                      },
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="프로그램 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {programs.length > 0 ? (
+                      programs.map((program) => (
+                        <SelectItem key={program.id} value={program.id}>
+                          {program.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="loading" disabled>
+                        프로그램 로딩 중...
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-500">
+                  위젯에서 표시할 특정 프로그램을 선택합니다. (현재{" "}
+                  {programs.length}개 프로그램)
+                </p>
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="show-statistics"
+                    checked={editingWidget.settings?.show_statistics ?? true}
+                    onCheckedChange={(checked) =>
+                      setEditingWidget({
+                        ...editingWidget,
+                        settings: {
+                          ...editingWidget.settings,
+                          show_statistics: checked === true,
+                        },
+                      })
+                    }
+                  />
+                  <Label htmlFor="show-statistics">통계 카드 표시</Label>
+                </div>
+                <p className="text-xs text-gray-500 ml-6">
+                  상단에 참가자, 일정, 재정 통계 카드를 표시합니다.
+                </p>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="compact-view"
+                    checked={editingWidget.settings?.compact_view ?? false}
+                    onCheckedChange={(checked) =>
+                      setEditingWidget({
+                        ...editingWidget,
+                        settings: {
+                          ...editingWidget.settings,
+                          compact_view: checked === true,
+                        },
+                      })
+                    }
+                  />
+                  <Label htmlFor="compact-view">컴팩트 보기</Label>
+                </div>
+                <p className="text-xs text-gray-500 ml-6">
+                  위젯을 더 작은 크기로 표시합니다.
                 </p>
               </div>
             </div>
@@ -5451,7 +6253,33 @@ export default function LayoutManager(): JSX.Element {
             )}
             {widget.settings?.default_tab && (
               <div className="text-xs text-purple-500 mt-1">
-                기본 탭: {widget.settings.default_tab === "upcoming" ? "다가올 일정" : "지난 일정"}
+                기본 탭:{" "}
+                {widget.settings.default_tab === "upcoming"
+                  ? "다가올 일정"
+                  : "지난 일정"}
+              </div>
+            )}
+          </div>
+        );
+
+      case "programs":
+        return previewMode ? (
+          <ProgramsWidget programs={programs} widget={widget} />
+        ) : (
+          <div className="bg-indigo-50 p-4 rounded">
+            <div className="font-medium">{widget.title || "프로그램 위젯"}</div>
+            <div className="text-sm text-gray-500 mt-1">프로그램 관리 위젯</div>
+            {widget.settings?.selected_program && (
+              <div className="text-xs text-indigo-500 mt-1">
+                선택된 프로그램:{" "}
+                {programs.find(
+                  (p) => p.id === widget.settings?.selected_program
+                )?.name || widget.settings.selected_program}
+              </div>
+            )}
+            {widget.settings?.default_tab && (
+              <div className="text-xs text-indigo-500 mt-1">
+                기본 탭: {widget.settings.default_tab}
               </div>
             )}
           </div>
@@ -5747,6 +6575,21 @@ export default function LayoutManager(): JSX.Element {
                     <Plus className="h-4 w-4 mr-2" />
                     간단 캘린더 추가
                   </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      addNewWidget("programs", addingWidgetToArea, {
+                        title: "프로그램 위젯",
+                      });
+                      setAddingWidgetToArea(null);
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    프로그램 위젯 추가
+                  </Button>
                 </div>
               </div>
             </div>
@@ -5799,102 +6642,106 @@ export default function LayoutManager(): JSX.Element {
                               </div>
                             ) : (
                               <div className="flex flex-wrap gap-4 w-full">
-                                {area.widgets.map((widget: any, index: number) => (
-                                  <Draggable
-                                    key={widget.id}
-                                    draggableId={widget.id.toString()}
-                                    index={index}
-                                  >
-                                    {(provided) => (
-                                      <div
-                                        ref={provided.innerRef}
-                                        {...provided.draggableProps}
-                                        className={`${getWidthClass(
-                                          widget.width
-                                        )} ${
-                                          !widget.is_active ? "opacity-50" : ""
-                                        }`}
-                                      >
-                                        {previewMode ? (
-                                          <div className="w-full relative group">
-                                            {renderWidgetPreview(widget)}
-                                            {/* 미리보기 모드에서도 편집 컨트롤 표시 (호버 시) */}
-                                            <div className="absolute top-2 right-2 flex space-x-1 bg-white/80 backdrop-blur-sm rounded-md p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
-                                              <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-7 w-7"
-                                                {...provided.dragHandleProps}
-                                              >
-                                                <MoveVertical className="h-3.5 w-3.5" />
-                                              </Button>
-                                              <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-7 w-7"
-                                                onClick={() => {
-                                                  setEditingWidget(widget);
-                                                  setDialogOpen(true);
-                                                }}
-                                              >
-                                                <Settings className="h-3.5 w-3.5" />
-                                              </Button>
-                                              <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-7 w-7"
-                                                onClick={() =>
-                                                  deleteWidget(widget.id)
-                                                }
-                                              >
-                                                <Trash2 className="h-3.5 w-3.5" />
-                                              </Button>
-                                            </div>
-                                          </div>
-                                        ) : (
-                                          <Card>
-                                            <CardHeader className="p-3 flex flex-row items-center justify-between space-y-0">
-                                              <CardTitle className="text-sm font-medium">
-                                                {widget.title}
-                                              </CardTitle>
-                                              <div className="flex space-x-1">
+                                {area.widgets.map(
+                                  (widget: any, index: number) => (
+                                    <Draggable
+                                      key={widget.id}
+                                      draggableId={widget.id.toString()}
+                                      index={index}
+                                    >
+                                      {(provided) => (
+                                        <div
+                                          ref={provided.innerRef}
+                                          {...provided.draggableProps}
+                                          className={`${getWidthClass(
+                                            widget.width
+                                          )} ${
+                                            !widget.is_active
+                                              ? "opacity-50"
+                                              : ""
+                                          }`}
+                                        >
+                                          {previewMode ? (
+                                            <div className="w-full relative group">
+                                              {renderWidgetPreview(widget)}
+                                              {/* 미리보기 모드에서도 편집 컨트롤 표시 (호버 시) */}
+                                              <div className="absolute top-2 right-2 flex space-x-1 bg-white/80 backdrop-blur-sm rounded-md p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
                                                 <Button
                                                   variant="ghost"
                                                   size="icon"
+                                                  className="h-7 w-7"
                                                   {...provided.dragHandleProps}
                                                 >
-                                                  <MoveVertical className="h-4 w-4" />
+                                                  <MoveVertical className="h-3.5 w-3.5" />
                                                 </Button>
                                                 <Button
                                                   variant="ghost"
                                                   size="icon"
+                                                  className="h-7 w-7"
                                                   onClick={() => {
                                                     setEditingWidget(widget);
                                                     setDialogOpen(true);
                                                   }}
                                                 >
-                                                  <Settings className="h-4 w-4" />
+                                                  <Settings className="h-3.5 w-3.5" />
                                                 </Button>
                                                 <Button
                                                   variant="ghost"
                                                   size="icon"
+                                                  className="h-7 w-7"
                                                   onClick={() =>
                                                     deleteWidget(widget.id)
                                                   }
                                                 >
-                                                  <Trash2 className="h-4 w-4" />
+                                                  <Trash2 className="h-3.5 w-3.5" />
                                                 </Button>
                                               </div>
-                                            </CardHeader>
-                                            <CardContent className="p-3">
-                                              {renderWidgetPreview(widget)}
-                                            </CardContent>
-                                          </Card>
-                                        )}
-                                      </div>
-                                    )}
-                                  </Draggable>
-                                ))}
+                                            </div>
+                                          ) : (
+                                            <Card>
+                                              <CardHeader className="p-3 flex flex-row items-center justify-between space-y-0">
+                                                <CardTitle className="text-sm font-medium">
+                                                  {widget.title}
+                                                </CardTitle>
+                                                <div className="flex space-x-1">
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    {...provided.dragHandleProps}
+                                                  >
+                                                    <MoveVertical className="h-4 w-4" />
+                                                  </Button>
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => {
+                                                      setEditingWidget(widget);
+                                                      setDialogOpen(true);
+                                                    }}
+                                                  >
+                                                    <Settings className="h-4 w-4" />
+                                                  </Button>
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() =>
+                                                      deleteWidget(widget.id)
+                                                    }
+                                                  >
+                                                    <Trash2 className="h-4 w-4" />
+                                                  </Button>
+                                                </div>
+                                              </CardHeader>
+                                              <CardContent className="p-3">
+                                                {renderWidgetPreview(widget)}
+                                              </CardContent>
+                                            </Card>
+                                          )}
+                                        </div>
+                                      )}
+                                    </Draggable>
+                                  )
+                                )}
                               </div>
                             )}
                           </div>
@@ -5929,9 +6776,10 @@ export default function LayoutManager(): JSX.Element {
           if (!editingWidget) return;
 
           const currentMode = editingWidget.settings?.currentMode || "desktop";
-          const currentImages = currentMode === "desktop" 
-            ? (editingWidget.settings?.desktop_images || [])
-            : (editingWidget.settings?.mobile_images || []);
+          const currentImages =
+            currentMode === "desktop"
+              ? editingWidget.settings?.desktop_images || []
+              : editingWidget.settings?.mobile_images || [];
 
           if (currentImages.length >= 8) {
             toast({

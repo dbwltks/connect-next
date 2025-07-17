@@ -48,6 +48,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
+import { createClient } from "@/utils/supabase/client";
 
 // 프로그램 상태 타입
 type ProgramStatus = "준비중" | "진행중" | "완료" | "중단";
@@ -114,47 +115,46 @@ export default function ProgramsPage() {
     features: [] as string[],
   });
 
-  // 임시 데이터 (실제로는 API에서 가져올 데이터)
+  // 프로그램 데이터 로드
   useEffect(() => {
-    const mockPrograms: Program[] = [
-      {
-        id: "1",
-        name: "청년부 제자훈련",
-        category: "교육",
-        status: "진행중",
-        startDate: "2024-01-15",
-        endDate: "2024-06-30",
-        description: "청년들을 위한 체계적인 제자훈련 프로그램",
-        participantCount: 25,
-        budget: 500000,
-        features: ["participants", "calendar", "attendance"],
-      },
-      {
-        id: "2",
-        name: "여름성경학교",
-        category: "특별행사",
-        status: "준비중",
-        startDate: "2024-07-15",
-        endDate: "2024-07-19",
-        description: "어린이들을 위한 여름성경학교",
-        participantCount: 0,
-        budget: 2000000,
-        features: ["participants", "finance", "calendar"],
-      },
-      {
-        id: "3",
-        name: "노인 돌봄 사역",
-        category: "봉사",
-        status: "진행중",
-        startDate: "2024-01-01",
-        endDate: "2024-12-31",
-        description: "지역 노인분들을 위한 지속적인 돌봄 사역",
-        participantCount: 15,
-        features: ["participants", "calendar"],
-      },
-    ];
-    setPrograms(mockPrograms);
+    loadPrograms();
   }, []);
+
+  // Supabase에서 프로그램 목록 로드
+  const loadPrograms = async () => {
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('programs')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('프로그램 로드 오류:', error);
+        return;
+      }
+
+      console.log('프로그램 데이터:', data);
+
+      // 데이터 변환
+      const transformedPrograms: Program[] = (data || []).map((program: any) => ({
+        id: program.id,
+        name: program.name,
+        category: program.category,
+        status: program.status,
+        startDate: program.start_date,
+        endDate: program.end_date,
+        description: program.description,
+        participantCount: Array.isArray(program.participants) ? program.participants.length : 0,
+        budget: Array.isArray(program.finances) ? program.finances.reduce((sum: number, finance: any) => sum + (finance.amount || 0), 0) : 0,
+        features: program.features || []
+      }));
+
+      setPrograms(transformedPrograms);
+    } catch (error) {
+      console.error('프로그램 로드 실패:', error);
+    }
+  };
 
   // 폼 초기화
   const resetForm = () => {
@@ -194,36 +194,105 @@ export default function ProgramsPage() {
   };
 
   // 프로그램 삭제
-  const handleDeleteProgram = (id: string) => {
+  const handleDeleteProgram = async (id: string) => {
     if (confirm("정말로 이 프로그램을 삭제하시겠습니까?")) {
-      setPrograms(programs.filter(p => p.id !== id));
+      try {
+        const supabase = createClient();
+        const { error } = await supabase
+          .from('programs')
+          .delete()
+          .eq('id', id);
+
+        if (error) {
+          console.error('프로그램 삭제 오류:', error);
+          alert('프로그램 삭제에 실패했습니다.');
+          return;
+        }
+
+        // 로컬 상태 업데이트
+        setPrograms(programs.filter(p => p.id !== id));
+      } catch (error) {
+        console.error('프로그램 삭제 실패:', error);
+        alert('프로그램 삭제에 실패했습니다.');
+      }
     }
   };
 
   // 폼 제출
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (isEdit && selectedProgram) {
-      // 편집 모드
-      setPrograms(programs.map(p => 
-        p.id === selectedProgram.id 
-          ? { ...selectedProgram, ...formData }
-          : p
-      ));
-    } else {
-      // 새 프로그램 추가
-      const newProgram: Program = {
-        id: Date.now().toString(),
-        ...formData,
-        participantCount: 0,
-        budget: 0,
-      };
-      setPrograms([...programs, newProgram]);
+    try {
+      const supabase = createClient();
+      
+      if (isEdit && selectedProgram) {
+        // 편집 모드
+        const { error } = await supabase
+          .from('programs')
+          .update({
+            name: formData.name,
+            category: formData.category,
+            status: formData.status,
+            start_date: formData.startDate,
+            end_date: formData.endDate,
+            description: formData.description,
+            features: formData.features,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', selectedProgram.id);
+
+        if (error) {
+          console.error('프로그램 수정 오류:', error);
+          alert('프로그램 수정에 실패했습니다.');
+          return;
+        }
+
+        // 로컬 상태 업데이트
+        setPrograms(programs.map(p => 
+          p.id === selectedProgram.id 
+            ? { ...selectedProgram, ...formData }
+            : p
+        ));
+      } else {
+        // 새 프로그램 추가
+        const { data, error } = await supabase
+          .from('programs')
+          .insert({
+            name: formData.name,
+            category: formData.category,
+            status: formData.status,
+            start_date: formData.startDate,
+            end_date: formData.endDate,
+            description: formData.description,
+            features: formData.features,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error('프로그램 추가 오류:', error);
+          alert('프로그램 추가에 실패했습니다.');
+          return;
+        }
+
+        // 로컬 상태 업데이트
+        const newProgram: Program = {
+          id: data.id,
+          ...formData,
+          participantCount: 0,
+          budget: 0,
+        };
+        setPrograms([newProgram, ...programs]);
+      }
+      
+      setIsDialogOpen(false);
+      resetForm();
+    } catch (error) {
+      console.error('폼 제출 실패:', error);
+      alert('작업에 실패했습니다.');
     }
-    
-    setIsDialogOpen(false);
-    resetForm();
   };
 
   // 기능 토글

@@ -17,6 +17,7 @@ import { CarouselWidget } from "@/components/widgets/carousel-widget";
 import { OrganizationChartWidget } from "@/components/widgets/organization-chart-widget";
 import CalendarWidget from "@/components/widgets/calendar-widget";
 import SimpleCalendarWidget from "@/components/widgets/simple-calendar-widget";
+import ProgramsWidget from "@/components/widgets/programs-widget";
 import { IWidget } from "@/types/index";
 import React, { useState, useEffect } from "react";
 import useSWR from "swr";
@@ -115,6 +116,8 @@ export default function HomepageWidgets({
         );
       case "simple-calendar":
         return <SimpleCalendarWidget widget={widget} />;
+      case "programs":
+        return <ProgramsWidget programs={[]} widget={widget} />;
       default:
         return (
           <Card className="h-full">
