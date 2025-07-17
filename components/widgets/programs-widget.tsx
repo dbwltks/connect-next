@@ -2559,52 +2559,50 @@ export default function ProgramsWidget({
                                     setIsDayEventsModalOpen(false);
                                   }}
                                 >
-                                  <div className="flex justify-between items-start mb-2">
-                                    <div>
-                                      <h3 className="font-semibold text-lg mb-1">
-                                        {event.title}
-                                      </h3>
+                                  <div className="flex justify-between items-start">
+                                    <div className="flex-1">
                                       <div className="flex items-center gap-2 mb-2">
+                                        <h3
+                                          className={`font-semibold ${timeStatus.status === "past" ? "text-gray-600" : ""}`}
+                                        >
+                                          {event.title}
+                                        </h3>
                                         <span
                                           className={`text-xs px-2 py-1 rounded-full font-medium ${timeStatus.bgColor} ${timeStatus.color}`}
                                         >
+                                          {timeStatus.icon}{" "}
                                           {timeStatus.label}
                                         </span>
                                         {team && (
-                                          <Badge
-                                            variant="secondary"
-                                            className="text-xs"
-                                          >
+                                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
                                             {team.name}
-                                          </Badge>
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="space-y-2">
+                                        <div className="flex items-center gap-1">
+                                          <Clock size={16} className="text-gray-600" />
+                                          <span className="font-medium text-sm">
+                                            {format(eventDate, "HH:mm")}
+                                            {endDate &&
+                                              ` - ${format(endDate, "HH:mm")}`}
+                                          </span>
+                                        </div>
+                                        {event.location && (
+                                          <div className="flex items-center gap-1">
+                                            <MapPin size={16} className="text-gray-600" />
+                                            <span className="font-medium text-sm">
+                                              {event.location}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {event.description && (
+                                          <p className="text-gray-500 text-sm mt-2">
+                                            {event.description}
+                                          </p>
                                         )}
                                       </div>
                                     </div>
-                                  </div>
-
-                                  <div className="space-y-2 text-sm text-gray-600">
-                                    <div className="flex items-center gap-4">
-                                      <div className="flex items-center gap-1">
-                                        <Clock size={14} />
-                                        <span>
-                                          {format(eventDate, "HH:mm")}
-                                          {endDate &&
-                                            ` - ${format(endDate, "HH:mm")}`}
-                                        </span>
-                                      </div>
-                                      {event.location && (
-                                        <div className="flex items-center gap-1">
-                                          <MapPin size={14} />
-                                          <span>{event.location}</span>
-                                        </div>
-                                      )}
-                                    </div>
-
-                                    {event.description && (
-                                      <p className="text-gray-700 mt-2">
-                                        {event.description}
-                                      </p>
-                                    )}
                                   </div>
                                 </div>
                               );
