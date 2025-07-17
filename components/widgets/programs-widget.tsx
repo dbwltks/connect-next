@@ -128,7 +128,8 @@ interface FinanceRecord {
   amount: number;
   paidBy?: string;
   description?: string;
-  date: string;
+  date?: string;
+  datetime?: string;
   program_id: string;
   team_id?: string;
 }
@@ -236,7 +237,7 @@ export default function ProgramsWidget({
     amount: "",
     paidBy: "",
     description: "",
-    date: format(new Date(), "yyyy-MM-dd"),
+    datetime: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
   });
 
   // 재정 카테고리 관리 상태
@@ -528,7 +529,10 @@ export default function ProgramsWidget({
   const filteredFinances = finances.filter((finance) => {
     // 날짜 필터
     if (financeFilters.dateRange !== "all") {
-      const financeDate = parseISO(finance.date);
+      if (!finance.datetime && !finance.date) return true;
+      const dateStr = finance.datetime || finance.date;
+      if (!dateStr) return true;
+      const financeDate = parseISO(dateStr);
       const today = new Date();
       const todayStart = new Date(
         today.getFullYear(),
@@ -580,10 +584,15 @@ export default function ProgramsWidget({
               return false;
           } else if (financeFilters.startDate && financeFilters.endDate) {
             // 백업: 기존 문자열 날짜 사용
-            const customStart = parseISO(financeFilters.startDate);
-            const customEnd = parseISO(financeFilters.endDate);
-            if (financeDate < customStart || financeDate > customEnd)
-              return false;
+            try {
+              const customStart = parseISO(financeFilters.startDate);
+              const customEnd = parseISO(financeFilters.endDate);
+              if (financeDate < customStart || financeDate > customEnd)
+                return false;
+            } catch (error) {
+              console.warn("날짜 파싱 오류:", error);
+              return true;
+            }
           }
           break;
       }
@@ -627,7 +636,12 @@ export default function ProgramsWidget({
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const paginatedFinances = filteredFinances
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .sort((a, b) => {
+      // datetime으로 정렬 (기존 데이터 호환성을 위해 date도 체크)
+      const aDateTime = new Date(a.datetime || a.date || 0);
+      const bDateTime = new Date(b.datetime || b.date || 0);
+      return bDateTime.getTime() - aDateTime.getTime();
+    })
     .slice(startIndex, endIndex);
 
   // 필터 변경 시 페이지 리셋
@@ -1135,7 +1149,7 @@ export default function ProgramsWidget({
               amount: parseFloat(newFinance.amount),
               paidBy: newFinance.paidBy,
               description: newFinance.description,
-              date: newFinance.date,
+              datetime: newFinance.datetime,
               updated_at: new Date().toISOString(),
             };
           }
@@ -1152,7 +1166,7 @@ export default function ProgramsWidget({
           amount: parseFloat(newFinance.amount),
           paidBy: newFinance.paidBy,
           description: newFinance.description,
-          date: newFinance.date,
+          datetime: newFinance.datetime,
           created_at: new Date().toISOString(),
         };
         updatedFinances = [...currentFinances, newFinanceRecord];
@@ -1180,7 +1194,7 @@ export default function ProgramsWidget({
         amount: "",
         paidBy: "",
         description: "",
-        date: format(new Date(), "yyyy-MM-dd"),
+        datetime: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
       });
       setEditingFinance(null);
 
@@ -1395,7 +1409,7 @@ export default function ProgramsWidget({
       amount: finance.amount.toString(),
       paidBy: finance.paidBy || "",
       description: finance.description || "",
-      date: finance.date,
+      datetime: finance.datetime || format(new Date(), "yyyy-MM-dd'T'HH:mm"),
     });
     setIsFinanceModalOpen(true);
   };
@@ -3274,7 +3288,7 @@ export default function ProgramsWidget({
                               amount: "",
                               paidBy: "",
                               description: "",
-                              date: format(new Date(), "yyyy-MM-dd"),
+                              datetime: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
                             });
                             setIsFinanceModalOpen(true);
                           }}
@@ -3353,7 +3367,20 @@ export default function ProgramsWidget({
                               onClick={() => handleFinanceRowClick(finance)}
                             >
                               <TableCell className="text-sm">
-                                {format(parseISO(finance.date), "MM/dd")}
+                                {(() => {
+                                  try {
+                                    if (finance.datetime) {
+                                      return format(parseISO(finance.datetime), "MM/dd HH:mm");
+                                    } else if (finance.date) {
+                                      return format(parseISO(finance.date), "MM/dd");
+                                    } else {
+                                      return "-";
+                                    }
+                                  } catch (error) {
+                                    console.warn("날짜 포맷 오류:", error);
+                                    return "-";
+                                  }
+                                })()}
                               </TableCell>
                               <TableCell>
                                 <Badge
@@ -4024,13 +4051,13 @@ export default function ProgramsWidget({
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="finance-date">날짜 *</Label>
+              <Label htmlFor="finance-datetime">날짜 및 시간 *</Label>
               <Input
-                id="finance-date"
-                type="date"
-                value={newFinance.date}
+                id="finance-datetime"
+                type="datetime-local"
+                value={newFinance.datetime}
                 onChange={(e) =>
-                  setNewFinance((prev) => ({ ...prev, date: e.target.value }))
+                  setNewFinance((prev) => ({ ...prev, datetime: e.target.value }))
                 }
               />
             </div>
@@ -4311,10 +4338,26 @@ export default function ProgramsWidget({
                   <div>
                     <span className="text-gray-500">날짜:</span>
                     <span className="ml-2 font-medium">
-                      {format(
-                        parseISO(selectedFinanceForAction.date),
-                        "yyyy년 MM월 dd일"
-                      )}
+                      {(() => {
+                        try {
+                          if (selectedFinanceForAction.datetime) {
+                            return format(
+                              parseISO(selectedFinanceForAction.datetime),
+                              "yyyy년 MM월 dd일 HH:mm"
+                            );
+                          } else if (selectedFinanceForAction.date) {
+                            return format(
+                              parseISO(selectedFinanceForAction.date),
+                              "yyyy년 MM월 dd일"
+                            );
+                          } else {
+                            return "-";
+                          }
+                        } catch (error) {
+                          console.warn("날짜 포맷 오류:", error);
+                          return "-";
+                        }
+                      })()}
                     </span>
                   </div>
                   <div>
