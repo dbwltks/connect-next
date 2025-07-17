@@ -396,71 +396,33 @@ export default function ProgramsWidget({
         const userRole = userData.role || "member";
         setUserRole(userRole);
 
-        // 팀 리더인지 확인 (team_roles의 tier를 기반으로 확인)
+        // members 테이블에서 사용자의 팀 역할 확인
         if (selectedProgram) {
           try {
-            const { data: programData } = await supabase
-              .from("programs")
-              .select("team_members, participants, team_roles")
-              .eq("id", selectedProgram)
+            // members 테이블에서 현재 사용자의 팀 정보 조회
+            const { data: memberData } = await supabase
+              .from("members")
+              .select("team_role, team_id, team_tier")
+              .eq("user_id", user.id)
               .single();
 
-            if (
-              programData &&
-              programData.team_members &&
-              programData.team_roles
-            ) {
-              console.log("프로그램 데이터:", {
-                programId: selectedProgram,
-                userDataEmail: userData.email,
-                participantsCount: programData.participants?.length,
-                teamMembersCount: programData.team_members?.length,
-                teamRolesCount: programData.team_roles?.length,
+            if (memberData) {
+              console.log("Members 테이블에서 팀 역할 찾음:", {
+                userId: user.id,
+                teamRole: memberData.team_role,
+                teamId: memberData.team_id,
+                teamTier: memberData.team_tier,
               });
 
-              // 현재 사용자의 participant ID를 찾기 (users 테이블의 이메일로 매칭)
-              const participants = programData.participants || [];
-              const userParticipant = participants.find(
-                (p: any) => p.email === userData.email
-              );
-
-              console.log("사용자 participant 찾기:", {
-                userDataEmail: userData.email,
-                participantEmails: participants.map((p: any) => p.email),
-                foundParticipant: userParticipant,
-              });
-
-              if (userParticipant) {
-                // team_members에서 이 사용자의 역할 찾기
-                const teamMembers = programData.team_members || [];
-                const userMembership = teamMembers.find(
-                  (tm: any) => tm.participantId === userParticipant.id
-                );
-
-                if (userMembership) {
-                  setUserTeamId(userMembership.teamId);
-
-                  // team_roles에서 tier 확인
-                  const teamRoles = programData.team_roles || [];
-                  const userTeamRole = teamRoles.find(
-                    (role: any) => role.id === userMembership.roleId
-                  );
-
-                  if (userTeamRole) {
-                    // tier를 그대로 권한으로 사용
-                    const tierRole = `tier${userTeamRole.tier}`;
-                    setUserRole(tierRole);
-                    console.log(
-                      "Tier 권한 설정 - 역할:",
-                      userTeamRole.name,
-                      "tier:",
-                      userTeamRole.tier,
-                      "권한:",
-                      tierRole
-                    );
-                  }
-                }
+              // team_tier가 있으면 tier 권한으로 설정
+              if (memberData.team_tier !== null && memberData.team_tier !== undefined) {
+                const tierRole = `tier${memberData.team_tier}`;
+                setUserRole(tierRole);
+                setUserTeamId(memberData.team_id);
+                console.log("Tier 권한 설정:", tierRole);
               }
+            } else {
+              console.log("Members 테이블에서 사용자 정보를 찾을 수 없음");
             }
           } catch (teamError) {
             console.log("팀 권한 확인 중 오류:", teamError);
