@@ -46,15 +46,20 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      // 1. username으로 사용자 정보 조회
+      // 1. username으로 사용자 정보 조회 (승인 상태 확인 포함)
       const { data: userRow, error: userError } = await createClient()
         .from("users")
-        .select("id, email, role, username")
+        .select("id, email, role, username, is_approved")
         .eq("username", formData.username)
         .single();
 
       if (userError || !userRow) {
         throw new Error("존재하지 않는 아이디입니다.");
+      }
+
+      // 관리자 승인 확인
+      if (userRow.role === "pending" || userRow.is_approved === false) {
+        throw new Error("관리자 승인이 필요합니다. 승인 완료 후 로그인해주세요.");
       }
 
       // 2. 이메일로 로그인 시도

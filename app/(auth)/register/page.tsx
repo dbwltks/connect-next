@@ -282,26 +282,34 @@ export default function RegisterPage() {
       
       // 이메일은 Supabase Auth가 회원가입 시 자동으로 중복 체크함
 
-      // Supabase Auth 회원가입
+      // Supabase Auth 회원가입 (이메일 인증 자동 완료)
       const { data, error } = await createClient().auth.signUp({
         email: formData.email,
         password: formData.password,
+        options: {
+          emailRedirectTo: undefined,
+        },
       });
       if (error || !data.user)
         throw new Error(error?.message || "회원가입에 실패했습니다");
 
-      // users 테이블에 username, nickname, email 저장
+      // users 테이블에 username, nickname, email 저장 (관리자 승인 대기 상태)
       const { error: userError } = await createClient().from("users").insert({
         id: data.user.id,
         username: formData.username,
         nickname: formData.nickname,
         email: formData.email,
+        role: "pending", // 관리자 승인 대기 상태
+        is_approved: false, // 승인 상태 필드
       });
       if (userError) throw new Error(userError.message);
 
+      // 회원가입 후 즉시 로그아웃 처리 (승인 전까지 로그인 불가)
+      await createClient().auth.signOut();
+
       toast({
-        title: "회원가입 성공",
-        description: "이메일 인증 후 로그인하세요",
+        title: "회원가입 신청 완료",
+        description: "관리자 승인 후 로그인 가능합니다",
         variant: "default",
       });
       router.push("/login");

@@ -107,7 +107,7 @@ export default function AdminHeader() {
                   className="cursor-pointer"
                   onClick={() => {
                     signOut();
-                    router.push("/");
+                    window.location.href = "/";
                   }}
                 >
                   <LogOut className="mr-2 h-4 w-4" />
@@ -190,7 +190,7 @@ export default function AdminHeader() {
                   className="cursor-pointer"
                   onClick={() => {
                     signOut();
-                    router.push("/");
+                    window.location.href = "/";
                   }}
                 >
                   <LogOut className="mr-2 h-4 w-4" />

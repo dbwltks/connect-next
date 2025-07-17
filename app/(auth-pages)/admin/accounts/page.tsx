@@ -46,10 +46,13 @@ import {
 type User = {
   id: string;
   username: string;
+  nickname?: string;
+  email?: string;
   role: string;
   created_at: string;
   last_login: string | null;
   is_active: boolean;
+  is_approved: boolean;
   linked_member?: Member | null;
 };
 
@@ -94,7 +97,7 @@ export default function AccountsPage() {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // 사용자 목록 가져오기
+      // 사용자 목록 가져오기 (승인 상태 포함)
       const { data: userData, error: userError } = await createClient()
         .from("users")
         .select("*")
@@ -394,10 +397,76 @@ export default function AccountsPage() {
     switch (role) {
       case "admin":
         return "관리자";
+      case "tier0":
+        return "Tier 0";
+      case "tier1":
+        return "Tier 1";
+      case "tier2":
+        return "Tier 2";
+      case "tier3":
+        return "Tier 3";
+      case "guest":
+        return "게스트";
+      case "pending":
+        return "승인 대기";
       case "user":
         return "일반 사용자";
       default:
         return role;
+    }
+  };
+
+  // 승인 처리
+  const handleApprove = async (userId: string) => {
+    try {
+      const { error } = await createClient()
+        .from("users")
+        .update({
+          is_approved: true,
+          role: "guest",
+          approved_at: new Date().toISOString(),
+        })
+        .eq("id", userId);
+
+      if (error) throw error;
+
+      toast({
+        title: "승인 완료",
+        description: "사용자가 승인되었습니다.",
+      });
+
+      fetchUsers();
+    } catch (error: any) {
+      toast({
+        title: "승인 실패",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  // 거부 처리
+  const handleReject = async (userId: string) => {
+    try {
+      const { error } = await createClient()
+        .from("users")
+        .delete()
+        .eq("id", userId);
+
+      if (error) throw error;
+
+      toast({
+        title: "거부 완료",
+        description: "사용자 계정이 삭제되었습니다.",
+      });
+
+      fetchUsers();
+    } catch (error: any) {
+      toast({
+        title: "거부 실패",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -472,19 +541,20 @@ export default function AccountsPage() {
                   마지막 로그인
                 </TableHead>
                 <TableHead className="hidden sm:table-cell">상태</TableHead>
+                <TableHead className="hidden sm:table-cell">승인</TableHead>
                 <TableHead className="text-right md:text-left">작업</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-4">
+                  <TableCell colSpan={7} className="text-center py-4">
                     데이터를 불러오는 중...
                   </TableCell>
                 </TableRow>
               ) : filteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-4">
+                  <TableCell colSpan={7} className="text-center py-4">
                     {searchTerm
                       ? "검색 결과가 없습니다."
                       : "등록된 계정이 없습니다."}
@@ -495,6 +565,16 @@ export default function AccountsPage() {
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">
                       <div>{user.username}</div>
+                      {user.nickname && (
+                        <div className="text-xs text-gray-500">
+                          {user.nickname}
+                        </div>
+                      )}
+                      {user.email && (
+                        <div className="text-xs text-gray-500">
+                          {user.email}
+                        </div>
+                      )}
                       <div className="md:hidden text-xs text-gray-500">
                         {getRoleText(user.role)}
                       </div>
@@ -525,6 +605,30 @@ export default function AccountsPage() {
                       >
                         {user.is_active ? "활성" : "비활성"}
                       </span>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell">
+                      {user.role === "pending" || !user.is_approved ? (
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-6 px-2 text-xs bg-green-50 hover:bg-green-100 text-green-700"
+                            onClick={() => handleApprove(user.id)}
+                          >
+                            승인
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-6 px-2 text-xs bg-red-50 hover:bg-red-100 text-red-700"
+                            onClick={() => handleReject(user.id)}
+                          >
+                            거부
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-green-600 text-xs">승인됨</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-right md:text-left">
                       <div className="flex items-center justify-end md:justify-start gap-1 md:gap-2">
@@ -620,6 +724,12 @@ export default function AccountsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="admin">관리자</SelectItem>
+                    <SelectItem value="tier0">Tier 0</SelectItem>
+                    <SelectItem value="tier1">Tier 1</SelectItem>
+                    <SelectItem value="tier2">Tier 2</SelectItem>
+                    <SelectItem value="tier3">Tier 3</SelectItem>
+                    <SelectItem value="guest">게스트</SelectItem>
+                    <SelectItem value="pending">승인 대기</SelectItem>
                     <SelectItem value="user">일반 사용자</SelectItem>
                   </SelectContent>
                 </Select>

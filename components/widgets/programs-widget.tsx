@@ -204,6 +204,12 @@ export default function ProgramsWidget({
   const hasAdminPermission = () => {
     return userRole === "admin" || userRole === "tier0" || userRole === "tier1";
   };
+
+  // 게스트 포함 읽기 권한 확인 함수 (guest 포함 모든 사용자가 볼 수 있음)
+  const hasViewPermission = () => {
+    return userRole === "admin" || userRole === "tier0" || userRole === "tier1" || 
+           userRole === "tier2" || userRole === "tier3" || userRole === "guest";
+  };
   // 장소 관리 상태
   const [isLocationSettingsOpen, setIsLocationSettingsOpen] = useState(false);
   const [savedLocations, setSavedLocations] = useState<string[]>([]);
@@ -839,11 +845,12 @@ export default function ProgramsWidget({
           return false;
         }
         // 권한 설정이 있는 탭은 사용자 역할이 포함되어야 접근 가능
-        return tabPermission.includes(userRole);
+        // guest가 포함되어 있으면 누구나 볼 수 있음
+        return tabPermission.includes(userRole) || tabPermission.includes("guest");
       }
 
-      // 전체 권한 설정이 없는 경우 모든 탭 접근 가능
-      return true;
+      // 전체 권한 설정이 없는 경우 게스트 이상 모든 사용자가 접근 가능
+      return hasViewPermission();
     });
 
     return {
@@ -3357,17 +3364,17 @@ export default function ProgramsWidget({
                       </Select>
                     </div>
                   </div>
-                  <div className="border rounded-lg">
+                  <div className="border rounded-lg overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
                           <TableHead>날짜</TableHead>
                           <TableHead>구분</TableHead>
-                          <TableHead>카테고리</TableHead>
-                          <TableHead>거래처</TableHead>
+                          <TableHead className="hidden sm:table-cell">카테고리</TableHead>
+                          <TableHead className="hidden sm:table-cell">거래처</TableHead>
                           <TableHead>품명</TableHead>
                           <TableHead>거래자</TableHead>
-                          <TableHead>내용</TableHead>
+                          <TableHead className="hidden sm:table-cell">내용</TableHead>
                           <TableHead className="text-right">금액</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -3402,10 +3409,10 @@ export default function ProgramsWidget({
                                   {finance.type === "income" ? "수입" : "지출"}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="text-sm text-gray-600">
+                              <TableCell className="text-sm text-gray-600 hidden sm:table-cell">
                                 {finance.category}
                               </TableCell>
-                              <TableCell className="text-sm text-gray-600">
+                              <TableCell className="text-sm text-gray-600 hidden sm:table-cell">
                                 {finance.vendor || "-"}
                               </TableCell>
                               <TableCell className="text-sm text-gray-600">
@@ -3414,7 +3421,7 @@ export default function ProgramsWidget({
                               <TableCell className="text-sm text-gray-600">
                                 {finance.paidBy || "-"}
                               </TableCell>
-                              <TableCell className="font-medium">
+                              <TableCell className="font-medium hidden sm:table-cell">
                                 {finance.description}
                               </TableCell>
                               <TableCell className="text-right">
