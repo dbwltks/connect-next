@@ -61,6 +61,7 @@ import {
   Edit,
   Settings,
   CheckCircle,
+  Filter,
 } from "lucide-react";
 import {
   format,
@@ -207,6 +208,9 @@ export default function ProgramsWidget({
   const [isLocationSettingsOpen, setIsLocationSettingsOpen] = useState(false);
   const [savedLocations, setSavedLocations] = useState<string[]>([]);
   const [newLocation, setNewLocation] = useState("");
+  
+  // 필터 모달 상태
+  const [isFinanceFilterModalOpen, setIsFinanceFilterModalOpen] = useState(false);
   const [editingLocationIndex, setEditingLocationIndex] = useState<
     number | null
   >(null);
@@ -291,6 +295,17 @@ export default function ProgramsWidget({
 
   // 캘린더 팝오버 상태
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+
+  // 활성 필터 개수 계산
+  const getActiveFiltersCount = () => {
+    let count = 0;
+    if (financeFilters.dateRange !== "all") count++;
+    if (financeFilters.type !== "all") count++;
+    if (financeFilters.category !== "all") count++;
+    if (financeFilters.vendor !== "all") count++;
+    if (financeFilters.paidBy !== "all") count++;
+    return count;
+  };
 
   // 페이지네이션 상태
   const [currentPage, setCurrentPage] = useState(1);
@@ -3305,215 +3320,20 @@ export default function ProgramsWidget({
 
                   {/* 필터 UI */}
                   <div className="flex justify-between items-center mb-4">
-                    <div className="flex gap-2 flex-wrap">
-                      {/* 날짜 필터 */}
-                      <Select
-                        value={financeFilters.dateRange}
-                        onValueChange={(
-                          value: "all" | "today" | "week" | "month" | "custom"
-                        ) => {
-                          resetPageAndSetFilter({
-                            dateRange: value,
-                            selectedDate: undefined,
-                            selectedDateRange: undefined,
-                            startDate: "",
-                            endDate: "",
-                          });
-                        }}
-                      >
-                        <SelectTrigger className="w-[120px]">
-                          <SelectValue placeholder="날짜" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">전체 기간</SelectItem>
-                          <SelectItem value="today">오늘</SelectItem>
-                          <SelectItem value="week">이번 주</SelectItem>
-                          <SelectItem value="month">이번 달</SelectItem>
-                          <SelectItem value="custom">사용자 정의</SelectItem>
-                        </SelectContent>
-                      </Select>
-
-                      {/* 사용자 정의 날짜 선택 */}
-                      {financeFilters.dateRange === "custom" && (
-                        <>
-                          {/* 단일/기간 선택 */}
-                          <Select
-                            value={financeFilters.customDateType}
-                            onValueChange={(value: "single" | "range") =>
-                              resetPageAndSetFilter({
-                                customDateType: value,
-                                selectedDate: undefined,
-                                selectedDateRange: undefined,
-                              })
-                            }
-                          >
-                            <SelectTrigger className="w-[100px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="single">단일 날짜</SelectItem>
-                              <SelectItem value="range">기간</SelectItem>
-                            </SelectContent>
-                          </Select>
-
-                          {/* 캘린더 팝오버 */}
-                          <Popover
-                            open={isDatePickerOpen}
-                            onOpenChange={setIsDatePickerOpen}
-                          >
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                className="w-[240px] justify-start text-left font-normal"
-                              >
-                                <CalendarDays className="mr-2 h-4 w-4" />
-                                {financeFilters.customDateType === "single"
-                                  ? financeFilters.selectedDate
-                                    ? format(
-                                        financeFilters.selectedDate,
-                                        "yyyy년 MM월 dd일"
-                                      )
-                                    : "날짜를 선택하세요"
-                                  : financeFilters.selectedDateRange?.from
-                                    ? financeFilters.selectedDateRange.to
-                                      ? `${format(financeFilters.selectedDateRange.from, "MM/dd")} - ${format(financeFilters.selectedDateRange.to, "MM/dd")}`
-                                      : format(
-                                          financeFilters.selectedDateRange.from,
-                                          "MM/dd"
-                                        )
-                                    : "기간을 선택하세요"}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent
-                              className="w-auto p-0"
-                              align="start"
-                            >
-                              {financeFilters.customDateType === "single" ? (
-                                <CalendarComponent
-                                  mode="single"
-                                  selected={financeFilters.selectedDate}
-                                  onSelect={(date: Date | undefined) => {
-                                    resetPageAndSetFilter({
-                                      selectedDate: date,
-                                    });
-                                    if (date) {
-                                      setIsDatePickerOpen(false);
-                                    }
-                                  }}
-                                  numberOfMonths={1}
-                                />
-                              ) : (
-                                <CalendarComponent
-                                  mode="range"
-                                  selected={financeFilters.selectedDateRange}
-                                  onSelect={(range: any) => {
-                                    resetPageAndSetFilter({
-                                      selectedDateRange: range,
-                                    });
-                                  }}
-                                  numberOfMonths={2}
-                                />
-                              )}
-                            </PopoverContent>
-                          </Popover>
-
-                          {/* 선택된 날짜 초기화 버튼 */}
-                          {(financeFilters.selectedDate ||
-                            financeFilters.selectedDateRange?.from) && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                resetPageAndSetFilter({
-                                  selectedDate: undefined,
-                                  selectedDateRange: undefined,
-                                });
-                              }}
-                            >
-                              초기화
-                            </Button>
-                          )}
-                        </>
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsFinanceFilterModalOpen(true)}
+                      className="flex items-center gap-2"
+                    >
+                      <Filter className="h-4 w-4" />
+                      <span>필터</span>
+                      {getActiveFiltersCount() > 0 && (
+                        <Badge variant="secondary" className="text-xs ml-1">
+                          {getActiveFiltersCount()}
+                        </Badge>
                       )}
-
-                      <Select
-                        value={financeFilters.type}
-                        onValueChange={(value: "all" | "income" | "expense") =>
-                          resetPageAndSetFilter({ type: value })
-                        }
-                      >
-                        <SelectTrigger className="w-[120px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">전체</SelectItem>
-                          <SelectItem value="income">수입</SelectItem>
-                          <SelectItem value="expense">지출</SelectItem>
-                        </SelectContent>
-                      </Select>
-
-                      <Select
-                        value={financeFilters.category}
-                        onValueChange={(value) =>
-                          resetPageAndSetFilter({ category: value })
-                        }
-                      >
-                        <SelectTrigger className="w-[140px]">
-                          <SelectValue placeholder="카테고리" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">전체 카테고리</SelectItem>
-                          {financeCategories.map((category) => (
-                            <SelectItem key={category} value={category}>
-                              {category}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-
-                      <Select
-                        value={financeFilters.vendor}
-                        onValueChange={(value) =>
-                          resetPageAndSetFilter({ vendor: value })
-                        }
-                      >
-                        <SelectTrigger className="w-[140px]">
-                          <SelectValue placeholder="거래처" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">전체 거래처</SelectItem>
-                          {financeVendors.map((vendor) => (
-                            <SelectItem key={vendor} value={vendor}>
-                              {vendor}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-
-                      <Select
-                        value={financeFilters.paidBy}
-                        onValueChange={(value) =>
-                          resetPageAndSetFilter({ paidBy: value })
-                        }
-                      >
-                        <SelectTrigger className="w-[140px]">
-                          <SelectValue placeholder="거래자" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">전체 거래자</SelectItem>
-                          {Array.from(
-                            new Set(
-                              finances.map((f) => f.paidBy).filter(Boolean)
-                            )
-                          ).map((paidBy) => (
-                            <SelectItem key={paidBy} value={paidBy!}>
-                              {paidBy}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
+                    </Button>
+                    
                     {/* 항목 수 선택 */}
                     <div className="flex items-center gap-2">
                       <Select
@@ -3697,6 +3517,253 @@ export default function ProgramsWidget({
                   </div>
                 </div>
               </div>
+
+              {/* 필터 모달 */}
+              <Dialog open={isFinanceFilterModalOpen} onOpenChange={setIsFinanceFilterModalOpen}>
+                <DialogContent className="sm:max-w-[600px]">
+                  <DialogHeader>
+                    <DialogTitle>재정 필터</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    {/* 날짜 필터 */}
+                    <div>
+                      <Label className="text-sm font-medium">날짜</Label>
+                      <Select
+                        value={financeFilters.dateRange}
+                        onValueChange={(value: "all" | "today" | "week" | "month" | "custom") => {
+                          resetPageAndSetFilter({
+                            dateRange: value,
+                            selectedDate: undefined,
+                            selectedDateRange: undefined,
+                            startDate: "",
+                            endDate: "",
+                          });
+                        }}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="날짜" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">전체 기간</SelectItem>
+                          <SelectItem value="today">오늘</SelectItem>
+                          <SelectItem value="week">이번 주</SelectItem>
+                          <SelectItem value="month">이번 달</SelectItem>
+                          <SelectItem value="custom">사용자 정의</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* 사용자 정의 날짜 선택 */}
+                    {financeFilters.dateRange === "custom" && (
+                      <div className="space-y-3">
+                        <div>
+                          <Label className="text-sm font-medium">날짜 선택 방식</Label>
+                          <Select
+                            value={financeFilters.customDateType}
+                            onValueChange={(value: "single" | "range") =>
+                              resetPageAndSetFilter({
+                                customDateType: value,
+                                selectedDate: undefined,
+                                selectedDateRange: undefined,
+                              })
+                            }
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="single">단일 날짜</SelectItem>
+                              <SelectItem value="range">기간</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium">
+                            {financeFilters.customDateType === "single" ? "날짜 선택" : "기간 선택"}
+                          </Label>
+                          <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className="w-full justify-start text-left font-normal"
+                              >
+                                <CalendarDays className="mr-2 h-4 w-4" />
+                                {financeFilters.customDateType === "single"
+                                  ? financeFilters.selectedDate
+                                    ? format(financeFilters.selectedDate, "yyyy년 MM월 dd일")
+                                    : "날짜를 선택하세요"
+                                  : financeFilters.selectedDateRange?.from
+                                    ? financeFilters.selectedDateRange.to
+                                      ? `${format(financeFilters.selectedDateRange.from, "MM/dd")} - ${format(financeFilters.selectedDateRange.to, "MM/dd")}`
+                                      : format(financeFilters.selectedDateRange.from, "MM/dd")
+                                    : "기간을 선택하세요"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              {financeFilters.customDateType === "single" ? (
+                                <CalendarComponent
+                                  mode="single"
+                                  selected={financeFilters.selectedDate}
+                                  onSelect={(date: Date | undefined) => {
+                                    resetPageAndSetFilter({
+                                      selectedDate: date,
+                                    });
+                                    if (date) {
+                                      setIsDatePickerOpen(false);
+                                    }
+                                  }}
+                                  numberOfMonths={1}
+                                />
+                              ) : (
+                                <CalendarComponent
+                                  mode="range"
+                                  selected={financeFilters.selectedDateRange}
+                                  onSelect={(range: any) => {
+                                    resetPageAndSetFilter({
+                                      selectedDateRange: range,
+                                    });
+                                  }}
+                                  numberOfMonths={2}
+                                />
+                              )}
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+
+                        {(financeFilters.selectedDate || financeFilters.selectedDateRange?.from) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              resetPageAndSetFilter({
+                                selectedDate: undefined,
+                                selectedDateRange: undefined,
+                              });
+                            }}
+                            className="w-full"
+                          >
+                            날짜 선택 초기화
+                          </Button>
+                        )}
+                      </div>
+                    )}
+
+                    {/* 타입 필터 */}
+                    <div>
+                      <Label className="text-sm font-medium">구분</Label>
+                      <Select
+                        value={financeFilters.type}
+                        onValueChange={(value: "all" | "income" | "expense") =>
+                          resetPageAndSetFilter({ type: value })
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">전체</SelectItem>
+                          <SelectItem value="income">수입</SelectItem>
+                          <SelectItem value="expense">지출</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* 카테고리 필터 */}
+                    <div>
+                      <Label className="text-sm font-medium">카테고리</Label>
+                      <Select
+                        value={financeFilters.category}
+                        onValueChange={(value) => resetPageAndSetFilter({ category: value })}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="카테고리" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">전체 카테고리</SelectItem>
+                          {financeCategories.map((category) => (
+                            <SelectItem key={category} value={category}>
+                              {category}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* 거래처 필터 */}
+                    <div>
+                      <Label className="text-sm font-medium">거래처</Label>
+                      <Select
+                        value={financeFilters.vendor}
+                        onValueChange={(value) => resetPageAndSetFilter({ vendor: value })}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="거래처" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">전체 거래처</SelectItem>
+                          {financeVendors.map((vendor) => (
+                            <SelectItem key={vendor} value={vendor}>
+                              {vendor}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* 거래자 필터 */}
+                    <div>
+                      <Label className="text-sm font-medium">거래자</Label>
+                      <Select
+                        value={financeFilters.paidBy}
+                        onValueChange={(value) => resetPageAndSetFilter({ paidBy: value })}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="거래자" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">전체 거래자</SelectItem>
+                          {Array.from(new Set(finances.map((f) => f.paidBy).filter(Boolean))).map((paidBy) => (
+                            <SelectItem key={paidBy} value={paidBy!}>
+                              {paidBy}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* 필터 초기화 버튼 */}
+                    <div className="flex gap-2 pt-4">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          resetPageAndSetFilter({
+                            dateRange: "all",
+                            customDateType: "single",
+                            selectedDate: undefined,
+                            selectedDateRange: undefined,
+                            startDate: "",
+                            endDate: "",
+                            type: "all",
+                            category: "all",
+                            vendor: "all",
+                            paidBy: "all",
+                          });
+                        }}
+                        className="flex-1"
+                      >
+                        전체 초기화
+                      </Button>
+                      <Button
+                        onClick={() => setIsFinanceFilterModalOpen(false)}
+                        className="flex-1"
+                      >
+                        적용
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </TabsContent>
           )}
 
