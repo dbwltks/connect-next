@@ -162,6 +162,8 @@ export default function ProgramsWidget({
   const [isLocationSettingsOpen, setIsLocationSettingsOpen] = useState(false);
   const [savedLocations, setSavedLocations] = useState<string[]>([]);
   const [newLocation, setNewLocation] = useState("");
+  const [editingLocationIndex, setEditingLocationIndex] = useState<number | null>(null);
+  const [editingLocationValue, setEditingLocationValue] = useState("");
   // 날짜별 일정 보기 모달 상태
   const [isDayEventsModalOpen, setIsDayEventsModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -759,6 +761,71 @@ export default function ProgramsWidget({
     }
   };
 
+  // 장소 수정 시작
+  const startEditLocation = (index: number, location: string) => {
+    setEditingLocationIndex(index);
+    setEditingLocationValue(location);
+  };
+
+  // 장소 수정 취소
+  const cancelEditLocation = () => {
+    setEditingLocationIndex(null);
+    setEditingLocationValue("");
+  };
+
+  // 장소 수정 저장
+  const saveEditLocation = async () => {
+    if (!selectedProgram || editingLocationIndex === null || !editingLocationValue.trim()) {
+      return;
+    }
+
+    // 중복 체크 (자기 자신 제외)
+    const isDuplicate = savedLocations.some((loc, index) => 
+      index !== editingLocationIndex && loc === editingLocationValue.trim()
+    );
+
+    if (isDuplicate) {
+      alert('이미 존재하는 장소명입니다.');
+      return;
+    }
+
+    try {
+      const supabase = createClient();
+      const updatedLocations = [...savedLocations];
+      updatedLocations[editingLocationIndex] = editingLocationValue.trim();
+      
+      // 현재 events_settings 가져오기
+      const { data: currentData, error: fetchError } = await supabase
+        .from('programs')
+        .select('events_settings')
+        .eq('id', selectedProgram)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const currentSettings = currentData?.events_settings || {};
+      const updatedSettings = {
+        ...currentSettings,
+        locations: updatedLocations
+      };
+
+      // events_settings 업데이트
+      const { error } = await supabase
+        .from('programs')
+        .update({ events_settings: updatedSettings })
+        .eq('id', selectedProgram);
+
+      if (error) throw error;
+
+      setSavedLocations(updatedLocations);
+      setEditingLocationIndex(null);
+      setEditingLocationValue("");
+    } catch (error) {
+      console.error('장소 수정 실패:', error);
+      alert('장소 수정에 실패했습니다.');
+    }
+  };
+
   // 프로그램 변경 시 장소 데이터 로드
   useEffect(() => {
     if (selectedProgram) {
@@ -1033,15 +1100,63 @@ export default function ProgramsWidget({
                                         key={index}
                                         className="flex items-center justify-between p-2 bg-gray-50 rounded"
                                       >
-                                        <span className="text-sm">{location}</span>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={() => removeLocation(location)}
-                                          className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                                        >
-                                          ×
-                                        </Button>
+                                        {editingLocationIndex === index ? (
+                                          <>
+                                            <Input
+                                              value={editingLocationValue}
+                                              onChange={(e) => setEditingLocationValue(e.target.value)}
+                                              className="text-sm flex-1 mr-2"
+                                              onKeyDown={(e) => {
+                                                if (e.key === "Enter") {
+                                                  saveEditLocation();
+                                                } else if (e.key === "Escape") {
+                                                  cancelEditLocation();
+                                                }
+                                              }}
+                                              autoFocus
+                                            />
+                                            <div className="flex gap-1">
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={saveEditLocation}
+                                                className="h-6 w-6 p-0 text-green-500 hover:text-green-700"
+                                              >
+                                                ✓
+                                              </Button>
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={cancelEditLocation}
+                                                className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700"
+                                              >
+                                                ×
+                                              </Button>
+                                            </div>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <span className="text-sm flex-1">{location}</span>
+                                            <div className="flex gap-1">
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => startEditLocation(index, location)}
+                                                className="h-6 w-6 p-0 text-blue-500 hover:text-blue-700"
+                                              >
+                                                ✏
+                                              </Button>
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => removeLocation(location)}
+                                                className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                                              >
+                                                ×
+                                              </Button>
+                                            </div>
+                                          </>
+                                        )}
                                       </div>
                                     ))
                                   )}
