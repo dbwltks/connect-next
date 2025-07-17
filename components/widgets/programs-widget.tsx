@@ -32,10 +32,13 @@ import {
   DollarSign,
   Eye,
   Plus,
+  Trash2,
+  Settings,
 } from "lucide-react";
 import {
   format,
   addDays,
+  addHours,
   startOfWeek,
   endOfWeek,
   startOfMonth,
@@ -155,6 +158,16 @@ export default function ProgramsWidget({
   const [editingEventData, setEditingEventData] = useState<Event | null>(null);
   const [userRole, setUserRole] = useState<string>("guest"); // admin, team_leader, member, guest
   const [userTeamId, setUserTeamId] = useState<string | null>(null);
+  // 장소 관리 상태
+  const [isLocationSettingsOpen, setIsLocationSettingsOpen] = useState(false);
+  const [savedLocations, setSavedLocations] = useState<string[]>([]);
+  const [newLocation, setNewLocation] = useState("");
+  // 날짜별 일정 보기 모달 상태
+  const [isDayEventsModalOpen, setIsDayEventsModalOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDateEvents, setSelectedDateEvents] = useState<Event[]>([]);
+  
+  // events_settings 구조: { locations: string[], defaultDuration: number, ... }
   const [newEvent, setNewEvent] = useState({
     title: "",
     description: "",
@@ -384,12 +397,18 @@ export default function ProgramsWidget({
     end: endOfWeek(endOfMonth(currentDate), { weekStartsOn: 0 }),
   });
 
-  // 특정 날짜의 이벤트 가져오기
+  // 특정 날짜의 이벤트 가져오기 (시간 순서대로 정렬)
   const getEventsForDay = (date: Date) => {
-    return filteredEvents.filter((event) => {
-      const eventDate = parseISO(event.start_date);
-      return isSameDay(eventDate, date);
-    });
+    return filteredEvents
+      .filter((event) => {
+        const eventDate = parseISO(event.start_date);
+        return isSameDay(eventDate, date);
+      })
+      .sort((a, b) => {
+        const timeA = parseISO(a.start_date);
+        const timeB = parseISO(b.start_date);
+        return timeA.getTime() - timeB.getTime();
+      });
   };
 
   // 팀별 색상
@@ -591,17 +610,8 @@ export default function ProgramsWidget({
         }
       }
 
-      // 모달 닫기 및 폼 초기화
+      // 모달 닫기
       setIsEventModalOpen(false);
-      setNewEvent({
-        title: "",
-        description: "",
-        start_date: "",
-        end_date: "",
-        location: "",
-        program_id: "",
-        team_id: "",
-      });
 
       alert("일정이 추가되었습니다.");
     } catch (error) {
@@ -611,6 +621,157 @@ export default function ProgramsWidget({
         `일정 추가에 실패했습니다: ${error instanceof Error ? error.message : "알 수 없는 오류"}`
       );
     }
+  };
+
+  // 일정 삭제 함수
+  const handleDeleteEvent = async (eventId: string) => {
+    if (!confirm("정말로 이 일정을 삭제하시겠습니까?")) {
+      return;
+    }
+
+    try {
+      await eventsApi.delete(eventId, selectedProgram);
+      
+      // 프로그램 데이터 새로고침하여 최신 events 가져오기
+      if (selectedProgram) {
+        const supabase = createClient();
+        const { data } = await supabase
+          .from("programs")
+          .select("events")
+          .eq("id", selectedProgram)
+          .single();
+
+        if (data) {
+          setEvents(Array.isArray(data.events) ? data.events : []);
+        }
+      }
+
+      // 모달 닫기
+      setIsEventDetailModalOpen(false);
+      setSelectedEvent(null);
+
+      alert("일정이 삭제되었습니다.");
+    } catch (error) {
+      console.error("일정 삭제 실패:", error);
+      alert(
+        `일정 삭제에 실패했습니다: ${error instanceof Error ? error.message : "알 수 없는 오류"}`
+      );
+    }
+  };
+
+  // events_settings에서 장소 로드
+  const loadLocationsFromProgram = async () => {
+    if (!selectedProgram) return;
+    
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('programs')
+        .select('events_settings')
+        .eq('id', selectedProgram)
+        .single();
+
+      if (error) throw error;
+      
+      const eventsSettings = data?.events_settings || {};
+      setSavedLocations(eventsSettings.locations || []);
+    } catch (error) {
+      console.error('장소 데이터 로드 실패:', error);
+    }
+  };
+
+  // 장소 추가 함수
+  const addLocation = async () => {
+    if (!newLocation.trim() || !selectedProgram || savedLocations.includes(newLocation.trim())) {
+      return;
+    }
+
+    try {
+      const supabase = createClient();
+      const updatedLocations = [...savedLocations, newLocation.trim()];
+      
+      // 현재 events_settings 가져오기
+      const { data: currentData, error: fetchError } = await supabase
+        .from('programs')
+        .select('events_settings')
+        .eq('id', selectedProgram)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const currentSettings = currentData?.events_settings || {};
+      const updatedSettings = {
+        ...currentSettings,
+        locations: updatedLocations
+      };
+
+      // events_settings 업데이트
+      const { error } = await supabase
+        .from('programs')
+        .update({ events_settings: updatedSettings })
+        .eq('id', selectedProgram);
+
+      if (error) throw error;
+
+      setSavedLocations(updatedLocations);
+      setNewLocation("");
+    } catch (error) {
+      console.error('장소 추가 실패:', error);
+      alert('장소 추가에 실패했습니다.');
+    }
+  };
+
+  // 장소 삭제 함수
+  const removeLocation = async (location: string) => {
+    if (!selectedProgram) return;
+
+    try {
+      const supabase = createClient();
+      const updatedLocations = savedLocations.filter(loc => loc !== location);
+      
+      // 현재 events_settings 가져오기
+      const { data: currentData, error: fetchError } = await supabase
+        .from('programs')
+        .select('events_settings')
+        .eq('id', selectedProgram)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const currentSettings = currentData?.events_settings || {};
+      const updatedSettings = {
+        ...currentSettings,
+        locations: updatedLocations
+      };
+
+      // events_settings 업데이트
+      const { error } = await supabase
+        .from('programs')
+        .update({ events_settings: updatedSettings })
+        .eq('id', selectedProgram);
+
+      if (error) throw error;
+
+      setSavedLocations(updatedLocations);
+    } catch (error) {
+      console.error('장소 삭제 실패:', error);
+      alert('장소 삭제에 실패했습니다.');
+    }
+  };
+
+  // 프로그램 변경 시 장소 데이터 로드
+  useEffect(() => {
+    if (selectedProgram) {
+      loadLocationsFromProgram();
+    }
+  }, [selectedProgram]);
+
+  // 날짜 클릭 시 해당 날짜의 모든 일정 보기
+  const handleDateClick = (date: Date) => {
+    const dayEvents = getEventsForDay(date);
+    setSelectedDate(date);
+    setSelectedDateEvents(dayEvents);
+    setIsDayEventsModalOpen(true);
   };
 
   if (loading) {
@@ -826,9 +987,98 @@ export default function ProgramsWidget({
                       
                       return false;
                     })() && (
-                      <Dialog
+                      <div className="flex gap-2">
+                        {/* 장소 설정 버튼 */}
+                        <Dialog
+                          open={isLocationSettingsOpen}
+                          onOpenChange={setIsLocationSettingsOpen}
+                        >
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <Settings size={16} />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-[425px]">
+                            <DialogHeader>
+                              <DialogTitle>장소 설정</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4 py-4">
+                              <div className="space-y-2">
+                                <Label>새 장소 추가</Label>
+                                <div className="flex gap-2">
+                                  <Input
+                                    value={newLocation}
+                                    onChange={(e) => setNewLocation(e.target.value)}
+                                    placeholder="장소명을 입력하세요"
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        addLocation();
+                                      }
+                                    }}
+                                  />
+                                  <Button onClick={addLocation} disabled={!newLocation.trim()}>
+                                    추가
+                                  </Button>
+                                </div>
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <Label>저장된 장소</Label>
+                                <div className="max-h-40 overflow-y-auto space-y-1">
+                                  {savedLocations.length === 0 ? (
+                                    <p className="text-sm text-gray-500 py-2">저장된 장소가 없습니다.</p>
+                                  ) : (
+                                    savedLocations.map((location, index) => (
+                                      <div
+                                        key={index}
+                                        className="flex items-center justify-between p-2 bg-gray-50 rounded"
+                                      >
+                                        <span className="text-sm">{location}</span>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => removeLocation(location)}
+                                          className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                                        >
+                                          ×
+                                        </Button>
+                                      </div>
+                                    ))
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+
+                        {/* 일정 추가 모달 */}
+                        <Dialog
                         open={isEventModalOpen}
-                        onOpenChange={setIsEventModalOpen}
+                        onOpenChange={(open) => {
+                          setIsEventModalOpen(open);
+                          if (open) {
+                            // 모달이 열릴 때 기본 시간 설정 (현재 시간, 1시간 후)
+                            const now = new Date();
+                            const oneHourLater = addHours(now, 1);
+                            setNewEvent(prev => ({
+                              ...prev,
+                              start_date: format(now, "yyyy-MM-dd'T'HH:mm"),
+                              end_date: format(oneHourLater, "yyyy-MM-dd'T'HH:mm"),
+                              program_id: selectedProgram || ""
+                            }));
+                          } else {
+                            // 모달이 닫힐 때 폼 초기화
+                            setNewEvent({
+                              title: "",
+                              description: "",
+                              start_date: "",
+                              end_date: "",
+                              location: "",
+                              program_id: "",
+                              team_id: "",
+                            });
+                          }
+                        }}
                       >
                         <DialogTrigger asChild>
                           <Button variant="default" size="sm">
@@ -878,12 +1128,22 @@ export default function ProgramsWidget({
                               id="start_date"
                               type="datetime-local"
                               value={newEvent.start_date}
-                              onChange={(e) =>
+                              onChange={(e) => {
+                                const startDateTime = e.target.value;
+                                // 시작 일시가 변경되면 자동으로 종료 일시를 1시간 후로 설정
+                                let endDateTime = "";
+                                if (startDateTime) {
+                                  const startDate = new Date(startDateTime);
+                                  const endDate = addHours(startDate, 1);
+                                  endDateTime = format(endDate, "yyyy-MM-dd'T'HH:mm");
+                                }
+                                
                                 setNewEvent((prev) => ({
                                   ...prev,
-                                  start_date: e.target.value,
-                                }))
-                              }
+                                  start_date: startDateTime,
+                                  end_date: endDateTime,
+                                }));
+                              }}
                             />
                           </div>
 
@@ -904,17 +1164,52 @@ export default function ProgramsWidget({
 
                           <div className="grid gap-2">
                             <Label htmlFor="location">장소</Label>
-                            <Input
-                              id="location"
+                            <Select
                               value={newEvent.location}
-                              onChange={(e) =>
-                                setNewEvent((prev) => ({
-                                  ...prev,
-                                  location: e.target.value,
-                                }))
-                              }
-                              placeholder="장소를 입력하세요"
-                            />
+                              onValueChange={(value) => {
+                                if (value === "custom") {
+                                  // Custom option selected, clear the location to show input
+                                  setNewEvent((prev) => ({
+                                    ...prev,
+                                    location: "",
+                                  }));
+                                } else {
+                                  // Pre-saved location selected
+                                  setNewEvent((prev) => ({
+                                    ...prev,
+                                    location: value,
+                                  }));
+                                }
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="장소를 선택하거나 직접 입력하세요" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {savedLocations.map((location) => (
+                                  <SelectItem key={location} value={location}>
+                                    {location}
+                                  </SelectItem>
+                                ))}
+                                <SelectItem value="custom">직접 입력</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            
+                            {/* Show input field when custom is selected or when location is not in saved locations */}
+                            {(newEvent.location === "" || !savedLocations.includes(newEvent.location)) && (
+                              <Input
+                                id="location-custom"
+                                value={newEvent.location}
+                                onChange={(e) =>
+                                  setNewEvent((prev) => ({
+                                    ...prev,
+                                    location: e.target.value,
+                                  }))
+                                }
+                                placeholder="장소를 입력하세요"
+                                className="mt-2"
+                              />
+                            )}
                           </div>
 
                           <div className="grid gap-2">
@@ -953,8 +1248,9 @@ export default function ProgramsWidget({
                         </div>
                       </DialogContent>
                       </Dialog>
+                      </div>
                     )}
-                  </div>
+                </div>
 
                   {/* 팀 필터 */}
                   <div className="flex flex-wrap gap-2">
@@ -1073,8 +1369,20 @@ export default function ProgramsWidget({
                         >
                           닫기
                         </Button>
-                        {/* 관리자만 수정 가능 - 여기서는 항상 표시하도록 설정 */}
-                        <Button
+                        {/* 삭제 버튼 - 권한 기반으로 표시 */}
+                        {(userRole === "admin" || userRole === "tier0" || userRole === "tier1") && selectedEvent && (
+                          <Button
+                            variant="destructive"
+                            onClick={() => handleDeleteEvent(selectedEvent.id)}
+                            className="gap-2"
+                          >
+                            <Trash2 size={16} />
+                            삭제
+                          </Button>
+                        )}
+                        {/* 수정 버튼 - 권한 기반으로 표시 */}
+                        {(userRole === "admin" || userRole === "tier0" || userRole === "tier1") && (
+                          <Button
                           onClick={() => {
                             if (selectedEvent) {
                               setEditingEventData({
@@ -1099,6 +1407,7 @@ export default function ProgramsWidget({
                         >
                           수정
                         </Button>
+                        )}
                       </div>
                     </DialogContent>
                   </Dialog>
@@ -1181,18 +1490,55 @@ export default function ProgramsWidget({
 
                           <div className="grid gap-2">
                             <Label htmlFor="edit-location">장소</Label>
-                            <Input
-                              id="edit-location"
+                            <Select
                               value={editingEventData.location || ""}
-                              onChange={(e) =>
-                                setEditingEventData((prev: Event | null) =>
-                                  prev
-                                    ? { ...prev, location: e.target.value }
-                                    : null
-                                )
-                              }
-                              placeholder="장소를 입력하세요"
-                            />
+                              onValueChange={(value) => {
+                                if (value === "custom") {
+                                  // Custom option selected, clear the location to show input
+                                  setEditingEventData((prev: Event | null) =>
+                                    prev
+                                      ? { ...prev, location: "" }
+                                      : null
+                                  );
+                                } else {
+                                  // Pre-saved location selected
+                                  setEditingEventData((prev: Event | null) =>
+                                    prev
+                                      ? { ...prev, location: value }
+                                      : null
+                                  );
+                                }
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="장소를 선택하거나 직접 입력하세요" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {savedLocations.map((location) => (
+                                  <SelectItem key={location} value={location}>
+                                    {location}
+                                  </SelectItem>
+                                ))}
+                                <SelectItem value="custom">직접 입력</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            
+                            {/* Show input field when custom is selected or when location is not in saved locations */}
+                            {(editingEventData.location === "" || !savedLocations.includes(editingEventData.location || "")) && (
+                              <Input
+                                id="edit-location-custom"
+                                value={editingEventData.location || ""}
+                                onChange={(e) =>
+                                  setEditingEventData((prev: Event | null) =>
+                                    prev
+                                      ? { ...prev, location: e.target.value }
+                                      : null
+                                  )
+                                }
+                                placeholder="장소를 입력하세요"
+                                className="mt-2"
+                              />
+                            )}
                           </div>
 
                           <div className="grid gap-2">
@@ -1273,6 +1619,137 @@ export default function ProgramsWidget({
                           }}
                         >
                           저장
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+
+                  {/* 날짜별 일정 보기 모달 */}
+                  <Dialog
+                    open={isDayEventsModalOpen}
+                    onOpenChange={setIsDayEventsModalOpen}
+                  >
+                    <DialogContent className="sm:max-w-[600px]">
+                      <DialogHeader>
+                        <DialogTitle>
+                          {selectedDate && (
+                            <>
+                              {format(selectedDate, "yyyy년 MM월 dd일 (EEE)", {
+                                locale: ko,
+                              })}
+                              의 일정
+                            </>
+                          )}
+                        </DialogTitle>
+                      </DialogHeader>
+                      <div className="max-h-[60vh] overflow-y-auto">
+                        {selectedDateEvents.length > 0 ? (
+                          <div className="space-y-3">
+                            {selectedDateEvents
+                              .sort((a, b) => 
+                                new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
+                              )
+                              .map((event) => {
+                                const program = allPrograms.find(
+                                  (p) => p.id === event.program_id
+                                );
+                                const team = teams.find(
+                                  (t) => t.id === event.team_id
+                                );
+                                const eventDate = parseISO(event.start_date);
+                                const endDate = event.end_date
+                                  ? parseISO(event.end_date)
+                                  : null;
+                                const timeStatus = getEventTimeStatus(
+                                  eventDate,
+                                  endDate
+                                );
+
+                                return (
+                                  <div
+                                    key={event.id}
+                                    className={`border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer ${
+                                      timeStatus.status === "past"
+                                        ? "opacity-75"
+                                        : ""
+                                    }`}
+                                    onClick={() => {
+                                      setSelectedEvent(event);
+                                      setIsEventDetailModalOpen(true);
+                                      setIsDayEventsModalOpen(false);
+                                    }}
+                                  >
+                                    <div className="flex justify-between items-start mb-2">
+                                      <div>
+                                        <h3 className="font-semibold text-lg mb-1">
+                                          {event.title}
+                                        </h3>
+                                        <div className="flex items-center gap-2 mb-2">
+                                          <span
+                                            className={`text-xs px-2 py-1 rounded-full font-medium ${timeStatus.bgColor} ${timeStatus.color}`}
+                                          >
+                                            {timeStatus.label}
+                                          </span>
+                                          {team && (
+                                            <Badge
+                                              variant="secondary"
+                                              className="text-xs"
+                                            >
+                                              {team.name}
+                                            </Badge>
+                                          )}
+                                          {program && (
+                                            <Badge
+                                              variant="outline"
+                                              className="text-xs"
+                                            >
+                                              {program.name}
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="space-y-2 text-sm text-gray-600">
+                                      <div className="flex items-center gap-4">
+                                        <div className="flex items-center gap-1">
+                                          <Clock size={14} />
+                                          <span>
+                                            {format(eventDate, "HH:mm")}
+                                            {endDate &&
+                                              ` - ${format(endDate, "HH:mm")}`}
+                                          </span>
+                                        </div>
+                                        {event.location && (
+                                          <div className="flex items-center gap-1">
+                                            <MapPin size={14} />
+                                            <span>{event.location}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                      
+                                      {event.description && (
+                                        <p className="text-gray-700 mt-2">
+                                          {event.description}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 text-gray-500">
+                            이 날짜에는 등록된 일정이 없습니다.
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex justify-end">
+                        <Button
+                          variant="outline"
+                          onClick={() => setIsDayEventsModalOpen(false)}
+                        >
+                          닫기
                         </Button>
                       </div>
                     </DialogContent>
@@ -1725,9 +2202,15 @@ export default function ProgramsWidget({
                           return (
                             <div
                               key={day.toISOString()}
-                              className={`min-h-[80px] p-2 border-b border-r last:border-r-0 ${
+                              className={`min-h-[80px] p-2 border-b border-r last:border-r-0 cursor-pointer hover:bg-gray-50 transition-colors ${
                                 !isCurrentMonth ? "bg-gray-50 opacity-50" : ""
                               } ${isToday ? "bg-blue-50" : ""}`}
+                              onClick={() => handleDateClick(day)}
+                              title={
+                                dayEvents.length > 0
+                                  ? `${format(day, "yyyy년 MM월 dd일", { locale: ko })}\n${dayEvents.length}개의 일정:\n${dayEvents.map(e => `• ${e.title}`).join('\n')}`
+                                  : `${format(day, "yyyy년 MM월 dd일", { locale: ko })}\n등록된 일정이 없습니다.`
+                              }
                             >
                               <div
                                 className={`text-sm font-medium mb-1 ${
@@ -1756,7 +2239,8 @@ export default function ProgramsWidget({
                                         ...getTeamStyle(event.team_id),
                                       }}
                                       title={`${event.title} - ${program?.name || "프로그램"}`}
-                                      onClick={() => {
+                                      onClick={(e) => {
+                                        e.stopPropagation();
                                         setSelectedEvent(event);
                                         setIsEventDetailModalOpen(true);
                                       }}
@@ -1768,9 +2252,15 @@ export default function ProgramsWidget({
                                   );
                                 })}
                                 {dayEvents.length > 2 && (
-                                  <div className="text-xs text-gray-500 text-center">
-                                    +{dayEvents.length - 2}
-                                  </div>
+                                  <button
+                                    className="text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded px-2 py-1 w-full transition-colors"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDateClick(day);
+                                    }}
+                                  >
+                                    +{dayEvents.length - 2} 더보기
+                                  </button>
                                 )}
                               </div>
                             </div>
