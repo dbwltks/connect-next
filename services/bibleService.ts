@@ -261,19 +261,19 @@ export function formatBibleVerses(
     if (version === "niv") {
       // 1. <br> 태그 제거
       cleanText = cleanText.replace(/<br\s*\/?>/gi, " ");
-      
+
       // 2. ▷ 이후의 주석 부분 전체 제거 (줄바꿈이 있는 경우도 처리)
       cleanText = cleanText.replace(/▷.*$/gi, "");
-      
+
       // 3. <sup> 태그와 내용 제거
       cleanText = cleanText.replace(/<sup[^>]*>.*?<\/sup>/gi, "");
-      
-      // 4. <i> 태그와 내용 제거  
+
+      // 4. <i> 태그와 내용 제거
       cleanText = cleanText.replace(/<i[^>]*>.*?<\/i>/gi, "");
-      
+
       // 5. "Or " 시작하는 대안 번역 제거
       cleanText = cleanText.replace(/\s+Or\s+.*$/gi, "");
-      
+
       // 6. 여러 공백을 하나로 통합하고 앞뒤 공백 제거
       cleanText = cleanText.replace(/\s+/g, " ").trim();
     }
@@ -321,19 +321,19 @@ export function formatBibleVersesWithSub(
     if (mainVersion === "niv") {
       // 1. <br> 태그 제거
       mainText = mainText.replace(/<br\s*\/?>/gi, " ");
-      
+
       // 2. ▷ 이후의 주석 부분 전체 제거
       mainText = mainText.replace(/▷.*$/gi, "");
-      
+
       // 3. <sup> 태그와 내용 제거
       mainText = mainText.replace(/<sup[^>]*>.*?<\/sup>/gi, "");
-      
-      // 4. <i> 태그와 내용 제거  
+
+      // 4. <i> 태그와 내용 제거
       mainText = mainText.replace(/<i[^>]*>.*?<\/i>/gi, "");
-      
+
       // 5. "Or " 시작하는 대안 번역 제거
       mainText = mainText.replace(/\s+Or\s+.*$/gi, "");
-      
+
       // 6. 여러 공백을 하나로 통합하고 앞뒤 공백 제거
       mainText = mainText.replace(/\s+/g, " ").trim();
     }
@@ -346,19 +346,19 @@ export function formatBibleVersesWithSub(
       if (subVersion === "niv") {
         // 1. <br> 태그 제거
         subText = subText.replace(/<br\s*\/?>/gi, " ");
-        
+
         // 2. ▷ 이후의 주석 부분 전체 제거
         subText = subText.replace(/▷.*$/gi, "");
-        
+
         // 3. <sup> 태그와 내용 제거
         subText = subText.replace(/<sup[^>]*>.*?<\/sup>/gi, "");
-        
-        // 4. <i> 태그와 내용 제거  
+
+        // 4. <i> 태그와 내용 제거
         subText = subText.replace(/<i[^>]*>.*?<\/i>/gi, "");
-        
+
         // 5. "Or " 시작하는 대안 번역 제거
         subText = subText.replace(/\s+Or\s+.*$/gi, "");
-        
+
         // 6. 여러 공백을 하나로 통합하고 앞뒤 공백 제거
         subText = subText.replace(/\s+/g, " ").trim();
       }

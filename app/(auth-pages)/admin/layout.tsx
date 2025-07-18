@@ -186,7 +186,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const { user, loading, signOut } = useAuth();
-  const { profile, loading: profileLoading } = useUserProfile(user);
+  const { profile, loading: profileLoading } = useUserProfile(user, { waitForProfile: true });
   const router = useRouter();
 
   console.log("Admin Layout - 상태:", { loading, profileLoading, user: !!user, profile, userRole: profile?.role });
@@ -201,16 +201,11 @@ export default function AdminLayout({
       return;
     }
     
-    // 프로필 로딩이 완료되었는데도 프로필이 없거나 admin이 아닌 경우만 리다이렉트
-    // 약간의 지연을 두어 상태 업데이트를 기다림
-    const timer = setTimeout(() => {
-      if (!profileLoading && (!profile || profile.role !== "admin")) {
-        console.log("관리자 권한 체크 실패:", { profile, profileLoading, role: profile?.role });
-        router.push("/");
-      }
-    }, 100); // 100ms 지연
-    
-    return () => clearTimeout(timer);
+    // 프로필이 로드되었고 admin이 아닌 경우만 리다이렉트
+    if (profile && profile.role !== "admin") {
+      console.log("관리자 권한 체크 실패:", { profile, profileLoading, role: profile?.role });
+      router.push("/");
+    }
   }, [loading, profileLoading, user, profile, router]);
 
   // 로딩 중

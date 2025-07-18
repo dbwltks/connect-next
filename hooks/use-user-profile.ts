@@ -12,7 +12,7 @@ export interface UserProfile {
   avatar_url?: string;
 }
 
-export function useUserProfile(user: User | null) {
+export function useUserProfile(user: User | null, options?: { waitForProfile?: boolean }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -25,8 +25,11 @@ export function useUserProfile(user: User | null) {
       return;
     }
 
-    // 로딩 상태를 즉시 false로 설정하여 메뉴 로딩을 차단하지 않음
-    setLoading(false);
+    // 관리자 페이지에서는 프로필 로딩을 기다림
+    if (!options?.waitForProfile) {
+      // 로딩 상태를 즉시 false로 설정하여 메뉴 로딩을 차단하지 않음
+      setLoading(false);
+    }
 
     const fetchProfile = async () => {
       try {
@@ -51,9 +54,17 @@ export function useUserProfile(user: User | null) {
         } else {
           setProfile(null);
         }
+        
+        // 프로필 로딩이 완료되면 로딩 상태 false로 설정
+        if (options?.waitForProfile) {
+          setLoading(false);
+        }
       } catch (error) {
         console.error("Error fetching profile:", error);
         setProfile(null);
+        if (options?.waitForProfile) {
+          setLoading(false);
+        }
       }
     };
 
@@ -70,7 +81,7 @@ export function useUserProfile(user: User | null) {
     return () => {
       window.removeEventListener('profileUpdated', handleProfileUpdate);
     };
-  }, [user?.id, supabase, refreshTrigger]);
+  }, [user?.id, supabase, refreshTrigger, options?.waitForProfile]);
 
   const refreshProfile = () => {
     setRefreshTrigger(prev => prev + 1);

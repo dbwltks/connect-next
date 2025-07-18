@@ -29,6 +29,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import {
   Popover,
@@ -46,6 +56,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   Calendar,
   CalendarDays,
@@ -217,6 +228,71 @@ export default function ProgramsWidget({
       userRole === "guest"
     );
   };
+
+  // Alert 다이얼로그 표시 함수
+  const showAlert = (title: string, message: string) => {
+    setAlertTitle(title);
+    setAlertMessage(message);
+    setAlertOpen(true);
+  };
+
+  // 일정 삭제 확인 후 실행
+  const confirmDeleteEvent = async () => {
+    if (!eventToDeleteConfirm) return;
+
+    try {
+      await eventsApi.delete(eventToDeleteConfirm.id, selectedProgram);
+
+      // 프로그램 데이터 새로고침
+      if (selectedProgram) {
+        const supabase = createClient();
+        const { data } = await supabase
+          .from("programs")
+          .select("events")
+          .eq("id", selectedProgram)
+          .single();
+
+        if (data) {
+          setEvents(Array.isArray(data.events) ? data.events : []);
+        }
+      }
+      // 모달 닫기
+      setIsEventDetailModalOpen(false);
+      setSelectedEvent(null);
+
+      showAlert("삭제 완료", "일정이 삭제되었습니다.");
+    } catch (error) {
+      console.error("일정 삭제 실패:", error);
+      showAlert(
+        "삭제 실패",
+        `일정 삭제에 실패했습니다: ${error instanceof Error ? error.message : "알 수 없는 오류"}`
+      );
+    } finally {
+      setDeleteConfirmOpen(false);
+      setEventToDeleteConfirm(null);
+    }
+  };
+
+  // 재정 삭제 확인 후 실행
+  const confirmDeleteFinance = async () => {
+    if (!financeToDeleteConfirm || !selectedProgram) return;
+
+    try {
+      await financeApi.delete(financeToDeleteConfirm);
+      const updatedFinances = finances.filter(
+        (f) => f.id !== financeToDeleteConfirm
+      );
+      setFinances(updatedFinances);
+      showAlert("삭제 완료", "재정 거래가 삭제되었습니다.");
+    } catch (error) {
+      console.error("재정 삭제 실패:", error);
+      showAlert("삭제 실패", "재정 삭제에 실패했습니다.");
+    } finally {
+      setFinanceDeleteConfirmOpen(false);
+      setFinanceToDeleteConfirm(null);
+    }
+  };
+
   // 장소 관리 상태
   const [isLocationSettingsOpen, setIsLocationSettingsOpen] = useState(false);
   const [savedLocations, setSavedLocations] = useState<string[]>([]);
@@ -236,6 +312,27 @@ export default function ProgramsWidget({
 
   // 재정 추가 모달 상태
   const [isFinanceModalOpen, setIsFinanceModalOpen] = useState(false);
+
+  // 반복 일정 삭제 옵션 모달 상태
+  const [isRecurringDeleteModalOpen, setIsRecurringDeleteModalOpen] =
+    useState(false);
+  const [eventToDelete, setEventToDelete] = useState<any>(null);
+
+  // Alert 다이얼로그 상태
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertTitle, setAlertTitle] = useState("");
+  const [alertMessage, setAlertMessage] = useState("");
+
+  // 삭제 확인 다이얼로그 상태
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [eventToDeleteConfirm, setEventToDeleteConfirm] = useState<any>(null);
+
+  // 재정 삭제 확인 다이얼로그 상태
+  const [financeDeleteConfirmOpen, setFinanceDeleteConfirmOpen] =
+    useState(false);
+  const [financeToDeleteConfirm, setFinanceToDeleteConfirm] = useState<
+    string | null
+  >(null);
   const [newFinance, setNewFinance] = useState({
     type: "expense" as "income" | "expense",
     category: "",
@@ -343,6 +440,8 @@ export default function ProgramsWidget({
     location: "",
     program_id: "",
     team_id: "",
+    isRecurring: false,
+    recurringEndDate: "",
   });
 
   // 전체 프로그램 목록 로드 (programs가 비어있는 경우)
@@ -858,62 +957,144 @@ export default function ProgramsWidget({
     }
   }, [userRole, tabConfig, activeTab]);
 
-  // 일정 추가 함수
-  const handleAddEvent = async () => {
+  // 일정 추가/수정 함수
+  const handleSaveEvent = async () => {
     try {
       if (!newEvent.title || !newEvent.start_date) {
-        alert("제목과 시작 날짜는 필수입니다.");
+        showAlert("입력 오류", "제목과 시작 날짜는 필수입니다.");
         return;
       }
 
-      const eventToCreate = {
-        title: newEvent.title,
-        description: newEvent.description || undefined,
-        start_date: newEvent.start_date,
-        end_date: newEvent.end_date || undefined,
-        location: newEvent.location || undefined,
-        program_id: selectedProgram,
-        team_id: newEvent.team_id || undefined,
-      };
-
-      console.log("생성할 이벤트:", eventToCreate);
-      await eventsApi.create(eventToCreate);
-
-      // 프로그램 데이터 새로고침하여 최신 events 가져오기
-      if (eventToCreate.program_id) {
-        const supabase = createClient();
-        const { data } = await supabase
-          .from("programs")
-          .select("events")
-          .eq("id", eventToCreate.program_id)
-          .single();
-
-        if (data) {
-          setEvents(Array.isArray(data.events) ? data.events : []);
-        }
+      if (newEvent.isRecurring && !newEvent.recurringEndDate) {
+        showAlert("입력 오류", "반복 일정의 종료일을 설정해주세요.");
+        return;
       }
 
-      // 모달 닫기
-      setIsEventModalOpen(false);
+      // 수정 모드인 경우
+      if (isEditingEvent && editingEventData) {
+        const updatedEvent = {
+          ...editingEventData,
+          title: newEvent.title,
+          description: newEvent.description,
+          start_date: newEvent.start_date,
+          end_date: newEvent.end_date,
+          location: newEvent.location,
+          team_id: newEvent.team_id,
+        };
 
-      alert("일정이 추가되었습니다.");
-    } catch (error) {
-      console.error("일정 추가 실패:", error);
-      console.error("에러 상세:", JSON.stringify(error, null, 2));
-      alert(
-        `일정 추가에 실패했습니다: ${error instanceof Error ? error.message : "알 수 없는 오류"}`
-      );
-    }
-  };
+        await eventsApi.update(editingEventData.id, updatedEvent);
+        
+        // 이벤트 목록 업데이트
+        const updatedEvents = events.map(event =>
+          event.id === editingEventData.id ? updatedEvent : event
+        );
+        setEvents(updatedEvents);
+        setIsEditingEvent(false);
+        setEditingEventData(null);
+        setIsEventModalOpen(false);
+        
+        // 폼 초기화
+        setNewEvent({
+          title: "",
+          description: "",
+          start_date: "",
+          end_date: "",
+          location: "",
+          program_id: "",
+          team_id: "",
+          isRecurring: false,
+          recurringEndDate: "",
+        });
+        
+        showAlert("수정 완료", "일정이 수정되었습니다.");
+        return;
+      }
 
-  // 일정 삭제 함수
-  const handleDeleteEvent = async (eventId: string) => {
-    if (!confirm("정말로 이 일정을 삭제하시겠습니까?")) {
-      return;
-    }
+      if (newEvent.isRecurring) {
+        // 반복 일정 생성
+        const baseStartDate = new Date(newEvent.start_date);
+        const baseEndDate = newEvent.end_date
+          ? new Date(newEvent.end_date)
+          : null;
+        const recurringEndDate = new Date(newEvent.recurringEndDate);
 
-    try {
-      await eventsApi.delete(eventId, selectedProgram);
+        // 기본 일정의 요일 계산 (0: 일요일, 1: 월요일, ..., 6: 토요일)
+        const targetDayOfWeek = baseStartDate.getDay();
+
+        // 반복 그룹 ID 생성 (타임스탬프 + 랜덤)
+        const recurringGroupId = `recurring_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+        // 시작일부터 종료일까지 해당 요일에 맞는 모든 날짜 생성
+        const eventsToCreate = [];
+        let currentDate = new Date(baseStartDate);
+
+        // 종료일까지 매주 해당 요일에 일정 생성
+        while (currentDate <= recurringEndDate) {
+          const eventStartDate = new Date(currentDate);
+          const eventEndDate = baseEndDate ? new Date(currentDate) : null;
+
+          // 시작 시간 설정
+          eventStartDate.setHours(
+            baseStartDate.getHours(),
+            baseStartDate.getMinutes(),
+            baseStartDate.getSeconds()
+          );
+
+          // 종료 시간 설정 (있는 경우)
+          if (eventEndDate && baseEndDate) {
+            eventEndDate.setHours(
+              baseEndDate.getHours(),
+              baseEndDate.getMinutes(),
+              baseEndDate.getSeconds()
+            );
+          }
+
+          eventsToCreate.push({
+            title: newEvent.title,
+            description: newEvent.description || undefined,
+            start_date: eventStartDate.toISOString(),
+            end_date: eventEndDate ? eventEndDate.toISOString() : undefined,
+            location: newEvent.location || undefined,
+            program_id: selectedProgram,
+            team_id: newEvent.team_id || undefined,
+            recurring_group_id: recurringGroupId, // 반복 그룹 ID 추가
+            is_recurring: true, // 반복 일정 표시
+          });
+
+          // 다음 주 같은 요일로 이동
+          currentDate.setDate(currentDate.getDate() + 7);
+        }
+
+        console.log(
+          `${eventsToCreate.length}개의 반복 일정 생성 (그룹 ID: ${recurringGroupId}):`,
+          eventsToCreate
+        );
+
+        // 모든 반복 일정 생성
+        for (const event of eventsToCreate) {
+          await eventsApi.create(event);
+        }
+
+        showAlert(
+          "추가 완료",
+          `${eventsToCreate.length}개의 반복 일정이 추가되었습니다.`
+        );
+      } else {
+        // 단일 일정 생성
+        const eventToCreate = {
+          title: newEvent.title,
+          description: newEvent.description || undefined,
+          start_date: newEvent.start_date,
+          end_date: newEvent.end_date || undefined,
+          location: newEvent.location || undefined,
+          program_id: selectedProgram,
+          team_id: newEvent.team_id || undefined,
+        };
+
+        console.log("생성할 이벤트:", eventToCreate);
+        await eventsApi.create(eventToCreate);
+        showAlert("추가 완료", "일정이 추가되었습니다.");
+      }
 
       // 프로그램 데이터 새로고침하여 최신 events 가져오기
       if (selectedProgram) {
@@ -929,15 +1110,145 @@ export default function ProgramsWidget({
         }
       }
 
-      // 모달 닫기
+      // 모달 닫기 및 폼 초기화
+      setIsEventModalOpen(false);
+      setNewEvent({
+        title: "",
+        description: "",
+        start_date: "",
+        end_date: "",
+        location: "",
+        program_id: "",
+        team_id: "",
+        isRecurring: false,
+        recurringEndDate: "",
+      });
+    } catch (error) {
+      console.error("일정 추가 실패:", error);
+      console.error("에러 상세:", JSON.stringify(error, null, 2));
+      showAlert(
+        "추가 실패",
+        `일정 추가에 실패했습니다: ${error instanceof Error ? error.message : "알 수 없는 오류"}`
+      );
+    }
+  };
+
+  // 일정 삭제 함수
+  const handleDeleteEvent = async (eventId: string) => {
+    // 먼저 해당 일정이 반복 일정인지 확인
+    const eventToCheck = events.find((event) => event.id === eventId);
+
+    if (eventToCheck && (eventToCheck as any).recurring_group_id) {
+      // 반복 일정인 경우 삭제 옵션 선택 모달 표시
+      setEventToDelete(eventToCheck);
+      setIsRecurringDeleteModalOpen(true);
+      return;
+    }
+
+    // 일반 일정인 경우 삭제 확인 다이얼로그 표시
+    setEventToDeleteConfirm(eventToCheck);
+    setDeleteConfirmOpen(true);
+    return;
+  };
+
+  // 반복 일정 삭제 처리 함수
+  const handleRecurringEventDelete = async (
+    deleteOption: "single" | "future" | "all"
+  ) => {
+    if (!eventToDelete) return;
+
+    try {
+      if (deleteOption === "single") {
+        // 이 일정만 삭제
+        const remainingEvents = events.filter(event => event.id !== eventToDelete.id);
+        
+        // 프로그램 업데이트
+        const supabase = createClient();
+        const { error } = await supabase
+          .from("programs")
+          .update({ events: remainingEvents })
+          .eq("id", selectedProgram);
+
+        if (error) throw error;
+        
+        setEvents(remainingEvents);
+        showAlert("삭제 완료", "선택한 일정이 삭제되었습니다.");
+      } else if (deleteOption === "future") {
+        // 이번 및 향후 일정 삭제 - 현재 events 배열에서 필터링
+        const eventDate = new Date(eventToDelete.start_date);
+        
+        // 같은 그룹의 이번 및 향후 일정들 찾기
+        const futureEvents = events.filter(event => 
+          (event as any).recurring_group_id === (eventToDelete as any).recurring_group_id &&
+          new Date(event.start_date) >= eventDate
+        );
+
+        if (futureEvents.length > 0) {
+          // 삭제할 이벤트 ID들 수집
+          const eventIdsToDelete = futureEvents.map(event => event.id);
+          
+          // 남은 이벤트들만 필터링
+          const remainingEvents = events.filter(event => 
+            !eventIdsToDelete.includes(event.id)
+          );
+          
+          // 프로그램 업데이트
+          const supabase = createClient();
+          const { error } = await supabase
+            .from("programs")
+            .update({ events: remainingEvents })
+            .eq("id", selectedProgram);
+
+          if (error) throw error;
+          
+          setEvents(remainingEvents);
+          showAlert(
+            "삭제 완료",
+            `${futureEvents.length}개의 향후 일정이 삭제되었습니다.`
+          );
+        }
+      } else if (deleteOption === "all") {
+        // 모든 반복 일정 삭제 - 현재 events 배열에서 필터링
+        const allEvents = events.filter(event => 
+          (event as any).recurring_group_id === (eventToDelete as any).recurring_group_id
+        );
+
+        if (allEvents.length > 0) {
+          // 삭제할 이벤트 ID들 수집
+          const eventIdsToDelete = allEvents.map(event => event.id);
+          
+          // 남은 이벤트들만 필터링
+          const remainingEvents = events.filter(event => 
+            !eventIdsToDelete.includes(event.id)
+          );
+          
+          // 프로그램 업데이트
+          const supabase = createClient();
+          const { error } = await supabase
+            .from("programs")
+            .update({ events: remainingEvents })
+            .eq("id", selectedProgram);
+
+          if (error) throw error;
+          
+          setEvents(remainingEvents);
+          showAlert(
+            "삭제 완료",
+            `${allEvents.length}개의 모든 반복 일정이 삭제되었습니다.`
+          );
+        }
+      }
+
+      // 모달들 닫기
+      setIsRecurringDeleteModalOpen(false);
       setIsEventDetailModalOpen(false);
       setSelectedEvent(null);
-
-      alert("일정이 삭제되었습니다.");
+      setEventToDelete(null);
     } catch (error) {
-      console.error("일정 삭제 실패:", error);
-      alert(
-        `일정 삭제에 실패했습니다: ${error instanceof Error ? error.message : "알 수 없는 오류"}`
+      console.error("반복 일정 삭제 실패:", error);
+      showAlert(
+        "삭제 실패",
+        `삭제에 실패했습니다: ${error instanceof Error ? error.message : "알 수 없는 오류"}`
       );
     }
   };
@@ -1004,7 +1315,7 @@ export default function ProgramsWidget({
       setNewLocation("");
     } catch (error) {
       console.error("장소 추가 실패:", error);
-      alert("장소 추가에 실패했습니다.");
+      showAlert("추가 실패", "장소 추가에 실패했습니다.");
     }
   };
 
@@ -1042,7 +1353,7 @@ export default function ProgramsWidget({
       setSavedLocations(updatedLocations);
     } catch (error) {
       console.error("장소 삭제 실패:", error);
-      alert("장소 삭제에 실패했습니다.");
+      showAlert("삭제 실패", "장소 삭제에 실패했습니다.");
     }
   };
 
@@ -1075,7 +1386,7 @@ export default function ProgramsWidget({
     );
 
     if (isDuplicate) {
-      alert("이미 존재하는 장소명입니다.");
+      showAlert("입력 오류", "이미 존재하는 장소명입니다.");
       return;
     }
 
@@ -1112,7 +1423,7 @@ export default function ProgramsWidget({
       setEditingLocationValue("");
     } catch (error) {
       console.error("장소 수정 실패:", error);
-      alert("장소 수정에 실패했습니다.");
+      showAlert("수정 실패", "장소 수정에 실패했습니다.");
     }
   };
 
@@ -1126,7 +1437,7 @@ export default function ProgramsWidget({
   // 재정 데이터 추가 함수
   const handleAddFinance = async () => {
     if (!selectedProgram || !newFinance.amount || !newFinance.category) {
-      alert("필수 항목을 모두 입력해주세요.");
+      showAlert("입력 오류", "필수 항목을 모두 입력해주세요.");
       return;
     }
 
@@ -1211,14 +1522,15 @@ export default function ProgramsWidget({
       setEditingFinance(null);
 
       setIsFinanceModalOpen(false);
-      alert(
+      showAlert(
+        isEdit ? "수정 완료" : "추가 완료",
         isEdit
           ? "재정 데이터가 수정되었습니다."
           : "재정 데이터가 추가되었습니다."
       );
     } catch (error) {
       console.error("재정 처리 실패:", error);
-      alert("재정 처리에 실패했습니다.");
+      showAlert("처리 실패", "재정 처리에 실패했습니다.");
     }
   };
 
@@ -1279,14 +1591,14 @@ export default function ProgramsWidget({
       setNewFinanceCategory("");
     } catch (error) {
       console.error("카테고리 추가 실패:", error);
-      alert("카테고리 추가에 실패했습니다.");
+      showAlert("추가 실패", "카테고리 추가에 실패했습니다.");
     }
   };
 
   // 재정 카테고리 삭제
   const removeFinanceCategory = async (category: string) => {
     if (financeCategories.length <= 1) {
-      alert("최소 하나의 카테고리는 필요합니다.");
+      showAlert("삭제 불가", "최소 하나의 카테고리는 필요합니다.");
       return;
     }
 
@@ -1298,7 +1610,7 @@ export default function ProgramsWidget({
       setFinanceCategories(updatedCategories);
     } catch (error) {
       console.error("카테고리 삭제 실패:", error);
-      alert("카테고리 삭제에 실패했습니다.");
+      showAlert("삭제 실패", "카테고리 삭제에 실패했습니다.");
     }
   };
 
@@ -1327,7 +1639,7 @@ export default function ProgramsWidget({
     );
 
     if (isDuplicate) {
-      alert("이미 존재하는 카테고리명입니다.");
+      showAlert("입력 오류", "이미 존재하는 카테고리명입니다.");
       return;
     }
 
@@ -1342,7 +1654,7 @@ export default function ProgramsWidget({
       setEditingCategoryValue("");
     } catch (error) {
       console.error("카테고리 수정 실패:", error);
-      alert("카테고리 수정에 실패했습니다.");
+      showAlert("수정 실패", "카테고리 수정에 실패했습니다.");
     }
   };
 
@@ -1362,52 +1674,20 @@ export default function ProgramsWidget({
       setNewFinanceVendor("");
     } catch (error) {
       console.error("거래처 추가 실패:", error);
-      alert("거래처 추가에 실패했습니다.");
+      showAlert("추가 실패", "거래처 추가에 실패했습니다.");
     }
   };
 
   // 재정 삭제 함수
   const handleDeleteFinance = async (financeId: string) => {
-    if (
-      !selectedProgram ||
-      !confirm("정말로 이 거래 내역을 삭제하시겠습니까?")
-    ) {
+    if (!selectedProgram) {
       return;
     }
 
-    try {
-      const supabase = createClient();
-
-      // 현재 프로그램의 재정 데이터 가져오기
-      const { data: programData, error: fetchError } = await supabase
-        .from("programs")
-        .select("finances")
-        .eq("id", selectedProgram)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      const currentFinances = Array.isArray(programData?.finances)
-        ? programData.finances
-        : [];
-      const updatedFinances = currentFinances.filter(
-        (finance: any) => finance.id !== financeId
-      );
-
-      // programs 테이블의 finances 필드 업데이트
-      const { error } = await supabase
-        .from("programs")
-        .update({ finances: updatedFinances })
-        .eq("id", selectedProgram);
-
-      if (error) throw error;
-
-      // 로컬 상태 업데이트
-      setFinances(updatedFinances);
-    } catch (error) {
-      console.error("재정 삭제 실패:", error);
-      alert("재정 삭제에 실패했습니다.");
-    }
+    // 삭제 확인 다이얼로그 표시
+    setFinanceToDeleteConfirm(financeId);
+    setFinanceDeleteConfirmOpen(true);
+    return;
   };
 
   // 재정 수정 시작
@@ -1458,7 +1738,7 @@ export default function ProgramsWidget({
       !editFinanceData.amount ||
       !editFinanceData.category
     ) {
-      alert("필수 항목을 모두 입력해주세요.");
+      showAlert("입력 오류", "필수 항목을 모두 입력해주세요.");
       return;
     }
 
@@ -1510,17 +1790,17 @@ export default function ProgramsWidget({
       // 수정 모드 종료
       handleCancelEditFinance();
 
-      alert("재정 데이터가 수정되었습니다.");
+      showAlert("수정 완료", "재정 데이터가 수정되었습니다.");
     } catch (error) {
       console.error("재정 수정 실패:", error);
-      alert("재정 수정에 실패했습니다.");
+      showAlert("수정 실패", "재정 수정에 실패했습니다.");
     }
   };
 
   // 거래처 삭제
   const removeFinanceVendor = async (vendor: string) => {
     if (financeVendors.length <= 1) {
-      alert("최소 하나의 거래처는 필요합니다.");
+      showAlert("삭제 불가", "최소 하나의 거래처는 필요합니다.");
       return;
     }
 
@@ -1530,7 +1810,7 @@ export default function ProgramsWidget({
       setFinanceVendors(updatedVendors);
     } catch (error) {
       console.error("거래처 삭제 실패:", error);
-      alert("거래처 삭제에 실패했습니다.");
+      showAlert("삭제 실패", "거래처 삭제에 실패했습니다.");
     }
   };
 
@@ -1559,7 +1839,7 @@ export default function ProgramsWidget({
     );
 
     if (isDuplicate) {
-      alert("이미 존재하는 거래처명입니다.");
+      showAlert("입력 오류", "이미 존재하는 거래처명입니다.");
       return;
     }
 
@@ -1572,7 +1852,7 @@ export default function ProgramsWidget({
       setEditingVendorValue("");
     } catch (error) {
       console.error("거래처 수정 실패:", error);
-      alert("거래처 수정에 실패했습니다.");
+      showAlert("수정 실패", "거래처 수정에 실패했습니다.");
     }
   };
 
@@ -1753,36 +2033,27 @@ export default function ProgramsWidget({
                 <div className="flex justify-between items-center">
                   {/* 뷰 모드 탭 선택 */}
                   <div className="flex bg-gray-100 rounded-lg p-1">
-                    <button
+                    <Button
                       onClick={() => setViewMode("list")}
-                      className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
-                        viewMode === "list"
-                          ? "bg-white text-gray-900 shadow-sm"
-                          : "text-gray-600 hover:text-gray-900"
-                      }`}
+                      variant={viewMode === "list" ? "default" : "ghost"}
+                      size="sm"
                     >
                       목록
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       onClick={() => setViewMode("week")}
-                      className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
-                        viewMode === "week"
-                          ? "bg-white text-gray-900 shadow-sm"
-                          : "text-gray-600 hover:text-gray-900"
-                      }`}
+                      variant={viewMode === "week" ? "default" : "ghost"}
+                      size="sm"
                     >
                       주간
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       onClick={() => setViewMode("month")}
-                      className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
-                        viewMode === "month"
-                          ? "bg-white text-gray-900 shadow-sm"
-                          : "text-gray-600 hover:text-gray-900"
-                      }`}
+                      variant={viewMode === "month" ? "default" : "ghost"}
+                      size="sm"
                     >
                       월간
-                    </button>
+                    </Button>
                   </div>
 
                   {/* 일정 추가 버튼 - 탭별 권한 설정 확인 */}
@@ -1939,20 +2210,25 @@ export default function ProgramsWidget({
                         open={isEventModalOpen}
                         onOpenChange={(open) => {
                           setIsEventModalOpen(open);
-                          if (open) {
-                            // 모달이 열릴 때 기본 시간 설정 (현재 시간, 1시간 후)
+                          if (open && !isEditingEvent) {
+                            // 모달이 열릴 때 기본 시간 설정 (현재 시간, 1시간 후) - 추가 모드만
                             const now = new Date();
                             const oneHourLater = addHours(now, 1);
-                            setNewEvent((prev) => ({
-                              ...prev,
+                            setNewEvent({
+                              title: "",
+                              description: "",
                               start_date: format(now, "yyyy-MM-dd'T'HH:mm"),
                               end_date: format(
                                 oneHourLater,
                                 "yyyy-MM-dd'T'HH:mm"
                               ),
+                              location: "",
                               program_id: selectedProgram || "",
-                            }));
-                          } else {
+                              team_id: "",
+                              isRecurring: false,
+                              recurringEndDate: "",
+                            });
+                          } else if (!open) {
                             // 모달이 닫힐 때 폼 초기화
                             setNewEvent({
                               title: "",
@@ -1962,19 +2238,43 @@ export default function ProgramsWidget({
                               location: "",
                               program_id: "",
                               team_id: "",
+                              isRecurring: false,
+                              recurringEndDate: "",
                             });
+                            // 수정 모드 초기화
+                            setIsEditingEvent(false);
+                            setEditingEventData(null);
                           }
                         }}
                       >
                         <DialogTrigger asChild>
-                          <Button variant="default" size="sm">
+                          <Button 
+                            variant="default" 
+                            size="sm"
+                            onClick={() => {
+                              setIsEditingEvent(false);
+                              setEditingEventData(null);
+                              // 폼 완전 초기화
+                              setNewEvent({
+                                title: "",
+                                description: "",
+                                start_date: "",
+                                end_date: "",
+                                location: "",
+                                program_id: "",
+                                team_id: "",
+                                isRecurring: false,
+                                recurringEndDate: "",
+                              });
+                            }}
+                          >
                             <Plus size={16} className="mr-2" />
                             일정 추가
                           </Button>
                         </DialogTrigger>
                         <DialogContent className="w-[95vw] max-w-[425px] max-h-[90vh] overflow-y-auto mx-auto">
                           <DialogHeader>
-                            <DialogTitle>새 일정 추가</DialogTitle>
+                            <DialogTitle>{isEditingEvent ? "일정 수정" : "새 일정 추가"}</DialogTitle>
                           </DialogHeader>
                           <div className="grid gap-4 py-4">
                             <div className="grid gap-2">
@@ -2130,6 +2430,69 @@ export default function ProgramsWidget({
                                 </SelectContent>
                               </Select>
                             </div>
+
+                            {/* 반복 설정 */}
+                            <div className="grid gap-3 pt-4 border-t">
+                              <div className="flex items-center justify-between">
+                                <Label
+                                  htmlFor="recurring"
+                                  className="text-sm font-medium"
+                                >
+                                  매주 반복
+                                </Label>
+                                <Switch
+                                  id="recurring"
+                                  checked={newEvent.isRecurring}
+                                  onCheckedChange={(checked) =>
+                                    setNewEvent((prev) => ({
+                                      ...prev,
+                                      isRecurring: checked,
+                                      recurringEndDate: checked
+                                        ? prev.recurringEndDate
+                                        : "",
+                                    }))
+                                  }
+                                />
+                              </div>
+
+                              {newEvent.isRecurring && (
+                                <div className="grid gap-3 pl-6 space-y-2">
+                                  <div className="grid gap-2">
+                                    <Label htmlFor="recurring-end">
+                                      반복 종료일
+                                    </Label>
+                                    <Input
+                                      id="recurring-end"
+                                      type="date"
+                                      value={newEvent.recurringEndDate}
+                                      onChange={(e) =>
+                                        setNewEvent((prev) => ({
+                                          ...prev,
+                                          recurringEndDate: e.target.value,
+                                        }))
+                                      }
+                                      min={
+                                        newEvent.start_date
+                                          ? new Date(newEvent.start_date)
+                                              .toISOString()
+                                              .split("T")[0]
+                                          : new Date()
+                                              .toISOString()
+                                              .split("T")[0]
+                                      }
+                                    />
+                                  </div>
+
+                                  <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded">
+                                    💡 위에 설정한 시작일부터 종료일까지 매주
+                                    같은 요일, 같은 시간에 반복됩니다.
+                                    <br />
+                                    예: 월요일 10:00~12:00 → 매주 월요일
+                                    10:00~12:00 반복
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
                           <div className="flex justify-end gap-2">
                             <Button
@@ -2138,7 +2501,9 @@ export default function ProgramsWidget({
                             >
                               취소
                             </Button>
-                            <Button onClick={handleAddEvent}>추가</Button>
+                            <Button onClick={handleSaveEvent}>
+                              {isEditingEvent ? "수정" : "추가"}
+                            </Button>
                           </div>
                         </DialogContent>
                       </Dialog>
@@ -2148,28 +2513,28 @@ export default function ProgramsWidget({
 
                 {/* 팀 필터 */}
                 <div className="flex flex-wrap gap-2">
-                  <button
+                  <Button
                     onClick={() => setSelectedTeamFilter("all")}
-                    className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                      selectedTeamFilter === "all"
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
+                    variant={
+                      selectedTeamFilter === "all" ? "default" : "secondary"
+                    }
+                    size="sm"
+                    className="rounded-full"
                   >
                     전체
-                  </button>
+                  </Button>
                   {teams.map((team) => (
-                    <button
+                    <Button
                       key={team.id}
                       onClick={() => setSelectedTeamFilter(team.id)}
-                      className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                        selectedTeamFilter === team.id
-                          ? "bg-blue-600 text-white"
-                          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                      }`}
+                      variant={
+                        selectedTeamFilter === team.id ? "default" : "secondary"
+                      }
+                      size="sm"
+                      className="rounded-full"
                     >
                       {team.name}
-                    </button>
+                    </Button>
                   ))}
                   {teams.length === 0 && (
                     <span className="text-sm text-gray-500">
@@ -2268,9 +2633,7 @@ export default function ProgramsWidget({
                         <Button
                           variant="destructive"
                           onClick={() => handleDeleteEvent(selectedEvent.id)}
-                          className="gap-2"
                         >
-                          <Trash2 size={16} />
                           삭제
                         </Button>
                       )}
@@ -2279,8 +2642,10 @@ export default function ProgramsWidget({
                         <Button
                           onClick={() => {
                             if (selectedEvent) {
-                              setEditingEventData({
-                                ...selectedEvent,
+                              setEditingEventData(selectedEvent);
+                              setNewEvent({
+                                title: selectedEvent.title || "",
+                                description: selectedEvent.description || "",
                                 start_date: selectedEvent.start_date
                                   ? format(
                                       parseISO(selectedEvent.start_date),
@@ -2293,9 +2658,15 @@ export default function ProgramsWidget({
                                       "yyyy-MM-dd'T'HH:mm"
                                     )
                                   : "",
+                                location: selectedEvent.location || "",
+                                program_id: selectedEvent.program_id || "",
+                                team_id: selectedEvent.team_id || "",
+                                isRecurring: false,
+                                recurringEndDate: "",
                               });
                               setIsEditingEvent(true);
                               setIsEventDetailModalOpen(false);
+                              setIsEventModalOpen(true);
                             }
                           }}
                         >
@@ -2306,211 +2677,6 @@ export default function ProgramsWidget({
                   </DialogContent>
                 </Dialog>
 
-                {/* 일정 수정 모달 */}
-                <Dialog open={isEditingEvent} onOpenChange={setIsEditingEvent}>
-                  <DialogContent className="w-[95vw] max-w-[425px] max-h-[90vh] overflow-y-auto mx-auto">
-                    <DialogHeader>
-                      <DialogTitle>일정 수정</DialogTitle>
-                    </DialogHeader>
-                    {editingEventData && (
-                      <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                          <Label htmlFor="edit-title">제목 *</Label>
-                          <Input
-                            id="edit-title"
-                            value={editingEventData.title || ""}
-                            onChange={(e) =>
-                              setEditingEventData((prev: Event | null) =>
-                                prev ? { ...prev, title: e.target.value } : null
-                              )
-                            }
-                            placeholder="일정 제목을 입력하세요"
-                          />
-                        </div>
-
-                        <div className="grid gap-2">
-                          <Label htmlFor="edit-description">설명</Label>
-                          <Textarea
-                            id="edit-description"
-                            value={editingEventData.description || ""}
-                            onChange={(e) =>
-                              setEditingEventData((prev: Event | null) =>
-                                prev
-                                  ? { ...prev, description: e.target.value }
-                                  : null
-                              )
-                            }
-                            placeholder="일정 설명을 입력하세요"
-                            rows={3}
-                          />
-                        </div>
-
-                        <div className="grid gap-2">
-                          <Label htmlFor="edit-start-date">시작 일시 *</Label>
-                          <Input
-                            id="edit-start-date"
-                            type="datetime-local"
-                            value={editingEventData.start_date || ""}
-                            onChange={(e) =>
-                              setEditingEventData((prev: Event | null) =>
-                                prev
-                                  ? { ...prev, start_date: e.target.value }
-                                  : null
-                              )
-                            }
-                          />
-                        </div>
-
-                        <div className="grid gap-2">
-                          <Label htmlFor="edit-end-date">종료 일시</Label>
-                          <Input
-                            id="edit-end-date"
-                            type="datetime-local"
-                            value={editingEventData.end_date || ""}
-                            onChange={(e) =>
-                              setEditingEventData((prev: Event | null) =>
-                                prev
-                                  ? { ...prev, end_date: e.target.value }
-                                  : null
-                              )
-                            }
-                          />
-                        </div>
-
-                        <div className="grid gap-2">
-                          <Label htmlFor="edit-location">장소</Label>
-                          <Select
-                            value={editingEventData.location || ""}
-                            onValueChange={(value) => {
-                              if (value === "custom") {
-                                // Custom option selected, clear the location to show input
-                                setEditingEventData((prev: Event | null) =>
-                                  prev ? { ...prev, location: "" } : null
-                                );
-                              } else {
-                                // Pre-saved location selected
-                                setEditingEventData((prev: Event | null) =>
-                                  prev ? { ...prev, location: value } : null
-                                );
-                              }
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="장소를 선택하거나 직접 입력하세요" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {savedLocations.map((location) => (
-                                <SelectItem key={location} value={location}>
-                                  {location}
-                                </SelectItem>
-                              ))}
-                              <SelectItem value="custom">직접 입력</SelectItem>
-                            </SelectContent>
-                          </Select>
-
-                          {/* Show input field when custom is selected or when location is not in saved locations */}
-                          {(editingEventData.location === "" ||
-                            !savedLocations.includes(
-                              editingEventData.location || ""
-                            )) && (
-                            <Input
-                              id="edit-location-custom"
-                              value={editingEventData.location || ""}
-                              onChange={(e) =>
-                                setEditingEventData((prev: Event | null) =>
-                                  prev
-                                    ? { ...prev, location: e.target.value }
-                                    : null
-                                )
-                              }
-                              placeholder="장소를 입력하세요"
-                              className="mt-2"
-                            />
-                          )}
-                        </div>
-
-                        <div className="grid gap-2">
-                          <Label htmlFor="edit-team">진행팀</Label>
-                          <Select
-                            value={editingEventData.team_id || ""}
-                            onValueChange={(value) =>
-                              setEditingEventData((prev: Event | null) =>
-                                prev
-                                  ? {
-                                      ...prev,
-                                      team_id: value === "none" ? "" : value,
-                                    }
-                                  : null
-                              )
-                            }
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="진행팀을 선택하세요" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">팀 없음</SelectItem>
-                              {teams.map((team) => (
-                                <SelectItem key={team.id} value={team.id}>
-                                  {team.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    )}
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        onClick={() => setIsEditingEvent(false)}
-                      >
-                        취소
-                      </Button>
-                      <Button
-                        onClick={async () => {
-                          try {
-                            // 수정된 데이터로 업데이트
-                            const supabase = createClient();
-                            const { data: program } = await supabase
-                              .from("programs")
-                              .select("events")
-                              .eq("id", selectedProgram)
-                              .single();
-
-                            if (program) {
-                              const currentEvents = Array.isArray(
-                                program.events
-                              )
-                                ? program.events
-                                : [];
-                              const updatedEvents = currentEvents.map(
-                                (e: Event) =>
-                                  e.id === editingEventData?.id
-                                    ? editingEventData
-                                    : e
-                              );
-
-                              await supabase
-                                .from("programs")
-                                .update({ events: updatedEvents })
-                                .eq("id", selectedProgram);
-
-                              setEvents(updatedEvents);
-                              setIsEditingEvent(false);
-                              setEditingEventData(null);
-                              alert("일정이 수정되었습니다.");
-                            }
-                          } catch (error) {
-                            console.error("일정 수정 실패:", error);
-                            alert("일정 수정에 실패했습니다.");
-                          }
-                        }}
-                      >
-                        저장
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
 
                 {/* 날짜별 일정 보기 모달 */}
                 <Dialog
@@ -2661,8 +2827,12 @@ export default function ProgramsWidget({
                                 location: "",
                                 program_id: selectedProgram || "",
                                 team_id: "",
+                                isRecurring: false,
+                                recurringEndDate: "",
                               });
 
+                              setIsEditingEvent(false);
+                              setEditingEventData(null);
                               setIsDayEventsModalOpen(false);
                               setIsEventModalOpen(true);
                             }
@@ -2710,7 +2880,7 @@ export default function ProgramsWidget({
                 )}
               </div>
 
-              <div className="px-4 pb-4">
+              <div className="px-2 pb-4">
                 {/* 목록 보기 */}
                 {viewMode === "list" && (
                   <div className="space-y-6">
@@ -2912,15 +3082,15 @@ export default function ProgramsWidget({
                     {/* 요일 헤더 */}
                     <div
                       className="grid border-b"
-                      style={{ gridTemplateColumns: "60px repeat(7, 1fr)" }}
+                      style={{ gridTemplateColumns: "50px repeat(7, 1fr)" }}
                     >
-                      <div className="p-2 text-center text-sm font-medium text-gray-500">
+                      <div className="p-1 text-center text-xs font-medium text-gray-500 border-r">
                         시간
                       </div>
                       {weekDays.map((day, index) => (
                         <div
                           key={day.toISOString()}
-                          className={`p-3 text-center border-l ${
+                          className={`p-2 text-center border-l ${
                             isSameDay(day, new Date()) ? "bg-blue-50" : ""
                           }`}
                         >
@@ -2935,7 +3105,7 @@ export default function ProgramsWidget({
                           >
                             {format(day, "EEE", { locale: ko })}
                           </div>
-                          <div className="text-lg font-medium">
+                          <div className="text-sm font-medium">
                             {format(day, "d")}
                           </div>
                         </div>
@@ -2949,8 +3119,8 @@ export default function ProgramsWidget({
                           key={hour}
                           className="grid border-b"
                           style={{
-                            height: "60px",
-                            gridTemplateColumns: "60px repeat(7, 1fr)",
+                            height: "50px",
+                            gridTemplateColumns: "50px repeat(7, 1fr)",
                           }}
                         >
                           <div className="p-1 text-xs text-gray-500 border-r flex items-center justify-center">
@@ -2990,13 +3160,13 @@ export default function ProgramsWidget({
                             (e) => e.id === event.id
                           );
 
-                          // 시간 컬럼 60px 이후 계산 (calc 사용)
-                          const dayWidth = `calc((100% - 60px) / 7)`; // 각 날짜 컬럼의 폭
+                          // 시간 컬럼 50px 이후 계산 (calc 사용)
+                          const dayWidth = `calc((100% - 50px) / 7)`; // 각 날짜 컬럼의 폭
                           const eventWidth =
                             totalOverlapping > 1
                               ? `calc(${dayWidth} / ${totalOverlapping})`
                               : dayWidth;
-                          const eventLeft = `calc(60px + ${dayIndex} * ${dayWidth} + ${eventIndexInOverlap} * ${eventWidth})`;
+                          const eventLeft = `calc(50px + ${dayIndex} * ${dayWidth} + ${eventIndexInOverlap} * ${eventWidth})`;
 
                           const program = programs.find(
                             (p) => p.id === event.program_id
@@ -3010,9 +3180,9 @@ export default function ProgramsWidget({
                               )}`}
                               style={{
                                 left: eventLeft,
-                                top: `${startHour * 60 + (startMinute / 60) * 60}px`,
+                                top: `${startHour * 50 + (startMinute / 60) * 50}px`,
                                 width: eventWidth,
-                                height: `${Math.max(duration * 60 - 4, 30)}px`,
+                                height: `${Math.max(duration * 50 - 4, 30)}px`,
                                 fontSize: "10px",
                                 zIndex: 10 + eventIndexInOverlap,
                                 ...getTeamStyle(event.team_id),
@@ -3162,15 +3332,17 @@ export default function ProgramsWidget({
                                 );
                               })}
                               {dayEvents.length > 2 && (
-                                <button
-                                  className="text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded px-2 py-1 w-full transition-colors"
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-xs text-gray-500 h-6 px-2 py-1 w-full"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleDateClick(day);
                                   }}
                                 >
                                   +{dayEvents.length - 2} 더보기
-                                </button>
+                                </Button>
                               )}
                             </div>
                           </div>
@@ -4386,17 +4558,17 @@ export default function ProgramsWidget({
       </Dialog>
 
       {/* 재정 수정/삭제 액션 다이얼로그 */}
-      <Dialog
+      <AlertDialog
         open={isFinanceActionDialogOpen}
         onOpenChange={setIsFinanceActionDialogOpen}
       >
-        <DialogContent className="w-[95vw] max-w-[500px] max-h-[90vh] overflow-y-auto mx-auto">
-          <DialogHeader>
-            <DialogTitle>거래 내역 관리</DialogTitle>
-            <DialogDescription>
+        <AlertDialogContent className="w-[95vw] max-w-[500px] max-h-[90vh] overflow-y-auto mx-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle>거래 내역 관리</AlertDialogTitle>
+            <AlertDialogDescription>
               선택한 거래 내역을 수정하거나 삭제할 수 있습니다.
-            </DialogDescription>
-          </DialogHeader>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
 
           {selectedFinanceForAction && (
             <div className="space-y-4">
@@ -4478,44 +4650,172 @@ export default function ProgramsWidget({
                   </div>
                 </div>
               </div>
-
-              <div className="flex gap-3 justify-end">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    handleEditFinance(selectedFinanceForAction);
-                    setIsFinanceActionDialogOpen(false);
-                  }}
-                  className="flex items-center gap-2"
-                >
-                  <Edit className="h-4 w-4" />
-                  수정
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={() => {
-                    setIsFinanceActionDialogOpen(false);
-                    handleDeleteFinance(selectedFinanceForAction.id);
-                  }}
-                  className="flex items-center gap-2"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  삭제
-                </Button>
-              </div>
             </div>
           )}
 
-          <DialogFooter>
-            <Button
-              variant="outline"
+          <AlertDialogFooter>
+            <AlertDialogCancel
               onClick={() => setIsFinanceActionDialogOpen(false)}
             >
               닫기
+            </AlertDialogCancel>
+            <Button
+              variant="outline"
+              onClick={() => {
+                handleEditFinance(selectedFinanceForAction);
+                setIsFinanceActionDialogOpen(false);
+              }}
+            >
+              수정
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <AlertDialogAction
+              onClick={() => {
+                setIsFinanceActionDialogOpen(false);
+                handleDeleteFinance(selectedFinanceForAction.id);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              삭제
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 반복 일정 삭제 옵션 다이얼로그 */}
+      <AlertDialog
+        open={isRecurringDeleteModalOpen}
+        onOpenChange={setIsRecurringDeleteModalOpen}
+      >
+        <AlertDialogContent className="sm:max-w-[425px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>반복 일정 삭제</AlertDialogTitle>
+            <AlertDialogDescription>
+              이 일정은 반복 일정입니다. 삭제 범위를 선택해주세요.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-3">
+              <Button
+                variant="outline"
+                className="w-full justify-start text-left"
+                onClick={() => {
+                  handleRecurringEventDelete("single");
+                  setIsRecurringDeleteModalOpen(false);
+                }}
+              >
+                <div>
+                  <div className="font-medium">이 일정만 삭제</div>
+                  <div className="text-sm text-muted-foreground">
+                    선택한 일정만 삭제합니다
+                  </div>
+                </div>
+              </Button>
+
+              <Button
+                variant="outline"
+                className="w-full justify-start text-left"
+                onClick={() => {
+                  handleRecurringEventDelete("future");
+                  setIsRecurringDeleteModalOpen(false);
+                }}
+              >
+                <div>
+                  <div className="font-medium">이번 및 향후 일정 삭제</div>
+                  <div className="text-sm text-muted-foreground">
+                    이번 일정부터 이후 모든 반복 일정을 삭제합니다
+                  </div>
+                </div>
+              </Button>
+
+              <Button
+                variant="outline"
+                className="w-full justify-start text-left"
+                onClick={() => {
+                  handleRecurringEventDelete("all");
+                  setIsRecurringDeleteModalOpen(false);
+                }}
+              >
+                <div>
+                  <div className="font-medium">모든 반복 일정 삭제</div>
+                  <div className="text-sm text-muted-foreground">
+                    이 반복 일정 시리즈의 모든 일정을 삭제합니다
+                  </div>
+                </div>
+              </Button>
+            </div>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => setIsRecurringDeleteModalOpen(false)}
+            >
+              취소
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Alert 다이얼로그 */}
+      <AlertDialog open={alertOpen} onOpenChange={setAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{alertTitle}</AlertDialogTitle>
+            <AlertDialogDescription>{alertMessage}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setAlertOpen(false)}>
+              확인
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 일정 삭제 확인 다이얼로그 */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>일정 삭제</AlertDialogTitle>
+            <AlertDialogDescription>
+              정말로 이 일정을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteEvent}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              삭제
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 재정 삭제 확인 다이얼로그 */}
+      <AlertDialog
+        open={financeDeleteConfirmOpen}
+        onOpenChange={setFinanceDeleteConfirmOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>거래 내역 삭제</AlertDialogTitle>
+            <AlertDialogDescription>
+              정말로 이 거래 내역을 삭제하시겠습니까? 이 작업은 되돌릴 수
+              없습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteFinance}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              삭제
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
