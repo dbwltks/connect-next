@@ -18,6 +18,7 @@ export function BannerWidget({ widget, page }: BannerWidgetProps) {
               src={widget.display_options.banner_image}
               alt={widget.display_options.banner_title || "배너"}
               className="w-full h-full object-cover"
+              loading="lazy"
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">

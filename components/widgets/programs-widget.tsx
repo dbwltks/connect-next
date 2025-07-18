@@ -208,16 +208,23 @@ export default function ProgramsWidget({
 
   // 게스트 포함 읽기 권한 확인 함수 (guest 포함 모든 사용자가 볼 수 있음)
   const hasViewPermission = () => {
-    return userRole === "admin" || userRole === "tier0" || userRole === "tier1" || 
-           userRole === "tier2" || userRole === "tier3" || userRole === "guest";
+    return (
+      userRole === "admin" ||
+      userRole === "tier0" ||
+      userRole === "tier1" ||
+      userRole === "tier2" ||
+      userRole === "tier3" ||
+      userRole === "guest"
+    );
   };
   // 장소 관리 상태
   const [isLocationSettingsOpen, setIsLocationSettingsOpen] = useState(false);
   const [savedLocations, setSavedLocations] = useState<string[]>([]);
   const [newLocation, setNewLocation] = useState("");
-  
+
   // 필터 모달 상태
-  const [isFinanceFilterModalOpen, setIsFinanceFilterModalOpen] = useState(false);
+  const [isFinanceFilterModalOpen, setIsFinanceFilterModalOpen] =
+    useState(false);
   const [editingLocationIndex, setEditingLocationIndex] = useState<
     number | null
   >(null);
@@ -416,7 +423,10 @@ export default function ProgramsWidget({
               });
 
               // team_tier가 있으면 tier 권한으로 설정
-              if (memberData.team_tier !== null && memberData.team_tier !== undefined) {
+              if (
+                memberData.team_tier !== null &&
+                memberData.team_tier !== undefined
+              ) {
                 const tierRole = `tier${memberData.team_tier}`;
                 setUserRole(tierRole);
                 setUserTeamId(memberData.team_id);
@@ -822,7 +832,9 @@ export default function ProgramsWidget({
         }
         // 권한 설정이 있는 탭은 사용자 역할이 포함되어야 접근 가능
         // guest가 포함되어 있으면 누구나 볼 수 있음
-        return tabPermission.includes(userRole) || tabPermission.includes("guest");
+        return (
+          tabPermission.includes(userRole) || tabPermission.includes("guest")
+        );
       }
 
       // 전체 권한 설정이 없는 경우 게스트 이상 모든 사용자가 접근 가능
@@ -1630,7 +1642,7 @@ export default function ProgramsWidget({
       </div>
 
       {/* 통계 카드 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">총 참가자</CardTitle>
@@ -1736,14 +1748,14 @@ export default function ProgramsWidget({
           {/* 일정 탭 */}
           {tabConfig.availableTabs.some((tab) => tab.key === "calendar") && (
             <TabsContent value="calendar" className="space-y-4">
-              <div className="space-y-4 p-4">
+              <div className="space-y-4 px-4">
                 {/* 상단 컨트롤 바 */}
                 <div className="flex justify-between items-center">
                   {/* 뷰 모드 탭 선택 */}
                   <div className="flex bg-gray-100 rounded-lg p-1">
                     <button
                       onClick={() => setViewMode("list")}
-                      className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
                         viewMode === "list"
                           ? "bg-white text-gray-900 shadow-sm"
                           : "text-gray-600 hover:text-gray-900"
@@ -1753,7 +1765,7 @@ export default function ProgramsWidget({
                     </button>
                     <button
                       onClick={() => setViewMode("week")}
-                      className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
                         viewMode === "week"
                           ? "bg-white text-gray-900 shadow-sm"
                           : "text-gray-600 hover:text-gray-900"
@@ -1763,7 +1775,7 @@ export default function ProgramsWidget({
                     </button>
                     <button
                       onClick={() => setViewMode("month")}
-                      className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
                         viewMode === "month"
                           ? "bg-white text-gray-900 shadow-sm"
                           : "text-gray-600 hover:text-gray-900"
@@ -1801,7 +1813,7 @@ export default function ProgramsWidget({
                             <Settings size={16} />
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-[425px]">
+                        <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
                           <DialogHeader>
                             <DialogTitle>장소 설정</DialogTitle>
                           </DialogHeader>
@@ -1960,7 +1972,7 @@ export default function ProgramsWidget({
                             일정 추가
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-[425px]">
+                        <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
                           <DialogHeader>
                             <DialogTitle>새 일정 추가</DialogTitle>
                           </DialogHeader>
@@ -2171,7 +2183,7 @@ export default function ProgramsWidget({
                   open={isEventDetailModalOpen}
                   onOpenChange={setIsEventDetailModalOpen}
                 >
-                  <DialogContent className="sm:max-w-[500px]">
+                  <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>일정 상세보기</DialogTitle>
                     </DialogHeader>
@@ -2296,7 +2308,7 @@ export default function ProgramsWidget({
 
                 {/* 일정 수정 모달 */}
                 <Dialog open={isEditingEvent} onOpenChange={setIsEditingEvent}>
-                  <DialogContent className="sm:max-w-[425px]">
+                  <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>일정 수정</DialogTitle>
                     </DialogHeader>
@@ -2505,7 +2517,7 @@ export default function ProgramsWidget({
                   open={isDayEventsModalOpen}
                   onOpenChange={setIsDayEventsModalOpen}
                 >
-                  <DialogContent className="sm:max-w-[600px]">
+                  <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>
                         {selectedDate && (
@@ -2568,8 +2580,7 @@ export default function ProgramsWidget({
                                         <span
                                           className={`text-xs px-2 py-1 rounded-full font-medium ${timeStatus.bgColor} ${timeStatus.color}`}
                                         >
-                                          {timeStatus.icon}{" "}
-                                          {timeStatus.label}
+                                          {timeStatus.icon} {timeStatus.label}
                                         </span>
                                         {team && (
                                           <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
@@ -2579,7 +2590,10 @@ export default function ProgramsWidget({
                                       </div>
                                       <div className="space-y-2">
                                         <div className="flex items-center gap-1">
-                                          <Clock size={16} className="text-gray-600" />
+                                          <Clock
+                                            size={16}
+                                            className="text-gray-600"
+                                          />
                                           <span className="font-medium text-sm">
                                             {format(eventDate, "HH:mm")}
                                             {endDate &&
@@ -2588,7 +2602,10 @@ export default function ProgramsWidget({
                                         </div>
                                         {event.location && (
                                           <div className="flex items-center gap-1">
-                                            <MapPin size={16} className="text-gray-600" />
+                                            <MapPin
+                                              size={16}
+                                              className="text-gray-600"
+                                            />
                                             <span className="font-medium text-sm">
                                               {event.location}
                                             </span>
@@ -3288,7 +3305,10 @@ export default function ProgramsWidget({
                               amount: "",
                               paidBy: "",
                               description: "",
-                              datetime: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+                              datetime: format(
+                                new Date(),
+                                "yyyy-MM-dd'T'HH:mm"
+                              ),
                             });
                             setIsFinanceModalOpen(true);
                           }}
@@ -3316,7 +3336,7 @@ export default function ProgramsWidget({
                         </Badge>
                       )}
                     </Button>
-                    
+
                     {/* 항목 수 선택 */}
                     <div className="flex items-center gap-2">
                       <Select
@@ -3346,11 +3366,17 @@ export default function ProgramsWidget({
                         <TableRow>
                           <TableHead>날짜</TableHead>
                           <TableHead>구분</TableHead>
-                          <TableHead className="hidden sm:table-cell">카테고리</TableHead>
-                          <TableHead className="hidden sm:table-cell">거래처</TableHead>
+                          <TableHead className="hidden sm:table-cell">
+                            카테고리
+                          </TableHead>
+                          <TableHead className="hidden sm:table-cell">
+                            거래처
+                          </TableHead>
                           <TableHead>품명</TableHead>
                           <TableHead>거래자</TableHead>
-                          <TableHead className="hidden sm:table-cell">내용</TableHead>
+                          <TableHead className="hidden sm:table-cell">
+                            내용
+                          </TableHead>
                           <TableHead className="text-right">금액</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -3370,9 +3396,15 @@ export default function ProgramsWidget({
                                 {(() => {
                                   try {
                                     if (finance.datetime) {
-                                      return format(parseISO(finance.datetime), "MM/dd HH:mm");
+                                      return format(
+                                        parseISO(finance.datetime),
+                                        "MM/dd HH:mm"
+                                      );
                                     } else if (finance.date) {
-                                      return format(parseISO(finance.date), "MM/dd");
+                                      return format(
+                                        parseISO(finance.date),
+                                        "MM/dd"
+                                      );
                                     } else {
                                       return "-";
                                     }
@@ -3515,8 +3547,11 @@ export default function ProgramsWidget({
               </div>
 
               {/* 필터 모달 */}
-              <Dialog open={isFinanceFilterModalOpen} onOpenChange={setIsFinanceFilterModalOpen}>
-                <DialogContent className="sm:max-w-[600px]">
+              <Dialog
+                open={isFinanceFilterModalOpen}
+                onOpenChange={setIsFinanceFilterModalOpen}
+              >
+                <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>재정 필터</DialogTitle>
                   </DialogHeader>
@@ -3526,7 +3561,9 @@ export default function ProgramsWidget({
                       <Label className="text-sm font-medium">날짜</Label>
                       <Select
                         value={financeFilters.dateRange}
-                        onValueChange={(value: "all" | "today" | "week" | "month" | "custom") => {
+                        onValueChange={(
+                          value: "all" | "today" | "week" | "month" | "custom"
+                        ) => {
                           resetPageAndSetFilter({
                             dateRange: value,
                             selectedDate: undefined,
@@ -3553,7 +3590,9 @@ export default function ProgramsWidget({
                     {financeFilters.dateRange === "custom" && (
                       <div className="space-y-3">
                         <div>
-                          <Label className="text-sm font-medium">날짜 선택 방식</Label>
+                          <Label className="text-sm font-medium">
+                            날짜 선택 방식
+                          </Label>
                           <Select
                             value={financeFilters.customDateType}
                             onValueChange={(value: "single" | "range") =>
@@ -3576,9 +3615,14 @@ export default function ProgramsWidget({
 
                         <div>
                           <Label className="text-sm font-medium">
-                            {financeFilters.customDateType === "single" ? "날짜 선택" : "기간 선택"}
+                            {financeFilters.customDateType === "single"
+                              ? "날짜 선택"
+                              : "기간 선택"}
                           </Label>
-                          <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
+                          <Popover
+                            open={isDatePickerOpen}
+                            onOpenChange={setIsDatePickerOpen}
+                          >
                             <PopoverTrigger asChild>
                               <Button
                                 variant="outline"
@@ -3587,16 +3631,25 @@ export default function ProgramsWidget({
                                 <CalendarDays className="mr-2 h-4 w-4" />
                                 {financeFilters.customDateType === "single"
                                   ? financeFilters.selectedDate
-                                    ? format(financeFilters.selectedDate, "yyyy년 MM월 dd일")
+                                    ? format(
+                                        financeFilters.selectedDate,
+                                        "yyyy년 MM월 dd일"
+                                      )
                                     : "날짜를 선택하세요"
                                   : financeFilters.selectedDateRange?.from
                                     ? financeFilters.selectedDateRange.to
                                       ? `${format(financeFilters.selectedDateRange.from, "MM/dd")} - ${format(financeFilters.selectedDateRange.to, "MM/dd")}`
-                                      : format(financeFilters.selectedDateRange.from, "MM/dd")
+                                      : format(
+                                          financeFilters.selectedDateRange.from,
+                                          "MM/dd"
+                                        )
                                     : "기간을 선택하세요"}
                               </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
+                            <PopoverContent
+                              className="w-auto p-0"
+                              align="start"
+                            >
                               {financeFilters.customDateType === "single" ? (
                                 <CalendarComponent
                                   mode="single"
@@ -3627,7 +3680,8 @@ export default function ProgramsWidget({
                           </Popover>
                         </div>
 
-                        {(financeFilters.selectedDate || financeFilters.selectedDateRange?.from) && (
+                        {(financeFilters.selectedDate ||
+                          financeFilters.selectedDateRange?.from) && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -3670,7 +3724,9 @@ export default function ProgramsWidget({
                       <Label className="text-sm font-medium">카테고리</Label>
                       <Select
                         value={financeFilters.category}
-                        onValueChange={(value) => resetPageAndSetFilter({ category: value })}
+                        onValueChange={(value) =>
+                          resetPageAndSetFilter({ category: value })
+                        }
                       >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="카테고리" />
@@ -3691,7 +3747,9 @@ export default function ProgramsWidget({
                       <Label className="text-sm font-medium">거래처</Label>
                       <Select
                         value={financeFilters.vendor}
-                        onValueChange={(value) => resetPageAndSetFilter({ vendor: value })}
+                        onValueChange={(value) =>
+                          resetPageAndSetFilter({ vendor: value })
+                        }
                       >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="거래처" />
@@ -3712,14 +3770,20 @@ export default function ProgramsWidget({
                       <Label className="text-sm font-medium">거래자</Label>
                       <Select
                         value={financeFilters.paidBy}
-                        onValueChange={(value) => resetPageAndSetFilter({ paidBy: value })}
+                        onValueChange={(value) =>
+                          resetPageAndSetFilter({ paidBy: value })
+                        }
                       >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="거래자" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">전체 거래자</SelectItem>
-                          {Array.from(new Set(finances.map((f) => f.paidBy).filter(Boolean))).map((paidBy) => (
+                          {Array.from(
+                            new Set(
+                              finances.map((f) => f.paidBy).filter(Boolean)
+                            )
+                          ).map((paidBy) => (
                             <SelectItem key={paidBy} value={paidBy!}>
                               {paidBy}
                             </SelectItem>
@@ -3927,7 +3991,7 @@ export default function ProgramsWidget({
           setIsFinanceModalOpen(open);
         }}
       >
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingFinance ? "거래 수정" : "거래 추가"}
@@ -4057,7 +4121,10 @@ export default function ProgramsWidget({
                 type="datetime-local"
                 value={newFinance.datetime}
                 onChange={(e) =>
-                  setNewFinance((prev) => ({ ...prev, datetime: e.target.value }))
+                  setNewFinance((prev) => ({
+                    ...prev,
+                    datetime: e.target.value,
+                  }))
                 }
               />
             </div>
@@ -4084,7 +4151,7 @@ export default function ProgramsWidget({
         open={isFinanceCategorySettingsOpen}
         onOpenChange={setIsFinanceCategorySettingsOpen}
       >
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>재정 설정</DialogTitle>
           </DialogHeader>
@@ -4323,7 +4390,7 @@ export default function ProgramsWidget({
         open={isFinanceActionDialogOpen}
         onOpenChange={setIsFinanceActionDialogOpen}
       >
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>거래 내역 관리</DialogTitle>
             <DialogDescription>

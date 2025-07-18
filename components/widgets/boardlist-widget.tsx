@@ -297,6 +297,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
                       src={post.thumbnail_image}
                       alt={post.title}
                       className="w-full h-full object-cover"
+                      loading="lazy"
                     />
                   </div>
                 ) : (
@@ -333,6 +334,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
                       src={post.thumbnail_image}
                       alt={post.title}
                       className="w-full h-32 sm:h-40 object-cover"
+                      loading="lazy"
                     />
                   ) : (
                     <div className="w-full h-32 sm:h-40 bg-gray-100 flex items-center justify-center">
@@ -411,6 +413,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
                       src={post.thumbnail_image}
                       alt={post.title}
                       className="w-full h-full object-cover rounded"
+                      loading="lazy"
                     />
                   </div>
                 ) : showThumbnail ? (

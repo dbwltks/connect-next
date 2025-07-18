@@ -396,6 +396,7 @@ export function OrganizationChartWidget({
                     src={person.avatar}
                     alt={person.name}
                     className={`${avatarSize} rounded-full object-cover border-4 border-white shadow-lg`}
+                    loading="lazy"
                   />
                   {showPositionIcons && (
                     <div className="absolute -top-1 -right-1 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-md">
@@ -631,6 +632,7 @@ export function OrganizationChartWidget({
                           src={person.avatar}
                           alt={person.name}
                           className="w-full h-full object-cover"
+                          loading="lazy"
                         />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">

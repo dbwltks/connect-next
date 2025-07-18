@@ -113,7 +113,92 @@ export default function LoginPage() {
   };
 
   const handleGoogleLogin = async () => {
-    await createClient().auth.signInWithOAuth({ provider: "google" });
+    try {
+      const redirectTo = searchParams.get("redirect");
+      const { data, error } = await createClient().auth.signInWithOAuth({ 
+        provider: "google",
+        options: {
+          redirectTo: redirectTo 
+            ? `${window.location.origin}/callback?redirect_to=${redirectTo}`
+            : `${window.location.origin}/callback`,
+          skipBrowserRedirect: true
+        }
+      });
+      
+      if (error) {
+        console.error("Google login error:", error);
+        toast({
+          title: "로그인 실패",
+          description: "구글 로그인 중 오류가 발생했습니다.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (data?.url) {
+        // 팝업으로 구글 로그인 창 열기
+        const popup = window.open(
+          data.url,
+          'google-login',
+          'width=500,height=600,scrollbars=yes,resizable=yes'
+        );
+
+        // 팝업에서 메시지 받기 위한 리스너
+        const handleMessage = (event: MessageEvent) => {
+          if (event.origin !== window.location.origin) return;
+          
+          if (event.data.type === 'OAUTH_SUCCESS') {
+            // 팝업 강제 닫기
+            if (popup && !popup.closed) {
+              popup.close();
+            }
+            window.removeEventListener('message', handleMessage);
+            clearInterval(checkClosed);
+            
+            // 로그인 성공 처리
+            toast({
+              title: "로그인 성공",
+              description: "구글 로그인이 완료되었습니다.",
+            });
+            
+            // 리다이렉트
+            setTimeout(() => {
+              if (redirectTo) {
+                router.replace(redirectTo);
+              } else {
+                router.replace("/");
+              }
+            }, 500);
+          } else if (event.data.type === 'OAUTH_ERROR') {
+            popup?.close();
+            window.removeEventListener('message', handleMessage);
+            
+            toast({
+              title: "로그인 실패", 
+              description: "구글 로그인 중 오류가 발생했습니다.",
+              variant: "destructive",
+            });
+          }
+        };
+
+        window.addEventListener('message', handleMessage);
+
+        // 팝업이 닫혔는지 확인
+        const checkClosed = setInterval(() => {
+          if (popup?.closed) {
+            clearInterval(checkClosed);
+            window.removeEventListener('message', handleMessage);
+          }
+        }, 1000);
+      }
+    } catch (error: any) {
+      console.error("Google login error:", error);
+      toast({
+        title: "로그인 실패",
+        description: "구글 로그인 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleAppleLogin = async () => {
@@ -121,7 +206,33 @@ export default function LoginPage() {
   };
 
   const handleKakaoLogin = async () => {
-    await createClient().auth.signInWithOAuth({ provider: "kakao" });
+    try {
+      const redirectTo = searchParams.get("redirect");
+      const { data, error } = await createClient().auth.signInWithOAuth({ 
+        provider: "kakao",
+        options: {
+          redirectTo: redirectTo 
+            ? `${window.location.origin}/callback?redirect_to=${redirectTo}`
+            : `${window.location.origin}/callback`
+        }
+      });
+      
+      if (error) {
+        console.error("Kakao login error:", error);
+        toast({
+          title: "로그인 실패",
+          description: "카카오 로그인 중 오류가 발생했습니다.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error("Kakao login error:", error);
+      toast({
+        title: "로그인 실패",
+        description: "카카오 로그인 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -282,37 +393,6 @@ export default function LoginPage() {
                   />
                   <path fill="none" d="M0 0h48v48H0z" />
                 </g>
-              </svg>
-            </Button>
-            <Button
-              onClick={handleAppleLogin}
-              type="button"
-              variant="ghost"
-              className="w-11 h-11 p-0 flex items-center justify-center text-black"
-              aria-label="애플로 로그인"
-            >
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <path d="M16.365 1.43c0 1.14-.93 2.07-1.98 2.07-.09 0-.18-.01-.27-.02.01-.13.02-.26.02-.39 0-1.13.94-2.06 1.98-2.06.09 0 .18.01.27.02-.01.13-.02.26-.02.38zM12.01 6.5c-2.7 0-4.5 1.8-4.5 4.2 0 1.7 1.41 3.19 3.53 4.01-.15.52-.54 1.85-.62 2.15-.1.39.14.38.29.28.12-.08 1.93-1.34 2.72-1.89.19.01.39.02.59.02 2.7 0 4.5-1.8 4.5-4.2s-1.8-4.2-4.5-4.2z" />
-              </svg>
-            </Button>
-            <Button
-              onClick={handleKakaoLogin}
-              type="button"
-              variant="ghost"
-              className="w-11 h-11 p-0 flex items-center justify-center"
-              aria-label="카카오로 로그인"
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <ellipse cx="12" cy="12" rx="12" ry="12" fill="#FEE500" />
-                <path
-                  d="M12 6.5c-3.59 0-6.5 2.15-6.5 4.8 0 1.7 1.41 3.19 3.53 4.01-.15.52-.54 1.85-.62 2.15-.1.39.14.38.29.28.12-.08 1.93-1.34 2.72-1.89.19.01.39.02.59.02 3.59 0 6.5-2.15 6.5-4.8S15.59 6.5 12 6.5z"
-                  fill="#391B1B"
-                />
               </svg>
             </Button>
           </div>

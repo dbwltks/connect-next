@@ -144,16 +144,32 @@ export default function RegisterPage() {
       }
       
       if (field === "email") {
-        // 이메일은 실제 회원가입 시 Supabase Auth가 중복 체크함
-        // 여기서는 형식만 검증하고 사용 가능으로 표시
-        setDuplicateCheck((prev) => ({
-          ...prev,
-          [field]: {
-            status: "success",
-            message: "사용 가능한 이메일입니다",
-            isChecking: false,
-          },
-        }));
+        // 이메일 중복 체크 - users 테이블에서 확인
+        const { data } = await createClient()
+          .from("users")
+          .select("id")
+          .eq("email", value)
+          .single();
+          
+        if (data) {
+          setDuplicateCheck((prev) => ({
+            ...prev,
+            [field]: {
+              status: "error",
+              message: "이미 사용 중인 이메일입니다",
+              isChecking: false,
+            },
+          }));
+        } else {
+          setDuplicateCheck((prev) => ({
+            ...prev,
+            [field]: {
+              status: "success",
+              message: "사용 가능한 이메일입니다",
+              isChecking: false,
+            },
+          }));
+        }
         return;
       }
       

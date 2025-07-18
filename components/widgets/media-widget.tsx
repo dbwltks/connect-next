@@ -193,6 +193,7 @@ export function MediaWidget({ widget, page }: MediaWidgetProps) {
                       src={data.posts[0].thumbnail_image}
                       alt={data.posts[0].title}
                       className="w-full h-full object-cover"
+                      loading="lazy"
                     />
                   ) : (
                     <div className="w-full h-full object-cover bg-gray-200 flex items-center justify-center">
@@ -270,6 +271,7 @@ export function MediaWidget({ widget, page }: MediaWidgetProps) {
                         src={post.thumbnail_image}
                         alt={post.title}
                         className="w-full h-full object-cover"
+                        loading="lazy"
                       />
                     ) : (
                       <div className="w-full h-full bg-gray-200 flex items-center justify-center">
