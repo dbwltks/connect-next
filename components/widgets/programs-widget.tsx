@@ -1813,7 +1813,7 @@ export default function ProgramsWidget({
                             <Settings size={16} />
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
+                        <DialogContent className="w-[95vw] max-w-[425px] max-h-[90vh] overflow-y-auto mx-auto">
                           <DialogHeader>
                             <DialogTitle>장소 설정</DialogTitle>
                           </DialogHeader>
@@ -1972,7 +1972,7 @@ export default function ProgramsWidget({
                             일정 추가
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
+                        <DialogContent className="w-[95vw] max-w-[425px] max-h-[90vh] overflow-y-auto mx-auto">
                           <DialogHeader>
                             <DialogTitle>새 일정 추가</DialogTitle>
                           </DialogHeader>
@@ -2183,7 +2183,7 @@ export default function ProgramsWidget({
                   open={isEventDetailModalOpen}
                   onOpenChange={setIsEventDetailModalOpen}
                 >
-                  <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+                  <DialogContent className="w-[95vw] max-w-[500px] max-h-[90vh] overflow-y-auto mx-auto">
                     <DialogHeader>
                       <DialogTitle>일정 상세보기</DialogTitle>
                     </DialogHeader>
@@ -2308,7 +2308,7 @@ export default function ProgramsWidget({
 
                 {/* 일정 수정 모달 */}
                 <Dialog open={isEditingEvent} onOpenChange={setIsEditingEvent}>
-                  <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
+                  <DialogContent className="w-[95vw] max-w-[425px] max-h-[90vh] overflow-y-auto mx-auto">
                     <DialogHeader>
                       <DialogTitle>일정 수정</DialogTitle>
                     </DialogHeader>
@@ -2517,7 +2517,7 @@ export default function ProgramsWidget({
                   open={isDayEventsModalOpen}
                   onOpenChange={setIsDayEventsModalOpen}
                 >
-                  <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+                  <DialogContent className="w-[95vw] max-w-[600px] max-h-[90vh] overflow-y-auto mx-auto">
                     <DialogHeader>
                       <DialogTitle>
                         {selectedDate && (
@@ -3551,7 +3551,7 @@ export default function ProgramsWidget({
                 open={isFinanceFilterModalOpen}
                 onOpenChange={setIsFinanceFilterModalOpen}
               >
-                <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+                <DialogContent className="w-[95vw] max-w-[600px] max-h-[90vh] overflow-y-auto mx-auto">
                   <DialogHeader>
                     <DialogTitle>재정 필터</DialogTitle>
                   </DialogHeader>
@@ -3991,7 +3991,7 @@ export default function ProgramsWidget({
           setIsFinanceModalOpen(open);
         }}
       >
-        <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-[425px] max-h-[90vh] overflow-y-auto mx-auto">
           <DialogHeader>
             <DialogTitle>
               {editingFinance ? "거래 수정" : "거래 추가"}
@@ -4151,7 +4151,7 @@ export default function ProgramsWidget({
         open={isFinanceCategorySettingsOpen}
         onOpenChange={setIsFinanceCategorySettingsOpen}
       >
-        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-[500px] max-h-[90vh] overflow-y-auto mx-auto">
           <DialogHeader>
             <DialogTitle>재정 설정</DialogTitle>
           </DialogHeader>
@@ -4390,7 +4390,7 @@ export default function ProgramsWidget({
         open={isFinanceActionDialogOpen}
         onOpenChange={setIsFinanceActionDialogOpen}
       >
-        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-[500px] max-h-[90vh] overflow-y-auto mx-auto">
           <DialogHeader>
             <DialogTitle>거래 내역 관리</DialogTitle>
             <DialogDescription>
