@@ -124,6 +124,7 @@ export default async function RootLayout({
         </svg>
         <ClientLayout
           user={user}
+          headerMenus={menuItems}
           footerMenus={menuItemsRaw}
           footerSettings={footerSettings}
           widgets={widgets}

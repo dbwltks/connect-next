@@ -25,7 +25,8 @@ export function useUserProfile(user: User | null) {
       return;
     }
 
-    setLoading(true);
+    // 로딩 상태를 즉시 false로 설정하여 메뉴 로딩을 차단하지 않음
+    setLoading(false);
 
     const fetchProfile = async () => {
       try {
@@ -53,11 +54,10 @@ export function useUserProfile(user: User | null) {
       } catch (error) {
         console.error("Error fetching profile:", error);
         setProfile(null);
-      } finally {
-        setLoading(false);
       }
     };
 
+    // 비동기로 프로필 가져오기 (메뉴 로딩을 차단하지 않음)
     fetchProfile();
 
     // 브라우저 이벤트를 통한 프로필 업데이트 리스너

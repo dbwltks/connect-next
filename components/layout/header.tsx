@@ -33,6 +33,7 @@ import { useUserProfile } from "@/hooks/use-user-profile";
 import { useTheme } from "next-themes";
 import { api } from "@/lib/api";
 import useSWR from "swr";
+import { headerMenuSWRConfig } from "@/config/swr-config";
 
 interface User {
   id: string;
@@ -135,23 +136,38 @@ function useBodyScrollLock(isLocked: boolean) {
   }, [isLocked]);
 }
 
-export default function Header() {
+export default function Header({ initialMenus = [] }: { initialMenus?: any[] }) {
   // auth-context에서 사용자 정보 가져오기
   const { user, loading } = useAuth();
   const { profile, loading: profileLoading } = useUserProfile(user);
 
-  // SWR을 사용한 헤더 메뉴 데이터 페칭
+  // SWR을 사용한 헤더 메뉴 데이터 페칭 (fallback 데이터 설정)
   const {
     data: menuItems,
     error: menuError,
     isLoading: menuLoading,
   } = useSWR("headerMenus", () => api.menus.getHeaderMenus(), {
-    // 전역 설정 사용
-    // staleTime: 300000, // 5분간 캐시 유지
+    ...headerMenuSWRConfig,
+    fallbackData: initialMenus, // 서버에서 받은 초기 데이터를 fallback으로 사용
   });
 
-  // 로딩 중 체크
-  const isLoading = loading || profileLoading || menuLoading;
+  // 로딩 중 체크 (메뉴는 즉시 표시, 사용자 UI만 로딩 상태 반영)
+  const isAuthLoading = loading;
+  const isProfileLoading = profileLoading;
+
+  // 개발 환경에서 로딩 상태 로깅
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 Header Loading States:', {
+        authLoading: isAuthLoading,
+        profileLoading: isProfileLoading,
+        menuLoading: menuLoading,
+        hasInitialMenus: initialMenus.length > 0,
+        hasMenuItems: menuItems?.length > 0,
+        menuError: menuError?.message
+      });
+    }
+  }, [isAuthLoading, isProfileLoading, menuLoading, initialMenus.length, menuItems?.length, menuError]);
 
   // 스크롤 동작을 위한 상태 관리
   const [isVisible, setIsVisible] = useState(true);
@@ -263,7 +279,8 @@ export default function Header() {
           user={user}
           profile={profile}
           menuItems={menuItems || []}
-          isLoading={isLoading}
+          isAuthLoading={isAuthLoading}
+          isProfileLoading={isProfileLoading}
         />
       </div>
     </header>
@@ -274,12 +291,14 @@ function HeaderClient({
   user,
   profile,
   menuItems,
-  isLoading,
+  isAuthLoading,
+  isProfileLoading,
 }: {
   user: any;
   profile: any;
   menuItems: any[];
-  isLoading?: boolean;
+  isAuthLoading?: boolean;
+  isProfileLoading?: boolean;
 }) {
   const { signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -436,7 +455,7 @@ function HeaderClient({
 
         {/* 우측 로그인/사용자 메뉴 - 고정 너비 적용 */}
         <div className="w-[56px] flex justify-center">
-          {!isClient ? (
+          {!isClient || isAuthLoading ? (
             // 서버에서는 일관된 불투명 버튼을 렌더링
             <Button variant="ghost" size="icon" className="opacity-0">
               <span className="sr-only">로그인</span>
@@ -476,7 +495,7 @@ function HeaderClient({
       <div className="hidden lg:flex items-center gap-2">
         <ThemeSwitcher />
         {/* SSR과 CSR 불일치 문제를 해결하기 위해 클라이언트 상태 확인 후 렌더링 */}
-        {!isClient || isLoading ? (
+        {!isClient || isAuthLoading ? (
           // 서버에서는 일관된 불투명 버튼을 렌더링하거나 로딩 중
           <Button variant="ghost" size="icon" className="opacity-0">
             <span className="sr-only">로그인</span>

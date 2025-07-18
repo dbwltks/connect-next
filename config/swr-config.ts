@@ -46,3 +46,13 @@ export const realtimeSWRConfig: SWRConfiguration = {
   refreshInterval: 0,   // 자동 갱신 비활성화
   revalidateOnFocus: true,  // 포커스 시 재검증
 };
+
+// 헤더 메뉴 전용 설정 (최적화된 캐시 설정)
+export const headerMenuSWRConfig: SWRConfiguration = {
+  ...swrGlobalConfig,
+  refreshInterval: 0,       // 자동 갱신 비활성화
+  revalidateOnFocus: false, // 포커스 시 재검증 비활성화
+  revalidateOnMount: false, // 마운트 시 재검증 비활성화 (초기 데이터 있을 때)
+  dedupingInterval: 300000, // 5분간 중복 요청 방지
+  focusThrottleInterval: 60000, // 포커스 이벤트 1분간 throttle
+};
