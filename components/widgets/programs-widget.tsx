@@ -983,16 +983,16 @@ export default function ProgramsWidget({
         };
 
         await eventsApi.update(editingEventData.id, updatedEvent);
-        
+
         // 이벤트 목록 업데이트
-        const updatedEvents = events.map(event =>
+        const updatedEvents = events.map((event) =>
           event.id === editingEventData.id ? updatedEvent : event
         );
         setEvents(updatedEvents);
         setIsEditingEvent(false);
         setEditingEventData(null);
         setIsEventModalOpen(false);
-        
+
         // 폼 초기화
         setNewEvent({
           title: "",
@@ -1005,7 +1005,7 @@ export default function ProgramsWidget({
           isRecurring: false,
           recurringEndDate: "",
         });
-        
+
         showAlert("수정 완료", "일정이 수정되었습니다.");
         return;
       }
@@ -1160,8 +1160,10 @@ export default function ProgramsWidget({
     try {
       if (deleteOption === "single") {
         // 이 일정만 삭제
-        const remainingEvents = events.filter(event => event.id !== eventToDelete.id);
-        
+        const remainingEvents = events.filter(
+          (event) => event.id !== eventToDelete.id
+        );
+
         // 프로그램 업데이트
         const supabase = createClient();
         const { error } = await supabase
@@ -1170,28 +1172,30 @@ export default function ProgramsWidget({
           .eq("id", selectedProgram);
 
         if (error) throw error;
-        
+
         setEvents(remainingEvents);
         showAlert("삭제 완료", "선택한 일정이 삭제되었습니다.");
       } else if (deleteOption === "future") {
         // 이번 및 향후 일정 삭제 - 현재 events 배열에서 필터링
         const eventDate = new Date(eventToDelete.start_date);
-        
+
         // 같은 그룹의 이번 및 향후 일정들 찾기
-        const futureEvents = events.filter(event => 
-          (event as any).recurring_group_id === (eventToDelete as any).recurring_group_id &&
-          new Date(event.start_date) >= eventDate
+        const futureEvents = events.filter(
+          (event) =>
+            (event as any).recurring_group_id ===
+              (eventToDelete as any).recurring_group_id &&
+            new Date(event.start_date) >= eventDate
         );
 
         if (futureEvents.length > 0) {
           // 삭제할 이벤트 ID들 수집
-          const eventIdsToDelete = futureEvents.map(event => event.id);
-          
+          const eventIdsToDelete = futureEvents.map((event) => event.id);
+
           // 남은 이벤트들만 필터링
-          const remainingEvents = events.filter(event => 
-            !eventIdsToDelete.includes(event.id)
+          const remainingEvents = events.filter(
+            (event) => !eventIdsToDelete.includes(event.id)
           );
-          
+
           // 프로그램 업데이트
           const supabase = createClient();
           const { error } = await supabase
@@ -1200,7 +1204,7 @@ export default function ProgramsWidget({
             .eq("id", selectedProgram);
 
           if (error) throw error;
-          
+
           setEvents(remainingEvents);
           showAlert(
             "삭제 완료",
@@ -1209,19 +1213,21 @@ export default function ProgramsWidget({
         }
       } else if (deleteOption === "all") {
         // 모든 반복 일정 삭제 - 현재 events 배열에서 필터링
-        const allEvents = events.filter(event => 
-          (event as any).recurring_group_id === (eventToDelete as any).recurring_group_id
+        const allEvents = events.filter(
+          (event) =>
+            (event as any).recurring_group_id ===
+            (eventToDelete as any).recurring_group_id
         );
 
         if (allEvents.length > 0) {
           // 삭제할 이벤트 ID들 수집
-          const eventIdsToDelete = allEvents.map(event => event.id);
-          
+          const eventIdsToDelete = allEvents.map((event) => event.id);
+
           // 남은 이벤트들만 필터링
-          const remainingEvents = events.filter(event => 
-            !eventIdsToDelete.includes(event.id)
+          const remainingEvents = events.filter(
+            (event) => !eventIdsToDelete.includes(event.id)
           );
-          
+
           // 프로그램 업데이트
           const supabase = createClient();
           const { error } = await supabase
@@ -1230,7 +1236,7 @@ export default function ProgramsWidget({
             .eq("id", selectedProgram);
 
           if (error) throw error;
-          
+
           setEvents(remainingEvents);
           showAlert(
             "삭제 완료",
@@ -2028,32 +2034,52 @@ export default function ProgramsWidget({
           {/* 일정 탭 */}
           {tabConfig.availableTabs.some((tab) => tab.key === "calendar") && (
             <TabsContent value="calendar" className="space-y-4">
-              <div className="space-y-4 px-4">
+              <div className="space-y-4 px-2 sm:px-4">
                 {/* 상단 컨트롤 바 */}
                 <div className="flex justify-between items-center">
-                  {/* 뷰 모드 탭 선택 */}
-                  <div className="flex bg-gray-100 rounded-lg p-1">
-                    <Button
-                      onClick={() => setViewMode("list")}
-                      variant={viewMode === "list" ? "default" : "ghost"}
-                      size="sm"
+                  <div className="flex items-center gap-4">
+                    {/* 뷰 모드 탭 선택 */}
+                    <div className="flex bg-gray-100 rounded-lg p-1">
+                      <Button
+                        onClick={() => setViewMode("list")}
+                        variant={viewMode === "list" ? "default" : "ghost"}
+                        size="sm"
+                      >
+                        목록
+                      </Button>
+                      <Button
+                        onClick={() => setViewMode("week")}
+                        variant={viewMode === "week" ? "default" : "ghost"}
+                        size="sm"
+                      >
+                        주간
+                      </Button>
+                      <Button
+                        onClick={() => setViewMode("month")}
+                        variant={viewMode === "month" ? "default" : "ghost"}
+                        size="sm"
+                      >
+                        월간
+                      </Button>
+                    </div>
+
+                    {/* 팀별 필터 드롭다운 */}
+                    <Select
+                      value={selectedTeamFilter}
+                      onValueChange={setSelectedTeamFilter}
                     >
-                      목록
-                    </Button>
-                    <Button
-                      onClick={() => setViewMode("week")}
-                      variant={viewMode === "week" ? "default" : "ghost"}
-                      size="sm"
-                    >
-                      주간
-                    </Button>
-                    <Button
-                      onClick={() => setViewMode("month")}
-                      variant={viewMode === "month" ? "default" : "ghost"}
-                      size="sm"
-                    >
-                      월간
-                    </Button>
+                      <SelectTrigger className="w-30">
+                        <SelectValue placeholder="팀 선택" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">전체 팀</SelectItem>
+                        {teams.map((team) => (
+                          <SelectItem key={team.id} value={team.id}>
+                            {team.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {/* 일정 추가 버튼 - 탭별 권한 설정 확인 */}
@@ -2248,8 +2274,8 @@ export default function ProgramsWidget({
                         }}
                       >
                         <DialogTrigger asChild>
-                          <Button 
-                            variant="default" 
+                          <Button
+                            variant="default"
                             size="sm"
                             onClick={() => {
                               setIsEditingEvent(false);
@@ -2268,13 +2294,14 @@ export default function ProgramsWidget({
                               });
                             }}
                           >
-                            <Plus size={16} className="mr-2" />
                             일정 추가
                           </Button>
                         </DialogTrigger>
                         <DialogContent className="w-[95vw] max-w-[425px] max-h-[90vh] overflow-y-auto mx-auto">
                           <DialogHeader>
-                            <DialogTitle>{isEditingEvent ? "일정 수정" : "새 일정 추가"}</DialogTitle>
+                            <DialogTitle>
+                              {isEditingEvent ? "일정 수정" : "새 일정 추가"}
+                            </DialogTitle>
                           </DialogHeader>
                           <div className="grid gap-4 py-4">
                             <div className="grid gap-2">
@@ -2512,7 +2539,7 @@ export default function ProgramsWidget({
                 </div>
 
                 {/* 팀 필터 */}
-                <div className="flex flex-wrap gap-2">
+                {/* <div className="flex flex-wrap gap-2">
                   <Button
                     onClick={() => setSelectedTeamFilter("all")}
                     variant={
@@ -2541,7 +2568,7 @@ export default function ProgramsWidget({
                       등록된 팀이 없습니다
                     </span>
                   )}
-                </div>
+                </div> */}
 
                 {/* 일정 상세보기 모달 */}
                 <Dialog
@@ -2677,7 +2704,6 @@ export default function ProgramsWidget({
                   </DialogContent>
                 </Dialog>
 
-
                 {/* 날짜별 일정 보기 모달 */}
                 <Dialog
                   open={isDayEventsModalOpen}
@@ -2749,7 +2775,10 @@ export default function ProgramsWidget({
                                           {timeStatus.icon} {timeStatus.label}
                                         </span>
                                         {team && (
-                                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                          <span
+                                            className="text-xs px-2 py-1 rounded border"
+                                            style={getTeamStyle(event.team_id)}
+                                          >
                                             {team.name}
                                           </span>
                                         )}
@@ -2838,7 +2867,6 @@ export default function ProgramsWidget({
                             }
                           }}
                         >
-                          <Plus className="mr-2 h-4 w-4" />
                           일정 추가
                         </Button>
                       )}
@@ -3003,7 +3031,12 @@ export default function ProgramsWidget({
                                             {timeStatus.icon} {timeStatus.label}
                                           </span>
                                           {team && (
-                                            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                            <span
+                                              className="text-xs px-2 py-1 rounded border font-medium"
+                                              style={getTeamStyle(
+                                                event.team_id
+                                              )}
+                                            >
                                               {team.name}
                                             </span>
                                           )}
@@ -3050,14 +3083,6 @@ export default function ProgramsWidget({
                                             </p>
                                           )}
                                         </div>
-                                      </div>
-                                      <div className="flex items-center gap-2 ml-4">
-                                        <div
-                                          className={`w-3 h-3 rounded-full ${getTeamColor(event.team_id)}`}
-                                          title={
-                                            team ? `${team.name} 팀` : "팀 없음"
-                                          }
-                                        />
                                       </div>
                                     </div>
                                   </div>
