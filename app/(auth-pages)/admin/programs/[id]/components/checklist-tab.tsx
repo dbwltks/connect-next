@@ -24,7 +24,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { CheckCircle, Plus, Edit, Trash2, XCircle, Filter, Triangle } from "lucide-react";
+import { CheckCircle, Plus, Edit, Trash2, XCircle, Filter, Triangle, ChevronUp, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import { saveProgramFeatureData, loadProgramData } from "../utils/program-data";
@@ -62,6 +62,7 @@ export default function ChecklistTab({ programId }: ChecklistTabProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [userRole, setUserRole] = useState<string>('guest');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [isChecklistDialogOpen, setIsChecklistDialogOpen] = useState(false);
 
   // 관리자 권한 확인 함수
@@ -297,35 +298,6 @@ export default function ChecklistTab({ programId }: ChecklistTabProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">확인사항 관리</h2>
-        <div className="flex items-center gap-2">
-          <Select value={selectedTeam} onValueChange={(value) => {
-            setSelectedTeam(value);
-            setCurrentPage(1);
-          }}>
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="팀 선택" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">전체</SelectItem>
-              {Array.isArray(teams) && teams.map((team) => (
-                <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {hasAdminPermission() && (
-            <Button size="sm" onClick={() => {
-              setSelectedChecklistEdit(null);
-              setChecklistForm({ name: "", required: false, price: "", teams: [] });
-              setIsChecklistDialogOpen(true);
-            }}>
-              <Plus className="h-4 w-4 mr-2" />
-              항목 추가
-            </Button>
-          )}
-        </div>
-      </div>
 
       {/* 참여자별 확인사항 현황 */}
       <Card className="border-0 shadow-sm">
@@ -333,6 +305,30 @@ export default function ChecklistTab({ programId }: ChecklistTabProps) {
           <div className="flex justify-between items-center">
             <CardTitle className="text-lg">참여자별 확인 현황</CardTitle>
             <div className="flex items-center gap-2">
+              <Select value={selectedTeam} onValueChange={(value) => {
+                setSelectedTeam(value);
+                setCurrentPage(1);
+              }}>
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="팀 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">전체</SelectItem>
+                  {Array.isArray(teams) && teams.map((team) => (
+                    <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {hasAdminPermission() && (
+                <Button size="sm" onClick={() => {
+                  setSelectedChecklistEdit(null);
+                  setChecklistForm({ name: "", required: false, price: "", teams: [] });
+                  setIsChecklistDialogOpen(true);
+                }}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  항목 추가
+                </Button>
+              )}
               <Select value={itemsPerPage.toString()} onValueChange={(value) => {
                 setItemsPerPage(parseInt(value));
                 setCurrentPage(1);
@@ -355,7 +351,24 @@ export default function ChecklistTab({ programId }: ChecklistTabProps) {
             <Table>
               <TableHeader>
                 <TableRow className="border-b">
-                  <TableHead className="font-semibold min-w-[120px]">참여자</TableHead>
+                  <TableHead className="font-semibold min-w-[120px]">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="p-0 h-auto font-semibold hover:bg-transparent flex items-center gap-1"
+                      onClick={() => {
+                        setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                        setCurrentPage(1);
+                      }}
+                    >
+                      참여자
+                      {sortOrder === 'asc' ? (
+                        <ChevronUp className="h-4 w-4" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </TableHead>
                   {Array.isArray(checklistItems) && checklistItems
                     .filter(item => {
                       if (selectedTeam === 'all') return true;
@@ -379,12 +392,23 @@ export default function ChecklistTab({ programId }: ChecklistTabProps) {
               </TableHeader>
               <TableBody>
                 {(() => {
+                  // 참여자 정렬
+                  const sortedParticipants = Array.isArray(participants) 
+                    ? [...participants].sort((a, b) => {
+                        if (sortOrder === 'asc') {
+                          return a.name.localeCompare(b.name, 'ko');
+                        } else {
+                          return b.name.localeCompare(a.name, 'ko');
+                        }
+                      })
+                    : [];
+
                   // 페이지네이션 계산
-                  const totalParticipants = Array.isArray(participants) ? participants.length : 0;
+                  const totalParticipants = sortedParticipants.length;
                   const totalPages = Math.ceil(totalParticipants / itemsPerPage);
                   const startIndex = (currentPage - 1) * itemsPerPage;
                   const endIndex = startIndex + itemsPerPage;
-                  const paginatedParticipants = Array.isArray(participants) ? participants.slice(startIndex, endIndex) : [];
+                  const paginatedParticipants = sortedParticipants.slice(startIndex, endIndex);
 
                   return paginatedParticipants.map((participant) => {
                   const participantCheckData = Array.isArray(checklistEntries) ? checklistEntries.filter(
@@ -405,7 +429,7 @@ export default function ChecklistTab({ programId }: ChecklistTabProps) {
 
                   return (
                     <TableRow key={participant.id} className="border-b last:border-0">
-                      <TableCell className="font-medium">{participant.name}</TableCell>
+                      <TableCell className="font-medium py-2">{participant.name}</TableCell>
                       {Array.isArray(checklistItems) && checklistItems
                         .filter(item => {
                           if (selectedTeam === 'all') return true;
@@ -417,7 +441,7 @@ export default function ChecklistTab({ programId }: ChecklistTabProps) {
                         );
                         
                         return (
-                          <TableCell key={item.id} className="text-center">
+                          <TableCell key={item.id} className="text-center py-2">
                             <div className="flex justify-center">
                               {(() => {
                                 // 기존 completed 필드와 새로운 status 필드 호환성 처리
@@ -456,7 +480,7 @@ export default function ChecklistTab({ programId }: ChecklistTabProps) {
                           </TableCell>
                         );
                       })}
-                      <TableCell className="text-center">
+                      <TableCell className="text-center py-2">
                         <div className="w-16 mx-auto">
                           <Badge 
                             className={`w-full justify-center text-xs ${
