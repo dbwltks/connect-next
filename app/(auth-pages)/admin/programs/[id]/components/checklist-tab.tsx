@@ -24,7 +24,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { CheckCircle, Plus, Edit, Trash2, XCircle, Filter } from "lucide-react";
+import { CheckCircle, Plus, Edit, Trash2, XCircle, Filter, Triangle } from "lucide-react";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import { saveProgramFeatureData, loadProgramData } from "../utils/program-data";
@@ -44,6 +44,7 @@ interface ChecklistEntry {
   teamId?: string;
   checklistItemId: string;
   completed: boolean;
+  status?: 'pending' | 'in_progress' | 'completed'; // 새로운 상태 필드
   completedDate?: string;
   note?: string;
 }
@@ -218,11 +219,53 @@ export default function ChecklistTab({ programId }: ChecklistTabProps) {
     }
   };
 
-  // 체크 상태 토글
-  const toggleCheck = async (participantId: string, checklistItemId: string, completed: boolean) => {
+  // 기존 데이터를 새로운 status 필드로 마이그레이션
+  const migrateOldData = async () => {
+    const needsMigration = checklistEntries.some(entry => 
+      !entry.status && entry.completed !== undefined
+    );
+    
+    if (needsMigration) {
+      const migratedEntries = checklistEntries.map(entry => ({
+        ...entry,
+        status: entry.status || (entry.completed ? 'completed' : 'pending')
+      }));
+      
+      await saveChecklistEntries(migratedEntries);
+    }
+  };
+
+  // 데이터 로드 후 마이그레이션 실행
+  useEffect(() => {
+    if (checklistEntries.length > 0) {
+      migrateOldData();
+    }
+  }, [checklistEntries.length]); // 데이터가 로드된 후에만 실행
+
+  // 체크 상태 토글 (3단계 순환: pending -> in_progress -> completed -> pending)
+  const toggleCheck = async (participantId: string, checklistItemId: string) => {
     const existingEntry = checklistEntries.find(
       entry => entry.participantId === participantId && entry.checklistItemId === checklistItemId
     );
+
+    // 현재 상태 확인
+    const currentStatus = existingEntry?.status || 'pending';
+    
+    // 다음 상태 결정
+    let nextStatus: 'pending' | 'in_progress' | 'completed';
+    switch (currentStatus) {
+      case 'pending':
+        nextStatus = 'in_progress';
+        break;
+      case 'in_progress':
+        nextStatus = 'completed';
+        break;
+      case 'completed':
+        nextStatus = 'pending';
+        break;
+      default:
+        nextStatus = 'in_progress';
+    }
 
     let updatedEntries;
     if (existingEntry) {
@@ -231,8 +274,9 @@ export default function ChecklistTab({ programId }: ChecklistTabProps) {
         entry.participantId === participantId && entry.checklistItemId === checklistItemId
           ? { 
               ...entry, 
-              completed, 
-              completedDate: completed ? format(new Date(), "yyyy-MM-dd") : undefined 
+              status: nextStatus,
+              completed: nextStatus === 'completed', // 기존 completed 필드도 유지
+              completedDate: nextStatus === 'completed' ? format(new Date(), "yyyy-MM-dd") : undefined 
             }
           : entry
       );
@@ -241,8 +285,9 @@ export default function ChecklistTab({ programId }: ChecklistTabProps) {
       const newEntry: ChecklistEntry = {
         participantId,
         checklistItemId,
-        completed,
-        completedDate: completed ? format(new Date(), "yyyy-MM-dd") : undefined,
+        status: nextStatus,
+        completed: nextStatus === 'completed',
+        completedDate: nextStatus === 'completed' ? format(new Date(), "yyyy-MM-dd") : undefined,
       };
       updatedEntries = [...checklistEntries, newEntry];
     }
@@ -374,34 +419,39 @@ export default function ChecklistTab({ programId }: ChecklistTabProps) {
                         return (
                           <TableCell key={item.id} className="text-center">
                             <div className="flex justify-center">
-                              {checkData?.completed ? (
-                                <div className="flex flex-col items-center">
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="p-1 h-auto hover:bg-red-50"
-                                    onClick={() => toggleCheck(participant.id, item.id, false)}
-                                  >
-                                    <CheckCircle className="h-5 w-5 text-green-500 hover:text-red-500 transition-colors" />
-                                  </Button>
-                                  {checkData.completedDate && (
-                                    <span className="text-xs text-gray-500 mt-1">
-                                      {format(new Date(checkData.completedDate), "MM/dd", { locale: ko })}
-                                    </span>
-                                  )}
-                                </div>
-                              ) : (
-                                <div className="flex flex-col items-center">
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="p-1 h-auto hover:bg-green-50"
-                                    onClick={() => toggleCheck(participant.id, item.id, true)}
-                                  >
-                                    <XCircle className="h-5 w-5 text-red-300 hover:text-green-500 transition-colors" />
-                                  </Button>
-                                </div>
-                              )}
+                              {(() => {
+                                // 기존 completed 필드와 새로운 status 필드 호환성 처리
+                                const status = checkData?.status || (checkData?.completed ? 'completed' : 'pending');
+                                const renderIcon = () => {
+                                  switch (status) {
+                                    case 'completed':
+                                      return <CheckCircle className="h-5 w-5 text-green-500 hover:text-yellow-500 transition-colors" />;
+                                    case 'in_progress':
+                                      return <Triangle className="h-5 w-5 text-yellow-500 hover:text-red-500 transition-colors" />;
+                                    case 'pending':
+                                    default:
+                                      return <XCircle className="h-5 w-5 text-red-300 hover:text-green-500 transition-colors" />;
+                                  }
+                                };
+
+                                return (
+                                  <div className="flex flex-col items-center">
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="p-1 h-auto hover:bg-gray-50"
+                                      onClick={() => toggleCheck(participant.id, item.id)}
+                                    >
+                                      {renderIcon()}
+                                    </Button>
+                                    {checkData?.completedDate && status === 'completed' && (
+                                      <span className="text-xs text-gray-500 mt-1">
+                                        {format(new Date(checkData.completedDate), "MM/dd", { locale: ko })}
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           </TableCell>
                         );

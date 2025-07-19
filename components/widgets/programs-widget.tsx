@@ -3207,7 +3207,7 @@ export default function ProgramsWidget({
                                 left: eventLeft,
                                 top: `${startHour * 50 + (startMinute / 60) * 50}px`,
                                 width: eventWidth,
-                                height: `${Math.max(duration * 50 - 4, 30)}px`,
+                                height: `${Math.max(duration * 50, 30)}px`,
                                 fontSize: "10px",
                                 zIndex: 10 + eventIndexInOverlap,
                                 ...getTeamStyle(event.team_id),
@@ -3250,22 +3250,6 @@ export default function ProgramsWidget({
                                     {program.name}
                                   </div>
                                 )}
-                              {event.location && duration > 0.5 && (
-                                <div
-                                  className="opacity-60 text-xs leading-tight overflow-hidden mt-1"
-                                  style={{
-                                    wordBreak: "break-word",
-                                    display: "-webkit-box",
-                                    WebkitLineClamp: Math.max(
-                                      Math.floor(duration * 1.5),
-                                      1
-                                    ),
-                                    WebkitBoxOrient: "vertical",
-                                  }}
-                                >
-                                  📍 {event.location}
-                                </div>
-                              )}
                             </div>
                           );
                         });
