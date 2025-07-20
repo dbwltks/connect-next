@@ -93,6 +93,7 @@ import FinanceTab from "@/app/(auth-pages)/admin/programs/[id]/components/financ
 import {
   eventsApi,
   financeApi,
+  type Event,
 } from "@/app/(auth-pages)/admin/programs/[id]/utils/api";
 import { createClient } from "@/utils/supabase/client";
 
@@ -105,16 +106,6 @@ interface Program {
   end_date?: string;
 }
 
-interface Event {
-  id: string;
-  title: string;
-  description?: string;
-  start_date: string;
-  end_date?: string;
-  location?: string;
-  program_id: string;
-  team_id?: string;
-}
 
 interface Participant {
   id: string;
@@ -318,6 +309,11 @@ export default function ProgramsWidget({
   const [isRecurringDeleteModalOpen, setIsRecurringDeleteModalOpen] =
     useState(false);
   const [eventToDelete, setEventToDelete] = useState<any>(null);
+
+  // 반복 일정 수정 옵션 모달 상태
+  const [isRecurringEditModalOpen, setIsRecurringEditModalOpen] =
+    useState(false);
+  const [eventToEdit, setEventToEdit] = useState<any>(null);
 
   // Alert 다이얼로그 상태
   const [alertOpen, setAlertOpen] = useState(false);
@@ -973,6 +969,13 @@ export default function ProgramsWidget({
 
       // 수정 모드인 경우
       if (isEditingEvent && editingEventData) {
+        // 단일 일정을 반복으로 수정하는 경우
+        if (!editingEventData.is_recurring && newEvent.isRecurring) {
+          setEventToEdit(editingEventData);
+          setIsRecurringEditModalOpen(true);
+          return;
+        }
+        
         const updatedEvent = {
           ...editingEventData,
           title: newEvent.title,
@@ -981,9 +984,11 @@ export default function ProgramsWidget({
           end_date: newEvent.end_date,
           location: newEvent.location,
           team_id: newEvent.team_id,
+          is_recurring: newEvent.isRecurring,
+          recurring_end_date: newEvent.isRecurring ? newEvent.recurringEndDate : undefined,
         };
 
-        await eventsApi.update(editingEventData.id, updatedEvent);
+        await eventsApi.update(editingEventData.id, updatedEvent, selectedProgram);
 
         // 이벤트 목록 업데이트
         const updatedEvents = events.map((event) =>
@@ -1032,7 +1037,7 @@ export default function ProgramsWidget({
         // 종료일까지 매주 해당 요일에 일정 생성
         while (currentDate <= recurringEndDate) {
           const eventStartDate = new Date(currentDate);
-          const eventEndDate = baseEndDate ? new Date(currentDate) : null;
+          const eventEndDate = baseEndDate ? new Date(currentDate) : undefined;
 
           // 시작 시간 설정
           eventStartDate.setHours(
@@ -1257,6 +1262,101 @@ export default function ProgramsWidget({
         "삭제 실패",
         `삭제에 실패했습니다: ${error instanceof Error ? error.message : "알 수 없는 오류"}`
       );
+    }
+  };
+
+  // 반복 일정 수정 처리
+  const handleRecurringEdit = async (
+    editOption: "single" | "future" | "all" | "convert"
+  ) => {
+    if (!eventToEdit) return;
+
+    try {
+      if (editOption === "convert") {
+        // 단일 일정을 반복으로 변환
+        // 기존 단일 일정 삭제
+        await eventsApi.delete(eventToEdit.id, selectedProgram);
+
+        // 새로운 반복 일정들 생성
+        const baseStartDate = new Date(newEvent.start_date);
+        const baseEndDate = newEvent.end_date ? new Date(newEvent.end_date) : undefined;
+        const recurringEndDate = new Date(newEvent.recurringEndDate);
+
+        // 기본 일정의 요일 계산
+        const targetDayOfWeek = baseStartDate.getDay();
+
+        // 반복 그룹 ID 생성
+        const recurringGroupId = `recurring_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+        // 시작일부터 종료일까지 해당 요일에 맞는 모든 날짜 생성
+        const eventsToCreate = [];
+        let currentDate = new Date(baseStartDate);
+
+        while (currentDate <= recurringEndDate) {
+          const eventStartDate = new Date(currentDate);
+          
+          if (eventStartDate.getDay() === targetDayOfWeek) {
+            let eventEndDate: Date | undefined = undefined;
+            if (baseEndDate) {
+              eventEndDate = new Date(eventStartDate);
+              const duration = baseEndDate.getTime() - baseStartDate.getTime();
+              eventEndDate.setTime(eventStartDate.getTime() + duration);
+            }
+
+            const eventData = {
+              title: newEvent.title,
+              description: newEvent.description,
+              start_date: eventStartDate.toISOString(),
+              end_date: eventEndDate ? eventEndDate.toISOString() : undefined,
+              location: newEvent.location,
+              program_id: selectedProgram || "",
+              team_id: newEvent.team_id || undefined,
+              is_recurring: true,
+              recurring_end_date: newEvent.recurringEndDate,
+              recurring_group_id: recurringGroupId,
+            };
+
+            eventsToCreate.push(eventData);
+          }
+
+          // 다음 주로 이동
+          currentDate.setDate(currentDate.getDate() + 7);
+        }
+
+        // 모든 반복 일정 생성
+        for (const eventData of eventsToCreate) {
+          await eventsApi.create(eventData);
+        }
+
+        // 이벤트 목록 새로고침
+        const updatedEvents = await eventsApi.getAll(selectedProgram || "");
+        setEvents(updatedEvents);
+
+        showAlert("변환 완료", `${eventsToCreate.length}개의 반복 일정이 생성되었습니다.`);
+      }
+
+      setIsRecurringEditModalOpen(false);
+      setEventToEdit(null);
+      setIsEditingEvent(false);
+      setEditingEventData(null);
+      setIsEventModalOpen(false);
+
+      // 폼 초기화
+      setNewEvent({
+        title: "",
+        description: "",
+        start_date: "",
+        end_date: "",
+        location: "",
+        program_id: "",
+        team_id: "",
+        isRecurring: false,
+        recurringEndDate: "",
+      });
+
+    } catch (error) {
+      console.error("반복 일정 수정 실패:", error);
+      showAlert("오류", "반복 일정 수정 중 오류가 발생했습니다.");
     }
   };
 
@@ -2689,8 +2789,8 @@ export default function ProgramsWidget({
                                 location: selectedEvent.location || "",
                                 program_id: selectedEvent.program_id || "",
                                 team_id: selectedEvent.team_id || "",
-                                isRecurring: false,
-                                recurringEndDate: "",
+                                isRecurring: selectedEvent.is_recurring || false,
+                                recurringEndDate: selectedEvent.recurring_end_date || "",
                               });
                               setIsEditingEvent(true);
                               setIsEventDetailModalOpen(false);
@@ -4179,6 +4279,49 @@ export default function ProgramsWidget({
           <AlertDialogFooter>
             <AlertDialogCancel
               onClick={() => setIsRecurringDeleteModalOpen(false)}
+            >
+              취소
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 반복 일정 수정 옵션 모달 */}
+      <AlertDialog 
+        open={isRecurringEditModalOpen} 
+        onOpenChange={setIsRecurringEditModalOpen}
+      >
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>단일 일정을 반복으로 변환</AlertDialogTitle>
+            <AlertDialogDescription>
+              이 단일 일정을 반복 일정으로 변환하시겠습니까?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Button
+                variant="outline"
+                className="w-full justify-start text-left"
+                onClick={() => {
+                  handleRecurringEdit("convert");
+                  setIsRecurringEditModalOpen(false);
+                }}
+              >
+                <div>
+                  <div className="font-medium">반복 일정으로 변환</div>
+                  <div className="text-sm text-muted-foreground">
+                    현재 일정을 삭제하고 새로운 반복 일정들을 생성합니다
+                  </div>
+                </div>
+              </Button>
+            </div>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => setIsRecurringEditModalOpen(false)}
             >
               취소
             </AlertDialogCancel>

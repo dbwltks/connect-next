@@ -41,6 +41,9 @@ export interface Event {
   location?: string;
   program_id: string;
   team_id?: string;
+  is_recurring?: boolean;
+  recurring_end_date?: string;
+  recurring_group_id?: string;
 }
 
 export interface AttendanceRecord {
