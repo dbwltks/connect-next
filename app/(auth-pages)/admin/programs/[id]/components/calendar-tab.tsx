@@ -51,7 +51,7 @@ export default function CalendarTab({ programId }: CalendarTabProps) {
           start_date: formData.start_date,
           end_date: formData.end_date || undefined,
           location: formData.location || undefined
-        });
+        }, programId);
       } else {
         await eventsApi.create({
           program_id: programId,
@@ -87,7 +87,7 @@ export default function CalendarTab({ programId }: CalendarTabProps) {
   const handleDelete = async (id: string) => {
     if (confirm('정말로 이 일정을 삭제하시겠습니까?')) {
       try {
-        await eventsApi.delete(id);
+        await eventsApi.delete(id, programId);
         loadEvents();
       } catch (error) {
         console.error('일정 삭제 실패:', error);

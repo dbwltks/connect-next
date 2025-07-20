@@ -29,6 +29,8 @@ export interface ProgramData {
   finances?: any[];
   events?: any[];
   attendance?: any[];
+  attendance_sessions?: any[];
+  attendance_records?: any[];
   checklist_setting?: any[];
   checklist?: any[];
   teams?: any[];
