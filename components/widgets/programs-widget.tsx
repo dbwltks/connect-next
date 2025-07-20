@@ -975,6 +975,13 @@ export default function ProgramsWidget({
           setIsRecurringEditModalOpen(true);
           return;
         }
+
+        // 반복 일정을 수정하는 경우
+        if (editingEventData.is_recurring && newEvent.isRecurring) {
+          setEventToEdit(editingEventData);
+          setIsRecurringEditModalOpen(true);
+          return;
+        }
         
         const updatedEvent = {
           ...editingEventData,
@@ -1328,11 +1335,154 @@ export default function ProgramsWidget({
           await eventsApi.create(eventData);
         }
 
-        // 이벤트 목록 새로고침
-        const updatedEvents = await eventsApi.getAll(selectedProgram || "");
-        setEvents(updatedEvents);
+        // 프로그램 데이터 새로고침하여 최신 events 가져오기
+        if (selectedProgram) {
+          const supabase = createClient();
+          const { data } = await supabase
+            .from("programs")
+            .select("events")
+            .eq("id", selectedProgram)
+            .single();
+
+          if (data) {
+            const updatedEvents = Array.isArray(data.events) ? data.events : [];
+            setEvents(updatedEvents);
+            
+            // 실제 저장된 이벤트 개수 확인
+            const recurringEvents = updatedEvents.filter((e: any) => e.is_recurring);
+            if (recurringEvents.length === 0) {
+              showAlert("오류", "반복 일정이 저장되지 않았습니다. 다시 시도해주세요.");
+              return;
+            }
+          }
+        }
 
         showAlert("변환 완료", `${eventsToCreate.length}개의 반복 일정이 생성되었습니다.`);
+      } else if (editOption === "single") {
+        // 이 일정만 수정
+        const updatedEvent = {
+          ...eventToEdit,
+          title: newEvent.title,
+          description: newEvent.description,
+          start_date: newEvent.start_date,
+          end_date: newEvent.end_date,
+          location: newEvent.location,
+          team_id: newEvent.team_id,
+          is_recurring: newEvent.isRecurring,
+          recurring_end_date: newEvent.isRecurring ? newEvent.recurringEndDate : undefined,
+        };
+
+        await eventsApi.update(eventToEdit.id, updatedEvent, selectedProgram);
+
+        // 프로그램 데이터 새로고침
+        if (selectedProgram) {
+          const supabase = createClient();
+          const { data } = await supabase
+            .from("programs")
+            .select("events")
+            .eq("id", selectedProgram)
+            .single();
+
+          if (data) {
+            setEvents(Array.isArray(data.events) ? data.events : []);
+          }
+        }
+
+        showAlert("수정 완료", "선택한 일정이 수정되었습니다.");
+      } else if (editOption === "future") {
+        // 이번 및 향후 일정 수정
+        const eventDate = new Date(eventToEdit.start_date);
+        const futureEvents = events.filter(
+          (event) =>
+            (event as any).recurring_group_id === (eventToEdit as any).recurring_group_id &&
+            new Date(event.start_date) >= eventDate
+        );
+
+        for (const event of futureEvents) {
+          const timeDiff = new Date(event.start_date).getTime() - new Date(eventToEdit.start_date).getTime();
+          const newStartDate = new Date(new Date(newEvent.start_date).getTime() + timeDiff);
+          
+          let newEndDate = undefined;
+          if (newEvent.end_date && event.end_date) {
+            const originalDuration = new Date(eventToEdit.end_date || eventToEdit.start_date).getTime() - new Date(eventToEdit.start_date).getTime();
+            newEndDate = new Date(newStartDate.getTime() + originalDuration).toISOString();
+          }
+
+          const updatedEvent = {
+            ...event,
+            title: newEvent.title,
+            description: newEvent.description,
+            start_date: newStartDate.toISOString(),
+            end_date: newEndDate,
+            location: newEvent.location,
+            team_id: newEvent.team_id,
+            recurring_end_date: newEvent.recurringEndDate,
+          };
+
+          await eventsApi.update(event.id, updatedEvent, selectedProgram);
+        }
+
+        // 프로그램 데이터 새로고침
+        if (selectedProgram) {
+          const supabase = createClient();
+          const { data } = await supabase
+            .from("programs")
+            .select("events")
+            .eq("id", selectedProgram)
+            .single();
+
+          if (data) {
+            setEvents(Array.isArray(data.events) ? data.events : []);
+          }
+        }
+
+        showAlert("수정 완료", `${futureEvents.length}개의 향후 일정이 수정되었습니다.`);
+      } else if (editOption === "all") {
+        // 모든 반복 일정 수정
+        const allEvents = events.filter(
+          (event) =>
+            (event as any).recurring_group_id === (eventToEdit as any).recurring_group_id
+        );
+
+        for (const event of allEvents) {
+          const timeDiff = new Date(event.start_date).getTime() - new Date(eventToEdit.start_date).getTime();
+          const newStartDate = new Date(new Date(newEvent.start_date).getTime() + timeDiff);
+          
+          let newEndDate = undefined;
+          if (newEvent.end_date && event.end_date) {
+            const originalDuration = new Date(eventToEdit.end_date || eventToEdit.start_date).getTime() - new Date(eventToEdit.start_date).getTime();
+            newEndDate = new Date(newStartDate.getTime() + originalDuration).toISOString();
+          }
+
+          const updatedEvent = {
+            ...event,
+            title: newEvent.title,
+            description: newEvent.description,
+            start_date: newStartDate.toISOString(),
+            end_date: newEndDate,
+            location: newEvent.location,
+            team_id: newEvent.team_id,
+            recurring_end_date: newEvent.recurringEndDate,
+          };
+
+          await eventsApi.update(event.id, updatedEvent, selectedProgram);
+        }
+
+        // 프로그램 데이터 새로고침
+        if (selectedProgram) {
+          const supabase = createClient();
+          const { data } = await supabase
+            .from("programs")
+            .select("events")
+            .eq("id", selectedProgram)
+            .single();
+
+          if (data) {
+            setEvents(Array.isArray(data.events) ? data.events : []);
+          }
+        }
+
+        showAlert("수정 완료", `${allEvents.length}개의 모든 반복 일정이 수정되었습니다.`);
       }
 
       setIsRecurringEditModalOpen(false);
@@ -4293,29 +4443,86 @@ export default function ProgramsWidget({
       >
         <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>단일 일정을 반복으로 변환</AlertDialogTitle>
+            <AlertDialogTitle>
+              {eventToEdit && !eventToEdit.is_recurring ? "단일 일정을 반복으로 변환" : "반복 일정 수정"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              이 단일 일정을 반복 일정으로 변환하시겠습니까?
+              {eventToEdit && !eventToEdit.is_recurring 
+                ? "이 단일 일정을 반복 일정으로 변환하시겠습니까?"
+                : "반복 일정을 어떻게 수정하시겠습니까?"
+              }
             </AlertDialogDescription>
           </AlertDialogHeader>
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Button
-                variant="outline"
-                className="w-full justify-start text-left"
-                onClick={() => {
-                  handleRecurringEdit("convert");
-                  setIsRecurringEditModalOpen(false);
-                }}
-              >
-                <div>
-                  <div className="font-medium">반복 일정으로 변환</div>
-                  <div className="text-sm text-muted-foreground">
-                    현재 일정을 삭제하고 새로운 반복 일정들을 생성합니다
+              {eventToEdit && !eventToEdit.is_recurring ? (
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-left"
+                  onClick={() => {
+                    handleRecurringEdit("convert");
+                    setIsRecurringEditModalOpen(false);
+                  }}
+                >
+                  <div>
+                    <div className="font-medium">반복 일정으로 변환</div>
+                    <div className="text-sm text-muted-foreground">
+                      현재 일정을 삭제하고 새로운 반복 일정들을 생성합니다
+                    </div>
                   </div>
-                </div>
-              </Button>
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left"
+                    onClick={() => {
+                      handleRecurringEdit("single");
+                      setIsRecurringEditModalOpen(false);
+                    }}
+                  >
+                    <div>
+                      <div className="font-medium">이 일정만 수정</div>
+                      <div className="text-sm text-muted-foreground">
+                        선택한 일정만 수정합니다
+                      </div>
+                    </div>
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left"
+                    onClick={() => {
+                      handleRecurringEdit("future");
+                      setIsRecurringEditModalOpen(false);
+                    }}
+                  >
+                    <div>
+                      <div className="font-medium">이번 및 향후 일정 수정</div>
+                      <div className="text-sm text-muted-foreground">
+                        현재 일정부터 미래의 모든 반복 일정을 수정합니다
+                      </div>
+                    </div>
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left"
+                    onClick={() => {
+                      handleRecurringEdit("all");
+                      setIsRecurringEditModalOpen(false);
+                    }}
+                  >
+                    <div>
+                      <div className="font-medium">모든 반복 일정 수정</div>
+                      <div className="text-sm text-muted-foreground">
+                        이 반복 일정 시리즈의 모든 일정을 수정합니다
+                      </div>
+                    </div>
+                  </Button>
+                </>
+              )}
             </div>
           </div>
 
