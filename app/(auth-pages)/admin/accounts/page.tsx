@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Pencil,
   Trash2,
@@ -32,6 +33,7 @@ import {
   Users,
   UserPlus,
   X,
+  Settings,
 } from "lucide-react";
 import { toast } from "@/components/ui/toaster";
 import {
@@ -41,6 +43,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+
+// 역할 타입 정의
+type Role = {
+  id: string;
+  name: string;
+  display_name: string;
+  description?: string;
+  level: number;
+};
+
+// 사용자 역할 타입 정의
+type UserRole = {
+  id: string;
+  role_id: string;
+  assigned_at: string;
+  is_active: boolean;
+  roles: Role;
+};
 
 // 사용자 타입 정의
 type User = {
@@ -48,12 +73,14 @@ type User = {
   username: string;
   nickname?: string;
   email?: string;
-  role: string;
+  role: string; // 레거시 단일 역할 (하위 호환성)
+  user_roles?: UserRole[]; // 새로운 다중 역할
   created_at: string;
   last_login: string | null;
   is_active: boolean;
   is_approved: boolean;
   linked_member?: Member | null;
+  permissions_count?: number;
 };
 
 // 교인 타입 정의
@@ -70,7 +97,8 @@ type Member = {
 type UserFormData = {
   username: string;
   password: string;
-  role: string;
+  role: string; // 레거시 지원
+  role_ids: string[]; // 다중 역할
   is_active: boolean;
 };
 
@@ -82,28 +110,43 @@ export default function AccountsPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [openLinkDialog, setOpenLinkDialog] = useState(false);
+  const [openRoleDialog, setOpenRoleDialog] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [unlinkedMembers, setUnlinkedMembers] = useState<Member[]>([]);
   const [selectedMemberId, setSelectedMemberId] = useState<string>("");
+  const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
   const [formData, setFormData] = useState<UserFormData>({
     username: "",
     password: "",
     role: "user",
+    role_ids: [],
     is_active: true,
   });
   const [loading, setLoading] = useState(true);
 
-  // 사용자 목록 가져오기
+  // 역할 목록 가져오기
+  const fetchRoles = async () => {
+    try {
+      const response = await fetch("/api/admin/roles");
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableRoles(data.roles || []);
+      }
+    } catch (error) {
+      console.error("역할 목록 가져오기 오류:", error);
+    }
+  };
+
+  // 사용자 목록 가져오기 (다중 역할 지원)
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // 사용자 목록 가져오기 (승인 상태 포함)
-      const { data: userData, error: userError } = await createClient()
-        .from("users")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (userError) throw userError;
+      // API를 통해 사용자 목록 가져오기 (다중 역할 포함)
+      const response = await fetch("/api/admin/users");
+      if (!response.ok) throw new Error("사용자 목록 가져오기 실패");
+      
+      const data = await response.json();
+      const userData = data.users || [];
 
       // 교인 목록 가져오기
       const { data: memberData, error: memberError } = await createClient()
@@ -114,12 +157,11 @@ export default function AccountsPage() {
       if (memberError) throw memberError;
 
       // 사용자와 교인 정보 연결
-      const usersWithMembers =
-        userData?.map((user: any) => {
-          const linkedMember =
-            memberData?.find((member: any) => member.user_id === user.id) || null;
-          return { ...user, linked_member: linkedMember };
-        }) || [];
+      const usersWithMembers = userData.map((user: any) => {
+        const linkedMember =
+          memberData?.find((member: any) => member.user_id === user.id) || null;
+        return { ...user, linked_member: linkedMember };
+      });
 
       setUsers(usersWithMembers);
       setFilteredUsers(usersWithMembers);
@@ -158,6 +200,7 @@ export default function AccountsPage() {
 
   // 초기 데이터 로드
   useEffect(() => {
+    fetchRoles();
     fetchUsers();
   }, []);
 
@@ -179,6 +222,7 @@ export default function AccountsPage() {
       username: "",
       password: "",
       role: "user",
+      role_ids: [],
       is_active: true,
     });
     setCurrentUser(null);
@@ -300,10 +344,12 @@ export default function AccountsPage() {
   // 수정 다이얼로그 열기
   const openEdit = (user: User) => {
     setCurrentUser(user);
+    const currentRoleIds = user.user_roles?.map(ur => ur.role_id) || [];
     setFormData({
       username: user.username,
       password: "", // 비밀번호는 빈 값으로 설정 (수정 시 입력한 경우에만 변경)
       role: user.role,
+      role_ids: currentRoleIds,
       is_active: user.is_active,
     });
     setIsEditing(true);
@@ -392,28 +438,90 @@ export default function AccountsPage() {
     }
   };
 
-  // 역할에 따른 표시 텍스트
-  const getRoleText = (role: string) => {
-    switch (role) {
-      case "admin":
-        return "관리자";
-      case "tier0":
-        return "Tier 0";
-      case "tier1":
-        return "Tier 1";
-      case "tier2":
-        return "Tier 2";
-      case "tier3":
-        return "Tier 3";
-      case "guest":
-        return "게스트";
-      case "pending":
-        return "승인 대기";
-      case "user":
-        return "일반 사용자";
-      default:
-        return role;
+  // 역할 관리 다이얼로그 열기
+  const openRoleManagement = (user: User) => {
+    setCurrentUser(user);
+    // 현재 사용자의 역할 ID들을 formData에 설정
+    const currentRoleIds = user.user_roles?.map(ur => ur.role_id) || [];
+    setFormData(prev => ({
+      ...prev,
+      role_ids: currentRoleIds
+    }));
+    setOpenRoleDialog(true);
+  };
+
+  // 사용자 역할 업데이트
+  const handleUpdateUserRoles = async () => {
+    if (!currentUser) return;
+
+    try {
+      const response = await fetch(`/api/admin/users/${currentUser.id}/roles`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          role_ids: formData.role_ids,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "역할 업데이트 실패");
+      }
+
+      toast({
+        title: "역할 업데이트 성공",
+        description: `${currentUser.username}의 역할이 업데이트되었습니다.`,
+      });
+
+      setOpenRoleDialog(false);
+      fetchUsers();
+    } catch (error: any) {
+      console.error("역할 업데이트 중 오류 발생:", error.message);
+      toast({
+        title: "역할 업데이트 실패",
+        description: `오류가 발생했습니다: ${error.message}`,
+        variant: "destructive",
+      });
     }
+  };
+
+  // 역할 체크박스 토글
+  const toggleRole = (roleId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      role_ids: prev.role_ids.includes(roleId)
+        ? prev.role_ids.filter(id => id !== roleId)
+        : [...prev.role_ids, roleId]
+    }));
+  };
+
+  // 역할에 따른 표시 텍스트 (레거시 지원)
+  const getRoleText = (role: string) => {
+    const roleObj = availableRoles.find(r => r.name === role);
+    return roleObj?.display_name || role;
+  };
+
+  // 사용자의 모든 역할 표시
+  const getUserRolesDisplay = (user: User) => {
+    if (user.user_roles && user.user_roles.length > 0) {
+      return user.user_roles
+        .map(ur => ur.roles?.display_name || ur.roles?.name)
+        .join(", ");
+    }
+    // 레거시 단일 역할 지원
+    return getRoleText(user.role);
+  };
+
+  // 사용자의 최고 레벨 역할 가져오기 (권한 계산용)
+  const getUserHighestRole = (user: User) => {
+    if (user.user_roles && user.user_roles.length > 0) {
+      return user.user_roles.reduce((highest, current) => {
+        return (current.roles?.level || 0) > (highest.roles?.level || 0) ? current : highest;
+      });
+    }
+    return null;
   };
 
   // 승인 처리
@@ -576,7 +684,7 @@ export default function AccountsPage() {
                         </div>
                       )}
                       <div className="md:hidden text-xs text-gray-500">
-                        {getRoleText(user.role)}
+                        {getUserRolesDisplay(user)}
                       </div>
                       {user.linked_member && (
                         <div className="text-xs text-blue-600 mt-1">
@@ -589,7 +697,14 @@ export default function AccountsPage() {
                       )}
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
-                      {getRoleText(user.role)}
+                      <div className="space-y-1">
+                        <div>{getUserRolesDisplay(user)}</div>
+                        {user.permissions_count !== undefined && (
+                          <div className="text-xs text-gray-500">
+                            권한: {user.permissions_count}개
+                          </div>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
                       {formatDate(user.created_at)}
@@ -640,6 +755,15 @@ export default function AccountsPage() {
                           title="계정 수정"
                         >
                           <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openRoleManagement(user)}
+                          className="h-8 w-8"
+                          title="역할 관리"
+                        >
+                          <Settings className="h-4 w-4 text-purple-500" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -845,6 +969,103 @@ export default function AccountsPage() {
             </Button>
             <Button onClick={handleLinkMember} disabled={!selectedMemberId}>
               연결
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 역할 관리 다이얼로그 */}
+      <Dialog open={openRoleDialog} onOpenChange={setOpenRoleDialog}>
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>역할 관리</DialogTitle>
+            <DialogDescription>
+              {currentUser?.username}의 역할을 관리하세요. 여러 역할을 동시에 할당할 수 있습니다.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            {/* 현재 역할 정보 */}
+            {currentUser?.user_roles && currentUser.user_roles.length > 0 && (
+              <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900 rounded-md">
+                <h4 className="text-sm font-medium mb-2">현재 할당된 역할:</h4>
+                <div className="space-y-1">
+                  {currentUser.user_roles.map((userRole) => (
+                    <div key={userRole.id} className="text-sm">
+                      <span className="font-medium">
+                        {userRole.roles?.display_name || userRole.roles?.name}
+                      </span>
+                      <span className="text-gray-500 ml-2">
+                        (레벨: {userRole.roles?.level})
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 역할 선택 */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">역할 선택</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {availableRoles
+                  .sort((a, b) => b.level - a.level) // 레벨 높은 순으로 정렬
+                  .map((role) => (
+                    <div
+                      key={role.id}
+                      className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
+                    >
+                      <Checkbox
+                        id={`role-${role.id}`}
+                        checked={formData.role_ids.includes(role.id)}
+                        onCheckedChange={() => toggleRole(role.id)}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <Label
+                          htmlFor={`role-${role.id}`}
+                          className="text-sm font-medium cursor-pointer"
+                        >
+                          {role.display_name}
+                        </Label>
+                        <p className="text-xs text-gray-500 mt-1">
+                          레벨: {role.level}
+                        </p>
+                        {role.description && (
+                          <p className="text-xs text-gray-600 mt-1">
+                            {role.description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            {/* 권한 요약 정보 */}
+            {formData.role_ids.length > 0 && (
+              <div className="mt-4 p-3 bg-green-50 dark:bg-green-900 rounded-md">
+                <h4 className="text-sm font-medium mb-2">선택된 역할:</h4>
+                <div className="text-sm space-y-1">
+                  {formData.role_ids.map((roleId) => {
+                    const role = availableRoles.find(r => r.id === roleId);
+                    return role ? (
+                      <div key={roleId}>
+                        • {role.display_name} (레벨: {role.level})
+                      </div>
+                    ) : null;
+                  })}
+                </div>
+                <p className="text-xs text-gray-600 mt-2">
+                  * 높은 레벨의 역할이 우선 적용됩니다.
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpenRoleDialog(false)}>
+              취소
+            </Button>
+            <Button onClick={handleUpdateUserRoles}>
+              역할 업데이트
             </Button>
           </DialogFooter>
         </DialogContent>

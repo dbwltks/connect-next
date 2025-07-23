@@ -21,6 +21,13 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -65,6 +72,7 @@ import {
   Clock,
   MapPin,
   Users,
+  UserCheck,
   DollarSign,
   Eye,
   Plus,
@@ -74,6 +82,7 @@ import {
   CheckCircle,
   Filter,
 } from "lucide-react";
+import { SiGooglecalendar } from "react-icons/si";
 import {
   format,
   addDays,
@@ -90,12 +99,14 @@ import {
 import { ko } from "date-fns/locale";
 import ChecklistTab from "@/app/(auth-pages)/admin/programs/[id]/components/checklist-tab";
 import FinanceTab from "@/app/(auth-pages)/admin/programs/[id]/components/finance-tab";
+import AttendanceTab from "@/app/(auth-pages)/admin/programs/[id]/components/attendance-tab";
 import {
   eventsApi,
   financeApi,
   type Event,
 } from "@/app/(auth-pages)/admin/programs/[id]/utils/api";
 import { createClient } from "@/utils/supabase/client";
+import { initializeGoogleAPI, authenticateUser, syncMultipleEvents, createOrUpdateEvent, deleteAllConnectNextEvents } from "@/utils/google-calendar-api";
 
 interface Program {
   id: string;
@@ -203,6 +214,133 @@ export default function ProgramsWidget({
   const [editingEventData, setEditingEventData] = useState<Event | null>(null);
   const [userRole, setUserRole] = useState<string>("guest"); // admin, team_leader, member, guest
   const [userTeamId, setUserTeamId] = useState<string | null>(null);
+
+  // Google Calendar API 관련 상태
+  const [isGoogleAPIInitialized, setIsGoogleAPIInitialized] = useState(false);
+  const [isGoogleAuthenticated, setIsGoogleAuthenticated] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  // Google Calendar API 초기화
+  const initGoogleAPI = async () => {
+    try {
+      const initialized = await initializeGoogleAPI();
+      setIsGoogleAPIInitialized(initialized);
+      return initialized;
+    } catch (error) {
+      console.error('Google API 초기화 실패:', error);
+      return false;
+    }
+  };
+
+  // Google Calendar 인증
+  const authenticateGoogle = async () => {
+    try {
+      if (!isGoogleAPIInitialized) {
+        const initialized = await initGoogleAPI();
+        if (!initialized) {
+          throw new Error('Google API 초기화 실패');
+        }
+      }
+
+      const authenticated = await authenticateUser();
+      setIsGoogleAuthenticated(authenticated);
+      
+      if (authenticated) {
+        showAlert("성공", "Google Calendar에 연결되었습니다!");
+      } else {
+        showAlert("오류", "Google Calendar 인증에 실패했습니다.");
+      }
+      
+      return authenticated;
+    } catch (error) {
+      console.error('Google Calendar 인증 실패:', error);
+      showAlert("오류", "Google Calendar 인증 중 오류가 발생했습니다.");
+      return false;
+    }
+  };
+
+  // 팀 색상을 Google Calendar 색상 ID로 변환
+  const getGoogleCalendarColorId = (teamId: string): string => {
+    const team = teams.find((t) => t.id === teamId);
+    
+    if (team?.color) {
+      // 팀 색상을 Google Calendar 색상 ID로 매핑
+      const colorMap: { [key: string]: string } = {
+        '#3B82F6': '9',  // 파란색
+        '#EF4444': '11', // 빨간색  
+        '#10B981': '10', // 초록색
+        '#F59E0B': '5',  // 노란색
+        '#8B5CF6': '3',  // 보라색
+        '#06B6D4': '7',  // 청록색
+        '#F97316': '6',  // 주황색
+        '#EC4899': '4',  // 핑크색
+      };
+      
+      return colorMap[team.color] || '9'; // 기본 파란색
+    }
+    
+    // 팀 색상이 없으면 팀 ID 기반으로 색상 할당
+    const colorIds = ['9', '10', '11', '5', '3', '7', '6', '4'];
+    const index = parseInt(teamId) % colorIds.length;
+    return colorIds[index];
+  };
+
+  // 스마트 동기화 (생성/업데이트)
+  const syncEventsToGoogle = async () => {
+    try {
+      if (!isGoogleAuthenticated) {
+        const authenticated = await authenticateGoogle();
+        if (!authenticated) return;
+      }
+
+      setIsSyncing(true);
+      
+      const calendarEvents = filteredEvents.map(event => ({
+        title: event.title,
+        startDate: parseISO(event.start_date),
+        endDate: event.end_date ? parseISO(event.end_date) : addHours(parseISO(event.start_date), 1),
+        description: event.description || '',
+        location: event.location || '',
+        connectId: `connect_${event.id}`,
+        colorId: getGoogleCalendarColorId(event.team_id || ''), // 팀별 색상
+      }));
+
+      const results = await syncMultipleEvents(calendarEvents);
+      
+      showAlert("동기화 완료", 
+        `생성: ${results.created}개, 업데이트: ${results.updated}개${results.errors > 0 ? `, 오류: ${results.errors}개` : ''}`
+      );
+    } catch (error) {
+      console.error('Google Calendar 동기화 실패:', error);
+      showAlert("오류", "Google Calendar 동기화 중 오류가 발생했습니다.");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // Connect Next 일정들만 삭제
+  const deleteConnectNextEventsFromGoogle = async () => {
+    try {
+      if (!isGoogleAuthenticated) {
+        const authenticated = await authenticateGoogle();
+        if (!authenticated) return;
+      }
+
+      setIsSyncing(true);
+      
+      const results = await deleteAllConnectNextEvents();
+      
+      showAlert("삭제 완료", 
+        `삭제: ${results.deleted}개${results.errors > 0 ? `, 오류: ${results.errors}개` : ''}`
+      );
+    } catch (error) {
+      console.error('Google Calendar 삭제 실패:', error);
+      showAlert("오류", "Google Calendar 삭제 중 오류가 발생했습니다.");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
 
   // 관리자 권한 확인 함수 (admin, tier0, tier1만 설정/추가/수정/삭제 가능)
   const hasAdminPermission = () => {
@@ -909,6 +1047,7 @@ export default function ProgramsWidget({
     const availableTabs = [
       { key: "calendar", label: "일정" },
       { key: "participants", label: "참가자" },
+      { key: "attendance", label: "출석" },
       { key: "finance", label: "재정" },
       { key: "checklist", label: "확인사항" },
       { key: "overview", label: "개요" },
@@ -2274,6 +2413,7 @@ export default function ProgramsWidget({
               >
                 {tab.key === "calendar" && <Calendar size={16} />}
                 {tab.key === "participants" && <Users size={16} />}
+                {tab.key === "attendance" && <UserCheck size={16} />}
                 {tab.key === "finance" && <DollarSign size={16} />}
                 {tab.key === "checklist" && <CheckCircle size={16} />}
                 {tab.key === "overview" && <Eye size={16} />}
@@ -2350,7 +2490,7 @@ export default function ProgramsWidget({
 
                     return false;
                   })() && (
-                    <div className="flex gap-2">
+                    <div className="flex items-center gap-2">
                       {/* 장소 설정 버튼 */}
                       <Dialog
                         open={isLocationSettingsOpen}
@@ -2481,6 +2621,37 @@ export default function ProgramsWidget({
                           </div>
                         </DialogContent>
                       </Dialog>
+
+                      {/* 구글 캘린더 드롭다운 - 데스크톱 */}
+                      {filteredEvents.length > 0 && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <img 
+                              src="https://www.gstatic.com/marketing-cms/assets/images/cf/3c/0d56042f479fac9ad22d06855578/calender.webp" 
+                              alt="Google Calendar" 
+                              className="w-8 h-8 rounded cursor-pointer hover:opacity-80 transition-opacity hidden md:block object-contain"
+                            />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem 
+                              onClick={syncEventsToGoogle}
+                              disabled={isSyncing}
+                            >
+                              <Calendar className="mr-2 h-4 w-4" />
+                              구글캘린더 동기화
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={deleteConnectNextEventsFromGoogle}
+                              disabled={isSyncing}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              동기화 삭제
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
 
                       {/* 일정 추가 모달 */}
                       <Dialog
@@ -3160,6 +3331,39 @@ export default function ProgramsWidget({
               </div>
 
               <div className="px-2 pb-4">
+                {/* 구글 캘린더 드롭다운 - 모바일 (별도 줄) */}
+                {filteredEvents.length > 0 && (
+                  <div className="flex md:hidden justify-center mb-4 px-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <img 
+                          src="https://www.gstatic.com/marketing-cms/assets/images/cf/3c/0d56042f479fac9ad22d06855578/calender.webp" 
+                          alt="Google Calendar" 
+                          className="w-8 h-8 rounded cursor-pointer hover:opacity-80 transition-opacity object-contain" 
+                        />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="center">
+                        <DropdownMenuItem 
+                          onClick={syncEventsToGoogle}
+                          disabled={isSyncing}
+                        >
+                          <Calendar className="mr-2 h-4 w-4" />
+                          구글캘린더 동기화
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          onClick={deleteConnectNextEventsFromGoogle}
+                          disabled={isSyncing}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          동기화 삭제
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                )}
+
                 {/* 목록 보기 */}
                 {viewMode === "list" && (
                   <div className="space-y-6">
@@ -3293,11 +3497,11 @@ export default function ProgramsWidget({
                                           )}
                                         </div>
                                         <div className="space-y-2">
-                                          <div className="flex items-center gap-1">
-                                            <Calendar
-                                              size={16}
-                                              className="text-gray-600"
-                                            />
+                                      <div className="flex items-center gap-1">
+                                        <Calendar
+                                          size={16}
+                                          className="text-gray-600"
+                                        />
                                             <span className="font-medium text-sm">
                                               {format(
                                                 eventDate,
@@ -3677,6 +3881,13 @@ export default function ProgramsWidget({
                     })}
                 </div>
               </div>
+            </TabsContent>
+          )}
+
+          {/* 출석 탭 */}
+          {tabConfig.availableTabs.some((tab) => tab.key === "attendance") && (
+            <TabsContent value="attendance" className="p-0">
+              <AttendanceTab programId={selectedProgram || ""} />
             </TabsContent>
           )}
 
@@ -4236,6 +4447,21 @@ export default function ProgramsWidget({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* 구글 캘린더 동기화 로딩 모달 */}
+      {isSyncing && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 flex flex-col items-center gap-4 shadow-xl min-w-[250px]">
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+            <p className="text-gray-700 dark:text-gray-300 font-medium text-center">
+              구글 캘린더 작업 중...
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+              잠시만 기다려주세요
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* 재정 수정/삭제 액션 다이얼로그 */}
       <AlertDialog

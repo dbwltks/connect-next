@@ -38,6 +38,12 @@ import {
 } from "@/components/ui/pagination";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import {
   UserCheck,
   Plus,
   Calendar,
@@ -104,6 +110,16 @@ export default function AttendanceTab({ programId }: AttendanceTabProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [userRole, setUserRole] = useState<string>("guest");
+
+  // 필터 관련 상태
+  const [dateFilter, setDateFilter] = useState<
+    "all" | "thisWeek" | "lastWeek" | "thisMonth" | "custom"
+  >("all");
+  const [customDateRange, setCustomDateRange] = useState<{
+    from?: Date;
+    to?: Date;
+  }>({});
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   // 모달 상태
   const [isSessionModalOpen, setIsSessionModalOpen] = useState(false);
@@ -371,8 +387,56 @@ export default function AttendanceTab({ programId }: AttendanceTabProps) {
       ? Math.round((presentCount / totalAttendanceRecords) * 100)
       : 0;
 
+  // 날짜 필터링 함수
+  const getFilteredSessions = () => {
+    const now = new Date();
+
+    return attendanceSessions.filter((session) => {
+      const sessionDate = parseLocalDate(session.date);
+
+      switch (dateFilter) {
+        case "thisWeek":
+          const thisWeekStart = new Date(now);
+          thisWeekStart.setDate(now.getDate() - now.getDay());
+          const thisWeekEnd = new Date(thisWeekStart);
+          thisWeekEnd.setDate(thisWeekStart.getDate() + 6);
+          return sessionDate >= thisWeekStart && sessionDate <= thisWeekEnd;
+
+        case "lastWeek":
+          const lastWeekStart = new Date(now);
+          lastWeekStart.setDate(now.getDate() - now.getDay() - 7);
+          const lastWeekEnd = new Date(lastWeekStart);
+          lastWeekEnd.setDate(lastWeekStart.getDate() + 6);
+          return sessionDate >= lastWeekStart && sessionDate <= lastWeekEnd;
+
+        case "thisMonth":
+          const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+          const thisMonthEnd = new Date(
+            now.getFullYear(),
+            now.getMonth() + 1,
+            0
+          );
+          return sessionDate >= thisMonthStart && sessionDate <= thisMonthEnd;
+
+        case "custom":
+          if (customDateRange.from && customDateRange.to) {
+            return (
+              sessionDate >= customDateRange.from &&
+              sessionDate <= customDateRange.to
+            );
+          }
+          return true;
+
+        default:
+          return true;
+      }
+    });
+  };
+
+  const filteredSessions = getFilteredSessions();
+
   return (
-    <div className="space-y-4 p-4">
+    <div className="space-y-4 w-full max-w-full overflow-hidden box-border">
       {/* 출석 통계 카드 */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
@@ -595,7 +659,8 @@ export default function AttendanceTab({ programId }: AttendanceTabProps) {
 
       {/* 전체 출석 현황 테이블 */}
       <div>
-        <div className="flex items-center justify-between mb-3">
+        {/* 날짜 필터 */}
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <h3 className="text-lg font-semibold flex items-center gap-2">
               <UserCheck className="h-5 w-5" />
@@ -606,6 +671,69 @@ export default function AttendanceTab({ programId }: AttendanceTabProps) {
             </Badge>
           </div>
           <div className="flex items-center gap-2">
+            <Select
+              value={dateFilter}
+              onValueChange={(
+                value: "all" | "thisWeek" | "lastWeek" | "thisMonth" | "custom"
+              ) => {
+                setDateFilter(value);
+                if (value !== "custom") {
+                  setCustomDateRange({});
+                }
+              }}
+            >
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">전체</SelectItem>
+                <SelectItem value="thisWeek">이번주</SelectItem>
+                <SelectItem value="lastWeek">저번주</SelectItem>
+                <SelectItem value="thisMonth">이번달</SelectItem>
+                <SelectItem value="custom">사용자 지정</SelectItem>
+              </SelectContent>
+            </Select>
+            {dateFilter === "custom" && (
+              <Popover
+                open={isDatePickerOpen}
+                onOpenChange={setIsDatePickerOpen}
+              >
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-[240px] justify-start text-left font-normal",
+                      !customDateRange.from && "text-muted-foreground"
+                    )}
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {customDateRange.from ? (
+                      customDateRange.to ? (
+                        <>
+                          {format(customDateRange.from, "yyyy-MM-dd")} -{" "}
+                          {format(customDateRange.to, "yyyy-MM-dd")}
+                        </>
+                      ) : (
+                        format(customDateRange.from, "yyyy-MM-dd")
+                      )
+                    ) : (
+                      <span>날짜 범위 선택</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    initialFocus
+                    mode="range"
+                    selected={customDateRange as any}
+                    onSelect={(range) => {
+                      setCustomDateRange(range || {});
+                    }}
+                    numberOfMonths={2}
+                  />
+                </PopoverContent>
+              </Popover>
+            )}
             <Select
               value={itemsPerPage.toString()}
               onValueChange={(value) => {
@@ -625,228 +753,299 @@ export default function AttendanceTab({ programId }: AttendanceTabProps) {
             </Select>
           </div>
         </div>
-        <Card className="border-0 shadow-sm">
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-b">
-                    <TableHead className="font-semibold min-w-[120px] sticky left-0 bg-white z-10">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="p-0 h-auto font-semibold hover:bg-transparent flex items-center gap-1"
-                        onClick={() => {
-                          setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-                          setCurrentPage(1);
-                        }}
-                      >
-                        참가자
-                        {sortOrder === "asc" ? (
-                          <ChevronUp className="h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </TableHead>
-                    {attendanceSessions
-                      .sort(
-                        (a, b) =>
-                          parseLocalDate(a.date).getTime() -
-                          parseLocalDate(b.date).getTime()
-                      )
-                      .map((session) => (
-                        <TableHead
-                          key={session.id}
-                          className="font-semibold text-center min-w-[100px]"
-                        >
-                          <div className="flex flex-col items-center">
-                            <span className="text-xs font-medium">
-                              {session.title}
-                            </span>
-                            <span className="text-xs text-gray-500 mt-1">
-                              {format(parseLocalDate(session.date), "MM/dd", {
-                                locale: ko,
-                              })}
-                            </span>
-                          </div>
-                        </TableHead>
-                      ))}
-                    <TableHead className="font-semibold text-center min-w-[80px]">
-                      출석률
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedParticipants.map((participant) => {
-                    // 참가자별 출석률 계산
-                    const participantRecords = attendanceRecords.filter(
-                      (record) => record.participantId === participant.id
-                    );
-                    const presentCount = participantRecords.filter(
-                      (record) => record.status === "present"
-                    ).length;
-                    const totalSessions = attendanceSessions.length;
-                    const attendanceRate =
-                      totalSessions > 0
-                        ? Math.round((presentCount / totalSessions) * 100)
-                        : 0;
 
-                    return (
-                      <TableRow
-                        key={participant.id}
-                        className="border-b last:border-0"
-                      >
-                        <TableCell className="font-medium py-3 sticky left-0 bg-white z-10">
-                          {participant.name}
-                        </TableCell>
-                        {attendanceSessions
+        <div className="w-full overflow-hidden">
+          <Card className="overflow-hidden">
+            <CardContent className="p-0">
+              <div className="flex w-full max-w-full">
+                {/* 참가자 고정 컬럼 */}
+                <div className="w-[130px] flex-shrink-0 border-r">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-b">
+                        <TableHead className="w-[130px]">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="p-0 h-auto font-semibold hover:bg-transparent flex items-center gap-1"
+                            onClick={() => {
+                              setSortOrder(
+                                sortOrder === "asc" ? "desc" : "asc"
+                              );
+                              setCurrentPage(1);
+                            }}
+                          >
+                            참가자
+                            {sortOrder === "asc" ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedParticipants.map((participant) => (
+                        <TableRow key={participant.id} className="h-[52px]">
+                          <TableCell className="font-medium py-3 h-[52px]">
+                            {participant.name}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {participants.length === 0 && (
+                        <TableRow>
+                          <TableCell className="text-center py-8 text-gray-500">
+                            참가자 없음
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* 세션 스크롤 영역 */}
+                <div className="flex-1 min-w-0 max-w-[calc(100vw-500px)] border-r overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-b">
+                        {filteredSessions
                           .sort(
                             (a, b) =>
                               parseLocalDate(a.date).getTime() -
                               parseLocalDate(b.date).getTime()
                           )
-                          .map((session) => {
-                            const attendanceRecord = attendanceRecords.find(
-                              (record) =>
-                                record.participantId === participant.id &&
-                                record.date === session.date
-                            );
-                            const status = attendanceRecord?.status || "absent";
-
-                            return (
-                              <TableCell
-                                key={session.id}
-                                className="text-center py-3"
-                              >
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="p-1 h-auto hover:bg-gray-50"
-                                  onClick={() =>
-                                    toggleAttendance(
-                                      participant.id,
-                                      session.date
-                                    )
-                                  }
-                                >
-                                  {status === "present" && (
-                                    <CheckCircle2 className="h-5 w-5 text-green-500" />
-                                  )}
-                                  {status === "late" && (
-                                    <Clock className="h-5 w-5 text-yellow-500" />
-                                  )}
-                                  {status === "absent" && (
-                                    <XCircle className="h-5 w-5 text-red-300" />
-                                  )}
-                                </Button>
-                              </TableCell>
-                            );
-                          })}
-                        <TableCell className="text-center py-3">
-                          <div className="w-16 mx-auto">
-                            <Badge
-                              className={`w-full justify-center text-xs transition-colors duration-200 ${
-                                attendanceRate >= 80
-                                  ? "bg-green-100 text-green-800 border-green-200"
-                                  : attendanceRate >= 60
-                                    ? "bg-yellow-100 text-yellow-800 border-yellow-200"
-                                    : "bg-red-100 text-red-800 border-red-200"
-                              }`}
+                          .map((session) => (
+                            <TableHead
+                              key={session.id}
+                              className="text-center text-xs w-[80px]"
+                              style={{ width: "80px" }}
                             >
-                              {attendanceRate}%
-                            </Badge>
-                          </div>
-                        </TableCell>
+                              <div className="flex flex-col items-center">
+                                <span
+                                  className="font-medium truncate w-[75px]"
+                                  title={session.title}
+                                >
+                                  {session.title}
+                                </span>
+                                <span className="text-gray-500 mt-1">
+                                  {format(
+                                    parseLocalDate(session.date),
+                                    "MM/dd",
+                                    {
+                                      locale: ko,
+                                    }
+                                  )}
+                                </span>
+                              </div>
+                            </TableHead>
+                          ))}
                       </TableRow>
-                    );
-                  })}
-                  {participants.length === 0 && (
-                    <TableRow>
-                      <TableCell
-                        colSpan={attendanceSessions.length + 2}
-                        className="text-center py-8 text-gray-500"
-                      >
-                        등록된 참가자가 없습니다.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedParticipants.map((participant) => (
+                        <TableRow key={participant.id} className="h-[52px]">
+                          {filteredSessions
+                            .sort(
+                              (a, b) =>
+                                parseLocalDate(a.date).getTime() -
+                                parseLocalDate(b.date).getTime()
+                            )
+                            .map((session) => {
+                              const attendanceRecord = attendanceRecords.find(
+                                (record) =>
+                                  record.participantId === participant.id &&
+                                  record.date === session.date
+                              );
+                              const status =
+                                attendanceRecord?.status || "absent";
 
-            {/* 페이지네이션 */}
-            {totalPages > 1 && (
-              <div className="flex justify-between items-center p-4 border-t">
-                <div className="text-sm text-muted-foreground">
-                  총 {totalParticipants}명 중 {startIndex + 1}-
-                  {Math.min(endIndex, totalParticipants)}명 표시
-                </div>
-                <Pagination>
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setCurrentPage(Math.max(1, currentPage - 1));
-                        }}
-                        className={
-                          currentPage === 1
-                            ? "pointer-events-none opacity-50"
-                            : "cursor-pointer"
-                        }
-                      />
-                    </PaginationItem>
-
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      let pageNum;
-                      if (totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (currentPage <= 3) {
-                        pageNum = i + 1;
-                      } else if (currentPage >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i;
-                      } else {
-                        pageNum = currentPage - 2 + i;
-                      }
-
-                      return (
-                        <PaginationItem key={pageNum}>
-                          <PaginationLink
-                            href="#"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setCurrentPage(pageNum);
-                            }}
-                            isActive={currentPage === pageNum}
+                              return (
+                                <TableCell
+                                  key={session.id}
+                                  className="text-center py-3 h-[52px] w-[80px]"
+                                  style={{ width: "80px" }}
+                                >
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="p-1 h-auto hover:bg-gray-50"
+                                    onClick={() =>
+                                      toggleAttendance(
+                                        participant.id,
+                                        session.date
+                                      )
+                                    }
+                                  >
+                                    {status === "present" && (
+                                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                                    )}
+                                    {status === "late" && (
+                                      <Clock className="h-5 w-5 text-yellow-500" />
+                                    )}
+                                    {status === "absent" && (
+                                      <XCircle className="h-5 w-5 text-red-300" />
+                                    )}
+                                  </Button>
+                                </TableCell>
+                              );
+                            })}
+                        </TableRow>
+                      ))}
+                      {participants.length === 0 && (
+                        <TableRow>
+                          <TableCell
+                            colSpan={filteredSessions.length}
+                            className="text-center py-8 text-gray-500"
                           >
-                            {pageNum}
-                          </PaginationLink>
-                        </PaginationItem>
-                      );
-                    })}
+                            세션 없음
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
 
-                    <PaginationItem>
-                      <PaginationNext
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setCurrentPage(Math.min(totalPages, currentPage + 1));
-                        }}
-                        className={
-                          currentPage === totalPages
-                            ? "pointer-events-none opacity-50"
-                            : "cursor-pointer"
-                        }
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
+                {/* 출석률 고정 컬럼 */}
+                <div className="w-[80px] flex-shrink-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-b">
+                        <TableHead className="text-center w-[80px]">
+                          출석률
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedParticipants.map((participant) => {
+                        // 필터링된 세션에 대한 참가자별 출석률 계산
+                        const filteredSessionDates = filteredSessions.map(
+                          (session) => session.date
+                        );
+                        const participantRecords = attendanceRecords.filter(
+                          (record) =>
+                            record.participantId === participant.id &&
+                            filteredSessionDates.includes(record.date)
+                        );
+                        const presentCount = participantRecords.filter(
+                          (record) => record.status === "present"
+                        ).length;
+                        const totalFilteredSessions = filteredSessions.length;
+                        const attendanceRate =
+                          totalFilteredSessions > 0
+                            ? Math.round(
+                                (presentCount / totalFilteredSessions) * 100
+                              )
+                            : 0;
+
+                        return (
+                          <TableRow key={participant.id} className="h-[52px]">
+                            <TableCell className="text-center py-3 h-[52px] w-[80px]">
+                              <Badge
+                                className={`text-xs ${
+                                  attendanceRate >= 80
+                                    ? "bg-green-100 text-green-800"
+                                    : attendanceRate >= 60
+                                      ? "bg-yellow-100 text-yellow-800"
+                                      : "bg-red-100 text-red-800"
+                                }`}
+                              >
+                                {attendanceRate}%
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                      {participants.length === 0 && (
+                        <TableRow>
+                          <TableCell className="text-center py-8 text-gray-500">
+                            -
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
+
+              {/* 페이지네이션 */}
+              {totalPages > 1 && (
+                <div className="flex justify-between items-center p-4 border-t">
+                  <div className="text-sm text-muted-foreground">
+                    총 {totalParticipants}명 중 {startIndex + 1}-
+                    {Math.min(endIndex, totalParticipants)}명 표시
+                  </div>
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setCurrentPage(Math.max(1, currentPage - 1));
+                          }}
+                          className={
+                            currentPage === 1
+                              ? "pointer-events-none opacity-50"
+                              : "cursor-pointer"
+                          }
+                        />
+                      </PaginationItem>
+
+                      {Array.from(
+                        { length: Math.min(5, totalPages) },
+                        (_, i) => {
+                          let pageNum;
+                          if (totalPages <= 5) {
+                            pageNum = i + 1;
+                          } else if (currentPage <= 3) {
+                            pageNum = i + 1;
+                          } else if (currentPage >= totalPages - 2) {
+                            pageNum = totalPages - 4 + i;
+                          } else {
+                            pageNum = currentPage - 2 + i;
+                          }
+
+                          return (
+                            <PaginationItem key={pageNum}>
+                              <PaginationLink
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setCurrentPage(pageNum);
+                                }}
+                                isActive={currentPage === pageNum}
+                              >
+                                {pageNum}
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
+                        }
+                      )}
+
+                      <PaginationItem>
+                        <PaginationNext
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setCurrentPage(
+                              Math.min(totalPages, currentPage + 1)
+                            );
+                          }}
+                          className={
+                            currentPage === totalPages
+                              ? "pointer-events-none opacity-50"
+                              : "cursor-pointer"
+                          }
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* 출석 세션 추가/수정 모달 */}

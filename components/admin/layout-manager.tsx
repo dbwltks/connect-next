@@ -23,6 +23,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { ChevronDown } from "lucide-react";
 import ImageBrowser from "@/components/ui/image-browser";
 
 import { MediaWidget } from "../widgets/media-widget";
@@ -143,6 +149,11 @@ export default function LayoutManager(): JSX.Element {
   const [banners, setBanners] = useState<any[]>([]);
   const [pages, setPages] = useState<any[]>([]);
   const [programs, setPrograms] = useState<any[]>([]);
+
+  // 권한 시스템 관련 상태
+  const [availableRoles, setAvailableRoles] = useState<any[]>([]);
+  const [availablePermissions, setAvailablePermissions] = useState<any[]>([]);
+  const [permissionsLoading, setPermissionsLoading] = useState(true);
   const [boardPosts, setBoardPosts] = useState<{ [key: string]: any[] }>({});
   const [selectedPageId, setSelectedPageId] = useState<string | null>(null); // null은 홈페이지
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -160,6 +171,7 @@ export default function LayoutManager(): JSX.Element {
     fetchBanners();
     fetchPages();
     fetchPrograms();
+    fetchRolesAndPermissions();
   }, []);
 
   // 페이지 또는 레이아웃 구조 변경 시 위젯 데이터 다시 로드
@@ -280,6 +292,33 @@ export default function LayoutManager(): JSX.Element {
       }
     } catch (error) {
       console.error("프로그램을 불러오는 중 오류가 발생했습니다:", error);
+    }
+  };
+
+  // 역할과 권한 데이터 가져오기
+  const fetchRolesAndPermissions = async () => {
+    try {
+      setPermissionsLoading(true);
+
+      // 역할 목록 로딩
+      const rolesResponse = await fetch("/api/admin/roles");
+      if (rolesResponse.ok) {
+        const rolesData = await rolesResponse.json();
+        setAvailableRoles(rolesData.roles || []);
+      }
+
+      // 권한 목록 로딩
+      const permissionsResponse = await fetch("/api/admin/permissions");
+      if (permissionsResponse.ok) {
+        const permissionsData = await permissionsResponse.json();
+        setAvailablePermissions(permissionsData.permissions || []);
+      }
+
+      console.log("권한 시스템 데이터 로딩 완료");
+    } catch (error) {
+      console.error("권한 데이터 로딩 실패:", error);
+    } finally {
+      setPermissionsLoading(false);
     }
   };
 
@@ -5247,7 +5286,7 @@ export default function LayoutManager(): JSX.Element {
               <Tabs defaultValue="basic" className="w-full">
                 <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="basic">기본 설정</TabsTrigger>
-                  <TabsTrigger value="tabs">탭 설정</TabsTrigger>
+                  <TabsTrigger value="permissions">권한 설정</TabsTrigger>
                   <TabsTrigger value="advanced">고급 설정</TabsTrigger>
                 </TabsList>
 
@@ -5536,232 +5575,621 @@ export default function LayoutManager(): JSX.Element {
                   )}
                 </TabsContent>
 
-                <TabsContent value="advanced" className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="programs-default-main-tab">
-                      기본 상위 탭
-                    </Label>
-                    <Select
-                      value={
-                        editingWidget.settings?.default_main_tab || "common"
-                      }
-                      onValueChange={(value) =>
-                        setEditingWidget({
-                          ...editingWidget,
-                          settings: {
-                            ...editingWidget.settings,
-                            default_main_tab: value,
-                          },
-                        })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="기본 상위 탭 선택" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="common">공통</SelectItem>
-                        <SelectItem value="team">팀</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-gray-500">
-                      위젯이 처음 로드될 때 기본으로 표시할 상위 탭을
-                      선택합니다.
-                    </p>
-                  </div>
+                <TabsContent value="permissions" className="space-y-4">
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-lg font-semibold">권한 관리</Label>
+                      <p className="text-sm text-gray-600 mt-1">
+                        각 탭별로 개별 권한을 설정합니다
+                      </p>
+                    </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="programs-tab-permissions">
-                      탭별 권한 설정
-                    </Label>
-                    <p className="text-xs text-gray-500">
-                      각 탭에 접근할 수 있는 사용자 권한을 설정합니다. 선택하지
-                      않으면 모든 사용자가 접근할 수 있습니다.
-                    </p>
-                  </div>
+                    {/* 탭별 권한 설정 */}
+                    <div className="space-y-3">
+                      {[
+                        {
+                          key: "calendar",
+                          name: "일정",
+                          icon: "📅",
+                          desc: "일정 생성, 수정, 조회 권한",
+                        },
+                        {
+                          key: "participants",
+                          name: "참가자",
+                          icon: "👥",
+                          desc: "참가자 관리 및 조회 권한",
+                        },
+                        {
+                          key: "attendance",
+                          name: "출석",
+                          icon: "✅",
+                          desc: "출석 체크 및 현황 조회 권한",
+                        },
+                        {
+                          key: "finance",
+                          name: "재정",
+                          icon: "💰",
+                          desc: "재정 관리 및 조회 권한",
+                        },
+                        {
+                          key: "checklist",
+                          name: "확인사항",
+                          icon: "📋",
+                          desc: "확인사항 관리 및 조회 권한",
+                        },
+                        {
+                          key: "overview",
+                          name: "개요",
+                          icon: "📊",
+                          desc: "프로그램 개요 및 통계 조회 권한",
+                        },
+                      ].map((tab) => (
+                        <Card key={tab.key} className="p-4">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-3">
+                              <span className="text-2xl">{tab.icon}</span>
+                              <div>
+                                <Label className="text-base font-medium">
+                                  {tab.name} 탭
+                                </Label>
+                                <p className="text-sm text-gray-500 mt-1">
+                                  {tab.desc}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              {/* 보기 권한 */}
+                              <div className="flex flex-col gap-1">
+                                <Label className="text-xs text-gray-600">
+                                  보기 권한
+                                </Label>
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="w-40 h-8 justify-between text-xs"
+                                    >
+                                      {(() => {
+                                        const viewPerms =
+                                          editingWidget.settings
+                                            ?.view_permissions?.[tab.key] || [];
+                                        if (viewPerms.length === 0)
+                                          return "접근 불가";
+                                        if (viewPerms.length === 6)
+                                          return "모든 사용자";
+                                        return `${viewPerms.length}개 역할 선택됨`;
+                                      })()}
+                                      <ChevronDown className="h-3 w-3" />
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-56 p-3">
+                                    <div className="space-y-2">
+                                      <Label className="text-sm font-medium">
+                                        보기 권한 설정
+                                      </Label>
+                                      <p className="text-xs text-gray-500 mb-3">
+                                        실제 시스템 역할 기반으로 권한을
+                                        설정합니다. 사용자의 역할에 포함된
+                                        권한에 따라 접근이 결정됩니다.
+                                      </p>
+                                      <div className="space-y-2">
+                                        {permissionsLoading ? (
+                                          <div className="text-center py-2 text-sm text-gray-500">
+                                            권한 로딩중...
+                                          </div>
+                                        ) : (
+                                          /* 실제 역할들 */
+                                          availableRoles.map((role) => (
+                                            <div
+                                              key={role.id}
+                                              className="flex items-center space-x-3"
+                                            >
+                                              <Checkbox
+                                                id={`view-${tab.key}-${role.name}`}
+                                                checked={
+                                                  editingWidget.settings?.view_permissions?.[
+                                                    tab.key
+                                                  ]?.includes(role.name) ||
+                                                  false
+                                                }
+                                                onCheckedChange={(checked) => {
+                                                  const currentPermissions =
+                                                    editingWidget.settings
+                                                      ?.view_permissions || {};
+                                                  const currentTabPermissions =
+                                                    currentPermissions[
+                                                      tab.key
+                                                    ] || [];
+                                                  const newTabPermissions =
+                                                    checked
+                                                      ? [
+                                                          ...currentTabPermissions,
+                                                          role.name,
+                                                        ]
+                                                      : currentTabPermissions.filter(
+                                                          (r: string) =>
+                                                            r !== role.name
+                                                        );
 
-                  <div className="space-y-4 p-4 bg-blue-50 rounded-lg">
-                    <div className="space-y-4">
-                      <Label className="text-sm font-medium">
-                        탭별 권한 설정
-                      </Label>
+                                                  setEditingWidget({
+                                                    ...editingWidget,
+                                                    settings: {
+                                                      ...editingWidget.settings,
+                                                      view_permissions: {
+                                                        ...currentPermissions,
+                                                        [tab.key]:
+                                                          newTabPermissions,
+                                                      },
+                                                    },
+                                                  });
+                                                }}
+                                              />
+                                              <div className="flex-1">
+                                                <Label
+                                                  htmlFor={`view-${tab.key}-${role.name}`}
+                                                  className="text-sm font-medium cursor-pointer"
+                                                >
+                                                  {role.display_name}
+                                                </Label>
+                                                <p className="text-xs text-gray-500">
+                                                  {role.description ||
+                                                    `레벨 ${role.level}`}
+                                                </p>
+                                              </div>
+                                            </div>
+                                          ))
+                                        )}
+                                      </div>
+                                      <div className="pt-2 border-t flex gap-1">
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="text-xs flex-1"
+                                          onClick={() => {
+                                            const currentPermissions =
+                                              editingWidget.settings
+                                                ?.view_permissions || {};
+                                            setEditingWidget({
+                                              ...editingWidget,
+                                              settings: {
+                                                ...editingWidget.settings,
+                                                view_permissions: {
+                                                  ...currentPermissions,
+                                                  [tab.key]: [
+                                                    "admin",
+                                                    "tier0",
+                                                    "tier1",
+                                                    "tier2",
+                                                    "tier3",
+                                                    "guest",
+                                                  ],
+                                                },
+                                              },
+                                            });
+                                          }}
+                                        >
+                                          전체 선택
+                                        </Button>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="text-xs flex-1"
+                                          onClick={() => {
+                                            const currentPermissions =
+                                              editingWidget.settings
+                                                ?.view_permissions || {};
+                                            setEditingWidget({
+                                              ...editingWidget,
+                                              settings: {
+                                                ...editingWidget.settings,
+                                                view_permissions: {
+                                                  ...currentPermissions,
+                                                  [tab.key]: [],
+                                                },
+                                              },
+                                            });
+                                          }}
+                                        >
+                                          전체 해제
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
+                              </div>
 
-                      {/* 탭 설정 */}
-                      <div className="space-y-3">
-                        <Label className="text-sm font-medium text-gray-700">
-                          탭 접근 권한
-                        </Label>
-                        {[
-                          "calendar",
-                          "participants",
-                          "finance",
-                          "checklist",
-                          "overview",
-                        ].map((subTab) => (
-                          <div key={subTab} className="space-y-2">
-                            <Label className="text-sm font-medium">
-                              {subTab === "calendar"
-                                ? "일정"
-                                : subTab === "participants"
-                                  ? "참가자"
-                                  : subTab === "finance"
-                                    ? "재정"
-                                    : subTab === "checklist"
-                                      ? "확인사항"
-                                      : "개요"}{" "}
-                              탭
-                            </Label>
-                            <div className="grid grid-cols-2 gap-2">
-                              {[
-                                "admin",
-                                "tier0",
-                                "tier1",
-                                "tier2",
-                                "tier3",
-                                "guest",
-                              ].map((role) => (
-                                <div
-                                  key={role}
-                                  className="flex items-center space-x-2"
-                                >
-                                  <input
-                                    type="checkbox"
-                                    id={`${subTab}-${role}`}
-                                    checked={
-                                      editingWidget.settings?.tab_permissions?.[
-                                        subTab
-                                      ]?.includes(role) || false
-                                    }
-                                    onChange={(e) => {
-                                      const currentPermissions =
-                                        editingWidget.settings
-                                          ?.tab_permissions || {};
-                                      const currentTabPermissions =
-                                        currentPermissions[subTab] || [];
-                                      const newTabPermissions = e.target.checked
-                                        ? [...currentTabPermissions, role]
-                                        : currentTabPermissions.filter(
-                                            (r: string) => r !== role
-                                          );
+                              {/* 편집 권한 */}
+                              <div className="flex flex-col gap-1">
+                                <Label className="text-xs text-gray-600">
+                                  편집 권한
+                                </Label>
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="w-40 h-8 justify-between text-xs"
+                                    >
+                                      {(() => {
+                                        const editPerms =
+                                          editingWidget.settings
+                                            ?.edit_permissions?.[tab.key] || [];
+                                        if (editPerms.length === 0)
+                                          return "편집 불가";
+                                        if (editPerms.length === 6)
+                                          return "모든 사용자";
+                                        return `${editPerms.length}개 역할 선택됨`;
+                                      })()}
+                                      <ChevronDown className="h-3 w-3" />
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-56 p-3">
+                                    <div className="space-y-2">
+                                      <Label className="text-sm font-medium">
+                                        편집 권한 설정
+                                      </Label>
+                                      <p className="text-xs text-gray-500 mb-3">
+                                        실제 시스템 역할 기반으로 편집 권한을
+                                        설정합니다. 역할별 권한에 따라
+                                        수정/추가/삭제가 제한됩니다.
+                                      </p>
+                                      <div className="space-y-2">
+                                        {permissionsLoading ? (
+                                          <div className="text-center py-2 text-sm text-gray-500">
+                                            권한 로딩중...
+                                          </div>
+                                        ) : (
+                                          /* 실제 역할들 */
+                                          availableRoles.map((role) => (
+                                            <div
+                                              key={role.id}
+                                              className="flex items-center space-x-3"
+                                            >
+                                              <Checkbox
+                                                id={`edit-${tab.key}-${role.name}`}
+                                                checked={
+                                                  editingWidget.settings?.edit_permissions?.[
+                                                    tab.key
+                                                  ]?.includes(role.name) ||
+                                                  false
+                                                }
+                                                onCheckedChange={(checked) => {
+                                                  const currentPermissions =
+                                                    editingWidget.settings
+                                                      ?.edit_permissions || {};
+                                                  const currentTabPermissions =
+                                                    currentPermissions[
+                                                      tab.key
+                                                    ] || [];
+                                                  const newTabPermissions =
+                                                    checked
+                                                      ? [
+                                                          ...currentTabPermissions,
+                                                          role.name,
+                                                        ]
+                                                      : currentTabPermissions.filter(
+                                                          (r: string) =>
+                                                            r !== role.name
+                                                        );
 
-                                      setEditingWidget({
-                                        ...editingWidget,
-                                        settings: {
-                                          ...editingWidget.settings,
-                                          tab_permissions: {
-                                            ...currentPermissions,
-                                            [subTab]: newTabPermissions,
-                                          },
-                                        },
-                                      });
-                                    }}
-                                  />
-                                  <Label
-                                    htmlFor={`${subTab}-${role}`}
-                                    className="text-xs"
-                                  >
-                                    {role === "admin"
-                                      ? "관리자"
-                                      : role === "tier0"
-                                        ? "Tier 0"
-                                        : role === "tier1"
-                                          ? "Tier 1"
-                                          : role === "tier2"
-                                            ? "Tier 2"
-                                            : role === "tier3"
-                                              ? "Tier 3"
-                                              : "게스트"}
-                                  </Label>
-                                </div>
-                              ))}
+                                                  setEditingWidget({
+                                                    ...editingWidget,
+                                                    settings: {
+                                                      ...editingWidget.settings,
+                                                      edit_permissions: {
+                                                        ...currentPermissions,
+                                                        [tab.key]:
+                                                          newTabPermissions,
+                                                      },
+                                                    },
+                                                  });
+                                                }}
+                                              />
+                                              <div className="flex-1">
+                                                <Label
+                                                  htmlFor={`edit-${tab.key}-${role.name}`}
+                                                  className="text-sm font-medium cursor-pointer"
+                                                >
+                                                  {role.display_name}
+                                                </Label>
+                                                <p className="text-xs text-gray-500">
+                                                  {role.description ||
+                                                    `레벨 ${role.level}`}
+                                                </p>
+                                              </div>
+                                            </div>
+                                          ))
+                                        )}
+                                      </div>
+                                      <div className="pt-2 border-t flex gap-1">
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="text-xs flex-1"
+                                          onClick={() => {
+                                            const currentPermissions =
+                                              editingWidget.settings
+                                                ?.edit_permissions || {};
+                                            setEditingWidget({
+                                              ...editingWidget,
+                                              settings: {
+                                                ...editingWidget.settings,
+                                                edit_permissions: {
+                                                  ...currentPermissions,
+                                                  [tab.key]: [
+                                                    "admin",
+                                                    "tier0",
+                                                    "tier1",
+                                                    "tier2",
+                                                    "tier3",
+                                                    "guest",
+                                                  ],
+                                                },
+                                              },
+                                            });
+                                          }}
+                                        >
+                                          전체 선택
+                                        </Button>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="text-xs flex-1"
+                                          onClick={() => {
+                                            const currentPermissions =
+                                              editingWidget.settings
+                                                ?.edit_permissions || {};
+                                            setEditingWidget({
+                                              ...editingWidget,
+                                              settings: {
+                                                ...editingWidget.settings,
+                                                edit_permissions: {
+                                                  ...currentPermissions,
+                                                  [tab.key]: [],
+                                                },
+                                              },
+                                            });
+                                          }}
+                                        >
+                                          전체 해제
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
+                              </div>
                             </div>
                           </div>
-                        ))}
-                      </div>
-
-                      {/* 빠른 설정 버튼 */}
-                      <div className="flex gap-2 pt-3 border-t">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const allPermissions = {
-                              calendar: [
-                                "admin",
-                                "tier0",
-                                "tier1",
-                                "tier2",
-                                "tier3",
-                                "guest",
-                              ],
-                              participants: [
-                                "admin",
-                                "tier0",
-                                "tier1",
-                                "tier2",
-                              ],
-                              finance: ["admin", "tier0", "tier1"],
-                              checklist: ["admin", "tier0", "tier1", "tier2"],
-                              overview: [
-                                "admin",
-                                "tier0",
-                                "tier1",
-                                "tier2",
-                                "tier3",
-                                "guest",
-                              ],
-                            };
-
-                            setEditingWidget({
-                              ...editingWidget,
-                              settings: {
-                                ...editingWidget.settings,
-                                tab_permissions: allPermissions,
-                              },
-                            });
-                          }}
-                        >
-                          기본 권한 설정
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const adminOnlyPermissions = {
-                              calendar: ["admin", "tier0"],
-                              participants: ["admin", "tier0"],
-                              finance: ["admin", "tier0"],
-                              checklist: ["admin", "tier0"],
-                              overview: ["admin", "tier0"],
-                            };
-
-                            setEditingWidget({
-                              ...editingWidget,
-                              settings: {
-                                ...editingWidget.settings,
-                                tab_permissions: adminOnlyPermissions,
-                              },
-                            });
-                          }}
-                        >
-                          관리자만
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setEditingWidget({
-                              ...editingWidget,
-                              settings: {
-                                ...editingWidget.settings,
-                                tab_permissions: {},
-                              },
-                            });
-                          }}
-                        >
-                          모든 권한 해제
-                        </Button>
-                      </div>
+                        </Card>
+                      ))}
                     </div>
+
+                    {/* 권한 시스템 설명 */}
+                    <Card className="p-4 bg-blue-50 border-blue-200">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-blue-900">
+                          💡 권한 시스템 안내
+                        </Label>
+                        <div className="text-xs text-blue-800 space-y-1">
+                          <p>
+                            • <strong>역할 기반 권한:</strong> 사용자의
+                            역할(Role)에 따라 권한이 결정됩니다
+                          </p>
+                          <p>
+                            • <strong>다중 권한 지원:</strong> 한 사용자가 여러
+                            역할을 가질 수 있습니다
+                          </p>
+                          <p>
+                            • <strong>세밀한 제어:</strong> 각 탭별로 보기/편집
+                            권한을 개별 설정 가능
+                          </p>
+                          <p>
+                            • <strong>실시간 적용:</strong> 권한 변경 시 즉시
+                            위젯에 반영됩니다
+                          </p>
+                        </div>
+                      </div>
+                    </Card>
+
+                    {/* 빠른 설정 */}
+                    <Card className="p-4 bg-gray-50">
+                      <Label className="text-sm font-medium mb-3 block">
+                        ⚡ 빠른 설정
+                      </Label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const defaultPermissions = {
+                              view_permissions: {
+                                calendar: [
+                                  "admin",
+                                  "tier0",
+                                  "tier1",
+                                  "tier2",
+                                  "tier3",
+                                  "guest",
+                                ],
+                                participants: [
+                                  "admin",
+                                  "tier0",
+                                  "tier1",
+                                  "tier2",
+                                  "tier3",
+                                ],
+                                attendance: [
+                                  "admin",
+                                  "tier0",
+                                  "tier1",
+                                  "tier2",
+                                  "tier3",
+                                ],
+                                finance: ["admin", "tier0", "tier1"],
+                                checklist: ["admin", "tier0", "tier1", "tier2"],
+                                overview: [
+                                  "admin",
+                                  "tier0",
+                                  "tier1",
+                                  "tier2",
+                                  "tier3",
+                                  "guest",
+                                ],
+                              },
+                              edit_permissions: {
+                                calendar: ["admin", "tier0"],
+                                participants: ["admin", "tier0"],
+                                attendance: ["admin", "tier0", "tier1"],
+                                finance: ["admin", "tier0"],
+                                checklist: ["admin", "tier0", "tier1"],
+                                overview: ["admin", "tier0"],
+                              },
+                            };
+                            setEditingWidget({
+                              ...editingWidget,
+                              settings: {
+                                ...editingWidget.settings,
+                                ...defaultPermissions,
+                              },
+                            });
+                          }}
+                        >
+                          기본 설정
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const openPermissions = {
+                              view_permissions: {
+                                calendar: [
+                                  "admin",
+                                  "tier0",
+                                  "tier1",
+                                  "tier2",
+                                  "tier3",
+                                  "guest",
+                                ],
+                                participants: [
+                                  "admin",
+                                  "tier0",
+                                  "tier1",
+                                  "tier2",
+                                  "tier3",
+                                  "guest",
+                                ],
+                                attendance: [
+                                  "admin",
+                                  "tier0",
+                                  "tier1",
+                                  "tier2",
+                                  "tier3",
+                                  "guest",
+                                ],
+                                finance: [
+                                  "admin",
+                                  "tier0",
+                                  "tier1",
+                                  "tier2",
+                                  "tier3",
+                                  "guest",
+                                ],
+                                checklist: [
+                                  "admin",
+                                  "tier0",
+                                  "tier1",
+                                  "tier2",
+                                  "tier3",
+                                  "guest",
+                                ],
+                                overview: [
+                                  "admin",
+                                  "tier0",
+                                  "tier1",
+                                  "tier2",
+                                  "tier3",
+                                  "guest",
+                                ],
+                              },
+                              edit_permissions: {
+                                calendar: [
+                                  "admin",
+                                  "tier0",
+                                  "tier1",
+                                  "tier2",
+                                  "tier3",
+                                ],
+                                participants: [
+                                  "admin",
+                                  "tier0",
+                                  "tier1",
+                                  "tier2",
+                                  "tier3",
+                                ],
+                                attendance: [
+                                  "admin",
+                                  "tier0",
+                                  "tier1",
+                                  "tier2",
+                                  "tier3",
+                                ],
+                                finance: ["admin", "tier0", "tier1", "tier2"],
+                                checklist: [
+                                  "admin",
+                                  "tier0",
+                                  "tier1",
+                                  "tier2",
+                                  "tier3",
+                                ],
+                                overview: [
+                                  "admin",
+                                  "tier0",
+                                  "tier1",
+                                  "tier2",
+                                  "tier3",
+                                ],
+                              },
+                            };
+                            setEditingWidget({
+                              ...editingWidget,
+                              settings: {
+                                ...editingWidget.settings,
+                                ...openPermissions,
+                              },
+                            });
+                          }}
+                        >
+                          전체 개방
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditingWidget({
+                              ...editingWidget,
+                              settings: {
+                                ...editingWidget.settings,
+                                view_permissions: {},
+                                edit_permissions: {},
+                              },
+                            });
+                          }}
+                        >
+                          초기화
+                        </Button>
+                      </div>
+                    </Card>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="advanced" className="space-y-4">
+                  {/* 기타 고급 설정 */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">기타 설정</Label>
+                    <p className="text-xs text-gray-500">
+                      추가적인 고급 설정 옵션들입니다.
+                    </p>
                   </div>
                 </TabsContent>
               </Tabs>

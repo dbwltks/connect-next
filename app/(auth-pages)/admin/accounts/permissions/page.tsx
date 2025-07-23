@@ -125,14 +125,14 @@ export default function AccountsPermissions() {
     name: "",
     display_name: "",
     description: "",
-    level: 0,
+    level: undefined as number | undefined,
   });
   
   const [editingRole, setEditingRole] = useState({
     name: "",
     display_name: "",
     description: "",
-    level: 0,
+    level: undefined as number | undefined,
   });
   
   // 새 권한 폼 상태
@@ -416,25 +416,19 @@ export default function AccountsPermissions() {
 
   const handleCreateRole = async (roleData?: any) => {
     try {
-      const dataToUse = roleData || newRole;
-      
-      if (!dataToUse.name || !dataToUse.display_name) {
-        toast({
-          title: "오류",
-          description: "필수 필드를 입력해주세요.",
-          variant: "destructive",
-        });
-        return;
-      }
+      // 추가 모드일 때는 확실히 newRole 사용
+      const dataToUse = roleData || (isCreatingRole ? newRole : newRole);
 
-      const method = dataToUse.id ? 'PUT' : 'POST';
-      const url = '/api/admin/roles';
-      const body = dataToUse;
-
-      const response = await fetch(url, {
-        method,
+      const response = await fetch('/api/admin/roles', {
+        method: dataToUse.id ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          name: dataToUse.name,
+          display_name: dataToUse.display_name,
+          description: dataToUse.description,
+          level: dataToUse.level,
+          ...(dataToUse.id && { id: dataToUse.id })
+        }),
       });
 
       if (response.ok) {
@@ -823,11 +817,12 @@ export default function AccountsPermissions() {
               <DialogTrigger asChild>
                 <Button onClick={() => {
                   setSelectedRole(null);
+                  setIsCreatingRole(true);
                   setNewRole({
                     name: "",
                     display_name: "",
                     description: "",
-                    level: 0,
+                    level: undefined,
                   });
                 }}>
                   <Plus className="h-4 w-4 mr-2" />
@@ -869,9 +864,12 @@ export default function AccountsPermissions() {
                     <Input
                       id="role-level"
                       type="number"
-                      value={newRole.level}
-                      onChange={(e) => setNewRole({...newRole, level: parseInt(e.target.value) || 0})}
-                      placeholder="0-100"
+                      value={newRole.level ?? ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setNewRole({...newRole, level: value === '' ? undefined : parseInt(value) || 0})
+                      }}
+                      placeholder="0-900"
                     />
                   </div>
                   <div>
@@ -890,7 +888,7 @@ export default function AccountsPermissions() {
                       취소
                     </Button>
                   </DialogClose>
-                  <Button onClick={handleCreateRole}>
+                  <Button onClick={() => handleCreateRole(newRole)}>
                     {selectedRole ? '수정' : '추가'}
                   </Button>
                 </DialogFooter>
@@ -990,9 +988,12 @@ export default function AccountsPermissions() {
                                   <Input
                                     id="edit-role-level"
                                     type="number"
-                                    value={editingRole.level}
-                                    onChange={(e) => setEditingRole({...editingRole, level: parseInt(e.target.value) || 0})}
-                                    placeholder="0-100"
+                                    value={editingRole.level ?? ''}
+                                    onChange={(e) => {
+                                      const value = e.target.value;
+                                      setEditingRole({...editingRole, level: value === '' ? undefined : parseInt(value) || 0})
+                                    }}
+                                    placeholder="0-900"
                                   />
                                 </div>
                                 <div>

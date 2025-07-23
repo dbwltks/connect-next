@@ -33,9 +33,9 @@ export async function POST(request: NextRequest) {
     const { name, display_name, description, level } = body;
 
     // 필수 필드 검증
-    if (!name || !display_name || level === undefined) {
+    if (!name || !display_name || (level !== 0 && !level)) {
       return NextResponse.json(
-        { error: "필수 필드가 누락되었습니다." },
+        { error: "필수 필드가 누락되었습니다. (name, display_name, level 필요)" },
         { status: 400 }
       );
     }
