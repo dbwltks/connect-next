@@ -156,6 +156,7 @@ interface Team {
   member_count: number;
   program_id: string;
   color?: string;
+  google_calendar_color_id?: string;
 }
 
 interface ProgramsWidgetProps {
@@ -263,9 +264,26 @@ export default function ProgramsWidget({
   const getGoogleCalendarColorId = (teamId: string): string => {
     const team = teams.find((t) => t.id === teamId);
     
+    // 팀에 구글 캘린더 색상 ID가 설정되어 있으면 우선 사용
+    if (team?.google_calendar_color_id) {
+      return team.google_calendar_color_id;
+    }
+    
+    // 구글 캘린더 색상 ID가 없으면 기존 hex 색상을 매핑
     if (team?.color) {
-      // 팀 색상을 Google Calendar 색상 ID로 매핑
       const colorMap: { [key: string]: string } = {
+        '#a4bdfc': '1',  // 라벤더
+        '#7ae7bf': '2',  // 세이지
+        '#dbadff': '3',  // 그레이프
+        '#ff887c': '4',  // 플라밍고
+        '#fbd75b': '5',  // 바나나
+        '#ffb878': '6',  // 탠저린
+        '#46d6db': '7',  // 피콕
+        '#e1e1e1': '8',  // 그래파이트
+        '#5484ed': '9',  // 블루베리
+        '#51b749': '10', // 바질
+        '#dc2127': '11', // 토마토
+        // 기존 색상들도 호환성을 위해 유지
         '#3B82F6': '9',  // 파란색
         '#EF4444': '11', // 빨간색  
         '#10B981': '10', // 초록색
@@ -276,13 +294,11 @@ export default function ProgramsWidget({
         '#EC4899': '4',  // 핑크색
       };
       
-      return colorMap[team.color] || '9'; // 기본 파란색
+      return colorMap[team.color] || '9'; // 기본 블루베리
     }
     
-    // 팀 색상이 없으면 팀 ID 기반으로 색상 할당
-    const colorIds = ['9', '10', '11', '5', '3', '7', '6', '4'];
-    const index = parseInt(teamId) % colorIds.length;
-    return colorIds[index];
+    // 팀 정보가 없으면 기본 블루베리 색상
+    return '9';
   };
 
   // 스마트 동기화 (생성/업데이트)
@@ -2491,6 +2507,37 @@ export default function ProgramsWidget({
                     return false;
                   })() && (
                     <div className="flex items-center gap-2">
+                      {/* 구글 캘린더 드롭다운 */}
+                      {filteredEvents.length > 0 && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <img 
+                              src="https://www.gstatic.com/marketing-cms/assets/images/cf/3c/0d56042f479fac9ad22d06855578/calender.webp" 
+                              alt="Google Calendar" 
+                              className="w-8 h-8 rounded cursor-pointer hover:opacity-80 transition-opacity object-contain"
+                            />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem 
+                              onClick={syncEventsToGoogle}
+                              disabled={isSyncing}
+                            >
+                              <Calendar className="mr-2 h-4 w-4" />
+                              구글캘린더 동기화
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={deleteConnectNextEventsFromGoogle}
+                              disabled={isSyncing}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              동기화 삭제
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                      
                       {/* 장소 설정 버튼 */}
                       <Dialog
                         open={isLocationSettingsOpen}
@@ -2622,36 +2669,6 @@ export default function ProgramsWidget({
                         </DialogContent>
                       </Dialog>
 
-                      {/* 구글 캘린더 드롭다운 - 데스크톱 */}
-                      {filteredEvents.length > 0 && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <img 
-                              src="https://www.gstatic.com/marketing-cms/assets/images/cf/3c/0d56042f479fac9ad22d06855578/calender.webp" 
-                              alt="Google Calendar" 
-                              className="w-8 h-8 rounded cursor-pointer hover:opacity-80 transition-opacity hidden md:block object-contain"
-                            />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem 
-                              onClick={syncEventsToGoogle}
-                              disabled={isSyncing}
-                            >
-                              <Calendar className="mr-2 h-4 w-4" />
-                              구글캘린더 동기화
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              onClick={deleteConnectNextEventsFromGoogle}
-                              disabled={isSyncing}
-                              className="text-destructive focus:text-destructive"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              동기화 삭제
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
 
                       {/* 일정 추가 모달 */}
                       <Dialog
@@ -3331,38 +3348,6 @@ export default function ProgramsWidget({
               </div>
 
               <div className="px-2 pb-4">
-                {/* 구글 캘린더 드롭다운 - 모바일 (별도 줄) */}
-                {filteredEvents.length > 0 && (
-                  <div className="flex md:hidden justify-center mb-4 px-2">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <img 
-                          src="https://www.gstatic.com/marketing-cms/assets/images/cf/3c/0d56042f479fac9ad22d06855578/calender.webp" 
-                          alt="Google Calendar" 
-                          className="w-8 h-8 rounded cursor-pointer hover:opacity-80 transition-opacity object-contain" 
-                        />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="center">
-                        <DropdownMenuItem 
-                          onClick={syncEventsToGoogle}
-                          disabled={isSyncing}
-                        >
-                          <Calendar className="mr-2 h-4 w-4" />
-                          구글캘린더 동기화
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                          onClick={deleteConnectNextEventsFromGoogle}
-                          disabled={isSyncing}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          동기화 삭제
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                )}
 
                 {/* 목록 보기 */}
                 {viewMode === "list" && (

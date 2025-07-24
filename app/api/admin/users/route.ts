@@ -63,7 +63,10 @@ export async function GET(request: NextRequest) {
 
         // 역할 필터링 (특정 역할이 요청된 경우)
         if (roleFilter && roleFilter !== "all") {
-          const hasRole = userRoles?.some(ur => ur.roles?.name === roleFilter);
+          const hasRole = userRoles?.some(ur => {
+            const role = Array.isArray(ur.roles) ? ur.roles[0] : ur.roles;
+            return role?.name === roleFilter;
+          });
           if (!hasRole) {
             return null; // 필터링된 사용자
           }
@@ -72,7 +75,10 @@ export async function GET(request: NextRequest) {
         // 사용자의 모든 권한 수 계산
         let totalPermissions = 0;
         if (userRoles && userRoles.length > 0) {
-          const roleIds = userRoles.map(ur => ur.roles?.id).filter(Boolean);
+          const roleIds = userRoles.map(ur => {
+            const role = Array.isArray(ur.roles) ? ur.roles[0] : ur.roles;
+            return role?.id;
+          }).filter(Boolean);
           if (roleIds.length > 0) {
             const { data: permissionCount } = await supabase
               .from("role_permissions")

@@ -119,8 +119,8 @@ export default function LoginPage() {
         provider: "google",
         options: {
           redirectTo: redirectTo 
-            ? `${window.location.origin}/callback?redirect_to=${redirectTo}`
-            : `${window.location.origin}/callback`,
+            ? `${window.location.origin}/oauth-callback?redirect_to=${redirectTo}`
+            : `${window.location.origin}/oauth-callback`,
           skipBrowserRedirect: true
         }
       });
@@ -212,8 +212,8 @@ export default function LoginPage() {
         provider: "kakao",
         options: {
           redirectTo: redirectTo 
-            ? `${window.location.origin}/callback?redirect_to=${redirectTo}`
-            : `${window.location.origin}/callback`
+            ? `${window.location.origin}/oauth-callback?redirect_to=${redirectTo}`
+            : `${window.location.origin}/oauth-callback`
         }
       });
       

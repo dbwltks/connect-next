@@ -14,12 +14,28 @@ import { saveProgramFeatureData, loadProgramData } from "../utils/program-data";
 import { participantsApi } from "../utils/api";
 import { createClient } from "@/utils/supabase/client";
 
+// 구글 캘린더 색상 매핑
+const GOOGLE_CALENDAR_COLORS = [
+  { id: "1", name: "라벤더", color: "#a4bdfc", hex: "#a4bdfc" },
+  { id: "2", name: "세이지", color: "#7ae7bf", hex: "#7ae7bf" },
+  { id: "3", name: "그레이프", color: "#dbadff", hex: "#dbadff" },
+  { id: "4", name: "플라밍고", color: "#ff887c", hex: "#ff887c" },
+  { id: "5", name: "바나나", color: "#fbd75b", hex: "#fbd75b" },
+  { id: "6", name: "탠저린", color: "#ffb878", hex: "#ffb878" },
+  { id: "7", name: "피콕", color: "#46d6db", hex: "#46d6db" },
+  { id: "8", name: "그래파이트", color: "#e1e1e1", hex: "#e1e1e1" },
+  { id: "9", name: "블루베리", color: "#5484ed", hex: "#5484ed" },
+  { id: "10", name: "바질", color: "#51b749", hex: "#51b749" },
+  { id: "11", name: "토마토", color: "#dc2127", hex: "#dc2127" },
+];
+
 // 타입 정의
 interface Team {
   id: string;
   name: string;
   description?: string;
   color: string;
+  google_calendar_color_id?: string; // 구글 캘린더 색상 ID (1-11)
 }
 
 interface TeamRole {
@@ -75,7 +91,8 @@ export default function TeamsTab({ programId }: TeamsTabProps) {
   const [teamForm, setTeamForm] = useState({
     name: "",
     description: "",
-    color: "#3B82F6"
+    color: "#5484ed", // 구글 캘린더 기본 블루베리 색상
+    google_calendar_color_id: "9" // 블루베리 색상 ID
   });
   
   // 역할 관리
@@ -175,7 +192,7 @@ export default function TeamsTab({ programId }: TeamsTabProps) {
         setTeams(updatedTeams);
         setIsTeamDialogOpen(false);
         setSelectedTeamEdit(null);
-        setTeamForm({ name: "", description: "", color: "#3B82F6" });
+        setTeamForm({ name: "", description: "", color: "#5484ed", google_calendar_color_id: "9" });
       } else {
         alert('팀 저장에 실패했습니다.');
       }
@@ -425,7 +442,7 @@ export default function TeamsTab({ programId }: TeamsTabProps) {
           </Button>
           <Button size="sm" onClick={() => {
             setSelectedTeamEdit(null);
-            setTeamForm({ name: "", description: "", color: "#3B82F6" });
+            setTeamForm({ name: "", description: "", color: "#5484ed", google_calendar_color_id: "9" });
             setIsTeamDialogOpen(true);
           }}>
             <Plus className="h-4 w-4 mr-2" />
@@ -461,6 +478,7 @@ export default function TeamsTab({ programId }: TeamsTabProps) {
                         name: team.name,
                         description: team.description || "",
                         color: team.color,
+                        google_calendar_color_id: team.google_calendar_color_id || "9"
                       });
                       setIsTeamDialogOpen(true);
                     }}>
@@ -714,16 +732,37 @@ export default function TeamsTab({ programId }: TeamsTabProps) {
               />
             </div>
             <div>
-              <Label htmlFor="team-color">팀 색상</Label>
-              <div className="flex gap-2 items-center">
-                <Input
-                  id="team-color"
-                  type="color"
-                  value={teamForm.color}
-                  onChange={(e) => setTeamForm({...teamForm, color: e.target.value})}
-                  className="w-16 h-10"
-                />
-                <span className="text-sm text-gray-600">{teamForm.color}</span>
+              <Label>팀 색상 (구글 캘린더 연동)</Label>
+              <div className="space-y-3">
+                <div className="grid grid-cols-6 gap-2">
+                  {GOOGLE_CALENDAR_COLORS.map((colorOption) => (
+                    <button
+                      key={colorOption.id}
+                      type="button"
+                      onClick={() => setTeamForm({
+                        ...teamForm, 
+                        color: colorOption.hex,
+                        google_calendar_color_id: colorOption.id
+                      })}
+                      className={`w-10 h-10 rounded-lg border-2 transition-all hover:scale-105 ${
+                        teamForm.color === colorOption.hex 
+                          ? 'border-gray-800 shadow-lg' 
+                          : 'border-gray-300'
+                      }`}
+                      style={{ backgroundColor: colorOption.color }}
+                      title={colorOption.name}
+                    />
+                  ))}
+                </div>
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <div 
+                    className="w-4 h-4 rounded border" 
+                    style={{ backgroundColor: teamForm.color }}
+                  />
+                  <span>
+                    선택된 색상: {GOOGLE_CALENDAR_COLORS.find(c => c.hex === teamForm.color)?.name || '사용자 정의'}
+                  </span>
+                </div>
               </div>
             </div>
             <div className="flex justify-end gap-2">
