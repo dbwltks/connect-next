@@ -20,12 +20,25 @@ export default function ScrollToTop() {
   }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    // 모든 브라우저에서 확실하게 맨 위로 스크롤
+    const scrollToTop = () => {
+      // document.body와 document.documentElement 모두 처리 (모바일 호환성)
+      document.body.scrollTop = 0;
+      document.documentElement.scrollTop = 0;
+      
+      // window.scrollTo로도 처리 (iOS Safari 등)
       window.scrollTo({
         top: 0,
+        left: 0,
         behavior: 'auto'
       });
-    }, 100);
+    };
+
+    // 즉시 실행
+    scrollToTop();
+    
+    // 한 번 더 실행 (페이지 로드 완료 후)
+    const timer = setTimeout(scrollToTop, 100);
 
     return () => clearTimeout(timer);
   }, [pathname]);

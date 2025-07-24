@@ -109,6 +109,14 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
   const posts = data?.posts || [];
   const menuUrlMap = data?.menuUrlMap || {};
 
+  // 위젯이 연결된 메뉴 페이지 URL 가져오기
+  const getWidgetMenuUrl = () => {
+    if (pageId && menuUrlMap[pageId]) {
+      return menuUrlMap[pageId];
+    }
+    return null;
+  };
+
   // 템플릿 번호 가져오기 (문자열 또는 숫자 처리)
   const getTemplateNumber = (template: string | number | undefined): number => {
     if (template === undefined) return BOARD_TEMPLATE.CLASSIC;
@@ -468,9 +476,15 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
   return (
     <div className="h-full bg-white rounded-xl border border-slate-100 overflow-hidden p-4">
       <div className="pb-2">
-        <div className="text-base font-semibold">
-          {widget.title || page?.title || "게시판"}
-        </div>
+        {getWidgetMenuUrl() ? (
+          <Link href={getWidgetMenuUrl()!} className="text-base font-semibold hover:text-blue-600 transition-colors cursor-pointer">
+            {widget.title || page?.title || "게시판"}
+          </Link>
+        ) : (
+          <div className="text-base font-semibold">
+            {widget.title || page?.title || "게시판"}
+          </div>
+        )}
       </div>
       <div>{renderByTemplate()}</div>
     </div>

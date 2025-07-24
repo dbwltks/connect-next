@@ -108,6 +108,19 @@ body {
   background-color: #f1f5f9b3 !important;
 }
 
+/* 모바일 스크롤 최적화 */
+html, body {
+  height: 100%;
+  overflow-x: hidden;
+}
+
+/* iOS Safari 모바일 스크롤 개선 */
+@supports (-webkit-touch-callout: none) {
+  body {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
 @layer utilities {
   .widget-scale {
     transition-property: all;
