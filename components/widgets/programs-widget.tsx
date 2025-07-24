@@ -106,7 +106,13 @@ import {
   type Event,
 } from "@/app/(auth-pages)/admin/programs/[id]/utils/api";
 import { createClient } from "@/utils/supabase/client";
-import { initializeGoogleAPI, authenticateUser, syncMultipleEvents, createOrUpdateEvent, deleteAllConnectNextEvents } from "@/utils/google-calendar-api";
+import {
+  initializeGoogleAPI,
+  authenticateUser,
+  syncMultipleEvents,
+  createOrUpdateEvent,
+  deleteAllConnectNextEvents,
+} from "@/utils/google-calendar-api";
 
 interface Program {
   id: string;
@@ -116,7 +122,6 @@ interface Program {
   start_date?: string;
   end_date?: string;
 }
-
 
 interface Participant {
   id: string;
@@ -228,7 +233,7 @@ export default function ProgramsWidget({
       setIsGoogleAPIInitialized(initialized);
       return initialized;
     } catch (error) {
-      console.error('Google API 초기화 실패:', error);
+      console.error("Google API 초기화 실패:", error);
       return false;
     }
   };
@@ -239,22 +244,22 @@ export default function ProgramsWidget({
       if (!isGoogleAPIInitialized) {
         const initialized = await initGoogleAPI();
         if (!initialized) {
-          throw new Error('Google API 초기화 실패');
+          throw new Error("Google API 초기화 실패");
         }
       }
 
       const authenticated = await authenticateUser();
       setIsGoogleAuthenticated(authenticated);
-      
+
       if (authenticated) {
         showAlert("성공", "Google Calendar에 연결되었습니다!");
       } else {
         showAlert("오류", "Google Calendar 인증에 실패했습니다.");
       }
-      
+
       return authenticated;
     } catch (error) {
-      console.error('Google Calendar 인증 실패:', error);
+      console.error("Google Calendar 인증 실패:", error);
       showAlert("오류", "Google Calendar 인증 중 오류가 발생했습니다.");
       return false;
     }
@@ -263,42 +268,42 @@ export default function ProgramsWidget({
   // 팀 색상을 Google Calendar 색상 ID로 변환
   const getGoogleCalendarColorId = (teamId: string): string => {
     const team = teams.find((t) => t.id === teamId);
-    
+
     // 팀에 구글 캘린더 색상 ID가 설정되어 있으면 우선 사용
     if (team?.google_calendar_color_id) {
       return team.google_calendar_color_id;
     }
-    
+
     // 구글 캘린더 색상 ID가 없으면 기존 hex 색상을 매핑
     if (team?.color) {
       const colorMap: { [key: string]: string } = {
-        '#a4bdfc': '1',  // 라벤더
-        '#7ae7bf': '2',  // 세이지
-        '#dbadff': '3',  // 그레이프
-        '#ff887c': '4',  // 플라밍고
-        '#fbd75b': '5',  // 바나나
-        '#ffb878': '6',  // 탠저린
-        '#46d6db': '7',  // 피콕
-        '#e1e1e1': '8',  // 그래파이트
-        '#5484ed': '9',  // 블루베리
-        '#51b749': '10', // 바질
-        '#dc2127': '11', // 토마토
+        "#a4bdfc": "1", // 라벤더
+        "#7ae7bf": "2", // 세이지
+        "#dbadff": "3", // 그레이프
+        "#ff887c": "4", // 플라밍고
+        "#fbd75b": "5", // 바나나
+        "#ffb878": "6", // 탠저린
+        "#46d6db": "7", // 피콕
+        "#e1e1e1": "8", // 그래파이트
+        "#5484ed": "9", // 블루베리
+        "#51b749": "10", // 바질
+        "#dc2127": "11", // 토마토
         // 기존 색상들도 호환성을 위해 유지
-        '#3B82F6': '9',  // 파란색
-        '#EF4444': '11', // 빨간색  
-        '#10B981': '10', // 초록색
-        '#F59E0B': '5',  // 노란색
-        '#8B5CF6': '3',  // 보라색
-        '#06B6D4': '7',  // 청록색
-        '#F97316': '6',  // 주황색
-        '#EC4899': '4',  // 핑크색
+        "#3B82F6": "9", // 파란색
+        "#EF4444": "11", // 빨간색
+        "#10B981": "10", // 초록색
+        "#F59E0B": "5", // 노란색
+        "#8B5CF6": "3", // 보라색
+        "#06B6D4": "7", // 청록색
+        "#F97316": "6", // 주황색
+        "#EC4899": "4", // 핑크색
       };
-      
-      return colorMap[team.color] || '9'; // 기본 블루베리
+
+      return colorMap[team.color] || "9"; // 기본 블루베리
     }
-    
+
     // 팀 정보가 없으면 기본 블루베리 색상
-    return '9';
+    return "9";
   };
 
   // 스마트 동기화 (생성/업데이트)
@@ -310,24 +315,27 @@ export default function ProgramsWidget({
       }
 
       setIsSyncing(true);
-      
-      const calendarEvents = filteredEvents.map(event => ({
+
+      const calendarEvents = filteredEvents.map((event) => ({
         title: event.title,
         startDate: parseISO(event.start_date),
-        endDate: event.end_date ? parseISO(event.end_date) : addHours(parseISO(event.start_date), 1),
-        description: event.description || '',
-        location: event.location || '',
+        endDate: event.end_date
+          ? parseISO(event.end_date)
+          : addHours(parseISO(event.start_date), 1),
+        description: event.description || "",
+        location: event.location || "",
         connectId: `connect_${event.id}`,
-        colorId: getGoogleCalendarColorId(event.team_id || ''), // 팀별 색상
+        colorId: getGoogleCalendarColorId(event.team_id || ""), // 팀별 색상
       }));
 
       const results = await syncMultipleEvents(calendarEvents);
-      
-      showAlert("동기화 완료", 
-        `생성: ${results.created}개, 업데이트: ${results.updated}개${results.errors > 0 ? `, 오류: ${results.errors}개` : ''}`
+
+      showAlert(
+        "동기화 완료",
+        `생성: ${results.created}개, 업데이트: ${results.updated}개${results.errors > 0 ? `, 오류: ${results.errors}개` : ""}`
       );
     } catch (error) {
-      console.error('Google Calendar 동기화 실패:', error);
+      console.error("Google Calendar 동기화 실패:", error);
       showAlert("오류", "Google Calendar 동기화 중 오류가 발생했습니다.");
     } finally {
       setIsSyncing(false);
@@ -343,20 +351,20 @@ export default function ProgramsWidget({
       }
 
       setIsSyncing(true);
-      
+
       const results = await deleteAllConnectNextEvents();
-      
-      showAlert("삭제 완료", 
-        `삭제: ${results.deleted}개${results.errors > 0 ? `, 오류: ${results.errors}개` : ''}`
+
+      showAlert(
+        "삭제 완료",
+        `삭제: ${results.deleted}개${results.errors > 0 ? `, 오류: ${results.errors}개` : ""}`
       );
     } catch (error) {
-      console.error('Google Calendar 삭제 실패:', error);
+      console.error("Google Calendar 삭제 실패:", error);
       showAlert("오류", "Google Calendar 삭제 중 오류가 발생했습니다.");
     } finally {
       setIsSyncing(false);
     }
   };
-
 
   // 관리자 권한 확인 함수 (admin, tier0, tier1만 설정/추가/수정/삭제 가능)
   const hasAdminPermission = () => {
@@ -1137,7 +1145,7 @@ export default function ProgramsWidget({
           setIsRecurringEditModalOpen(true);
           return;
         }
-        
+
         const updatedEvent = {
           ...editingEventData,
           title: newEvent.title,
@@ -1147,10 +1155,16 @@ export default function ProgramsWidget({
           location: newEvent.location,
           team_id: newEvent.team_id,
           is_recurring: newEvent.isRecurring,
-          recurring_end_date: newEvent.isRecurring ? newEvent.recurringEndDate : undefined,
+          recurring_end_date: newEvent.isRecurring
+            ? newEvent.recurringEndDate
+            : undefined,
         };
 
-        await eventsApi.update(editingEventData.id, updatedEvent, selectedProgram);
+        await eventsApi.update(
+          editingEventData.id,
+          updatedEvent,
+          selectedProgram
+        );
 
         // 이벤트 목록 업데이트
         const updatedEvents = events.map((event) =>
@@ -1441,7 +1455,9 @@ export default function ProgramsWidget({
 
         // 새로운 반복 일정들 생성
         const baseStartDate = new Date(newEvent.start_date);
-        const baseEndDate = newEvent.end_date ? new Date(newEvent.end_date) : undefined;
+        const baseEndDate = newEvent.end_date
+          ? new Date(newEvent.end_date)
+          : undefined;
         const recurringEndDate = new Date(newEvent.recurringEndDate);
 
         // 기본 일정의 요일 계산
@@ -1456,7 +1472,7 @@ export default function ProgramsWidget({
 
         while (currentDate <= recurringEndDate) {
           const eventStartDate = new Date(currentDate);
-          
+
           if (eventStartDate.getDay() === targetDayOfWeek) {
             let eventEndDate: Date | undefined = undefined;
             if (baseEndDate) {
@@ -1502,17 +1518,25 @@ export default function ProgramsWidget({
           if (data) {
             const updatedEvents = Array.isArray(data.events) ? data.events : [];
             setEvents(updatedEvents);
-            
+
             // 실제 저장된 이벤트 개수 확인
-            const recurringEvents = updatedEvents.filter((e: any) => e.is_recurring);
+            const recurringEvents = updatedEvents.filter(
+              (e: any) => e.is_recurring
+            );
             if (recurringEvents.length === 0) {
-              showAlert("오류", "반복 일정이 저장되지 않았습니다. 다시 시도해주세요.");
+              showAlert(
+                "오류",
+                "반복 일정이 저장되지 않았습니다. 다시 시도해주세요."
+              );
               return;
             }
           }
         }
 
-        showAlert("변환 완료", `${eventsToCreate.length}개의 반복 일정이 생성되었습니다.`);
+        showAlert(
+          "변환 완료",
+          `${eventsToCreate.length}개의 반복 일정이 생성되었습니다.`
+        );
       } else if (editOption === "single") {
         // 이 일정만 수정
         const updatedEvent = {
@@ -1524,7 +1548,9 @@ export default function ProgramsWidget({
           location: newEvent.location,
           team_id: newEvent.team_id,
           is_recurring: newEvent.isRecurring,
-          recurring_end_date: newEvent.isRecurring ? newEvent.recurringEndDate : undefined,
+          recurring_end_date: newEvent.isRecurring
+            ? newEvent.recurringEndDate
+            : undefined,
         };
 
         await eventsApi.update(eventToEdit.id, updatedEvent, selectedProgram);
@@ -1549,18 +1575,28 @@ export default function ProgramsWidget({
         const eventDate = new Date(eventToEdit.start_date);
         const futureEvents = events.filter(
           (event) =>
-            (event as any).recurring_group_id === (eventToEdit as any).recurring_group_id &&
+            (event as any).recurring_group_id ===
+              (eventToEdit as any).recurring_group_id &&
             new Date(event.start_date) >= eventDate
         );
 
         for (const event of futureEvents) {
-          const timeDiff = new Date(event.start_date).getTime() - new Date(eventToEdit.start_date).getTime();
-          const newStartDate = new Date(new Date(newEvent.start_date).getTime() + timeDiff);
-          
+          const timeDiff =
+            new Date(event.start_date).getTime() -
+            new Date(eventToEdit.start_date).getTime();
+          const newStartDate = new Date(
+            new Date(newEvent.start_date).getTime() + timeDiff
+          );
+
           let newEndDate = undefined;
           if (newEvent.end_date && event.end_date) {
-            const originalDuration = new Date(eventToEdit.end_date || eventToEdit.start_date).getTime() - new Date(eventToEdit.start_date).getTime();
-            newEndDate = new Date(newStartDate.getTime() + originalDuration).toISOString();
+            const originalDuration =
+              new Date(
+                eventToEdit.end_date || eventToEdit.start_date
+              ).getTime() - new Date(eventToEdit.start_date).getTime();
+            newEndDate = new Date(
+              newStartDate.getTime() + originalDuration
+            ).toISOString();
           }
 
           const updatedEvent = {
@@ -1591,22 +1627,35 @@ export default function ProgramsWidget({
           }
         }
 
-        showAlert("수정 완료", `${futureEvents.length}개의 향후 일정이 수정되었습니다.`);
+        showAlert(
+          "수정 완료",
+          `${futureEvents.length}개의 향후 일정이 수정되었습니다.`
+        );
       } else if (editOption === "all") {
         // 모든 반복 일정 수정
         const allEvents = events.filter(
           (event) =>
-            (event as any).recurring_group_id === (eventToEdit as any).recurring_group_id
+            (event as any).recurring_group_id ===
+            (eventToEdit as any).recurring_group_id
         );
 
         for (const event of allEvents) {
-          const timeDiff = new Date(event.start_date).getTime() - new Date(eventToEdit.start_date).getTime();
-          const newStartDate = new Date(new Date(newEvent.start_date).getTime() + timeDiff);
-          
+          const timeDiff =
+            new Date(event.start_date).getTime() -
+            new Date(eventToEdit.start_date).getTime();
+          const newStartDate = new Date(
+            new Date(newEvent.start_date).getTime() + timeDiff
+          );
+
           let newEndDate = undefined;
           if (newEvent.end_date && event.end_date) {
-            const originalDuration = new Date(eventToEdit.end_date || eventToEdit.start_date).getTime() - new Date(eventToEdit.start_date).getTime();
-            newEndDate = new Date(newStartDate.getTime() + originalDuration).toISOString();
+            const originalDuration =
+              new Date(
+                eventToEdit.end_date || eventToEdit.start_date
+              ).getTime() - new Date(eventToEdit.start_date).getTime();
+            newEndDate = new Date(
+              newStartDate.getTime() + originalDuration
+            ).toISOString();
           }
 
           const updatedEvent = {
@@ -1637,7 +1686,10 @@ export default function ProgramsWidget({
           }
         }
 
-        showAlert("수정 완료", `${allEvents.length}개의 모든 반복 일정이 수정되었습니다.`);
+        showAlert(
+          "수정 완료",
+          `${allEvents.length}개의 모든 반복 일정이 수정되었습니다.`
+        );
       }
 
       setIsRecurringEditModalOpen(false);
@@ -1658,7 +1710,6 @@ export default function ProgramsWidget({
         isRecurring: false,
         recurringEndDate: "",
       });
-
     } catch (error) {
       console.error("반복 일정 수정 실패:", error);
       showAlert("오류", "반복 일정 수정 중 오류가 발생했습니다.");
@@ -2443,7 +2494,7 @@ export default function ProgramsWidget({
             <TabsContent value="calendar" className="space-y-4">
               <div className="space-y-4 px-2 sm:px-4">
                 {/* 상단 컨트롤 바 */}
-                <div className="flex justify-between items-center">
+                <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
                   <div className="flex items-center gap-2">
                     {/* 뷰 모드 탭 선택 */}
                     <div className="flex bg-gray-100 rounded-lg p-1">
@@ -2487,6 +2538,37 @@ export default function ProgramsWidget({
                         ))}
                       </SelectContent>
                     </Select>
+
+                    {/* 구글 캘린더 드롭다운 */}
+                    {filteredEvents.length > 0 && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <img
+                            src="https://www.gstatic.com/marketing-cms/assets/images/cf/3c/0d56042f479fac9ad22d06855578/calender.webp"
+                            alt="Google Calendar"
+                            className="w-8 h-8 rounded cursor-pointer hover:opacity-80 transition-opacity object-contain"
+                          />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={syncEventsToGoogle}
+                            disabled={isSyncing}
+                          >
+                            <Calendar className="mr-2 h-4 w-4" />
+                            구글캘린더 동기화
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={deleteConnectNextEventsFromGoogle}
+                            disabled={isSyncing}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            동기화 삭제
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
 
                   {/* 일정 추가 버튼 - 탭별 권한 설정 확인 */}
@@ -2506,38 +2588,7 @@ export default function ProgramsWidget({
 
                     return false;
                   })() && (
-                    <div className="flex items-center gap-2">
-                      {/* 구글 캘린더 드롭다운 */}
-                      {filteredEvents.length > 0 && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <img 
-                              src="https://www.gstatic.com/marketing-cms/assets/images/cf/3c/0d56042f479fac9ad22d06855578/calender.webp" 
-                              alt="Google Calendar" 
-                              className="w-8 h-8 rounded cursor-pointer hover:opacity-80 transition-opacity object-contain"
-                            />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem 
-                              onClick={syncEventsToGoogle}
-                              disabled={isSyncing}
-                            >
-                              <Calendar className="mr-2 h-4 w-4" />
-                              구글캘린더 동기화
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              onClick={deleteConnectNextEventsFromGoogle}
-                              disabled={isSyncing}
-                              className="text-destructive focus:text-destructive"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              동기화 삭제
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
-                      
+                    <div className="flex items-center gap-2 justify-end sm:justify-start">
                       {/* 장소 설정 버튼 */}
                       <Dialog
                         open={isLocationSettingsOpen}
@@ -2668,7 +2719,6 @@ export default function ProgramsWidget({
                           </div>
                         </DialogContent>
                       </Dialog>
-
 
                       {/* 일정 추가 모달 */}
                       <Dialog
@@ -3127,8 +3177,10 @@ export default function ProgramsWidget({
                                 location: selectedEvent.location || "",
                                 program_id: selectedEvent.program_id || "",
                                 team_id: selectedEvent.team_id || "",
-                                isRecurring: selectedEvent.is_recurring || false,
-                                recurringEndDate: selectedEvent.recurring_end_date || "",
+                                isRecurring:
+                                  selectedEvent.is_recurring || false,
+                                recurringEndDate:
+                                  selectedEvent.recurring_end_date || "",
                               });
                               setIsEditingEvent(true);
                               setIsEventDetailModalOpen(false);
@@ -3348,7 +3400,6 @@ export default function ProgramsWidget({
               </div>
 
               <div className="px-2 pb-4">
-
                 {/* 목록 보기 */}
                 {viewMode === "list" && (
                   <div className="space-y-6">
@@ -3459,34 +3510,36 @@ export default function ProgramsWidget({
                                   >
                                     <div className="flex justify-between items-start">
                                       <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-2">
+                                        <div className="flex items-start gap-2 mb-2">
                                           <h3
-                                            className={`font-semibold ${timeStatus.status === "past" ? "text-gray-600" : ""}`}
+                                            className={`font-semibold flex-1 leading-tight ${timeStatus.status === "past" ? "text-gray-600" : ""}`}
                                           >
                                             {event.title}
                                           </h3>
-                                          <span
-                                            className={`text-xs px-2 py-1 rounded-full font-medium ${timeStatus.bgColor} ${timeStatus.color}`}
-                                          >
-                                            {timeStatus.icon} {timeStatus.label}
-                                          </span>
-                                          {team && (
+                                          <div className="flex gap-2 flex-shrink-0">
                                             <span
-                                              className="text-xs px-2 py-1 rounded border font-medium"
-                                              style={getTeamStyle(
-                                                event.team_id
-                                              )}
+                                              className={`text-xs px-2 py-1 rounded-full font-medium ${timeStatus.bgColor} ${timeStatus.color}`}
                                             >
-                                              {team.name}
+                                              {timeStatus.icon} {timeStatus.label}
                                             </span>
-                                          )}
+                                            {team && (
+                                              <span
+                                                className="text-xs px-2 py-1 rounded border font-medium"
+                                                style={getTeamStyle(
+                                                  event.team_id
+                                                )}
+                                              >
+                                                {team.name}
+                                              </span>
+                                            )}
+                                          </div>
                                         </div>
                                         <div className="space-y-2">
-                                      <div className="flex items-center gap-1">
-                                        <Calendar
-                                          size={16}
-                                          className="text-gray-600"
-                                        />
+                                          <div className="flex items-center gap-1">
+                                            <Calendar
+                                              size={16}
+                                              className="text-gray-600"
+                                            />
                                             <span className="font-medium text-sm">
                                               {format(
                                                 eventDate,
@@ -4648,20 +4701,21 @@ export default function ProgramsWidget({
       </AlertDialog>
 
       {/* 반복 일정 수정 옵션 모달 */}
-      <AlertDialog 
-        open={isRecurringEditModalOpen} 
+      <AlertDialog
+        open={isRecurringEditModalOpen}
         onOpenChange={setIsRecurringEditModalOpen}
       >
         <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {eventToEdit && !eventToEdit.is_recurring ? "단일 일정을 반복으로 변환" : "반복 일정 수정"}
+              {eventToEdit && !eventToEdit.is_recurring
+                ? "단일 일정을 반복으로 변환"
+                : "반복 일정 수정"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {eventToEdit && !eventToEdit.is_recurring 
+              {eventToEdit && !eventToEdit.is_recurring
                 ? "이 단일 일정을 반복 일정으로 변환하시겠습니까?"
-                : "반복 일정을 어떻게 수정하시겠습니까?"
-              }
+                : "반복 일정을 어떻게 수정하시겠습니까?"}
             </AlertDialogDescription>
           </AlertDialogHeader>
 
