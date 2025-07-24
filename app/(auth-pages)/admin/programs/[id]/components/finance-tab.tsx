@@ -101,9 +101,10 @@ interface FinanceRecord {
 
 interface FinanceTabProps {
   programId: string;
+  hasEditPermission?: boolean;
 }
 
-export default function FinanceTab({ programId }: FinanceTabProps) {
+export default function FinanceTab({ programId, hasEditPermission = false }: FinanceTabProps) {
   const [finances, setFinances] = useState<FinanceRecord[]>([]);
 
   // 재정 추가 모달 상태
@@ -865,26 +866,28 @@ export default function FinanceTab({ programId }: FinanceTabProps) {
             >
               <Settings className="h-4 w-4" />
             </Button>
-            <Button
-              onClick={() => {
-                setEditingFinance(null);
-                setNewFinance({
-                  type: "expense",
-                  category: "",
-                  vendor: "",
-                  itemName: "",
-                  amount: "",
-                  paidBy: "",
-                  description: "",
-                  datetime: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
-                });
-                setIsFinanceModalOpen(true);
-              }}
-              size="sm"
-            >
-              <Plus className="h-4 w-4" />
-              거래
-            </Button>
+            {hasEditPermission && (
+              <Button
+                onClick={() => {
+                  setEditingFinance(null);
+                  setNewFinance({
+                    type: "expense",
+                    category: "",
+                    vendor: "",
+                    itemName: "",
+                    amount: "",
+                    paidBy: "",
+                    description: "",
+                    datetime: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+                  });
+                  setIsFinanceModalOpen(true);
+                }}
+                size="sm"
+              >
+                <Plus className="h-4 w-4" />
+                거래
+              </Button>
+            )}
           </div>
         </div>
 
@@ -1738,24 +1741,28 @@ export default function FinanceTab({ programId }: FinanceTabProps) {
             >
               닫기
             </AlertDialogCancel>
-            <Button
-              variant="outline"
-              onClick={() => {
-                handleEditFinance(selectedFinanceForAction);
-                setIsFinanceActionDialogOpen(false);
-              }}
-            >
-              수정
-            </Button>
-            <AlertDialogAction
-              onClick={() => {
-                setIsFinanceActionDialogOpen(false);
-                handleDeleteFinance(selectedFinanceForAction.id);
-              }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              삭제
-            </AlertDialogAction>
+            {hasEditPermission && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    handleEditFinance(selectedFinanceForAction);
+                    setIsFinanceActionDialogOpen(false);
+                  }}
+                >
+                  수정
+                </Button>
+                <AlertDialogAction
+                  onClick={() => {
+                    setIsFinanceActionDialogOpen(false);
+                    handleDeleteFinance(selectedFinanceForAction.id);
+                  }}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  삭제
+                </AlertDialogAction>
+              </>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

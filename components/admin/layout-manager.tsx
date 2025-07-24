@@ -5654,16 +5654,18 @@ export default function LayoutManager(): JSX.Element {
                                         const viewPerms =
                                           editingWidget.settings
                                             ?.view_permissions?.[tab.key] || [];
+                                        console.log("viewPerms for", tab.key, ":", viewPerms);
                                         if (viewPerms.length === 0)
                                           return "접근 불가";
-                                        if (viewPerms.length === 6)
+                                        if (viewPerms.length === 1 && viewPerms.includes("guest"))
                                           return "모든 사용자";
                                         return `${viewPerms.length}개 역할 선택됨`;
                                       })()}
                                       <ChevronDown className="h-3 w-3" />
                                     </Button>
                                   </PopoverTrigger>
-                                  <PopoverContent className="w-56 p-3">
+                                  <PopoverContent className="w-56 p-3 max-h-80 overflow-y-auto" 
+                                                   onWheel={(e) => e.stopPropagation()}>
                                     <div className="space-y-2">
                                       <Label className="text-sm font-medium">
                                         보기 권한 설정
@@ -5756,14 +5758,7 @@ export default function LayoutManager(): JSX.Element {
                                                 ...editingWidget.settings,
                                                 view_permissions: {
                                                   ...currentPermissions,
-                                                  [tab.key]: [
-                                                    "admin",
-                                                    "tier0",
-                                                    "tier1",
-                                                    "tier2",
-                                                    "tier3",
-                                                    "guest",
-                                                  ],
+                                                  [tab.key]: availableRoles.map(role => role.name),
                                                 },
                                               },
                                             });
@@ -5817,14 +5812,15 @@ export default function LayoutManager(): JSX.Element {
                                             ?.edit_permissions?.[tab.key] || [];
                                         if (editPerms.length === 0)
                                           return "편집 불가";
-                                        if (editPerms.length === 6)
+                                        if (editPerms.length === 1 && editPerms.includes("guest"))
                                           return "모든 사용자";
                                         return `${editPerms.length}개 역할 선택됨`;
                                       })()}
                                       <ChevronDown className="h-3 w-3" />
                                     </Button>
                                   </PopoverTrigger>
-                                  <PopoverContent className="w-56 p-3">
+                                  <PopoverContent className="w-56 p-3 max-h-80 overflow-y-auto" 
+                                                   onWheel={(e) => e.stopPropagation()}>
                                     <div className="space-y-2">
                                       <Label className="text-sm font-medium">
                                         편집 권한 설정
@@ -5917,14 +5913,7 @@ export default function LayoutManager(): JSX.Element {
                                                 ...editingWidget.settings,
                                                 edit_permissions: {
                                                   ...currentPermissions,
-                                                  [tab.key]: [
-                                                    "admin",
-                                                    "tier0",
-                                                    "tier1",
-                                                    "tier2",
-                                                    "tier3",
-                                                    "guest",
-                                                  ],
+                                                  [tab.key]: availableRoles.map(role => role.name),
                                                 },
                                               },
                                             });

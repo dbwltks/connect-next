@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
         username,
         email,
         role,
+        roles,
         is_active,
         created_at,
         last_login,
@@ -43,64 +44,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // 사용자별 역할 정보와 권한 수 계산
-    const usersWithRoles = await Promise.all(
-      (users || []).map(async (user) => {
-        // 사용자의 모든 역할 가져오기
-        const { data: userRoles } = await supabase
-          .from("user_roles")
-          .select(`
-            roles (
-              id,
-              name,
-              display_name,
-              level
-            ),
-            is_active
-          `)
-          .eq("user_id", user.id)
-          .eq("is_active", true);
-
-        // 역할 필터링 (특정 역할이 요청된 경우)
-        if (roleFilter && roleFilter !== "all") {
-          const hasRole = userRoles?.some(ur => {
-            const role = Array.isArray(ur.roles) ? ur.roles[0] : ur.roles;
-            return role?.name === roleFilter;
-          });
-          if (!hasRole) {
-            return null; // 필터링된 사용자
-          }
+    // 사용자별 역할 정보 처리 (JSON roles 필드 사용)
+    const usersWithRoles = (users || []).map(user => {
+      // JSON roles 필드에서 역할 정보 가져오기
+      const userRoles = user.roles || [];
+      
+      // 역할 필터링 (특정 역할이 요청된 경우)
+      if (roleFilter && roleFilter !== "all") {
+        const hasRole = userRoles.includes(roleFilter) || user.role === roleFilter;
+        if (!hasRole) {
+          return null; // 필터링된 사용자
         }
+      }
 
-        // 사용자의 모든 권한 수 계산
-        let totalPermissions = 0;
-        if (userRoles && userRoles.length > 0) {
-          const roleIds = userRoles.map(ur => {
-            const role = Array.isArray(ur.roles) ? ur.roles[0] : ur.roles;
-            return role?.id;
-          }).filter(Boolean);
-          if (roleIds.length > 0) {
-            const { data: permissionCount } = await supabase
-              .from("role_permissions")
-              .select("permission_id", { count: "exact" })
-              .in("role_id", roleIds);
-            totalPermissions = permissionCount?.length || 0;
-          }
-        }
-
-        return {
-          ...user,
-          user_roles: userRoles || [],
-          permissions_count: totalPermissions,
-        };
-      })
-    );
-
-    // null 값 제거 (필터링된 사용자들)
-    const filteredUsers = usersWithRoles.filter(user => user !== null);
+      return {
+        ...user,
+        user_roles: userRoles,
+        permissions_count: userRoles.length, // 단순하게 역할 수로 계산
+      };
+    }).filter(user => user !== null);
 
     return NextResponse.json({
-      users: filteredUsers,
+      users: usersWithRoles,
       total: count,
       page,
       limit,
@@ -119,10 +84,10 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
     const body = await request.json();
 
-    const { username, email, role, password } = body;
+    const { username, email, role, roles, password } = body;
 
     // 필수 필드 검증
-    if (!username || !email || !role) {
+    if (!username || !email || (!role && (!roles || roles.length === 0))) {
       return NextResponse.json(
         { error: "필수 필드가 누락되었습니다." },
         { status: 400 }
@@ -157,13 +122,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 역할 배열 처리
+    const userRoles = roles || (role ? [role] : ["member"]);
+
     // 사용자 생성 (실제로는 Supabase Auth를 사용해야 함)
     const { data: user, error } = await supabase
       .from("users")
       .insert({
         username,
         email,
-        role,
+        role: role || userRoles[0], // 레거시 호환성
+        roles: userRoles,
         is_active: true,
       })
       .select()

@@ -74,7 +74,8 @@ type User = {
   nickname?: string;
   email?: string;
   role: string; // 레거시 단일 역할 (하위 호환성)
-  user_roles?: UserRole[]; // 새로운 다중 역할
+  roles?: string[]; // 새로운 JSON 역할 배열
+  user_roles?: UserRole[]; // 구버전 호환성
   created_at: string;
   last_login: string | null;
   is_active: boolean;
@@ -98,7 +99,7 @@ type UserFormData = {
   username: string;
   password: string;
   role: string; // 레거시 지원
-  role_ids: string[]; // 다중 역할
+  roles: string[]; // JSON 역할 배열
   is_active: boolean;
 };
 
@@ -118,8 +119,8 @@ export default function AccountsPage() {
   const [formData, setFormData] = useState<UserFormData>({
     username: "",
     password: "",
-    role: "user",
-    role_ids: [],
+    role: "member",
+    roles: [],
     is_active: true,
   });
   const [loading, setLoading] = useState(true);
@@ -221,8 +222,8 @@ export default function AccountsPage() {
     setFormData({
       username: "",
       password: "",
-      role: "user",
-      role_ids: [],
+      role: "member",
+      roles: [],
       is_active: true,
     });
     setCurrentUser(null);
@@ -239,6 +240,7 @@ export default function AccountsPage() {
             username: formData.username,
             password: formData.password, // 실제로는 암호화 필요
             role: formData.role,
+            roles: formData.roles.length > 0 ? formData.roles : [formData.role],
             is_active: formData.is_active,
           },
         ])
@@ -273,6 +275,7 @@ export default function AccountsPage() {
       const updateData: any = {
         username: formData.username,
         role: formData.role,
+        roles: formData.roles,
         is_active: formData.is_active,
       };
 
@@ -344,12 +347,12 @@ export default function AccountsPage() {
   // 수정 다이얼로그 열기
   const openEdit = (user: User) => {
     setCurrentUser(user);
-    const currentRoleIds = user.user_roles?.map(ur => ur.role_id) || [];
+    const currentRoles = user.roles || (user.role ? [user.role] : []);
     setFormData({
       username: user.username,
       password: "", // 비밀번호는 빈 값으로 설정 (수정 시 입력한 경우에만 변경)
       role: user.role,
-      role_ids: currentRoleIds,
+      roles: currentRoles,
       is_active: user.is_active,
     });
     setIsEditing(true);
@@ -441,11 +444,11 @@ export default function AccountsPage() {
   // 역할 관리 다이얼로그 열기
   const openRoleManagement = (user: User) => {
     setCurrentUser(user);
-    // 현재 사용자의 역할 ID들을 formData에 설정
-    const currentRoleIds = user.user_roles?.map(ur => ur.role_id) || [];
+    // 현재 사용자의 역할들을 formData에 설정
+    const currentRoles = user.roles || (user.role ? [user.role] : []);
     setFormData(prev => ({
       ...prev,
-      role_ids: currentRoleIds
+      roles: currentRoles
     }));
     setOpenRoleDialog(true);
   };
@@ -454,6 +457,12 @@ export default function AccountsPage() {
   const handleUpdateUserRoles = async () => {
     if (!currentUser) return;
 
+    console.log("역할 업데이트 요청:", {
+      user_id: currentUser.id,
+      roles: formData.roles,
+      username: currentUser.username
+    });
+
     try {
       const response = await fetch(`/api/admin/users/${currentUser.id}/roles`, {
         method: "PUT",
@@ -461,13 +470,14 @@ export default function AccountsPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          role_ids: formData.role_ids,
+          roles: formData.roles,
         }),
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "역할 업데이트 실패");
+        console.error("역할 업데이트 에러 응답:", error);
+        throw new Error(error.details || error.error || "역할 업데이트 실패");
       }
 
       toast({
@@ -488,12 +498,12 @@ export default function AccountsPage() {
   };
 
   // 역할 체크박스 토글
-  const toggleRole = (roleId: string) => {
+  const toggleRole = (roleName: string) => {
     setFormData(prev => ({
       ...prev,
-      role_ids: prev.role_ids.includes(roleId)
-        ? prev.role_ids.filter(id => id !== roleId)
-        : [...prev.role_ids, roleId]
+      roles: prev.roles.includes(roleName)
+        ? prev.roles.filter(name => name !== roleName)
+        : [...prev.roles, roleName]
     }));
   };
 
@@ -505,9 +515,12 @@ export default function AccountsPage() {
 
   // 사용자의 모든 역할 표시
   const getUserRolesDisplay = (user: User) => {
-    if (user.user_roles && user.user_roles.length > 0) {
-      return user.user_roles
-        .map(ur => ur.roles?.display_name || ur.roles?.name)
+    if (user.roles && user.roles.length > 0) {
+      return user.roles
+        .map(roleName => {
+          const roleObj = availableRoles.find(r => r.name === roleName);
+          return roleObj?.display_name || roleName;
+        })
         .join(", ");
     }
     // 레거시 단일 역할 지원
@@ -847,14 +860,11 @@ export default function AccountsPage() {
                     <SelectValue placeholder="역할 선택" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="admin">관리자</SelectItem>
-                    <SelectItem value="tier0">Tier 0</SelectItem>
-                    <SelectItem value="tier1">Tier 1</SelectItem>
-                    <SelectItem value="tier2">Tier 2</SelectItem>
-                    <SelectItem value="tier3">Tier 3</SelectItem>
-                    <SelectItem value="guest">게스트</SelectItem>
-                    <SelectItem value="pending">승인 대기</SelectItem>
-                    <SelectItem value="user">일반 사용자</SelectItem>
+                    {availableRoles.map(role => (
+                      <SelectItem key={role.id} value={role.name}>
+                        {role.display_name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -985,20 +995,23 @@ export default function AccountsPage() {
           </DialogHeader>
           <div className="py-4 space-y-4">
             {/* 현재 역할 정보 */}
-            {currentUser?.user_roles && currentUser.user_roles.length > 0 && (
+            {currentUser?.roles && currentUser.roles.length > 0 && (
               <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900 rounded-md">
                 <h4 className="text-sm font-medium mb-2">현재 할당된 역할:</h4>
                 <div className="space-y-1">
-                  {currentUser.user_roles.map((userRole) => (
-                    <div key={userRole.id} className="text-sm">
-                      <span className="font-medium">
-                        {userRole.roles?.display_name || userRole.roles?.name}
-                      </span>
-                      <span className="text-gray-500 ml-2">
-                        (레벨: {userRole.roles?.level})
-                      </span>
-                    </div>
-                  ))}
+                  {currentUser.roles.map((roleName) => {
+                    const role = availableRoles.find(r => r.name === roleName);
+                    return (
+                      <div key={roleName} className="text-sm">
+                        <span className="font-medium">
+                          {role?.display_name || roleName}
+                        </span>
+                        <span className="text-gray-500 ml-2">
+                          (레벨: {role?.level || 'N/A'})
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -1016,8 +1029,8 @@ export default function AccountsPage() {
                     >
                       <Checkbox
                         id={`role-${role.id}`}
-                        checked={formData.role_ids.includes(role.id)}
-                        onCheckedChange={() => toggleRole(role.id)}
+                        checked={formData.roles.includes(role.name)}
+                        onCheckedChange={() => toggleRole(role.name)}
                       />
                       <div className="flex-1 min-w-0">
                         <Label
@@ -1041,17 +1054,21 @@ export default function AccountsPage() {
             </div>
 
             {/* 권한 요약 정보 */}
-            {formData.role_ids.length > 0 && (
+            {formData.roles.length > 0 && (
               <div className="mt-4 p-3 bg-green-50 dark:bg-green-900 rounded-md">
                 <h4 className="text-sm font-medium mb-2">선택된 역할:</h4>
                 <div className="text-sm space-y-1">
-                  {formData.role_ids.map((roleId) => {
-                    const role = availableRoles.find(r => r.id === roleId);
+                  {formData.roles.map((roleName) => {
+                    const role = availableRoles.find(r => r.name === roleName);
                     return role ? (
-                      <div key={roleId}>
+                      <div key={roleName}>
                         • {role.display_name} (레벨: {role.level})
                       </div>
-                    ) : null;
+                    ) : (
+                      <div key={roleName}>
+                        • {roleName}
+                      </div>
+                    );
                   })}
                 </div>
                 <p className="text-xs text-gray-600 mt-2">

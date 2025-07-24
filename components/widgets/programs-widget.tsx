@@ -180,6 +180,12 @@ interface ProgramsWidgetProps {
       tab_permissions?: {
         [key: string]: string[];
       };
+      view_permissions?: {
+        [key: string]: string[];
+      };
+      edit_permissions?: {
+        [key: string]: string[];
+      };
     };
   };
 }
@@ -202,6 +208,10 @@ export default function ProgramsWidget({
     useState<Program | null>(null);
   const [allPrograms, setAllPrograms] = useState<Program[]>(programs);
 
+  // 레이아웃 매니저에서 설정한 권한 구조
+  const viewPermissions = widget?.settings?.view_permissions || {};
+  const managePermissions = widget?.settings?.edit_permissions || {};
+
   // 디버깅용 로그
   console.log("ProgramsWidget - props.programs:", programs);
   console.log("ProgramsWidget - allPrograms:", allPrograms);
@@ -219,6 +229,8 @@ export default function ProgramsWidget({
   const [isEditingEvent, setIsEditingEvent] = useState(false);
   const [editingEventData, setEditingEventData] = useState<Event | null>(null);
   const [userRole, setUserRole] = useState<string>("guest"); // admin, team_leader, member, guest
+  const [userRoles, setUserRoles] = useState<string[]>([]); // 다중 역할 지원
+  const [userPermissions, setUserPermissions] = useState<string[]>([]); // 사용자 권한 목록
   const [userTeamId, setUserTeamId] = useState<string | null>(null);
 
   // Google Calendar API 관련 상태
@@ -366,22 +378,130 @@ export default function ProgramsWidget({
     }
   };
 
-  // 관리자 권한 확인 함수 (admin, tier0, tier1만 설정/추가/수정/삭제 가능)
+  // 관리자 권한 확인 함수 - 권한 기반으로 수정
   const hasAdminPermission = () => {
-    return userRole === "admin" || userRole === "tier0" || userRole === "tier1";
+    // 권한 기반 체크 우선
+    const hasManagePermission = hasAnyPermission(['create_programs', 'update_programs', 'delete_programs', 'manage_all']);
+    
+    // 레거시 역할 기반 체크 (하위 호환성)
+    const adminRoles = ["admin", "tier0", "tier1"];
+    const hasAdminRole = adminRoles.some(role => userRoles.includes(role)) || adminRoles.includes(userRole);
+    
+    const result = hasManagePermission || hasAdminRole;
+    
+    console.log("🔍 hasAdminPermission:", {
+      hasManagePermission,
+      hasAdminRole,
+      result,
+      userPermissions,
+      userRoles,
+      userRole
+    });
+    
+    return result;
   };
 
-  // 게스트 포함 읽기 권한 확인 함수 (guest 포함 모든 사용자가 볼 수 있음)
+  // 게스트 포함 읽기 권한 확인 함수 - 권한 기반으로 수정
   const hasViewPermission = () => {
-    return (
-      userRole === "admin" ||
-      userRole === "tier0" ||
-      userRole === "tier1" ||
-      userRole === "tier2" ||
-      userRole === "tier3" ||
-      userRole === "guest"
-    );
+    // 권한 기반 체크 우선
+    const hasReadPermission = hasAnyPermission(['view_programs', 'read_all']);
+    
+    // 레거시 역할 기반 체크 (하위 호환성)
+    const viewRoles = ["admin", "tier0", "tier1", "tier2", "tier3", "guest"];
+    const hasViewRole = viewRoles.some(role => userRoles.includes(role)) || viewRoles.includes(userRole);
+    
+    const result = hasReadPermission || hasViewRole;
+    
+    console.log("🔍 hasViewPermission:", {
+      hasReadPermission,
+      hasViewRole,
+      result,
+      userPermissions,
+      userRoles,
+      userRole
+    });
+    
+    return result;
   };
+
+  // 특정 역할 권한 확인 함수 (혼합 권한 시스템)
+  const hasRolePermission = (allowedRoles: string[]) => {
+    if (allowedRoles.length === 0) return false;
+    
+    // 계층적 역할 (guest → member → admin)
+    const hierarchicalRoles = ['guest', 'member', 'admin'];
+    const roleHierarchy: { [key: string]: number } = {
+      'guest': 0,   // 비회원 (최하위)
+      'member': 1,  // 교인 (로그인 사용자)
+      'admin': 2    // 관리자 (최고 권한)
+    };
+    
+    // 허용된 역할 중 계층적 역할과 특별 역할 분리
+    const allowedHierarchicalRoles = allowedRoles.filter(role => hierarchicalRoles.includes(role));
+    const allowedSpecialRoles = allowedRoles.filter(role => !hierarchicalRoles.includes(role));
+    
+    // 현재 사용자의 역할 분석
+    const allUserRoles = [...userRoles, userRole].filter(Boolean);
+    const userHierarchicalRoles = allUserRoles.filter(role => hierarchicalRoles.includes(role));
+    const userSpecialRoles = allUserRoles.filter(role => !hierarchicalRoles.includes(role));
+    
+    // 사용자의 계층적 레벨 결정
+    let userHierarchicalLevel = 0; // 기본값: guest
+    if (userRole === 'guest' && userRoles.length <= 1) {
+      userHierarchicalLevel = 0; // 비회원
+    } else if (userHierarchicalRoles.length > 0) {
+      // 가장 높은 계층적 역할의 레벨
+      userHierarchicalLevel = Math.max(...userHierarchicalRoles.map(role => roleHierarchy[role] || 0));
+    } else {
+      // 로그인했지만 특별한 계층적 역할이 없는 경우 member로 처리
+      userHierarchicalLevel = 1; // member
+    }
+    
+    let hasAccess = false;
+    
+    // 1. 계층적 역할 체크
+    if (allowedHierarchicalRoles.length > 0) {
+      const maxAllowedLevel = Math.max(...allowedHierarchicalRoles.map(role => roleHierarchy[role] || 0));
+      if (userHierarchicalLevel >= maxAllowedLevel) {
+        hasAccess = true;
+      }
+    }
+    
+    // 2. 특별 역할 체크 (정확한 매칭)
+    if (!hasAccess && allowedSpecialRoles.length > 0) {
+      hasAccess = allowedSpecialRoles.some(role => userSpecialRoles.includes(role));
+    }
+    
+    return hasAccess;
+  };
+
+  // 특정 권한 확인 함수
+  const hasPermission = (permission: string) => {
+    const result = userPermissions.includes(permission);
+    console.log("🔍 hasPermission:", {
+      permission,
+      userPermissions,
+      result
+    });
+    return result;
+  };
+
+  // 여러 권한 중 하나라도 있는지 확인
+  const hasAnyPermission = (permissions: string[]) => {
+    const result = permissions.some(permission => userPermissions.includes(permission));
+    console.log("🔍 hasAnyPermission:", {
+      permissions,
+      userPermissions,
+      result
+    });
+    return result;
+  };
+
+  // CRUD 권한 확인 함수들
+  const canView = (resource: string = 'programs') => hasPermission(`view_${resource}`) || hasPermission('view_all');
+  const canCreate = (resource: string = 'programs') => hasPermission(`create_${resource}`) || hasPermission('create_all');
+  const canUpdate = (resource: string = 'programs') => hasPermission(`update_${resource}`) || hasPermission('update_all');
+  const canDelete = (resource: string = 'programs') => hasPermission(`delete_${resource}`) || hasPermission('delete_all');
 
   // Alert 다이얼로그 표시 함수
   const showAlert = (title: string, message: string) => {
@@ -639,16 +759,25 @@ export default function ProgramsWidget({
 
         if (!user) {
           setUserRole("guest");
-          return;
+          setUserRoles(["guest"]); 
+          setUserPermissions([]);
+            return;
         }
 
-        // users 테이블에서 역할 확인
+        // users 테이블에서 역할 및 권한 확인 (다중 역할 포함)
         const { data: userData, error } = await supabase
           .from("users")
-          .select("role, email, id")
+          .select(`
+            role, 
+            roles,
+            email, 
+            id
+          `)
           .eq("id", user.id)
           .single();
 
+        console.log("🔍 사용자 데이터 조회 결과:", { userData, error });
+        
         if (error || !userData) {
           // 사용자 데이터가 없으면 관리자 권한으로 가정 (admin 페이지에서 사용하는 경우)
           console.log(
@@ -658,47 +787,74 @@ export default function ProgramsWidget({
           return;
         }
 
-        // 역할 설정 (기본값: member)
-        const userRole = userData.role || "member";
+        // JSON roles 필드 사용 (간단한 방식)
+        let userRole = "member"; // 기본값 (하위 호환성)
+        let allUserRoles: string[] = []; // 모든 역할 저장
+        let allUserPermissions: string[] = []; // 권한은 일단 빈 배열 (필요시 추가)
+        
+        console.log("🔍 사용자 roles 데이터:", userData.roles);
+        
+        // roles JSON 배열 사용
+        if (userData.roles && Array.isArray(userData.roles) && userData.roles.length > 0) {
+          allUserRoles = userData.roles;
+          userRole = userData.roles[0]; // 첫 번째 역할을 주 역할로 설정
+          console.log("🔍 JSON roles 사용:", { userRole, allUserRoles });
+        } else if (userData.role) {
+          // 레거시 단일 role 필드 사용
+          userRole = userData.role;
+          allUserRoles = [userData.role];
+          console.log("🔍 레거시 단일 role 사용:", { userRole, allUserRoles });
+        } else {
+          // 기본값
+          userRole = "member";
+          allUserRoles = ["member"];
+          console.log("🔍 기본값 사용:", { userRole, allUserRoles });
+        }
+        
         setUserRole(userRole);
+        setUserRoles(allUserRoles);
+        setUserPermissions(allUserPermissions);
 
-        // members 테이블에서 사용자의 팀 역할 확인
+        // members 테이블에서 사용자의 팀 정보만 확인 (권한은 DB roles만 사용)
         if (selectedProgram) {
           try {
             // members 테이블에서 현재 사용자의 팀 정보 조회
             const { data: memberData } = await supabase
               .from("members")
-              .select("team_role, team_id, team_tier")
+              .select("team_id")
               .eq("user_id", user.id)
               .single();
 
             if (memberData) {
-              console.log("Members 테이블에서 팀 역할 찾음:", {
+              console.log("Members 테이블에서 팀 정보 확인:", {
                 userId: user.id,
-                teamRole: memberData.team_role,
                 teamId: memberData.team_id,
-                teamTier: memberData.team_tier,
               });
-
-              // team_tier가 있으면 tier 권한으로 설정
-              if (
-                memberData.team_tier !== null &&
-                memberData.team_tier !== undefined
-              ) {
-                const tierRole = `tier${memberData.team_tier}`;
-                setUserRole(tierRole);
-                setUserTeamId(memberData.team_id);
-                console.log("Tier 권한 설정:", tierRole);
-              }
+              
+              setUserTeamId(memberData.team_id);
             } else {
               console.log("Members 테이블에서 사용자 정보를 찾을 수 없음");
             }
           } catch (teamError) {
-            console.log("팀 권한 확인 중 오류:", teamError);
+            console.log("팀 정보 확인 중 오류:", teamError);
           }
         }
 
-        console.log("사용자 권한:", userRole, "사용자 ID:", user.id);
+        console.log("🔍 사용자 권한 디버깅:", {
+          primaryRole: userRole,
+          allRoles: allUserRoles,
+          allPermissions: allUserPermissions,
+          userId: user.id,
+          legacyRole: userData.role,
+          rawUserData: userData,
+          userRolesData: userData.user_roles,
+          activeRoleDetails: userData.user_roles?.filter((ur: any) => ur.is_active).map((ur: any) => ({
+            roleId: ur.role_id,
+            roleName: ur.roles?.name,
+            roleDisplayName: ur.roles?.display_name,
+            roleLevel: ur.roles?.level
+          }))
+        });
       } catch (error) {
         console.error("사용자 권한 확인 실패:", error);
         // 오류 시 관리자 권한으로 가정 (admin 페이지에서 사용하는 경우)
@@ -1077,27 +1233,55 @@ export default function ProgramsWidget({
       { key: "overview", label: "개요" },
     ];
 
-    const tabPermissions = widget?.settings?.tab_permissions || {};
+    // 권한은 컴포넌트 레벨에서 이미 정의됨
 
-    // 권한 확인 로직 - 모든 탭이 권한 설정에 영향을 받음
+    console.log("🔍 탭 권한 디버깅:", {
+      viewPermissions,
+      managePermissions,
+      userRole,
+      userRoles,
+      userPermissions,
+      widgetSettings: widget?.settings,
+      calendarViewPermissions: viewPermissions.calendar,
+      userHasCalendarAccess: viewPermissions.calendar ? hasRolePermission(viewPermissions.calendar) : "no_settings"
+    });
+
+    // 권한 확인 로직 - 레이아웃 매니저의 view_permissions 기반으로 수정
     const filteredTabs = availableTabs.filter((tab) => {
-      const tabPermission = tabPermissions[tab.key];
+      const tabViewPermissions = viewPermissions[tab.key] || [];
+      
+      console.log(`🔍 탭 '${tab.key}' 권한 확인:`, {
+        tabViewPermissions,
+        hasPermissionSettings: Object.keys(viewPermissions).length > 0,
+        userRole,
+        userRoles,
+        userPermissions
+      });
 
-      // 권한 설정이 있는 경우 해당 권한 확인
-      if (Object.keys(tabPermissions).length > 0) {
-        // 권한 설정이 없는 탭은 접근 불가
-        if (!tabPermission) {
+      // 레이아웃 매니저의 로직과 일치시킴
+      // 권한 설정이 있는 위젯의 경우
+      if (Object.keys(viewPermissions).length > 0) {
+        // 해당 탭에 권한이 설정되지 않았으면 접근 불가 (레이아웃 매니저와 동일)
+        if (!tabViewPermissions || tabViewPermissions.length === 0) {
+          console.log(`❌ 탭 '${tab.key}': 권한 설정 없음 - 접근 불가`);
           return false;
         }
-        // 권한 설정이 있는 탭은 사용자 역할이 포함되어야 접근 가능
-        // guest가 포함되어 있으면 누구나 볼 수 있음
-        return (
-          tabPermission.includes(userRole) || tabPermission.includes("guest")
-        );
+        
+        // 권한이 설정된 탭은 해당 권한 확인
+        const hasAccess = hasRolePermission(tabViewPermissions);
+        
+        console.log(`${hasAccess ? '✅' : '❌'} 탭 '${tab.key}': 권한 확인 - 접근 ${hasAccess ? '허용' : '거부'}`, {
+          allowedPermissions: tabViewPermissions,
+          userHasPermissions: tabViewPermissions.filter((p: string) => userPermissions.includes(p)),
+          userHasRoles: tabViewPermissions.filter((r: string) => userRoles.includes(r) || userRole === r)
+        });
+        
+        return hasAccess;
       }
 
-      // 전체 권한 설정이 없는 경우 게스트 이상 모든 사용자가 접근 가능
-      return hasViewPermission();
+      // 권한 설정이 전혀 없는 위젯은 모든 탭 표시
+      console.log(`✅ 탭 '${tab.key}': 위젯에 권한 설정 없음 - 모든 사용자 접근 가능`);
+      return true;
     });
 
     return {
@@ -1115,7 +1299,7 @@ export default function ProgramsWidget({
         setActiveTab(tabConfig.availableTabs[0].key);
       }
     }
-  }, [userRole, tabConfig, activeTab]);
+  }, [userRole, userRoles, userPermissions, tabConfig, activeTab]);
 
   // 일정 추가/수정 함수
   const handleSaveEvent = async () => {
@@ -2469,9 +2653,14 @@ export default function ProgramsWidget({
       {/* 탭 컨텐츠 */}
       <Card>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList
-            className={`grid w-full grid-cols-${tabConfig.availableTabs.length}`}
-          >
+          <TabsList className={`grid w-full ${
+            tabConfig.availableTabs.length === 1 ? 'grid-cols-1' :
+            tabConfig.availableTabs.length === 2 ? 'grid-cols-2' :
+            tabConfig.availableTabs.length === 3 ? 'grid-cols-3' :
+            tabConfig.availableTabs.length === 4 ? 'grid-cols-4' :
+            tabConfig.availableTabs.length === 5 ? 'grid-cols-5' :
+            'grid-cols-6'
+          }`}>
             {tabConfig.availableTabs.map((tab) => (
               <TabsTrigger
                 key={tab.key}
@@ -2571,22 +2760,23 @@ export default function ProgramsWidget({
                     )}
                   </div>
 
-                  {/* 일정 추가 버튼 - 탭별 권한 설정 확인 */}
+                  {/* 일정 추가 버튼 - manage_permissions 기반으로 수정 */}
                   {(() => {
-                    const tabPermissions =
-                      widget?.settings?.tab_permissions || {};
-                    const calendarPermission = tabPermissions.calendar;
-
-                    // 일정 탭 권한이 없거나 사용자가 접근 가능한 경우 버튼 표시
-                    if (
-                      !calendarPermission ||
-                      calendarPermission.includes(userRole)
-                    ) {
-                      // 추가로 관리자나 고위 tier만 일정 추가 가능하도록 제한
-                      return hasAdminPermission();
+                    const calendarManagePermissions = managePermissions.calendar || [];
+                    
+                    // 관리 권한이 있는 위젯의 경우
+                    if (Object.keys(managePermissions).length > 0) {
+                      // 일정 관리 권한이 설정되지 않았으면 접근 불가  
+                      if (calendarManagePermissions.length === 0) {
+                        return false;
+                      }
+                      
+                      const hasManageAccess = hasRolePermission(calendarManagePermissions);
+                      return hasManageAccess;
                     }
 
-                    return false;
+                    // 위젯에 관리 권한 설정이 전혀 없으면 기본 관리자 권한으로 체크
+                    return hasAdminPermission();
                   })() && (
                     <div className="flex items-center gap-2 justify-end sm:justify-start">
                       {/* 장소 설정 버튼 */}
@@ -3932,7 +4122,39 @@ export default function ProgramsWidget({
           {/* 재정 탭 */}
           {tabConfig.availableTabs.some((tab) => tab.key === "finance") && (
             <TabsContent value="finance" className="p-0">
-              <FinanceTab programId={selectedProgram || ""} />
+              <FinanceTab 
+                programId={selectedProgram || ""} 
+                hasEditPermission={(() => {
+                  const financeManagePermissions = managePermissions.finance || [];
+                  
+                  console.log("🔍 재정 편집권한 디버그:", {
+                    managePermissions,
+                    financeManagePermissions,
+                    userRole,
+                    userRoles,
+                    userPermissions,
+                    hasManagePermissionsSet: Object.keys(managePermissions).length > 0
+                  });
+                  
+                  // 관리 권한이 있는 위젯의 경우
+                  if (Object.keys(managePermissions).length > 0) {
+                    // 재정 관리 권한이 설정되지 않았으면 접근 불가  
+                    if (financeManagePermissions.length === 0) {
+                      console.log("❌ 재정 편집권한이 설정되지 않음");
+                      return false;
+                    }
+                    
+                    const result = hasRolePermission(financeManagePermissions);
+                    console.log(`${result ? '✅' : '❌'} 재정 편집권한 결과:`, result);
+                    return result;
+                  }
+
+                  // 위젯에 관리 권한 설정이 전혀 없으면 기본 관리자 권한으로 체크
+                  const adminResult = hasAdminPermission();
+                  console.log("🔍 기본 관리자 권한 결과:", adminResult);
+                  return adminResult;
+                })()}
+              />
             </TabsContent>
           )}
 
@@ -3942,7 +4164,25 @@ export default function ProgramsWidget({
               {/* <div className="space-y-6"> */}
               {allPrograms.map((program) => (
                 // <Card key={program.id}>
-                <ChecklistTab programId={selectedProgram || ""} />
+                <ChecklistTab 
+                  programId={selectedProgram || ""} 
+                  hasEditPermission={(() => {
+                    const checklistManagePermissions = managePermissions.checklist || [];
+                    
+                    // 관리 권한이 있는 위젯의 경우
+                    if (Object.keys(managePermissions).length > 0) {
+                      // 확인사항 관리 권한이 설정되지 않았으면 접근 불가  
+                      if (checklistManagePermissions.length === 0) {
+                        return false;
+                      }
+                      
+                      return hasRolePermission(checklistManagePermissions);
+                    }
+
+                    // 위젯에 관리 권한 설정이 전혀 없으면 기본 관리자 권한으로 체크
+                    return hasAdminPermission();
+                  })()}
+                />
                 // </Card>
               ))}
               {allPrograms.length === 0 && (

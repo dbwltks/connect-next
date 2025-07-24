@@ -51,9 +51,10 @@ interface ChecklistEntry {
 
 interface ChecklistTabProps {
   programId: string;
+  hasEditPermission?: boolean;
 }
 
-export default function ChecklistTab({ programId }: ChecklistTabProps) {
+export default function ChecklistTab({ programId, hasEditPermission = false }: ChecklistTabProps) {
   const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
   const [checklistEntries, setChecklistEntries] = useState<ChecklistEntry[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -65,10 +66,7 @@ export default function ChecklistTab({ programId }: ChecklistTabProps) {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [isChecklistDialogOpen, setIsChecklistDialogOpen] = useState(false);
 
-  // 관리자 권한 확인 함수
-  const hasAdminPermission = () => {
-    return userRole === 'admin' || userRole === 'tier0' || userRole === 'tier1';
-  };
+  // 편집권한은 부모 컴포넌트에서 전달받음
   const [selectedChecklistEdit, setSelectedChecklistEdit] = useState<ChecklistItem | null>(null);
   const [checklistForm, setChecklistForm] = useState({
     name: "",
@@ -87,11 +85,22 @@ export default function ChecklistTab({ programId }: ChecklistTabProps) {
         if (user) {
           const { data: userData } = await supabase
             .from('users')
-            .select('role')
+            .select('role, roles')
             .eq('id', user.id)
             .single();
           
-          setUserRole(userData?.role || 'guest');
+          // JSON roles 필드 사용 (간단한 방식)
+          let userRoleValue = "member"; // 기본값 (하위 호환성)
+          
+          // roles JSON 배열 사용
+          if (userData?.roles && Array.isArray(userData.roles) && userData.roles.length > 0) {
+            userRoleValue = userData.roles[0]; // 첫 번째 역할을 주 역할로 설정
+          } else if (userData?.role) {
+            // 레거시 단일 role 필드 사용
+            userRoleValue = userData.role;
+          }
+          
+          setUserRole(userRoleValue);
         }
       } catch (error) {
         console.error('사용자 역할 로드 실패:', error);
@@ -319,7 +328,7 @@ export default function ChecklistTab({ programId }: ChecklistTabProps) {
                   ))}
                 </SelectContent>
               </Select>
-              {hasAdminPermission() && (
+              {hasEditPermission && (
                 <Button size="sm" onClick={() => {
                   setSelectedChecklistEdit(null);
                   setChecklistForm({ name: "", required: false, price: "", teams: [] });
@@ -464,7 +473,8 @@ export default function ChecklistTab({ programId }: ChecklistTabProps) {
                                       size="sm"
                                       variant="ghost"
                                       className="p-1 h-auto hover:bg-gray-50"
-                                      onClick={() => toggleCheck(participant.id, item.id)}
+                                      onClick={() => hasEditPermission && toggleCheck(participant.id, item.id)}
+                                      disabled={!hasEditPermission}
                                     >
                                       {renderIcon()}
                                     </Button>
@@ -640,7 +650,7 @@ export default function ChecklistTab({ programId }: ChecklistTabProps) {
                       {completedCount}/{Array.isArray(participants) ? participants.length : 0}명
                     </TableCell>
                     <TableCell className="text-right">
-                      {hasAdminPermission() ? (
+                      {hasEditPermission ? (
                         <div className="flex justify-end gap-2">
                           <Button variant="ghost" size="sm" onClick={() => {
                             setSelectedChecklistEdit(item);
