@@ -115,8 +115,9 @@ export default function CallbackPage() {
               // 데이터베이스 오류가 있어도 로그인은 계속 진행
             }
 
-            // 부모 창에 성공 메시지 전송
+            // 팝업 환경인지 확인
             if (window.opener) {
+              // 데스크톱 팝업 환경 - 부모 창에 성공 메시지 전송
               window.opener.postMessage(
                 { type: 'OAUTH_SUCCESS', session: data.session },
                 window.location.origin
@@ -129,6 +130,12 @@ export default function CallbackPage() {
                   document.body.innerHTML = '<div style="text-align:center;padding:50px;">로그인 완료! 이 창을 닫아주세요.</div>';
                 }
               }, 100);
+            } else {
+              // 모바일 직접 리다이렉트 환경
+              const redirectTo = searchParams.get("redirect_to");
+              const targetUrl = redirectTo || "/";
+              // 성공 플래그와 함께 리다이렉트
+              window.location.href = `${targetUrl}${targetUrl.includes('?') ? '&' : '?'}oauth_success=true`;
             }
           }
         }

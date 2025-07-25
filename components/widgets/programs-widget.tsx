@@ -381,97 +381,120 @@ export default function ProgramsWidget({
   // 관리자 권한 확인 함수 - 권한 기반으로 수정
   const hasAdminPermission = () => {
     // 권한 기반 체크 우선
-    const hasManagePermission = hasAnyPermission(['create_programs', 'update_programs', 'delete_programs', 'manage_all']);
-    
+    const hasManagePermission = hasAnyPermission([
+      "create_programs",
+      "update_programs",
+      "delete_programs",
+      "manage_all",
+    ]);
+
     // 레거시 역할 기반 체크 (하위 호환성)
     const adminRoles = ["admin", "tier0", "tier1"];
-    const hasAdminRole = adminRoles.some(role => userRoles.includes(role)) || adminRoles.includes(userRole);
-    
+    const hasAdminRole =
+      adminRoles.some((role) => userRoles.includes(role)) ||
+      adminRoles.includes(userRole);
+
     const result = hasManagePermission || hasAdminRole;
-    
+
     console.log("🔍 hasAdminPermission:", {
       hasManagePermission,
       hasAdminRole,
       result,
       userPermissions,
       userRoles,
-      userRole
+      userRole,
     });
-    
+
     return result;
   };
 
   // 게스트 포함 읽기 권한 확인 함수 - 권한 기반으로 수정
   const hasViewPermission = () => {
     // 권한 기반 체크 우선
-    const hasReadPermission = hasAnyPermission(['view_programs', 'read_all']);
-    
+    const hasReadPermission = hasAnyPermission(["view_programs", "read_all"]);
+
     // 레거시 역할 기반 체크 (하위 호환성)
     const viewRoles = ["admin", "tier0", "tier1", "tier2", "tier3", "guest"];
-    const hasViewRole = viewRoles.some(role => userRoles.includes(role)) || viewRoles.includes(userRole);
-    
+    const hasViewRole =
+      viewRoles.some((role) => userRoles.includes(role)) ||
+      viewRoles.includes(userRole);
+
     const result = hasReadPermission || hasViewRole;
-    
+
     console.log("🔍 hasViewPermission:", {
       hasReadPermission,
       hasViewRole,
       result,
       userPermissions,
       userRoles,
-      userRole
+      userRole,
     });
-    
+
     return result;
   };
 
   // 특정 역할 권한 확인 함수 (혼합 권한 시스템)
   const hasRolePermission = (allowedRoles: string[]) => {
     if (allowedRoles.length === 0) return false;
-    
+
     // 계층적 역할 (guest → member → admin)
-    const hierarchicalRoles = ['guest', 'member', 'admin'];
+    const hierarchicalRoles = ["guest", "member", "admin"];
     const roleHierarchy: { [key: string]: number } = {
-      'guest': 0,   // 비회원 (최하위)
-      'member': 1,  // 교인 (로그인 사용자)
-      'admin': 2    // 관리자 (최고 권한)
+      guest: 0, // 비회원 (최하위)
+      member: 1, // 교인 (로그인 사용자)
+      admin: 2, // 관리자 (최고 권한)
     };
-    
+
     // 허용된 역할 중 계층적 역할과 특별 역할 분리
-    const allowedHierarchicalRoles = allowedRoles.filter(role => hierarchicalRoles.includes(role));
-    const allowedSpecialRoles = allowedRoles.filter(role => !hierarchicalRoles.includes(role));
-    
+    const allowedHierarchicalRoles = allowedRoles.filter((role) =>
+      hierarchicalRoles.includes(role)
+    );
+    const allowedSpecialRoles = allowedRoles.filter(
+      (role) => !hierarchicalRoles.includes(role)
+    );
+
     // 현재 사용자의 역할 분석
     const allUserRoles = [...userRoles, userRole].filter(Boolean);
-    const userHierarchicalRoles = allUserRoles.filter(role => hierarchicalRoles.includes(role));
-    const userSpecialRoles = allUserRoles.filter(role => !hierarchicalRoles.includes(role));
-    
+    const userHierarchicalRoles = allUserRoles.filter((role) =>
+      hierarchicalRoles.includes(role)
+    );
+    const userSpecialRoles = allUserRoles.filter(
+      (role) => !hierarchicalRoles.includes(role)
+    );
+
     // 사용자의 계층적 레벨 결정
     let userHierarchicalLevel = 0; // 기본값: guest
-    if (userRole === 'guest' && userRoles.length <= 1) {
+    if (userRole === "guest" && userRoles.length <= 1) {
       userHierarchicalLevel = 0; // 비회원
     } else if (userHierarchicalRoles.length > 0) {
       // 가장 높은 계층적 역할의 레벨
-      userHierarchicalLevel = Math.max(...userHierarchicalRoles.map(role => roleHierarchy[role] || 0));
+      userHierarchicalLevel = Math.max(
+        ...userHierarchicalRoles.map((role) => roleHierarchy[role] || 0)
+      );
     } else {
       // 로그인했지만 특별한 계층적 역할이 없는 경우 member로 처리
       userHierarchicalLevel = 1; // member
     }
-    
+
     let hasAccess = false;
-    
+
     // 1. 계층적 역할 체크
     if (allowedHierarchicalRoles.length > 0) {
-      const maxAllowedLevel = Math.max(...allowedHierarchicalRoles.map(role => roleHierarchy[role] || 0));
+      const maxAllowedLevel = Math.max(
+        ...allowedHierarchicalRoles.map((role) => roleHierarchy[role] || 0)
+      );
       if (userHierarchicalLevel >= maxAllowedLevel) {
         hasAccess = true;
       }
     }
-    
+
     // 2. 특별 역할 체크 (정확한 매칭)
     if (!hasAccess && allowedSpecialRoles.length > 0) {
-      hasAccess = allowedSpecialRoles.some(role => userSpecialRoles.includes(role));
+      hasAccess = allowedSpecialRoles.some((role) =>
+        userSpecialRoles.includes(role)
+      );
     }
-    
+
     return hasAccess;
   };
 
@@ -481,27 +504,33 @@ export default function ProgramsWidget({
     console.log("🔍 hasPermission:", {
       permission,
       userPermissions,
-      result
+      result,
     });
     return result;
   };
 
   // 여러 권한 중 하나라도 있는지 확인
   const hasAnyPermission = (permissions: string[]) => {
-    const result = permissions.some(permission => userPermissions.includes(permission));
+    const result = permissions.some((permission) =>
+      userPermissions.includes(permission)
+    );
     console.log("🔍 hasAnyPermission:", {
       permissions,
       userPermissions,
-      result
+      result,
     });
     return result;
   };
 
   // CRUD 권한 확인 함수들
-  const canView = (resource: string = 'programs') => hasPermission(`view_${resource}`) || hasPermission('view_all');
-  const canCreate = (resource: string = 'programs') => hasPermission(`create_${resource}`) || hasPermission('create_all');
-  const canUpdate = (resource: string = 'programs') => hasPermission(`update_${resource}`) || hasPermission('update_all');
-  const canDelete = (resource: string = 'programs') => hasPermission(`delete_${resource}`) || hasPermission('delete_all');
+  const canView = (resource: string = "programs") =>
+    hasPermission(`view_${resource}`) || hasPermission("view_all");
+  const canCreate = (resource: string = "programs") =>
+    hasPermission(`create_${resource}`) || hasPermission("create_all");
+  const canUpdate = (resource: string = "programs") =>
+    hasPermission(`update_${resource}`) || hasPermission("update_all");
+  const canDelete = (resource: string = "programs") =>
+    hasPermission(`delete_${resource}`) || hasPermission("delete_all");
 
   // Alert 다이얼로그 표시 함수
   const showAlert = (title: string, message: string) => {
@@ -759,25 +788,27 @@ export default function ProgramsWidget({
 
         if (!user) {
           setUserRole("guest");
-          setUserRoles(["guest"]); 
+          setUserRoles(["guest"]);
           setUserPermissions([]);
-            return;
+          return;
         }
 
         // users 테이블에서 역할 및 권한 확인 (다중 역할 포함)
         const { data: userData, error } = await supabase
           .from("users")
-          .select(`
+          .select(
+            `
             role, 
             roles,
             email, 
             id
-          `)
+          `
+          )
           .eq("id", user.id)
           .single();
 
         console.log("🔍 사용자 데이터 조회 결과:", { userData, error });
-        
+
         if (error || !userData) {
           // 사용자 데이터가 없으면 관리자 권한으로 가정 (admin 페이지에서 사용하는 경우)
           console.log(
@@ -791,11 +822,15 @@ export default function ProgramsWidget({
         let userRole = "member"; // 기본값 (하위 호환성)
         let allUserRoles: string[] = []; // 모든 역할 저장
         let allUserPermissions: string[] = []; // 권한은 일단 빈 배열 (필요시 추가)
-        
+
         console.log("🔍 사용자 roles 데이터:", userData.roles);
-        
+
         // roles JSON 배열 사용
-        if (userData.roles && Array.isArray(userData.roles) && userData.roles.length > 0) {
+        if (
+          userData.roles &&
+          Array.isArray(userData.roles) &&
+          userData.roles.length > 0
+        ) {
           allUserRoles = userData.roles;
           userRole = userData.roles[0]; // 첫 번째 역할을 주 역할로 설정
           console.log("🔍 JSON roles 사용:", { userRole, allUserRoles });
@@ -810,7 +845,7 @@ export default function ProgramsWidget({
           allUserRoles = ["member"];
           console.log("🔍 기본값 사용:", { userRole, allUserRoles });
         }
-        
+
         setUserRole(userRole);
         setUserRoles(allUserRoles);
         setUserPermissions(allUserPermissions);
@@ -830,7 +865,7 @@ export default function ProgramsWidget({
                 userId: user.id,
                 teamId: memberData.team_id,
               });
-              
+
               setUserTeamId(memberData.team_id);
             } else {
               console.log("Members 테이블에서 사용자 정보를 찾을 수 없음");
@@ -848,12 +883,14 @@ export default function ProgramsWidget({
           legacyRole: userData.role,
           rawUserData: userData,
           userRolesData: userData.user_roles,
-          activeRoleDetails: userData.user_roles?.filter((ur: any) => ur.is_active).map((ur: any) => ({
-            roleId: ur.role_id,
-            roleName: ur.roles?.name,
-            roleDisplayName: ur.roles?.display_name,
-            roleLevel: ur.roles?.level
-          }))
+          activeRoleDetails: userData.user_roles
+            ?.filter((ur: any) => ur.is_active)
+            .map((ur: any) => ({
+              roleId: ur.role_id,
+              roleName: ur.roles?.name,
+              roleDisplayName: ur.roles?.display_name,
+              roleLevel: ur.roles?.level,
+            })),
         });
       } catch (error) {
         console.error("사용자 권한 확인 실패:", error);
@@ -1126,7 +1163,7 @@ export default function ProgramsWidget({
     return colors[index];
   };
 
-  // 팀별 스타일 (hex 색상용)
+  // 팀별 스타일 (hex 색상용) - Google Calendar 스타일
   const getTeamStyle = (teamId?: string) => {
     if (!teamId) {
       return {};
@@ -1135,9 +1172,9 @@ export default function ProgramsWidget({
     const team = teams.find((t) => t.id === teamId);
     if (team?.color) {
       return {
-        backgroundColor: team.color + "20", // 투명도 추가
+        backgroundColor: team.color,
         borderColor: team.color,
-        color: team.color,
+        color: "#ffffff",
       };
     }
 
@@ -1243,19 +1280,21 @@ export default function ProgramsWidget({
       userPermissions,
       widgetSettings: widget?.settings,
       calendarViewPermissions: viewPermissions.calendar,
-      userHasCalendarAccess: viewPermissions.calendar ? hasRolePermission(viewPermissions.calendar) : "no_settings"
+      userHasCalendarAccess: viewPermissions.calendar
+        ? hasRolePermission(viewPermissions.calendar)
+        : "no_settings",
     });
 
     // 권한 확인 로직 - 레이아웃 매니저의 view_permissions 기반으로 수정
     const filteredTabs = availableTabs.filter((tab) => {
       const tabViewPermissions = viewPermissions[tab.key] || [];
-      
+
       console.log(`🔍 탭 '${tab.key}' 권한 확인:`, {
         tabViewPermissions,
         hasPermissionSettings: Object.keys(viewPermissions).length > 0,
         userRole,
         userRoles,
-        userPermissions
+        userPermissions,
       });
 
       // 레이아웃 매니저의 로직과 일치시킴
@@ -1266,21 +1305,30 @@ export default function ProgramsWidget({
           console.log(`❌ 탭 '${tab.key}': 권한 설정 없음 - 접근 불가`);
           return false;
         }
-        
+
         // 권한이 설정된 탭은 해당 권한 확인
         const hasAccess = hasRolePermission(tabViewPermissions);
-        
-        console.log(`${hasAccess ? '✅' : '❌'} 탭 '${tab.key}': 권한 확인 - 접근 ${hasAccess ? '허용' : '거부'}`, {
-          allowedPermissions: tabViewPermissions,
-          userHasPermissions: tabViewPermissions.filter((p: string) => userPermissions.includes(p)),
-          userHasRoles: tabViewPermissions.filter((r: string) => userRoles.includes(r) || userRole === r)
-        });
-        
+
+        console.log(
+          `${hasAccess ? "✅" : "❌"} 탭 '${tab.key}': 권한 확인 - 접근 ${hasAccess ? "허용" : "거부"}`,
+          {
+            allowedPermissions: tabViewPermissions,
+            userHasPermissions: tabViewPermissions.filter((p: string) =>
+              userPermissions.includes(p)
+            ),
+            userHasRoles: tabViewPermissions.filter(
+              (r: string) => userRoles.includes(r) || userRole === r
+            ),
+          }
+        );
+
         return hasAccess;
       }
 
       // 권한 설정이 전혀 없는 위젯은 모든 탭 표시
-      console.log(`✅ 탭 '${tab.key}': 위젯에 권한 설정 없음 - 모든 사용자 접근 가능`);
+      console.log(
+        `✅ 탭 '${tab.key}': 위젯에 권한 설정 없음 - 모든 사용자 접근 가능`
+      );
       return true;
     });
 
@@ -2653,14 +2701,21 @@ export default function ProgramsWidget({
       {/* 탭 컨텐츠 */}
       <Card>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className={`grid w-full ${
-            tabConfig.availableTabs.length === 1 ? 'grid-cols-1' :
-            tabConfig.availableTabs.length === 2 ? 'grid-cols-2' :
-            tabConfig.availableTabs.length === 3 ? 'grid-cols-3' :
-            tabConfig.availableTabs.length === 4 ? 'grid-cols-4' :
-            tabConfig.availableTabs.length === 5 ? 'grid-cols-5' :
-            'grid-cols-6'
-          }`}>
+          <TabsList
+            className={`grid w-full ${
+              tabConfig.availableTabs.length === 1
+                ? "grid-cols-1"
+                : tabConfig.availableTabs.length === 2
+                  ? "grid-cols-2"
+                  : tabConfig.availableTabs.length === 3
+                    ? "grid-cols-3"
+                    : tabConfig.availableTabs.length === 4
+                      ? "grid-cols-4"
+                      : tabConfig.availableTabs.length === 5
+                        ? "grid-cols-5"
+                        : "grid-cols-6"
+            }`}
+          >
             {tabConfig.availableTabs.map((tab) => (
               <TabsTrigger
                 key={tab.key}
@@ -2762,16 +2817,19 @@ export default function ProgramsWidget({
 
                   {/* 일정 추가 버튼 - manage_permissions 기반으로 수정 */}
                   {(() => {
-                    const calendarManagePermissions = managePermissions.calendar || [];
-                    
+                    const calendarManagePermissions =
+                      managePermissions.calendar || [];
+
                     // 관리 권한이 있는 위젯의 경우
                     if (Object.keys(managePermissions).length > 0) {
-                      // 일정 관리 권한이 설정되지 않았으면 접근 불가  
+                      // 일정 관리 권한이 설정되지 않았으면 접근 불가
                       if (calendarManagePermissions.length === 0) {
                         return false;
                       }
-                      
-                      const hasManageAccess = hasRolePermission(calendarManagePermissions);
+
+                      const hasManageAccess = hasRolePermission(
+                        calendarManagePermissions
+                      );
                       return hasManageAccess;
                     }
 
@@ -3278,19 +3336,8 @@ export default function ProgramsWidget({
                               일시:{" "}
                               {format(
                                 parseISO(selectedEvent.start_date),
-                                "yyyy년 MM월 dd일 (EEE)",
+                                "yyyy년 MM월 dd일 (EEE) HH:mm",
                                 { locale: ko }
-                              )}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <Clock size={16} className="text-gray-500" />
-                            <span className="text-sm">
-                              시간:{" "}
-                              {format(
-                                parseISO(selectedEvent.start_date),
-                                "HH:mm"
                               )}
                               {selectedEvent.end_date &&
                                 ` - ${format(parseISO(selectedEvent.end_date), "HH:mm")}`}
@@ -3471,7 +3518,9 @@ export default function ProgramsWidget({
                                             className="text-gray-600"
                                           />
                                           <span className="font-medium text-sm">
-                                            {format(eventDate, "HH:mm")}
+                                            {format(eventDate, "HH:mm", {
+                                              locale: ko,
+                                            })}
                                             {endDate &&
                                               ` - ${format(endDate, "HH:mm")}`}
                                           </span>
@@ -3710,7 +3759,8 @@ export default function ProgramsWidget({
                                             <span
                                               className={`text-xs px-2 py-1 rounded-full font-medium ${timeStatus.bgColor} ${timeStatus.color}`}
                                             >
-                                              {timeStatus.icon} {timeStatus.label}
+                                              {timeStatus.icon}{" "}
+                                              {timeStatus.label}
                                             </span>
                                             {team && (
                                               <span
@@ -3733,18 +3783,9 @@ export default function ProgramsWidget({
                                             <span className="font-medium text-sm">
                                               {format(
                                                 eventDate,
-                                                "yyyy년 MM월 dd일 (EEE)",
+                                                "yyyy년 MM월 dd일 (EEE) HH:mm",
                                                 { locale: ko }
                                               )}
-                                            </span>
-                                          </div>
-                                          <div className="flex items-center gap-1">
-                                            <Clock
-                                              size={16}
-                                              className="text-gray-600"
-                                            />
-                                            <span className="font-medium text-sm">
-                                              {format(eventDate, "HH:mm")}
                                               {endDate &&
                                                 ` - ${format(endDate, "HH:mm")}`}
                                             </span>
@@ -4122,30 +4163,35 @@ export default function ProgramsWidget({
           {/* 재정 탭 */}
           {tabConfig.availableTabs.some((tab) => tab.key === "finance") && (
             <TabsContent value="finance" className="p-0">
-              <FinanceTab 
-                programId={selectedProgram || ""} 
+              <FinanceTab
+                programId={selectedProgram || ""}
                 hasEditPermission={(() => {
-                  const financeManagePermissions = managePermissions.finance || [];
-                  
+                  const financeManagePermissions =
+                    managePermissions.finance || [];
+
                   console.log("🔍 재정 편집권한 디버그:", {
                     managePermissions,
                     financeManagePermissions,
                     userRole,
                     userRoles,
                     userPermissions,
-                    hasManagePermissionsSet: Object.keys(managePermissions).length > 0
+                    hasManagePermissionsSet:
+                      Object.keys(managePermissions).length > 0,
                   });
-                  
+
                   // 관리 권한이 있는 위젯의 경우
                   if (Object.keys(managePermissions).length > 0) {
-                    // 재정 관리 권한이 설정되지 않았으면 접근 불가  
+                    // 재정 관리 권한이 설정되지 않았으면 접근 불가
                     if (financeManagePermissions.length === 0) {
                       console.log("❌ 재정 편집권한이 설정되지 않음");
                       return false;
                     }
-                    
+
                     const result = hasRolePermission(financeManagePermissions);
-                    console.log(`${result ? '✅' : '❌'} 재정 편집권한 결과:`, result);
+                    console.log(
+                      `${result ? "✅" : "❌"} 재정 편집권한 결과:`,
+                      result
+                    );
                     return result;
                   }
 
@@ -4164,18 +4210,19 @@ export default function ProgramsWidget({
               {/* <div className="space-y-6"> */}
               {allPrograms.map((program) => (
                 // <Card key={program.id}>
-                <ChecklistTab 
-                  programId={selectedProgram || ""} 
+                <ChecklistTab
+                  programId={selectedProgram || ""}
                   hasEditPermission={(() => {
-                    const checklistManagePermissions = managePermissions.checklist || [];
-                    
+                    const checklistManagePermissions =
+                      managePermissions.checklist || [];
+
                     // 관리 권한이 있는 위젯의 경우
                     if (Object.keys(managePermissions).length > 0) {
-                      // 확인사항 관리 권한이 설정되지 않았으면 접근 불가  
+                      // 확인사항 관리 권한이 설정되지 않았으면 접근 불가
                       if (checklistManagePermissions.length === 0) {
                         return false;
                       }
-                      
+
                       return hasRolePermission(checklistManagePermissions);
                     }
 
@@ -4302,9 +4349,13 @@ export default function ProgramsWidget({
                                 <h4 className="font-medium">{event.title}</h4>
                               </div>
                               <div className="text-sm text-gray-600">
-                                {format(eventDate, "MM월 dd일 (EEE) HH:mm", {
-                                  locale: ko,
-                                })}
+                                {format(
+                                  eventDate,
+                                  "yyyy년 MM월 dd일 (EEE) HH:mm",
+                                  {
+                                    locale: ko,
+                                  }
+                                )}
                                 {event.location && ` • ${event.location}`}
                               </div>
                             </div>

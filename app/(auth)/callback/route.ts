@@ -34,15 +34,15 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // 리디렉션 처리
+  // 리디렉션 처리 (성공 플래그 추가)
   if (redirectTo) {
-    return NextResponse.redirect(`${origin}${redirectTo}`);
+    return NextResponse.redirect(`${origin}${redirectTo}${redirectTo.includes('?') ? '&' : '?'}oauth_success=true`);
   }
 
   if (next !== "/") {
-    return NextResponse.redirect(`${origin}${next}`);
+    return NextResponse.redirect(`${origin}${next}${next.includes('?') ? '&' : '?'}oauth_success=true`);
   }
 
   // 기본 리디렉션
-  return NextResponse.redirect(`${origin}/`);
+  return NextResponse.redirect(`${origin}/?oauth_success=true`);
 }

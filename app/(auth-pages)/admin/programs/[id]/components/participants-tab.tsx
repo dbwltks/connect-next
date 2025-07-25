@@ -208,16 +208,39 @@ export default function ParticipantsTab({ programId }: ParticipantsTabProps) {
     }
   };
 
+  // 성별 데이터 표준화 함수
+  const normalizeGender = (gender: string): string => {
+    if (!gender) return '';
+    
+    const genderLower = gender.toLowerCase().trim();
+    
+    // 남성 패턴
+    if (['male', 'm', '남성', '남자', '남', 'man'].includes(genderLower)) {
+      return '남성';
+    }
+    
+    // 여성 패턴
+    if (['female', 'f', '여성', '여자', '여', 'woman'].includes(genderLower)) {
+      return '여성';
+    }
+    
+    return '';
+  };
+
   const handleSelectMember = (member: any) => {
     // 한글 이름 우선, 없으면 영어 이름 조합
     const displayName = member.korean_name || `${member.first_name} ${member.last_name}`.trim();
+    
+    // 성별 정보 추출 및 표준화 (다양한 필드명 고려)
+    const rawGender = member.gender || member.sex || member.gender_type || '';
+    const normalizedGender = normalizeGender(rawGender);
     
     setFormData({
       name: displayName,
       email: member.email || '',
       phone: member.phone || '',
-      birth_date: member.birth_date || '',
-      gender: member.gender || '',
+      birth_date: member.birth_date || member.date_of_birth || '',
+      gender: normalizedGender,
       status: '신청',
       category: '일반',
       notes: ''

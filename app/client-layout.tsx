@@ -2,10 +2,12 @@
 
 import { ThemeProvider } from "next-themes";
 import { SWRConfig } from "swr";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useEffect } from "react";
 import Header from "@/components/layout/header";
 import Footer from "@/components/layout/footer";
 import { Toaster } from "@/components/ui/toaster";
+import { toast } from "@/components/ui/toaster";
 import ScrollToTop from "@/components/scroll-to-top";
 import { AuthProvider } from "@/contexts/auth-context";
 import { swrGlobalConfig } from "@/config/swr-config";
@@ -26,7 +28,23 @@ export default function ClientLayout({
   widgets: any[];
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const isAdminPage = pathname?.startsWith('/admin');
+
+  // OAuth 성공 토스트 처리
+  useEffect(() => {
+    if (searchParams.get('oauth_success') === 'true') {
+      toast({
+        title: "로그인 성공",
+        description: "환영합니다!",
+      });
+      
+      // URL에서 oauth_success 파라미터 제거
+      const url = new URL(window.location.href);
+      url.searchParams.delete('oauth_success');
+      window.history.replaceState({}, '', url.pathname + url.search);
+    }
+  }, [searchParams]);
 
   return (
     <AuthProvider>
