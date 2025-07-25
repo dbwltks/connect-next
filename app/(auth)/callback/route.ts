@@ -80,12 +80,18 @@ export async function GET(request: NextRequest) {
           });
         } else {
           // 기존 사용자인 경우 마지막 로그인 시간 업데이트
+          // 아바타가 이미 있으면 업데이트하지 않음, 없으면 새로 설정
+          const updateData: any = {
+            last_login: new Date().toISOString(),
+          };
+          
+          if (!existingUser.avatar_url && userMetadata?.avatar_url) {
+            updateData.avatar_url = userMetadata.avatar_url;
+          }
+          
           await supabase
             .from("users")
-            .update({ 
-              last_login: new Date().toISOString(),
-              avatar_url: userMetadata?.avatar_url || existingUser.avatar_url
-            })
+            .update(updateData)
             .eq("id", user.id);
         }
       } catch (dbError) {

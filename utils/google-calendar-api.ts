@@ -99,30 +99,29 @@ export async function getSupabaseGoogleToken(): Promise<string | null> {
   }
 }
 
-// OAuth 인증 (Supabase 토큰 우선 사용)
-export async function authenticateUser(): Promise<boolean> {
+// Calendar API 전용 인증 (기본 로그인과 별도)
+export async function authenticateCalendarAPI(): Promise<boolean> {
   try {
-    // 1. 먼저 Supabase에서 구글 토큰 확인
-    const supabaseToken = await getSupabaseGoogleToken();
-    if (supabaseToken) {
-      window.gapi.client.setToken({ access_token: supabaseToken });
-      return true;
-    }
-
-    // 2. Supabase 토큰이 없으면 기존 OAuth 방식 사용
     if (!window.google) {
       throw new Error('Google Identity Services가 로드되지 않았습니다.');
     }
 
+    console.log('Google Calendar API 인증을 요청합니다...');
+    
     return new Promise((resolve) => {
       const tokenClient = window.google.accounts.oauth2.initTokenClient({
         client_id: GOOGLE_CALENDAR_CONFIG.CLIENT_ID,
-        scope: GOOGLE_CALENDAR_CONFIG.SCOPES.join(' '),
+        scope: GOOGLE_CALENDAR_CONFIG.SCOPES.join(' '), // 'https://www.googleapis.com/auth/calendar'
+        prompt: 'consent', // 항상 동의 화면 표시
         callback: (response: any) => {
           if (response.access_token) {
             window.gapi.client.setToken({ access_token: response.access_token });
+            console.log('Calendar API 인증 성공');
+            // 토큰을 로컬 스토리지에 임시 저장 (세션용)
+            sessionStorage.setItem('calendar_access_token', response.access_token);
             resolve(true);
           } else {
+            console.error('Calendar API 토큰 획득 실패:', response);
             resolve(false);
           }
         },
@@ -131,9 +130,33 @@ export async function authenticateUser(): Promise<boolean> {
       tokenClient.requestAccessToken();
     });
   } catch (error) {
-    console.error('인증 실패:', error);
+    console.error('Calendar API 인증 실패:', error);
     return false;
   }
+}
+
+// 저장된 Calendar API 토큰으로 인증 복원
+export function restoreCalendarAuth(): boolean {
+  try {
+    const token = sessionStorage.getItem('calendar_access_token');
+    if (token) {
+      window.gapi.client.setToken({ access_token: token });
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+// 호환성을 위한 기존 함수명 유지
+export async function authenticateUser(): Promise<boolean> {
+  // 먼저 저장된 토큰으로 복원 시도
+  if (restoreCalendarAuth()) {
+    return true;
+  }
+  // 없으면 새로 인증
+  return await authenticateCalendarAPI();
 }
 
 // 일정 생성
