@@ -233,9 +233,9 @@ export async function createCalendarEvent(event: CalendarEvent): Promise<string 
     });
 
     return response.result.id || null;
-  } catch (error) {
+  } catch (error: any) {
     // 401 에러면 토큰이 만료된 것이므로 재인증 시도
-    if (error.status === 401) {
+    if (error?.status === 401) {
       sessionStorage.removeItem('calendar_access_token');
       const authenticated = await authenticateCalendarAPI();
       if (authenticated) {
@@ -279,9 +279,9 @@ export async function findEventByConnectId(connectId: string): Promise<string | 
     }
     
     return null;
-  } catch (error) {
+  } catch (error: any) {
     // 401 에러면 토큰이 만료된 것이므로 재인증 시도
-    if (error.status === 401) {
+    if (error?.status === 401) {
       sessionStorage.removeItem('calendar_access_token');
       const authenticated = await authenticateCalendarAPI();
       if (authenticated) {
@@ -331,9 +331,9 @@ export async function updateCalendarEvent(eventId: string, event: CalendarEvent)
     });
 
     return true;
-  } catch (error) {
+  } catch (error: any) {
     // 401 에러면 토큰이 만료된 것이므로 재인증 시도
-    if (error.status === 401) {
+    if (error?.status === 401) {
       sessionStorage.removeItem('calendar_access_token');
       const authenticated = await authenticateCalendarAPI();
       if (authenticated) {
