@@ -46,8 +46,8 @@ export async function initializeGoogleAPI(): Promise<boolean> {
       window.gapi.load('client', resolve);
     });
 
+    // API 키 없이 초기화 (OAuth 토큰만 사용)
     await window.gapi.client.init({
-      apiKey: GOOGLE_CALENDAR_CONFIG.API_KEY,
       discoveryDocs: [GOOGLE_CALENDAR_CONFIG.DISCOVERY_DOC],
     });
 
@@ -122,20 +122,10 @@ export async function getSupabaseGoogleToken(): Promise<string | null> {
 // Calendar API 전용 인증 (직접 Google OAuth 사용)
 export async function authenticateCalendarAPI(): Promise<boolean> {
   try {
-    console.log('Google Calendar API 인증 시작...');
-    
-    // 로그인 여부와 상관없이 Google Calendar OAuth 진행
-    // 사이트 로그인과 Google Calendar 연결은 별개
-    
     // 먼저 저장된 토큰으로 복원 시도
     if (restoreCalendarAuth()) {
-      console.log('저장된 Calendar 토큰으로 인증 복원됨');
       return true;
     }
-    
-    console.log('Google Calendar OAuth 인증 창을 띄웁니다...');
-    console.log('CLIENT_ID:', GOOGLE_CALENDAR_CONFIG.CLIENT_ID);
-    console.log('API_KEY:', GOOGLE_CALENDAR_CONFIG.API_KEY);
     
     if (!GOOGLE_CALENDAR_CONFIG.CLIENT_ID) {
       throw new Error('Google Client ID가 설정되지 않았습니다. NEXT_PUBLIC_GOOGLE_CLIENT_ID 환경변수를 확인하세요.');
@@ -154,17 +144,15 @@ export async function authenticateCalendarAPI(): Promise<boolean> {
     return new Promise((resolve) => {
       const tokenClient = window.google.accounts.oauth2.initTokenClient({
         client_id: GOOGLE_CALENDAR_CONFIG.CLIENT_ID,
-        scope: GOOGLE_CALENDAR_CONFIG.SCOPES.join(' '), // 'https://www.googleapis.com/auth/calendar'
-        prompt: 'consent', // 항상 동의 화면 표시
+        scope: GOOGLE_CALENDAR_CONFIG.SCOPES.join(' '),
         callback: (response: any) => {
           if (response.access_token) {
+            // 토큰을 gapi 클라이언트에 설정
             window.gapi.client.setToken({ access_token: response.access_token });
-            console.log('Calendar API 인증 성공');
-            // 토큰을 로컬 스토리지에 임시 저장 (세션용)
+            // 세션 스토리지에도 저장
             sessionStorage.setItem('calendar_access_token', response.access_token);
             resolve(true);
           } else {
-            console.error('Calendar API 토큰 획득 실패:', response);
             resolve(false);
           }
         },
@@ -181,10 +169,16 @@ export async function authenticateCalendarAPI(): Promise<boolean> {
 // 저장된 Calendar API 토큰으로 인증 복원
 export function restoreCalendarAuth(): boolean {
   try {
+    if (typeof window === 'undefined' || !window.gapi?.client) {
+      return false;
+    }
+    
     const token = sessionStorage.getItem('calendar_access_token');
     if (token) {
+      // 토큰 설정 확인
       window.gapi.client.setToken({ access_token: token });
-      return true;
+      const currentToken = window.gapi.client.getToken();
+      return !!currentToken?.access_token;
     }
     return false;
   } catch {
@@ -205,6 +199,14 @@ export async function authenticateUser(): Promise<boolean> {
 // 일정 생성
 export async function createCalendarEvent(event: CalendarEvent): Promise<string | null> {
   try {
+    // 토큰이 없으면 인증 시도
+    if (!hasValidToken()) {
+      const authenticated = await authenticateCalendarAPI();
+      if (!authenticated) {
+        return null;
+      }
+    }
+
     const calendarEvent: calendar_v3.Schema$Event = {
       summary: event.title,
       description: event.description,
@@ -217,9 +219,7 @@ export async function createCalendarEvent(event: CalendarEvent): Promise<string 
         dateTime: event.endDate.toISOString(),
         timeZone: 'Asia/Seoul',
       },
-      // 색깔 설정 (Connect Next 고유 색상)
-      colorId: event.colorId || '9', // 9 = 파란색
-      // 고유 ID를 extendedProperties에 저장
+      colorId: event.colorId || '9',
       extendedProperties: {
         private: {
           connectId: event.connectId || `connect_${Date.now()}`,
@@ -234,23 +234,61 @@ export async function createCalendarEvent(event: CalendarEvent): Promise<string 
 
     return response.result.id || null;
   } catch (error) {
-    console.error('일정 생성 실패:', error);
+    // 401 에러면 토큰이 만료된 것이므로 재인증 시도
+    if (error.status === 401) {
+      sessionStorage.removeItem('calendar_access_token');
+      const authenticated = await authenticateCalendarAPI();
+      if (authenticated) {
+        // 재인증 성공하면 다시 시도
+        return await createCalendarEvent(event);
+      }
+    }
     return null;
+  }
+}
+
+// 유효한 토큰이 있는지 확인
+function hasValidToken(): boolean {
+  try {
+    const token = window.gapi?.client?.getToken();
+    return !!(token && token.access_token);
+  } catch {
+    return false;
   }
 }
 
 // Connect ID로 기존 일정 찾기
 export async function findEventByConnectId(connectId: string): Promise<string | null> {
   try {
+    // 토큰이 없으면 인증 시도
+    if (!hasValidToken()) {
+      const authenticated = await authenticateCalendarAPI();
+      if (!authenticated) {
+        return null;
+      }
+    }
+
     const response = await window.gapi.client.calendar.events.list({
       calendarId: 'primary',
       privateExtendedProperty: `connectId=${connectId}`,
+      maxResults: 10,
     });
 
-    const events = response.result.items || [];
-    return events.length > 0 ? events[0].id || null : null;
+    if (response.result?.items && response.result.items.length > 0) {
+      return response.result.items[0].id || null;
+    }
+    
+    return null;
   } catch (error) {
-    console.error('일정 검색 실패:', error);
+    // 401 에러면 토큰이 만료된 것이므로 재인증 시도
+    if (error.status === 401) {
+      sessionStorage.removeItem('calendar_access_token');
+      const authenticated = await authenticateCalendarAPI();
+      if (authenticated) {
+        // 재인증 성공하면 다시 시도
+        return await findEventByConnectId(connectId);
+      }
+    }
     return null;
   }
 }
@@ -258,6 +296,14 @@ export async function findEventByConnectId(connectId: string): Promise<string | 
 // 일정 업데이트
 export async function updateCalendarEvent(eventId: string, event: CalendarEvent): Promise<boolean> {
   try {
+    // 토큰이 없으면 인증 시도
+    if (!hasValidToken()) {
+      const authenticated = await authenticateCalendarAPI();
+      if (!authenticated) {
+        return false;
+      }
+    }
+
     const calendarEvent: calendar_v3.Schema$Event = {
       summary: event.title,
       description: event.description,
@@ -270,8 +316,7 @@ export async function updateCalendarEvent(eventId: string, event: CalendarEvent)
         dateTime: event.endDate.toISOString(),
         timeZone: 'Asia/Seoul',
       },
-      // 색깔 설정 (Connect Next 고유 색상)
-      colorId: event.colorId || '9', // 9 = 파란색
+      colorId: event.colorId || '9',
       extendedProperties: {
         private: {
           connectId: event.connectId || `connect_${Date.now()}`,
@@ -287,7 +332,15 @@ export async function updateCalendarEvent(eventId: string, event: CalendarEvent)
 
     return true;
   } catch (error) {
-    console.error('일정 업데이트 실패:', error);
+    // 401 에러면 토큰이 만료된 것이므로 재인증 시도
+    if (error.status === 401) {
+      sessionStorage.removeItem('calendar_access_token');
+      const authenticated = await authenticateCalendarAPI();
+      if (authenticated) {
+        // 재인증 성공하면 다시 시도
+        return await updateCalendarEvent(eventId, event);
+      }
+    }
     return false;
   }
 }
@@ -327,7 +380,6 @@ export async function createOrUpdateEvent(event: CalendarEvent): Promise<{ succe
       return { success: !!newEventId, action: newEventId ? 'created' : 'error' };
     }
   } catch (error) {
-    console.error('일정 생성/업데이트 실패:', error);
     return { success: false, action: 'error' };
   }
 }
