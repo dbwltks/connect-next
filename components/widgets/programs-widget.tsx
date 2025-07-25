@@ -1166,7 +1166,12 @@ export default function ProgramsWidget({
   // 팀별 스타일 (hex 색상용) - Google Calendar 스타일
   const getTeamStyle = (teamId?: string) => {
     if (!teamId) {
-      return {};
+      // 팀이 선택되지 않았을 때 그래파이트 색상 사용
+      return {
+        backgroundColor: "#616161",
+        borderColor: "#616161",
+        color: "#ffffff",
+      };
     }
 
     const team = teams.find((t) => t.id === teamId);
@@ -1178,7 +1183,12 @@ export default function ProgramsWidget({
       };
     }
 
-    return {};
+    // 팀은 있지만 색상이 없을 때도 그래파이트 색상 사용
+    return {
+      backgroundColor: "#616161",
+      borderColor: "#616161",
+      color: "#ffffff",
+    };
   };
 
   // 날짜 네비게이션

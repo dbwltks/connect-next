@@ -14,19 +14,19 @@ import { saveProgramFeatureData, loadProgramData } from "../utils/program-data";
 import { participantsApi } from "../utils/api";
 import { createClient } from "@/utils/supabase/client";
 
-// 구글 캘린더 색상 매핑
+// 구글 캘린더 실제 색상값 (빨주노초 순서)
 const GOOGLE_CALENDAR_COLORS = [
-  { id: "1", name: "라벤더", color: "#a4bdfc", hex: "#a4bdfc" },
-  { id: "2", name: "세이지", color: "#7ae7bf", hex: "#7ae7bf" },
-  { id: "3", name: "그레이프", color: "#dbadff", hex: "#dbadff" },
-  { id: "4", name: "플라밍고", color: "#ff887c", hex: "#ff887c" },
-  { id: "5", name: "바나나", color: "#fbd75b", hex: "#fbd75b" },
-  { id: "6", name: "탠저린", color: "#ffb878", hex: "#ffb878" },
-  { id: "7", name: "피콕", color: "#46d6db", hex: "#46d6db" },
-  { id: "8", name: "그래파이트", color: "#e1e1e1", hex: "#e1e1e1" },
-  { id: "9", name: "블루베리", color: "#5484ed", hex: "#5484ed" },
-  { id: "10", name: "바질", color: "#51b749", hex: "#51b749" },
-  { id: "11", name: "토마토", color: "#dc2127", hex: "#dc2127" },
+  { id: "11", name: "토마토", color: "#d50000", hex: "#d50000" },
+  { id: "4", name: "플라밍고", color: "#e67c73", hex: "#e67c73" },
+  { id: "6", name: "탠저린", color: "#ff9800", hex: "#ff9800" },
+  { id: "5", name: "바나나", color: "#f6bf26", hex: "#f6bf26" },
+  { id: "10", name: "바질", color: "#0b8043", hex: "#0b8043" },
+  { id: "2", name: "세이지", color: "#33b679", hex: "#33b679" },
+  { id: "7", name: "피콕", color: "#039be5", hex: "#039be5" },
+  { id: "9", name: "블루베리", color: "#3f51b5", hex: "#3f51b5" },
+  { id: "1", name: "라벤더", color: "#7986cb", hex: "#7986cb" },
+  { id: "3", name: "그레이프", color: "#8e24aa", hex: "#8e24aa" },
+  { id: "8", name: "그래파이트", color: "#616161", hex: "#616161" },
 ];
 
 // 타입 정의
@@ -91,7 +91,7 @@ export default function TeamsTab({ programId }: TeamsTabProps) {
   const [teamForm, setTeamForm] = useState({
     name: "",
     description: "",
-    color: "#5484ed", // 구글 캘린더 기본 블루베리 색상
+    color: "#3f51b5", // 구글 캘린더 기본 블루베리 색상
     google_calendar_color_id: "9" // 블루베리 색상 ID
   });
   
@@ -735,24 +735,42 @@ export default function TeamsTab({ programId }: TeamsTabProps) {
               <Label>팀 색상 (구글 캘린더 연동)</Label>
               <div className="space-y-3">
                 <div className="grid grid-cols-6 gap-2">
-                  {GOOGLE_CALENDAR_COLORS.map((colorOption) => (
-                    <button
-                      key={colorOption.id}
-                      type="button"
-                      onClick={() => setTeamForm({
-                        ...teamForm, 
-                        color: colorOption.hex,
-                        google_calendar_color_id: colorOption.id
-                      })}
-                      className={`w-10 h-10 rounded-lg border-2 transition-all hover:scale-105 ${
-                        teamForm.color === colorOption.hex 
-                          ? 'border-gray-800 shadow-lg' 
-                          : 'border-gray-300'
-                      }`}
-                      style={{ backgroundColor: colorOption.color }}
-                      title={colorOption.name}
-                    />
-                  ))}
+                  {GOOGLE_CALENDAR_COLORS.map((colorOption) => {
+                    // 현재 편집 중인 팀을 제외하고 다른 팀에서 사용 중인지 확인
+                    const isUsedByOtherTeam = teams.some(team => 
+                      team.color === colorOption.hex && 
+                      team.id !== selectedTeamEdit?.id
+                    );
+                    const usingTeam = teams.find(team => 
+                      team.color === colorOption.hex && 
+                      team.id !== selectedTeamEdit?.id
+                    );
+                    
+                    return (
+                      <button
+                        key={colorOption.id}
+                        type="button"
+                        onClick={() => setTeamForm({
+                          ...teamForm, 
+                          color: colorOption.hex,
+                          google_calendar_color_id: colorOption.id
+                        })}
+                        className={`relative w-10 h-10 rounded-lg border-2 transition-all hover:scale-105 flex items-center justify-center ${
+                          teamForm.color === colorOption.hex 
+                            ? 'border-gray-800 shadow-lg' 
+                            : 'border-gray-300'
+                        }`}
+                        style={{ backgroundColor: colorOption.color }}
+                        title={`${colorOption.name}${isUsedByOtherTeam ? ` (${usingTeam?.name}에서 사용 중)` : ''}`}
+                      >
+                        {isUsedByOtherTeam && (
+                          <div className="w-4 h-4 bg-red-500 rounded-full border-2 border-white text-white text-xs flex items-center justify-center font-bold">
+                            !
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <div 

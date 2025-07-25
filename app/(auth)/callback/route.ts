@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
         // 사용자 정보가 이미 존재하는지 확인
         const { data: existingUser } = await supabase
           .from("users")
-          .select("id, username")
+          .select("id, username, avatar_url")
           .eq("id", user.id)
           .single();
 
