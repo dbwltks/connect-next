@@ -39,9 +39,73 @@ export function useUserProfile(user: User | null, options?: { waitForProfile?: b
           .eq("id", user.id)
           .single();
 
-        if (error) {
-          console.error("Error fetching profile:", error);
-          setProfile(null);
+        if (error || !data) {
+          console.error("Error fetching profile or no profile found:", error);
+          
+          // 프로필이 없는 경우 (OAuth 사용자의 경우) 자동으로 생성
+          if (user && user.email) {
+            try {
+              const userMetadata = user.user_metadata || {};
+              let baseUsername = userMetadata?.full_name 
+                ? userMetadata.full_name.replace(/[^a-zA-Z0-9가-힣]/g, '').toLowerCase()
+                : user.email?.split('@')[0] || `user${user.id.slice(0, 8)}`;
+              
+              if (baseUsername.length < 3) {
+                baseUsername = `user${user.id.slice(0, 8)}`;
+              }
+
+              // 중복된 username이 있는지 확인하고 고유한 username 생성
+              let username = baseUsername;
+              let counter = 1;
+              
+              while (true) {
+                const { data: existingUsername } = await supabase
+                  .from("users")
+                  .select("username")
+                  .eq("username", username)
+                  .single();
+                  
+                if (!existingUsername) break;
+                
+                username = `${baseUsername}${counter}`;
+                counter++;
+                
+                if (counter > 100) {
+                  username = `user${user.id.slice(0, 8)}${Date.now()}`;
+                  break;
+                }
+              }
+
+              const { data: insertData, error: insertError } = await supabase.from("users").insert({
+                id: user.id,
+                email: user.email,
+                username: username,
+                avatar_url: userMetadata?.avatar_url || null,
+                role: "user",
+                is_approved: true,
+                last_login: new Date().toISOString(),
+              }).select().single();
+
+              if (!insertError && insertData) {
+                const profileData = {
+                  id: insertData.id,
+                  username: insertData.username,
+                  email: insertData.email,
+                  role: insertData.role || 'user',
+                  avatar_url: insertData.avatar_url,
+                };
+                setProfile(profileData);
+              } else {
+                console.error("Error creating profile:", insertError);
+                setProfile(null);
+              }
+            } catch (createError) {
+              console.error("Error creating user profile:", createError);
+              setProfile(null);
+            }
+          } else {
+            setProfile(null);
+          }
         } else if (data) {
           const profileData = {
             id: data.id,
@@ -51,8 +115,6 @@ export function useUserProfile(user: User | null, options?: { waitForProfile?: b
             avatar_url: data.avatar_url,
           };
           setProfile(profileData);
-        } else {
-          setProfile(null);
         }
         
         // 프로필 로딩이 완료되면 로딩 상태 false로 설정

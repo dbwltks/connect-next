@@ -3909,13 +3909,13 @@ export default function ProgramsWidget({
                             (e) => e.id === event.id
                           );
 
-                          // 시간 컬럼 50px 이후 계산 (calc 사용)
+                          // 시간 컬럼 50px 이후 계산 (calc 사용) - Google Calendar 스타일
                           const dayWidth = `calc((100% - 50px) / 7)`; // 각 날짜 컬럼의 폭
                           const eventWidth =
                             totalOverlapping > 1
-                              ? `calc(${dayWidth} / ${totalOverlapping})`
-                              : dayWidth;
-                          const eventLeft = `calc(50px + ${dayIndex} * ${dayWidth} + ${eventIndexInOverlap} * ${eventWidth})`;
+                              ? `calc((${dayWidth} / ${totalOverlapping}) - 4px)`
+                              : `calc(${dayWidth} - 4px)`;
+                          const eventLeft = `calc(50px + ${dayIndex} * ${dayWidth} + ${eventIndexInOverlap} * (${dayWidth} / ${totalOverlapping}) + 2px)`;
 
                           const program = programs.find(
                             (p) => p.id === event.program_id
@@ -3929,9 +3929,9 @@ export default function ProgramsWidget({
                               )}`}
                               style={{
                                 left: eventLeft,
-                                top: `${startHour * 50 + (startMinute / 60) * 50}px`,
+                                top: `${startHour * 50 + (startMinute / 60) * 50 + 2}px`,
                                 width: eventWidth,
-                                height: `${Math.max(duration * 50, 30)}px`,
+                                height: `${Math.max(duration * 50 - 4, 26)}px`,
                                 fontSize: "10px",
                                 zIndex: 10 + eventIndexInOverlap,
                                 ...getTeamStyle(event.team_id),
