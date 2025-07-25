@@ -3907,25 +3907,67 @@ export default function ProgramsWidget({
                               (1000 * 60 * 60)
                             : 1;
 
-                          // 간단한 겹침 처리: 같은 시간에 시작하는 이벤트들만 처리
-                          const sameTimeEvents = dayEvents.filter(
-                            (e) =>
-                              e.start_date.substring(0, 13) ===
-                              event.start_date.substring(0, 13) // 같은 시간(시까지)
-                          );
+                          // 겹침 처리: 중간 시작 이벤트는 양쪽을 모두 겹치게
+                          const overlappingEvents = dayEvents.filter((e) => {
+                            const eStartTime = parseISO(e.start_date);
+                            const eEndTime = e.end_date ? parseISO(e.end_date) : new Date(eStartTime.getTime() + 60 * 60 * 1000);
+                            
+                            // 시간이 겹치는지 확인
+                            return startTime < eEndTime && endTime > eStartTime;
+                          });
 
-                          const totalOverlapping = sameTimeEvents.length;
-                          const eventIndexInOverlap = sameTimeEvents.findIndex(
-                            (e) => e.id === event.id
-                          );
-
-                          // 시간 컬럼 50px 이후 계산 (calc 사용) - Google Calendar 스타일
+                          let eventWidth, eventLeft, zIndex;
                           const dayWidth = `calc((100% - 50px) / 7)`; // 각 날짜 컬럼의 폭
-                          const eventWidth =
-                            totalOverlapping > 1
-                              ? `calc((${dayWidth} / ${totalOverlapping}) - 4px)`
-                              : `calc(${dayWidth} - 4px)`;
-                          const eventLeft = `calc(50px + ${dayIndex} * ${dayWidth} + ${eventIndexInOverlap} * (${dayWidth} / ${totalOverlapping}) + 2px)`;
+
+                          if (overlappingEvents.length > 2) {
+                            // 3개 이상 겹칠 때만 분할 처리
+                            const sortedEvents = overlappingEvents.sort((a, b) => 
+                              parseISO(a.start_date).getTime() - parseISO(b.start_date).getTime()
+                            );
+
+                            const currentEventIndex = sortedEvents.findIndex(e => e.id === event.id);
+                            
+                            if (currentEventIndex === 0) {
+                              // 첫 번째 이벤트 - 왼쪽 절반
+                              eventWidth = `calc((${dayWidth} / 2) - 4px)`;
+                              eventLeft = `calc(50px + ${dayIndex} * ${dayWidth} + 2px)`;
+                              zIndex = 10;
+                            } else if (currentEventIndex === 1) {
+                              // 두 번째 이벤트 - 오른쪽 절반
+                              eventWidth = `calc((${dayWidth} / 2) - 4px)`;
+                              eventLeft = `calc(50px + ${dayIndex} * ${dayWidth} + (${dayWidth} / 2) + 2px)`;
+                              zIndex = 10;
+                            } else {
+                              // 중간에 시작하는 이벤트들 - 전체 너비에서 왼쪽 여백만 주고 양쪽 겹치게
+                              eventWidth = `calc(${dayWidth} - 8px)`; // 왼쪽 여백 4px
+                              eventLeft = `calc(50px + ${dayIndex} * ${dayWidth} + 6px)`;
+                              zIndex = 20; // 위에 보이게
+                            }
+                          } else if (overlappingEvents.length === 2) {
+                            // 2개만 겹칠 때 - 중간에 끼어드는 스타일로 처리
+                            const sortedEvents = overlappingEvents.sort((a, b) => 
+                              parseISO(a.start_date).getTime() - parseISO(b.start_date).getTime()
+                            );
+
+                            const currentEventIndex = sortedEvents.findIndex(e => e.id === event.id);
+                            
+                            if (currentEventIndex === 0) {
+                              // 첫 번째 이벤트 - 전체 너비
+                              eventWidth = `calc(${dayWidth} - 4px)`;
+                              eventLeft = `calc(50px + ${dayIndex} * ${dayWidth} + 2px)`;
+                              zIndex = 10;
+                            } else {
+                              // 두 번째 이벤트 - 중간에 끼어드는 스타일
+                              eventWidth = `calc(${dayWidth} - 8px)`; // 왼쪽 여백 4px
+                              eventLeft = `calc(50px + ${dayIndex} * ${dayWidth} + 6px)`;
+                              zIndex = 20; // 위에 보이게
+                            }
+                          } else {
+                            // 겹치지 않는 이벤트
+                            eventWidth = `calc(${dayWidth} - 4px)`;
+                            eventLeft = `calc(50px + ${dayIndex} * ${dayWidth} + 2px)`;
+                            zIndex = 10;
+                          }
 
                           const program = programs.find(
                             (p) => p.id === event.program_id
@@ -3943,7 +3985,8 @@ export default function ProgramsWidget({
                                 width: eventWidth,
                                 height: `${Math.max(duration * 50 - 4, 26)}px`,
                                 fontSize: "10px",
-                                zIndex: 10 + eventIndexInOverlap,
+                                zIndex: zIndex,
+                                border: zIndex === 20 ? '1px solid white' : undefined, // 중간 끼어드는 이벤트에 흰색 보더
                                 ...getTeamStyle(event.team_id),
                               }}
                               title={`${event.title} - ${program?.name || "프로그램"}`}
@@ -3967,7 +4010,7 @@ export default function ProgramsWidget({
                                 {event.title}
                               </div>
                               {program &&
-                                totalOverlapping === 1 &&
+                                overlappingEvents.length === 1 &&
                                 duration > 1 && (
                                   <div
                                     className="opacity-75 text-xs leading-tight overflow-hidden mt-1"

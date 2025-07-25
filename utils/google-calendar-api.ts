@@ -2,8 +2,8 @@ import { calendar_v3 } from 'googleapis';
 
 // Google Calendar API 설정
 export const GOOGLE_CALENDAR_CONFIG = {
-  CLIENT_ID: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '',
-  API_KEY: process.env.NEXT_PUBLIC_GOOGLE_API_KEY || '',
+  CLIENT_ID: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '728201014571-vcacg1pgbo5nfpgabdf7nngno467v63k.apps.googleusercontent.com',
+  API_KEY: process.env.NEXT_PUBLIC_GOOGLE_API_KEY || 'AIzaSyAX7ZC6in0O8D9AA8XMT3qln-lbjQP7Ajo',
   SCOPES: ['https://www.googleapis.com/auth/calendar'],
   DISCOVERY_DOC: 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest',
 };
@@ -102,6 +102,18 @@ export async function getSupabaseGoogleToken(): Promise<string | null> {
 // Calendar API 전용 인증 (기본 로그인과 별도)
 export async function authenticateCalendarAPI(): Promise<boolean> {
   try {
+    console.log('Google Calendar API 인증 시작...');
+    console.log('CLIENT_ID:', GOOGLE_CALENDAR_CONFIG.CLIENT_ID);
+    console.log('API_KEY:', GOOGLE_CALENDAR_CONFIG.API_KEY);
+    
+    if (!GOOGLE_CALENDAR_CONFIG.CLIENT_ID) {
+      throw new Error('Google Client ID가 설정되지 않았습니다. NEXT_PUBLIC_GOOGLE_CLIENT_ID 환경변수를 확인하세요.');
+    }
+    
+    if (!GOOGLE_CALENDAR_CONFIG.API_KEY) {
+      throw new Error('Google API Key가 설정되지 않았습니다. NEXT_PUBLIC_GOOGLE_API_KEY 환경변수를 확인하세요.');
+    }
+
     if (!window.google) {
       throw new Error('Google Identity Services가 로드되지 않았습니다.');
     }
