@@ -88,8 +88,28 @@ export async function getSupabaseGoogleToken(): Promise<string | null> {
     
     const { data: { session } } = await supabase.auth.getSession();
     
+    console.log('Supabase session:', session);
+    console.log('Provider token:', session?.provider_token);
+    console.log('Provider refresh token:', session?.provider_refresh_token);
+    
     if (session?.provider_token) {
-      return session.provider_token;
+      // 토큰의 스코프 확인을 위한 Google API 호출
+      try {
+        const response = await fetch(`https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=${session.provider_token}`);
+        const tokenInfo = await response.json();
+        console.log('토큰 정보:', tokenInfo);
+        
+        if (tokenInfo.scope && tokenInfo.scope.includes('calendar')) {
+          console.log('Calendar 스코프 확인됨');
+          return session.provider_token;
+        } else {
+          console.log('Calendar 스코프가 없음. 스코프:', tokenInfo.scope);
+          return null;
+        }
+      } catch (tokenError) {
+        console.error('토큰 정보 확인 실패:', tokenError);
+        return session.provider_token; // 일단 토큰 반환
+      }
     }
     
     return null;
@@ -99,22 +119,21 @@ export async function getSupabaseGoogleToken(): Promise<string | null> {
   }
 }
 
-// Calendar API 전용 인증 (Supabase 토큰 사용)
+// Calendar API 전용 인증 (직접 Google OAuth 사용)
 export async function authenticateCalendarAPI(): Promise<boolean> {
   try {
-    console.log('Google Calendar API 인증 시작 (Supabase 토큰 사용)...');
+    console.log('Google Calendar API 인증 시작...');
     
-    // 먼저 Supabase에서 Google 토큰 가져오기
-    const supabaseToken = await getSupabaseGoogleToken();
+    // 로그인 여부와 상관없이 Google Calendar OAuth 진행
+    // 사이트 로그인과 Google Calendar 연결은 별개
     
-    if (supabaseToken) {
-      console.log('Supabase에서 Google 토큰을 가져왔습니다.');
-      window.gapi.client.setToken({ access_token: supabaseToken });
-      sessionStorage.setItem('calendar_access_token', supabaseToken);
+    // 먼저 저장된 토큰으로 복원 시도
+    if (restoreCalendarAuth()) {
+      console.log('저장된 Calendar 토큰으로 인증 복원됨');
       return true;
     }
     
-    console.log('Supabase 토큰이 없어서 직접 OAuth 인증을 시도합니다...');
+    console.log('Google Calendar OAuth 인증 창을 띄웁니다...');
     console.log('CLIENT_ID:', GOOGLE_CALENDAR_CONFIG.CLIENT_ID);
     console.log('API_KEY:', GOOGLE_CALENDAR_CONFIG.API_KEY);
     
