@@ -99,10 +99,22 @@ export async function getSupabaseGoogleToken(): Promise<string | null> {
   }
 }
 
-// Calendar API 전용 인증 (기본 로그인과 별도)
+// Calendar API 전용 인증 (Supabase 토큰 사용)
 export async function authenticateCalendarAPI(): Promise<boolean> {
   try {
-    console.log('Google Calendar API 인증 시작...');
+    console.log('Google Calendar API 인증 시작 (Supabase 토큰 사용)...');
+    
+    // 먼저 Supabase에서 Google 토큰 가져오기
+    const supabaseToken = await getSupabaseGoogleToken();
+    
+    if (supabaseToken) {
+      console.log('Supabase에서 Google 토큰을 가져왔습니다.');
+      window.gapi.client.setToken({ access_token: supabaseToken });
+      sessionStorage.setItem('calendar_access_token', supabaseToken);
+      return true;
+    }
+    
+    console.log('Supabase 토큰이 없어서 직접 OAuth 인증을 시도합니다...');
     console.log('CLIENT_ID:', GOOGLE_CALENDAR_CONFIG.CLIENT_ID);
     console.log('API_KEY:', GOOGLE_CALENDAR_CONFIG.API_KEY);
     

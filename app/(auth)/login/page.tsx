@@ -119,6 +119,7 @@ export default function LoginPage() {
       const { data, error } = await createClient().auth.signInWithOAuth({ 
         provider: "google",
         options: {
+          scopes: 'https://www.googleapis.com/auth/calendar',
           redirectTo: redirectTo 
             ? `${window.location.origin}/callback?redirect_to=${redirectTo}`
             : `${window.location.origin}/callback`
