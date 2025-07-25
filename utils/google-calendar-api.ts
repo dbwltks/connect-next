@@ -122,6 +122,13 @@ export async function getSupabaseGoogleToken(): Promise<string | null> {
 // Calendar API 전용 인증 (직접 Google OAuth 사용)
 export async function authenticateCalendarAPI(): Promise<boolean> {
   try {
+    // 환경변수 값 디버깅
+    console.log('=== 환경변수 확인 ===');
+    console.log('CALENDAR_CLIENT_ID:', process.env.NEXT_PUBLIC_GOOGLE_CALENDAR_CLIENT_ID);
+    console.log('GOOGLE_CLIENT_ID:', process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
+    console.log('사용할 CLIENT_ID:', GOOGLE_CALENDAR_CONFIG.CLIENT_ID);
+    console.log('사용할 API_KEY:', GOOGLE_CALENDAR_CONFIG.API_KEY);
+    
     // 먼저 저장된 토큰으로 복원 시도
     if (restoreCalendarAuth()) {
       return true;
@@ -197,10 +204,24 @@ export async function authenticateUser(): Promise<boolean> {
 // 일정 생성
 export async function createCalendarEvent(event: CalendarEvent): Promise<string | null> {
   try {
+    console.log('=== createCalendarEvent 시작 ===');
+    
+    // gapi 클라이언트 초기화 확인
+    if (!window.gapi?.client) {
+      console.log('gapi 클라이언트가 초기화되지 않음, 초기화 시도');
+      const initialized = await initializeGoogleAPI();
+      if (!initialized) {
+        console.error('gapi 초기화 실패');
+        return null;
+      }
+    }
+    
     // 토큰이 없으면 인증 시도
     if (!hasValidToken()) {
+      console.log('유효한 토큰이 없음, 인증 시도');
       const authenticated = await authenticateCalendarAPI();
       if (!authenticated) {
+        console.log('인증 실패');
         return null;
       }
     }
@@ -249,8 +270,22 @@ export async function createCalendarEvent(event: CalendarEvent): Promise<string 
 function hasValidToken(): boolean {
   try {
     const token = window.gapi?.client?.getToken();
+    const sessionToken = sessionStorage.getItem('calendar_access_token');
+    
+    console.log('=== 토큰 상태 확인 ===');
+    console.log('gapi token:', token);
+    console.log('session token:', sessionToken ? '존재함' : '없음');
+    
+    // gapi에 토큰이 설정되어 있지 않지만 세션에 있으면 설정
+    if ((!token || !token.access_token) && sessionToken) {
+      console.log('세션 토큰을 gapi에 설정');
+      window.gapi.client.setToken({ access_token: sessionToken });
+      return true;
+    }
+    
     return !!(token && token.access_token);
-  } catch {
+  } catch (error) {
+    console.error('토큰 확인 중 오류:', error);
     return false;
   }
 }
@@ -258,10 +293,24 @@ function hasValidToken(): boolean {
 // Connect ID로 기존 일정 찾기
 export async function findEventByConnectId(connectId: string): Promise<string | null> {
   try {
+    console.log('=== findEventByConnectId 시작 ===');
+    
+    // gapi 클라이언트 초기화 확인
+    if (!window.gapi?.client) {
+      console.log('gapi 클라이언트가 초기화되지 않음, 초기화 시도');
+      const initialized = await initializeGoogleAPI();
+      if (!initialized) {
+        console.error('gapi 초기화 실패');
+        return null;
+      }
+    }
+    
     // 토큰이 없으면 인증 시도
     if (!hasValidToken()) {
+      console.log('유효한 토큰이 없음, 인증 시도');
       const authenticated = await authenticateCalendarAPI();
       if (!authenticated) {
+        console.log('인증 실패');
         return null;
       }
     }
