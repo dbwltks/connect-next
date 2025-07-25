@@ -1673,7 +1673,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
               {/* 댓글 버튼 */}
               <button
                 type="button"
-                className="flex items-center gap-1 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded text-sm"
+                className="flex items-center gap-1 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded text-xs"
                 onClick={() => {
                   const commentSection =
                     document.getElementById("comments-section");
@@ -1693,7 +1693,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
               {/* URL 복사 버튼 */}
               <button
                 type="button"
-                className="flex items-center gap-1 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded text-sm"
+                className="flex items-center gap-1 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded text-xs"
                 onClick={async () => {
                   try {
                     await navigator.clipboard.writeText(window.location.href);
