@@ -1,9 +1,9 @@
 import { calendar_v3 } from 'googleapis';
 
-// Google Calendar API 설정 (별도 OAuth 클라이언트 사용)
+// Google Calendar API 설정 (기본 Google OAuth 클라이언트 사용)
 export const GOOGLE_CALENDAR_CONFIG = {
-  CLIENT_ID: process.env.NEXT_PUBLIC_GOOGLE_CALENDAR_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '728201014571-vcacg1pgbo5nfpgabdf7nngno467v63k.apps.googleusercontent.com',
-  API_KEY: process.env.NEXT_PUBLIC_GOOGLE_CALENDAR_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_API_KEY || 'AIzaSyAX7ZC6in0O8D9AA8XMT3qln-lbjQP7Ajo',
+  CLIENT_ID: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '728201014571-vcacg1pgbo5nfpgabdf7nngno467v63k.apps.googleusercontent.com',
+  API_KEY: process.env.NEXT_PUBLIC_GOOGLE_API_KEY || 'AIzaSyAX7ZC6in0O8D9AA8XMT3qln-lbjQP7Ajo',
   SCOPES: ['https://www.googleapis.com/auth/calendar'],
   DISCOVERY_DOC: 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest',
 };

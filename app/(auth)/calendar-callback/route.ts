@@ -17,9 +17,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Google OAuth 토큰 교환
-    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CALENDAR_CLIENT_ID || 
-                    process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || 
+    // Google OAuth 토큰 교환 (기본 클라이언트 ID 사용)
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || 
                     '728201014571-vcacg1pgbo5nfpgabdf7nngno467v63k.apps.googleusercontent.com';
     
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET; // 서버사이드에서만 사용
