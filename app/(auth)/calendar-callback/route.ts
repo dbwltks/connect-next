@@ -17,11 +17,13 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Google OAuth 토큰 교환 (기본 클라이언트 ID 사용)
-    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || 
-                    '728201014571-vcacg1pgbo5nfpgabdf7nngno467v63k.apps.googleusercontent.com';
-    
-    const clientSecret = process.env.GOOGLE_CLIENT_SECRET; // 서버사이드에서만 사용
+    // Google OAuth 토큰 교환 (환경변수 사용)
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+    if (!clientId || !clientSecret) {
+      return NextResponse.redirect(`${origin}/?calendar_auth=error&message=${encodeURIComponent("OAuth 설정이 누락되었습니다")}`);
+    }
 
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
