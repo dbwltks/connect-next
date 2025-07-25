@@ -1,9 +1,9 @@
 import { calendar_v3 } from 'googleapis';
 
-// Google Calendar API 설정
+// Google Calendar API 설정 (별도 OAuth 클라이언트 사용)
 export const GOOGLE_CALENDAR_CONFIG = {
-  CLIENT_ID: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '728201014571-vcacg1pgbo5nfpgabdf7nngno467v63k.apps.googleusercontent.com',
-  API_KEY: process.env.NEXT_PUBLIC_GOOGLE_API_KEY || 'AIzaSyAX7ZC6in0O8D9AA8XMT3qln-lbjQP7Ajo',
+  CLIENT_ID: process.env.NEXT_PUBLIC_GOOGLE_CALENDAR_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '728201014571-vcacg1pgbo5nfpgabdf7nngno467v63k.apps.googleusercontent.com',
+  API_KEY: process.env.NEXT_PUBLIC_GOOGLE_CALENDAR_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_API_KEY || 'AIzaSyAX7ZC6in0O8D9AA8XMT3qln-lbjQP7Ajo',
   SCOPES: ['https://www.googleapis.com/auth/calendar'],
   DISCOVERY_DOC: 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest',
 };
@@ -141,25 +141,23 @@ export async function authenticateCalendarAPI(): Promise<boolean> {
 
     console.log('Google Calendar API 인증을 요청합니다...');
     
-    return new Promise((resolve) => {
-      const tokenClient = window.google.accounts.oauth2.initTokenClient({
-        client_id: GOOGLE_CALENDAR_CONFIG.CLIENT_ID,
-        scope: GOOGLE_CALENDAR_CONFIG.SCOPES.join(' '),
-        callback: (response: any) => {
-          if (response.access_token) {
-            // 토큰을 gapi 클라이언트에 설정
-            window.gapi.client.setToken({ access_token: response.access_token });
-            // 세션 스토리지에도 저장
-            sessionStorage.setItem('calendar_access_token', response.access_token);
-            resolve(true);
-          } else {
-            resolve(false);
-          }
-        },
-      });
-
-      tokenClient.requestAccessToken();
-    });
+    // 로그인 방식처럼 리디렉션으로 인증
+    const scope = GOOGLE_CALENDAR_CONFIG.SCOPES.join(' ');
+    const responseType = 'code';
+    const accessType = 'offline';
+    const prompt = 'consent';
+    
+    const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+    authUrl.searchParams.set('client_id', GOOGLE_CALENDAR_CONFIG.CLIENT_ID);
+    authUrl.searchParams.set('redirect_uri', `${window.location.origin}/calendar-callback`);
+    authUrl.searchParams.set('scope', scope);
+    authUrl.searchParams.set('response_type', responseType);
+    authUrl.searchParams.set('access_type', accessType);
+    authUrl.searchParams.set('prompt', prompt);
+    authUrl.searchParams.set('state', window.location.href); // 현재 페이지로 돌아가기
+    
+    window.location.href = authUrl.toString();
+    return true; // 리디렉션이므로 항상 true 반환
   } catch (error) {
     console.error('Calendar API 인증 실패:', error);
     return false;
