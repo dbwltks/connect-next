@@ -2799,7 +2799,7 @@ export default function ProgramsWidget({
                       <DialogTitle>
                         {selectedDate && (
                           <>
-                            {format(selectedDate, "yyyy년 MM월 dd일 (EEE)", {
+                            {format(selectedDate, "yyyy년 M월 d일 (EEE)", {
                               locale: ko,
                             })}
                             의 일정
@@ -2980,8 +2980,8 @@ export default function ProgramsWidget({
 
                     <h3 className="text-lg font-semibold">
                       {viewMode === "month"
-                        ? format(currentDate, "yyyy년 MM월", { locale: ko })
-                        : `${format(weekDays[0], "MM월 dd일", { locale: ko })} - ${format(weekDays[6], "MM월 dd일", { locale: ko })}`}
+                        ? format(currentDate, "yyyy년 M월", { locale: ko })
+                        : `${format(weekDays[0], "M월 d일", { locale: ko })} - ${format(weekDays[6], "M월 d일", { locale: ko })}`}
                     </h3>
 
                     <Button
@@ -3140,7 +3140,7 @@ export default function ProgramsWidget({
                                             <span className="font-medium text-sm">
                                               {format(
                                                 eventDate,
-                                                "yyyy년 MM월 dd일 (EEE)",
+                                                "yyyy년 M월 d일 (EEE)",
                                                 { locale: ko }
                                               )} {formatDateTimeToKorean(eventDate)}
                                               {endDate &&
@@ -3426,8 +3426,8 @@ export default function ProgramsWidget({
                             onClick={() => handleDateClick(day)}
                             title={
                               dayEvents.length > 0
-                                ? `${format(day, "yyyy년 MM월 dd일", { locale: ko })}\n${dayEvents.length}개의 일정:\n${dayEvents.map((e) => `• ${e.title}`).join("\n")}`
-                                : `${format(day, "yyyy년 MM월 dd일", { locale: ko })}\n등록된 일정이 없습니다.`
+                                ? `${format(day, "yyyy년 M월 d일", { locale: ko })}\n${dayEvents.length}개의 일정:\n${dayEvents.map((e) => `• ${e.title}`).join("\n")}`
+                                : `${format(day, "yyyy년 M월 d일", { locale: ko })}\n등록된 일정이 없습니다.`
                             }
                           >
                             <div
@@ -3740,7 +3740,7 @@ export default function ProgramsWidget({
                               <div className="text-sm text-gray-600">
                                 {format(
                                   eventDate,
-                                  "yyyy년 MM월 dd일 (EEE)",
+                                  "yyyy년 M월 d일 (EEE)",
                                   {
                                     locale: ko,
                                   }

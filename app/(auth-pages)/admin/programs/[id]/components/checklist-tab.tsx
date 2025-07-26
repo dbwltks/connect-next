@@ -310,57 +310,70 @@ export default function ChecklistTab({ programId, hasEditPermission = false }: C
 
       {/* 참여자별 확인사항 현황 */}
       <Card className="border-0 shadow-sm">
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle className="text-lg">참여자별 확인 현황</CardTitle>
-            <div className="flex items-center gap-2">
-              <Select value={selectedTeam} onValueChange={(value) => {
-                setSelectedTeam(value);
-                setCurrentPage(1);
-              }}>
-                <SelectTrigger className="w-32">
-                  <SelectValue placeholder="팀 선택" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">전체</SelectItem>
-                  {Array.isArray(teams) && teams.map((team) => (
-                    <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {hasEditPermission && (
-                <Button size="sm" onClick={() => {
-                  setSelectedChecklistEdit(null);
-                  setChecklistForm({ name: "", required: false, price: "", teams: [] });
-                  setIsChecklistDialogOpen(true);
-                }}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  항목 추가
-                </Button>
-              )}
-              <Select value={itemsPerPage.toString()} onValueChange={(value) => {
-                setItemsPerPage(parseInt(value));
-                setCurrentPage(1);
-              }}>
-                <SelectTrigger className="w-20">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="5">5개</SelectItem>
-                  <SelectItem value="10">10개</SelectItem>
-                  <SelectItem value="20">20개</SelectItem>
-                  <SelectItem value="50">50개</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold">참여자별 확인 현황</h3>
+            <Badge variant="secondary" className="text-sm text-blue-400">
+              {Array.isArray(participants) ? participants.length : 0}
+            </Badge>
           </div>
-        </CardHeader>
+          <div className="flex gap-2">
+            {hasEditPermission && (
+              <Button size="sm" onClick={() => {
+                setSelectedChecklistEdit(null);
+                setChecklistForm({ name: "", required: false, price: "", teams: [] });
+                setIsChecklistDialogOpen(true);
+              }}>
+                <Plus className="h-4 w-4" />
+                항목
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* 필터 UI */}
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex gap-2">
+            <Select value={selectedTeam} onValueChange={(value) => {
+              setSelectedTeam(value);
+              setCurrentPage(1);
+            }}>
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="팀 선택" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">전체</SelectItem>
+                {Array.isArray(teams) && teams.map((team) => (
+                  <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 항목 수 선택 */}
+          <div className="flex items-center gap-2">
+            <Select value={itemsPerPage.toString()} onValueChange={(value) => {
+              setItemsPerPage(parseInt(value));
+              setCurrentPage(1);
+            }}>
+              <SelectTrigger className="w-[80px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="5">5</SelectItem>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="border-b">
-                  <TableHead className="font-semibold min-w-[120px]">
+                  <TableHead className="font-semibold min-w-[100px] sticky left-0 bg-white z-10 py-3">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -370,7 +383,8 @@ export default function ChecklistTab({ programId, hasEditPermission = false }: C
                         setCurrentPage(1);
                       }}
                     >
-                      참여자
+                      <span className="hidden sm:inline">참여자</span>
+                      <span className="sm:hidden">이름</span>
                       {sortOrder === 'asc' ? (
                         <ChevronUp className="h-4 w-4" />
                       ) : (
@@ -384,11 +398,11 @@ export default function ChecklistTab({ programId, hasEditPermission = false }: C
                       return item.teams && item.teams.includes(selectedTeam);
                     })
                     .map((item) => (
-                    <TableHead key={item.id} className="font-semibold text-center min-w-[120px]">
-                      <div className="flex flex-col items-center">
-                        <span className="text-xs">{item.name}</span>
+                    <TableHead key={item.id} className="font-semibold text-center min-w-[80px] sm:min-w-[120px] py-3">
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-xs text-center leading-tight">{item.name}</span>
                         {item.price && (
-                          <span className="text-xs text-gray-500">${item.price} CAD</span>
+                          <span className="text-xs text-gray-500">${item.price}</span>
                         )}
                         {item.required && (
                           <span className="text-xs text-red-500">필수</span>
@@ -396,7 +410,10 @@ export default function ChecklistTab({ programId, hasEditPermission = false }: C
                       </div>
                     </TableHead>
                   ))}
-                  <TableHead className="font-semibold text-center">완료율</TableHead>
+                  <TableHead className="font-semibold text-center min-w-[60px] py-3">
+                    <span className="hidden sm:inline">완료율</span>
+                    <span className="sm:hidden">완료</span>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -438,7 +455,11 @@ export default function ChecklistTab({ programId, hasEditPermission = false }: C
 
                   return (
                     <TableRow key={participant.id} className="border-b last:border-0">
-                      <TableCell className="font-medium py-2">{participant.name}</TableCell>
+                      <TableCell className="font-medium py-3 sticky left-0 bg-white">
+                        <div className="truncate max-w-[80px] sm:max-w-none">
+                          {participant.name}
+                        </div>
+                      </TableCell>
                       {Array.isArray(checklistItems) && checklistItems
                         .filter(item => {
                           if (selectedTeam === 'all') return true;
@@ -479,7 +500,7 @@ export default function ChecklistTab({ programId, hasEditPermission = false }: C
                                       {renderIcon()}
                                     </Button>
                                     {checkData?.completedDate && status === 'completed' && (
-                                      <span className="text-xs text-gray-500 mt-1">
+                                      <span className="text-xs text-gray-500 mt-1 hidden sm:block">
                                         {format(new Date(checkData.completedDate), "MM/dd", { locale: ko })}
                                       </span>
                                     )}
@@ -491,7 +512,7 @@ export default function ChecklistTab({ programId, hasEditPermission = false }: C
                         );
                       })}
                       <TableCell className="text-center py-2">
-                        <div className="w-16 mx-auto">
+                        <div className="w-12 sm:w-16 mx-auto">
                           <Badge 
                             className={`w-full justify-center text-xs ${
                               completionRate >= 80 
@@ -505,7 +526,7 @@ export default function ChecklistTab({ programId, hasEditPermission = false }: C
                           </Badge>
                         </div>
                         {totalRequiredCount > 0 && (
-                          <div className="text-xs text-gray-500 mt-1">
+                          <div className="text-xs text-gray-500 mt-1 hidden sm:block">
                             {completedRequiredCount}/{totalRequiredCount} 필수
                           </div>
                         )}
@@ -526,8 +547,8 @@ export default function ChecklistTab({ programId, hasEditPermission = false }: C
             if (totalPages <= 1) return null;
             
             return (
-              <div className="flex justify-between items-center p-4 border-t">
-                <div className="text-sm text-muted-foreground">
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center p-4 border-t">
+                <div className="text-sm text-muted-foreground text-center sm:text-left">
                   총 {totalParticipants}명 중 {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, totalParticipants)}명 표시
                 </div>
                 <Pagination>
@@ -603,17 +624,24 @@ export default function ChecklistTab({ programId, hasEditPermission = false }: C
           <CardTitle className="text-lg">확인사항 목록</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-b">
-                <TableHead className="font-semibold">항목명</TableHead>
-                <TableHead className="font-semibold">필수여부</TableHead>
-                <TableHead className="font-semibold">금액</TableHead>
-                <TableHead className="font-semibold">팀</TableHead>
-                <TableHead className="font-semibold">완료자 수</TableHead>
-                <TableHead className="text-right font-semibold">관리</TableHead>
-              </TableRow>
-            </TableHeader>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-b">
+                  <TableHead className="font-semibold min-w-[120px]">항목명</TableHead>
+                  <TableHead className="font-semibold min-w-[80px]">
+                    <span className="hidden sm:inline">필수여부</span>
+                    <span className="sm:hidden">필수</span>
+                  </TableHead>
+                  <TableHead className="font-semibold min-w-[80px]">금액</TableHead>
+                  <TableHead className="font-semibold min-w-[80px] hidden sm:table-cell">팀</TableHead>
+                  <TableHead className="font-semibold min-w-[80px]">
+                    <span className="hidden sm:inline">완료자 수</span>
+                    <span className="sm:hidden">완료</span>
+                  </TableHead>
+                  <TableHead className="text-right font-semibold min-w-[80px]">관리</TableHead>
+                </TableRow>
+              </TableHeader>
             <TableBody>
               {Array.isArray(checklistItems) && checklistItems
                 .filter(item => {
@@ -634,24 +662,29 @@ export default function ChecklistTab({ programId, hasEditPermission = false }: C
                 
                 return (
                   <TableRow key={item.id} className="border-b last:border-0">
-                    <TableCell className="font-medium">{item.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="max-w-[100px] sm:max-w-none truncate">
+                        {item.name}
+                      </div>
+                    </TableCell>
                     <TableCell>
-                      <Badge className={item.required ? "bg-red-100 text-red-800 border-red-200" : "bg-gray-100 text-gray-800 border-gray-200"}>
+                      <Badge className={`${item.required ? "bg-red-100 text-red-800 border-red-200" : "bg-gray-100 text-gray-800 border-gray-200"} text-xs`}>
                         {item.required ? "필수" : "선택"}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      {item.price ? `$${item.price} CAD` : "-"}
+                    <TableCell className="text-sm">
+                      {item.price ? `$${item.price}` : "-"}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       <span className="text-sm text-muted-foreground">{teamNames}</span>
                     </TableCell>
-                    <TableCell>
-                      {completedCount}/{Array.isArray(participants) ? participants.length : 0}명
+                    <TableCell className="text-sm">
+                      {completedCount}/{Array.isArray(participants) ? participants.length : 0}
+                      <span className="hidden sm:inline">명</span>
                     </TableCell>
                     <TableCell className="text-right">
                       {hasEditPermission ? (
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end gap-1">
                           <Button variant="ghost" size="sm" onClick={() => {
                             setSelectedChecklistEdit(item);
                             setChecklistForm({
@@ -676,7 +709,8 @@ export default function ChecklistTab({ programId, hasEditPermission = false }: C
                 );
               })}
             </TableBody>
-          </Table>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 

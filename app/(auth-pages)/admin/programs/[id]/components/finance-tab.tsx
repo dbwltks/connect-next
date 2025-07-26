@@ -47,6 +47,8 @@ import {
   Settings,
   CalendarDays,
   Columns,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -73,6 +75,12 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import {
   format,
   parseISO,
@@ -181,10 +189,10 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
       | undefined,
     startDate: "",
     endDate: "",
-    type: "all" as "all" | "income" | "expense",
-    category: "all",
-    vendor: "all",
-    paidBy: "all",
+    types: [] as string[], // 다중 선택
+    categories: [] as string[], // 다중 선택
+    vendors: [] as string[], // 다중 선택
+    paidBys: [] as string[], // 다중 선택
   });
 
   // 필터 모달 상태
@@ -210,10 +218,10 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
   const getActiveFiltersCount = () => {
     let count = 0;
     if (financeFilters.dateRange !== "all") count++;
-    if (financeFilters.type !== "all") count++;
-    if (financeFilters.category !== "all") count++;
-    if (financeFilters.vendor !== "all") count++;
-    if (financeFilters.paidBy !== "all") count++;
+    if (financeFilters.types.length > 0) count++;
+    if (financeFilters.categories.length > 0) count++;
+    if (financeFilters.vendors.length > 0) count++;
+    if (financeFilters.paidBys.length > 0) count++;
     return count;
   };
 
@@ -241,6 +249,7 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
     amount: true,
   });
   const [isColumnDropdownOpen, setIsColumnDropdownOpen] = useState(false);
+
 
   // 화면 크기 변화 감지하여 모바일에서 자동으로 컬럼 숨기기
   useEffect(() => {
@@ -378,32 +387,23 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
       }
     }
 
-    // 타입 필터
-    if (financeFilters.type !== "all" && finance.type !== financeFilters.type) {
+    // 타입 필터 (다중 선택)
+    if (financeFilters.types.length > 0 && !financeFilters.types.includes(finance.type)) {
       return false;
     }
 
-    // 카테고리 필터
-    if (
-      financeFilters.category !== "all" &&
-      finance.category !== financeFilters.category
-    ) {
+    // 카테고리 필터 (다중 선택)
+    if (financeFilters.categories.length > 0 && !financeFilters.categories.includes(finance.category)) {
       return false;
     }
 
-    // 거래처 필터
-    if (
-      financeFilters.vendor !== "all" &&
-      finance.vendor !== financeFilters.vendor
-    ) {
+    // 거래처 필터 (다중 선택)
+    if (financeFilters.vendors.length > 0 && finance.vendor && !financeFilters.vendors.includes(finance.vendor)) {
       return false;
     }
 
-    // 거래자 필터
-    if (
-      financeFilters.paidBy !== "all" &&
-      finance.paidBy !== financeFilters.paidBy
-    ) {
+    // 거래자 필터 (다중 선택)
+    if (financeFilters.paidBys.length > 0 && finance.paidBy && !financeFilters.paidBys.includes(finance.paidBy)) {
       return false;
     }
 
@@ -893,7 +893,7 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
 
         {/* 필터 UI */}
         <div className="flex justify-between items-center mb-4">
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button
               variant="outline"
               onClick={() => setIsFinanceFilterModalOpen(true)}
@@ -901,12 +901,100 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
               size="sm"
             >
               <Filter className="h-4 w-4" />
+              필터
               {getActiveFiltersCount() > 0 && (
                 <Badge variant="secondary" className="text-xs ml-1">
                   {getActiveFiltersCount()}
                 </Badge>
               )}
             </Button>
+            
+            {/* 활성 필터 표시 */}
+            {financeFilters.types.length > 0 && (
+              <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 rounded-md text-xs">
+                <span className="text-blue-800">타입:</span>
+                <span className="text-blue-600">
+                  {financeFilters.types.map(type => type === 'income' ? '수입' : '지출').join(', ')}
+                </span>
+                <button
+                  onClick={() => setFinanceFilters(prev => ({ ...prev, types: [] }))}
+                  className="text-blue-500 hover:text-blue-700 ml-1"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+            
+            {financeFilters.categories.length > 0 && (
+              <div className="flex items-center gap-1 px-2 py-1 bg-green-100 rounded-md text-xs">
+                <span className="text-green-800">카테고리:</span>
+                <span className="text-green-600">
+                  {financeFilters.categories.length > 2 
+                    ? `${financeFilters.categories.slice(0, 2).join(', ')} 외 ${financeFilters.categories.length - 2}개`
+                    : financeFilters.categories.join(', ')
+                  }
+                </span>
+                <button
+                  onClick={() => setFinanceFilters(prev => ({ ...prev, categories: [] }))}
+                  className="text-green-500 hover:text-green-700 ml-1"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+            
+            {financeFilters.vendors.length > 0 && (
+              <div className="flex items-center gap-1 px-2 py-1 bg-purple-100 rounded-md text-xs">
+                <span className="text-purple-800">거래처:</span>
+                <span className="text-purple-600">
+                  {financeFilters.vendors.length > 2 
+                    ? `${financeFilters.vendors.slice(0, 2).join(', ')} 외 ${financeFilters.vendors.length - 2}개`
+                    : financeFilters.vendors.join(', ')
+                  }
+                </span>
+                <button
+                  onClick={() => setFinanceFilters(prev => ({ ...prev, vendors: [] }))}
+                  className="text-purple-500 hover:text-purple-700 ml-1"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+            
+            {financeFilters.paidBys.length > 0 && (
+              <div className="flex items-center gap-1 px-2 py-1 bg-orange-100 rounded-md text-xs">
+                <span className="text-orange-800">거래자:</span>
+                <span className="text-orange-600">
+                  {financeFilters.paidBys.length > 2 
+                    ? `${financeFilters.paidBys.slice(0, 2).join(', ')} 외 ${financeFilters.paidBys.length - 2}개`
+                    : financeFilters.paidBys.join(', ')
+                  }
+                </span>
+                <button
+                  onClick={() => setFinanceFilters(prev => ({ ...prev, paidBys: [] }))}
+                  className="text-orange-500 hover:text-orange-700 ml-1"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+            
+            {financeFilters.dateRange !== "all" && (
+              <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-md text-xs">
+                <span className="text-gray-800">날짜:</span>
+                <span className="text-gray-600">
+                  {financeFilters.dateRange === "today" ? "오늘" :
+                   financeFilters.dateRange === "week" ? "이번 주" :
+                   financeFilters.dateRange === "month" ? "이번 달" : "사용자 지정"}
+                </span>
+                <button
+                  onClick={() => setFinanceFilters(prev => ({ ...prev, dateRange: "all" }))}
+                  className="text-gray-500 hover:text-gray-700 ml-1"
+                >
+                  ×
+                </button>
+              </div>
+            )}
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -1954,100 +2042,236 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
               )}
             </div>
 
-            {/* 거래 유형 필터 */}
-            <div className="space-y-2">
-              <Label>거래 유형</Label>
-              <Select
-                value={financeFilters.type}
-                onValueChange={(value: "all" | "income" | "expense") =>
-                  setFinanceFilters((prev) => ({ ...prev, type: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">전체</SelectItem>
-                  <SelectItem value="income">수입</SelectItem>
-                  <SelectItem value="expense">지출</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <Accordion type="multiple" className="w-full space-y-2">
+              {/* 거래 유형 필터 */}
+              <AccordionItem value="types" className="border rounded-lg px-3">
+                <AccordionTrigger className="py-3 hover:no-underline">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="filter-types"
+                      checked={financeFilters.types.length > 0}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setFinanceFilters(prev => ({ ...prev, types: ['income', 'expense'] }));
+                        } else {
+                          setFinanceFilters(prev => ({ ...prev, types: [] }));
+                        }
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <Label htmlFor="filter-types" className="text-sm font-medium cursor-pointer">
+                      거래 유형
+                    </Label>
+                    {financeFilters.types.length > 0 && (
+                      <span className="text-xs text-gray-500">({financeFilters.types.length}개 선택)</span>
+                    )}
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="pb-3">
+                  <div className="space-y-2 pl-6">
+                    {['income', 'expense'].map((type) => (
+                      <div key={type} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`type-${type}`}
+                          checked={financeFilters.types.includes(type)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setFinanceFilters(prev => ({
+                                ...prev,
+                                types: [...prev.types, type]
+                              }));
+                            } else {
+                              setFinanceFilters(prev => ({
+                                ...prev,
+                                types: prev.types.filter(t => t !== type)
+                              }));
+                            }
+                          }}
+                        />
+                        <Label htmlFor={`type-${type}`} className="text-sm">
+                          {type === 'income' ? '수입' : '지출'}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
 
-            {/* 카테고리 필터 */}
-            <div className="space-y-2">
-              <Label>카테고리</Label>
-              <Select
-                value={financeFilters.category}
-                onValueChange={(value) =>
-                  setFinanceFilters((prev) => ({ ...prev, category: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">전체</SelectItem>
-                  {financeCategories.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              {/* 카테고리 필터 */}
+              <AccordionItem value="categories" className="border rounded-lg px-3">
+                <AccordionTrigger className="py-3 hover:no-underline">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="filter-categories"
+                      checked={financeFilters.categories.length > 0}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setFinanceFilters(prev => ({ ...prev, categories: financeCategories }));
+                        } else {
+                          setFinanceFilters(prev => ({ ...prev, categories: [] }));
+                        }
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <Label htmlFor="filter-categories" className="text-sm font-medium cursor-pointer">
+                      카테고리
+                    </Label>
+                    {financeFilters.categories.length > 0 && (
+                      <span className="text-xs text-gray-500">({financeFilters.categories.length}개 선택)</span>
+                    )}
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="pb-3">
+                  <div className="max-h-32 overflow-y-auto space-y-2 pl-6">
+                    {financeCategories.map((category) => (
+                      <div key={category} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`category-${category}`}
+                          checked={financeFilters.categories.includes(category)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setFinanceFilters(prev => ({
+                                ...prev,
+                                categories: [...prev.categories, category]
+                              }));
+                            } else {
+                              setFinanceFilters(prev => ({
+                                ...prev,
+                                categories: prev.categories.filter(c => c !== category)
+                              }));
+                            }
+                          }}
+                        />
+                        <Label htmlFor={`category-${category}`} className="text-sm">
+                          {category}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
 
-            {/* 거래처 필터 */}
-            <div className="space-y-2">
-              <Label>거래처</Label>
-              <Select
-                value={financeFilters.vendor}
-                onValueChange={(value) =>
-                  setFinanceFilters((prev) => ({ ...prev, vendor: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">전체</SelectItem>
-                  {financeVendors.map((vendor) => (
-                    <SelectItem key={vendor} value={vendor}>
-                      {vendor}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              {/* 거래처 필터 */}
+              <AccordionItem value="vendors" className="border rounded-lg px-3">
+                <AccordionTrigger className="py-3 hover:no-underline">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="filter-vendors"
+                      checked={financeFilters.vendors.length > 0}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setFinanceFilters(prev => ({ ...prev, vendors: financeVendors }));
+                        } else {
+                          setFinanceFilters(prev => ({ ...prev, vendors: [] }));
+                        }
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <Label htmlFor="filter-vendors" className="text-sm font-medium cursor-pointer">
+                      거래처
+                    </Label>
+                    {financeFilters.vendors.length > 0 && (
+                      <span className="text-xs text-gray-500">({financeFilters.vendors.length}개 선택)</span>
+                    )}
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="pb-3">
+                  <div className="max-h-32 overflow-y-auto space-y-2 pl-6">
+                    {financeVendors.map((vendor) => (
+                      <div key={vendor} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`vendor-${vendor}`}
+                          checked={financeFilters.vendors.includes(vendor)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setFinanceFilters(prev => ({
+                                ...prev,
+                                vendors: [...prev.vendors, vendor]
+                              }));
+                            } else {
+                              setFinanceFilters(prev => ({
+                                ...prev,
+                                vendors: prev.vendors.filter(v => v !== vendor)
+                              }));
+                            }
+                          }}
+                        />
+                        <Label htmlFor={`vendor-${vendor}`} className="text-sm">
+                          {vendor}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
 
-            {/* 거래자 필터 */}
-            <div className="space-y-2">
-              <Label>거래자</Label>
-              <Select
-                value={financeFilters.paidBy}
-                onValueChange={(value) =>
-                  setFinanceFilters((prev) => ({ ...prev, paidBy: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">전체</SelectItem>
-                  {Array.from(
-                    new Set(
-                      finances
-                        .filter((f) => f.paidBy && f.paidBy.trim())
-                        .map((f) => f.paidBy!)
-                    )
-                  ).map((paidBy) => (
-                    <SelectItem key={paidBy} value={paidBy}>
-                      {paidBy}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              {/* 거래자 필터 */}
+              <AccordionItem value="paidBys" className="border rounded-lg px-3">
+                <AccordionTrigger className="py-3 hover:no-underline">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="filter-paidBys"
+                      checked={financeFilters.paidBys.length > 0}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          const allPaidBys = Array.from(
+                            new Set(
+                              finances
+                                .filter((f) => f.paidBy && f.paidBy.trim())
+                                .map((f) => f.paidBy!)
+                            )
+                          );
+                          setFinanceFilters(prev => ({ ...prev, paidBys: allPaidBys }));
+                        } else {
+                          setFinanceFilters(prev => ({ ...prev, paidBys: [] }));
+                        }
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <Label htmlFor="filter-paidBys" className="text-sm font-medium cursor-pointer">
+                      거래자
+                    </Label>
+                    {financeFilters.paidBys.length > 0 && (
+                      <span className="text-xs text-gray-500">({financeFilters.paidBys.length}개 선택)</span>
+                    )}
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="pb-3">
+                  <div className="max-h-32 overflow-y-auto space-y-2 pl-6">
+                    {Array.from(
+                      new Set(
+                        finances
+                          .filter((f) => f.paidBy && f.paidBy.trim())
+                          .map((f) => f.paidBy!)
+                      )
+                    ).map((paidBy) => (
+                      <div key={paidBy} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`paidBy-${paidBy}`}
+                          checked={financeFilters.paidBys.includes(paidBy)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setFinanceFilters(prev => ({
+                                ...prev,
+                                paidBys: [...prev.paidBys, paidBy]
+                              }));
+                            } else {
+                              setFinanceFilters(prev => ({
+                                ...prev,
+                                paidBys: prev.paidBys.filter(p => p !== paidBy)
+                              }));
+                            }
+                          }}
+                        />
+                        <Label htmlFor={`paidBy-${paidBy}`} className="text-sm">
+                          {paidBy}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </div>
 
           <div className="flex justify-between">
@@ -2061,10 +2285,10 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
                   selectedDateRange: undefined,
                   startDate: "",
                   endDate: "",
-                  type: "all",
-                  category: "all",
-                  vendor: "all",
-                  paidBy: "all",
+                  types: [],
+                  categories: [],
+                  vendors: [],
+                  paidBys: [],
                 });
                 setCurrentPage(1);
               }}

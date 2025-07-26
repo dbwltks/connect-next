@@ -56,7 +56,7 @@ export function formatFullDateTimeToKorean(date: Date, locale?: any): string {
   const { format } = require('date-fns');
   const { ko } = require('date-fns/locale');
   
-  const dateStr = format(date, "yyyy년 MM월 dd일 (EEE)", { locale: locale || ko });
+  const dateStr = format(date, "yyyy년 M월 d일 (EEE)", { locale: locale || ko });
   const timeStr = formatDateTimeToKorean(date);
   
   return `${dateStr} ${timeStr}`;
