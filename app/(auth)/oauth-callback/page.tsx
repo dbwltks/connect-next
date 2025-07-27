@@ -18,7 +18,7 @@ export default function CallbackPage() {
           // 부모 창에 오류 메시지 전송
           if (window.opener) {
             window.opener.postMessage(
-              { type: 'OAUTH_ERROR', error, errorDescription },
+              { type: "OAUTH_ERROR", error, errorDescription },
               window.location.origin
             );
             // 팝업 창 닫기
@@ -29,13 +29,14 @@ export default function CallbackPage() {
 
         if (code) {
           // 코드를 세션으로 교환
-          const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-          
+          const { data, error: exchangeError } =
+            await supabase.auth.exchangeCodeForSession(code);
+
           if (exchangeError) {
             console.error("Code exchange error:", exchangeError);
             if (window.opener) {
               window.opener.postMessage(
-                { type: 'OAUTH_ERROR', error: exchangeError.message },
+                { type: "OAUTH_ERROR", error: exchangeError.message },
                 window.location.origin
               );
               // 팝업 창 닫기
@@ -49,20 +50,22 @@ export default function CallbackPage() {
             try {
               const user = data.user;
               const userMetadata = user.user_metadata;
-              
+
               // 사용자 정보가 이미 존재하는지 확인
               const { data: existingUser } = await supabase
                 .from("users")
-                .select("id, username, avatar_url")
+                .select("id, username")
                 .eq("id", user.id)
                 .single();
 
               if (!existingUser) {
                 // 새 사용자인 경우 users 테이블에 정보 저장
-                let baseUsername = userMetadata?.full_name 
-                  ? userMetadata.full_name.replace(/[^a-zA-Z0-9가-힣]/g, '').toLowerCase()
-                  : user.email?.split('@')[0] || `user${user.id.slice(0, 8)}`;
-                
+                let baseUsername = userMetadata?.full_name
+                  ? userMetadata.full_name
+                      .replace(/[^a-zA-Z0-9가-힣]/g, "")
+                      .toLowerCase()
+                  : user.email?.split("@")[0] || `user${user.id.slice(0, 8)}`;
+
                 // username이 너무 짧으면 user_id를 추가
                 if (baseUsername.length < 3) {
                   baseUsername = `user${user.id.slice(0, 8)}`;
@@ -71,19 +74,19 @@ export default function CallbackPage() {
                 // 중복된 username이 있는지 확인하고 고유한 username 생성
                 let username = baseUsername;
                 let counter = 1;
-                
+
                 while (true) {
                   const { data: existingUsername } = await supabase
                     .from("users")
                     .select("username")
                     .eq("username", username)
                     .single();
-                    
+
                   if (!existingUsername) break;
-                  
+
                   username = `${baseUsername}${counter}`;
                   counter++;
-                  
+
                   // 무한 루프 방지
                   if (counter > 100) {
                     username = `user${user.id.slice(0, 8)}${Date.now()}`;
@@ -102,18 +105,13 @@ export default function CallbackPage() {
                 });
               } else {
                 // 기존 사용자인 경우 마지막 로그인 시간 업데이트
-                // 아바타가 이미 있으면 업데이트하지 않음, 없으면 새로 설정
-                const updateData: any = {
-                  last_login: new Date().toISOString(),
-                };
-                
-                if (!existingUser.avatar_url && userMetadata?.avatar_url) {
-                  updateData.avatar_url = userMetadata.avatar_url;
-                }
-                
                 await supabase
                   .from("users")
-                  .update(updateData)
+                  .update({
+                    last_login: new Date().toISOString(),
+                    avatar_url:
+                      userMetadata?.avatar_url || existingUser.avatar_url,
+                  })
                   .eq("id", user.id);
               }
             } catch (dbError) {
@@ -125,7 +123,7 @@ export default function CallbackPage() {
             if (window.opener) {
               // 데스크톱 팝업 환경 - 부모 창에 성공 메시지 전송
               window.opener.postMessage(
-                { type: 'OAUTH_SUCCESS', session: data.session },
+                { type: "OAUTH_SUCCESS", session: data.session },
                 window.location.origin
               );
               // 팝업 창 닫기 - 여러 방법 시도
@@ -133,7 +131,8 @@ export default function CallbackPage() {
                 window.close();
                 if (!window.closed) {
                   // window.close()가 실패하면 빈 페이지로 이동
-                  document.body.innerHTML = '<div style="text-align:center;padding:50px;">로그인 완료! 이 창을 닫아주세요.</div>';
+                  document.body.innerHTML =
+                    '<div style="text-align:center;padding:50px;">로그인 완료! 이 창을 닫아주세요.</div>';
                 }
               }, 100);
             } else {
@@ -141,7 +140,7 @@ export default function CallbackPage() {
               const redirectTo = searchParams.get("redirect_to");
               const targetUrl = redirectTo || "/";
               // 성공 플래그와 함께 리다이렉트
-              window.location.href = `${targetUrl}${targetUrl.includes('?') ? '&' : '?'}oauth_success=true`;
+              window.location.href = `${targetUrl}${targetUrl.includes("?") ? "&" : "?"}oauth_success=true`;
             }
           }
         }
@@ -149,7 +148,7 @@ export default function CallbackPage() {
         console.error("Callback handling error:", error);
         if (window.opener) {
           window.opener.postMessage(
-            { type: 'OAUTH_ERROR', error: 'Unexpected error occurred' },
+            { type: "OAUTH_ERROR", error: "Unexpected error occurred" },
             window.location.origin
           );
           // 팝업 창 닫기

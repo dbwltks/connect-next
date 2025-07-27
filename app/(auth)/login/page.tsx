@@ -120,8 +120,12 @@ export default function LoginPage() {
         provider: "google",
         options: {
           redirectTo: redirectTo 
-            ? `${window.location.origin}/callback?redirect_to=${redirectTo}`
-            : `${window.location.origin}/callback`
+            ? `${window.location.origin}/auth/callback?redirect_to=${redirectTo}`
+            : `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
         }
       });
       
@@ -137,6 +141,7 @@ export default function LoginPage() {
 
       // 구글 로그인 시작 (리다이렉트 방식)
       if (data?.url) {
+        console.log("Google OAuth URL:", data.url);
         window.location.href = data.url;
       }
     } catch (error: any) {

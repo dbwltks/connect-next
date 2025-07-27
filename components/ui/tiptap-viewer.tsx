@@ -22,7 +22,8 @@ import BulletList from "@tiptap/extension-bullet-list";
 import OrderedList from "@tiptap/extension-ordered-list";
 import ListItem from "@tiptap/extension-list-item";
 import { Node } from "@tiptap/core";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import ImageViewer from "./image-viewer";
 
 // 유튜브 비디오 노드 확장
 const Youtube = Node.create({
@@ -128,6 +129,15 @@ export default function TipTapViewer({
   fontBoldLevel = 1,
   fontFamily = "nanumMyeongjo",
 }: TipTapViewerProps) {
+  const [imageViewer, setImageViewer] = useState<{
+    isOpen: boolean;
+    src: string;
+    alt: string;
+  }>({
+    isOpen: false,
+    src: "",
+    alt: "",
+  });
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -154,7 +164,7 @@ export default function TipTapViewer({
       }),
       Image.configure({
         HTMLAttributes: {
-          class: "max-w-full h-auto rounded-lg",
+          class: "max-w-full h-auto rounded-lg cursor-pointer",
         },
       }),
       TextAlign.configure({
@@ -209,6 +219,29 @@ export default function TipTapViewer({
     }
   }, [editor, content]);
 
+  // 이미지 클릭 이벤트 리스너 추가
+  useEffect(() => {
+    if (!editor) return;
+
+    const handleImageClick = (event: Event) => {
+      const target = event.target as HTMLImageElement;
+      if (target.tagName === 'IMG') {
+        setImageViewer({
+          isOpen: true,
+          src: target.src,
+          alt: target.alt || '',
+        });
+      }
+    };
+
+    const editorElement = editor.view.dom;
+    editorElement.addEventListener('click', handleImageClick);
+
+    return () => {
+      editorElement.removeEventListener('click', handleImageClick);
+    };
+  }, [editor]);
+
   if (!editor) {
     return <div>로딩 중...</div>;
   }
@@ -254,6 +287,14 @@ export default function TipTapViewer({
   return (
     <div className={`tiptap-viewer ${className}`}>
       <EditorContent editor={editor} />
+      
+      {/* 이미지 뷰어 모달 */}
+      <ImageViewer
+        src={imageViewer.src}
+        alt={imageViewer.alt}
+        isOpen={imageViewer.isOpen}
+        onClose={() => setImageViewer(prev => ({ ...prev, isOpen: false }))}
+      />
 
       <style jsx global>{`
         .tiptap-viewer .ProseMirror {
@@ -376,6 +417,7 @@ export default function TipTapViewer({
           height: auto;
           margin: 1rem 0;
           border-radius: 0.5rem;
+          cursor: pointer;
         }
 
         .tiptap-viewer .ProseMirror table {
