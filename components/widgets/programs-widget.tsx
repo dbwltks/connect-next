@@ -81,6 +81,7 @@ import {
   Settings,
   CheckCircle,
   Filter,
+  BarChart3,
 } from "lucide-react";
 import { SiGooglecalendar } from "react-icons/si";
 import {
@@ -101,6 +102,8 @@ import { formatHourToKorean, formatDateTimeToKorean, formatFullDateTimeToKorean 
 import ChecklistTab from "@/app/(auth-pages)/admin/programs/[id]/components/checklist-tab";
 import FinanceTab from "@/app/(auth-pages)/admin/programs/[id]/components/finance-tab";
 import AttendanceTab from "@/app/(auth-pages)/admin/programs/[id]/components/attendance-tab";
+import ParticipantsTab from "@/app/(auth-pages)/admin/programs/[id]/components/participants-tab";
+import DashboardTab from "@/app/(auth-pages)/admin/programs/[id]/components/dashboard-tab";
 import {
   eventsApi,
   type Event,
@@ -205,7 +208,7 @@ export default function ProgramsWidget({
   useEffect(() => {
     setAllPrograms(programs);
   }, [programs]);
-  const [activeTab, setActiveTab] = useState<string>("calendar");
+  const [activeTab, setActiveTab] = useState<string>("dashboard");
   const [loading, setLoading] = useState(true);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [isEventDetailModalOpen, setIsEventDetailModalOpen] = useState(false);
@@ -1018,12 +1021,12 @@ export default function ProgramsWidget({
   // 권한에 따른 탭 표시 결정
   const getVisibleTabs = () => {
     const availableTabs = [
+      { key: "dashboard", label: "대시보드" },
       { key: "calendar", label: "일정" },
       { key: "participants", label: "참가자" },
       { key: "attendance", label: "출석" },
       { key: "finance", label: "재정" },
       { key: "checklist", label: "확인사항" },
-      { key: "overview", label: "개요" },
     ];
 
     // 권한은 컴포넌트 레벨에서 이미 정의됨
@@ -2064,14 +2067,15 @@ export default function ProgramsWidget({
                 key={tab.key}
                 value={tab.key}
                 className="flex items-center gap-2"
+                title={tab.label} // 호버 시 툴팁으로 표시
               >
                 {tab.key === "calendar" && <Calendar size={16} />}
                 {tab.key === "participants" && <Users size={16} />}
                 {tab.key === "attendance" && <UserCheck size={16} />}
                 {tab.key === "finance" && <DollarSign size={16} />}
                 {tab.key === "checklist" && <CheckCircle size={16} />}
-                {tab.key === "overview" && <Eye size={16} />}
-                {tab.label}
+                {tab.key === "dashboard" && <BarChart3 size={16} />}
+                <span className="hidden sm:inline">{tab.label}</span>
               </TabsTrigger>
             ))}
           </TabsList>
@@ -3497,64 +3501,38 @@ export default function ProgramsWidget({
           {tabConfig.availableTabs.some(
             (tab) => tab.key === "participants"
           ) && (
-            <TabsContent value="participants" className="p-4">
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-semibold">최근 등록 참가자</h3>
-                  <Badge variant="outline">
-                    총 {filteredParticipants.length}명
-                  </Badge>
-                </div>
+            <TabsContent value="participants" className="p-0">
+              <ParticipantsTab 
+                programId={selectedProgram || ""} 
+                hasEditPermission={(() => {
+                  const participantsManagePermissions =
+                    managePermissions.participants || [];
 
-                <div className="space-y-2">
-                  {filteredParticipants
-                    .sort(
-                      (a, b) =>
-                        new Date(b.registered_at).getTime() -
-                        new Date(a.registered_at).getTime()
-                    )
-                    .slice(0, 10)
-                    .map((participant) => {
-                      return (
-                        <div
-                          key={participant.id}
-                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                        >
-                          <div>
-                            <h4 className="font-medium">{participant.name}</h4>
-                            <div className="text-sm text-gray-600 flex items-center gap-2">
-                              <span>{participant.email}</span>
-                              {selectedProgramData && (
-                                <Badge variant="outline" className="text-xs">
-                                  {selectedProgramData.name}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <Badge
-                              variant={
-                                participant.status === "승인"
-                                  ? "default"
-                                  : participant.status === "신청"
-                                    ? "secondary"
-                                    : "destructive"
-                              }
-                            >
-                              {participant.status}
-                            </Badge>
-                            <div className="text-xs text-gray-500 mt-1">
-                              {format(
-                                parseISO(participant.registered_at),
-                                "MM/dd"
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
-              </div>
+                  console.log("🔍 참가자 편집권한 디버그:", {
+                    managePermissions,
+                    participantsManagePermissions,
+                    userRole,
+                    userRoles,
+                    userPermissions,
+                    hasManagePermissionsSet:
+                      Object.keys(managePermissions).length > 0,
+                  });
+
+                  // 관리 권한이 있는 위젯의 경우
+                  if (Object.keys(managePermissions).length > 0) {
+                    // 참가자 관리 권한이 설정되지 않았으면 접근 불가
+                    if (participantsManagePermissions.length === 0) {
+                      console.log("❌ 참가자 편집권한이 설정되지 않음");
+                      return false;
+                    }
+
+                    return hasRolePermission(participantsManagePermissions);
+                  }
+
+                  // 위젯에 관리 권한 설정이 전혀 없으면 기본 관리자 권한으로 체크
+                  return hasAdminPermission();
+                })()}
+              />
             </TabsContent>
           )}
 
@@ -3650,115 +3628,13 @@ export default function ProgramsWidget({
             </TabsContent>
           )}
 
-          {/* 개요 탭 */}
-          {tabConfig.availableTabs.some((tab) => tab.key === "overview") && (
-            <TabsContent value="overview" className="p-4">
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">
-                    프로그램별 현황
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {programs.map((program) => {
-                      const programParticipants = participants.filter(
-                        (p) => p.program_id === program.id
-                      );
-                      const programEvents = events.filter(
-                        (e) => e.program_id === program.id
-                      );
-
-                      return (
-                        <Card key={program.id}>
-                          <CardContent className="p-4">
-                            <div className="flex justify-between items-start mb-3">
-                              <h4 className="font-semibold">{program.name}</h4>
-                              <Badge
-                                variant={
-                                  program.status === "진행중"
-                                    ? "default"
-                                    : program.status === "계획중"
-                                      ? "secondary"
-                                      : "outline"
-                                }
-                              >
-                                {program.status}
-                              </Badge>
-                            </div>
-                            <div className="space-y-2 text-sm">
-                              <div className="flex justify-between">
-                                <span className="text-gray-600">참가자</span>
-                                <span className="font-medium">
-                                  {programParticipants.length}명
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-gray-600">일정</span>
-                                <span className="font-medium">
-                                  {programEvents.length}개
-                                </span>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">다가오는 일정</h3>
-                  <div className="space-y-2">
-                    {filteredEvents
-                      .filter(
-                        (event) => new Date(event.start_date) >= new Date()
-                      )
-                      .sort(
-                        (a, b) =>
-                          new Date(a.start_date).getTime() -
-                          new Date(b.start_date).getTime()
-                      )
-                      .slice(0, 5)
-                      .map((event) => {
-                        const program = programs.find(
-                          (p) => p.id === event.program_id
-                        );
-                        const eventDate = parseISO(event.start_date);
-                        const daysUntil = Math.ceil(
-                          (eventDate.getTime() - new Date().getTime()) /
-                            (1000 * 60 * 60 * 24)
-                        );
-
-                        return (
-                          <div
-                            key={event.id}
-                            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                          >
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <h4 className="font-medium">{event.title}</h4>
-                              </div>
-                              <div className="text-sm text-gray-600">
-                                {format(
-                                  eventDate,
-                                  "yyyy년 M월 d일 (EEE)",
-                                  {
-                                    locale: ko,
-                                  }
-                                )} {formatDateTimeToKorean(eventDate)}
-                                {event.location && ` • ${event.location}`}
-                              </div>
-                            </div>
-                            <div className="text-sm font-medium text-blue-600">
-                              D-{daysUntil}
-                            </div>
-                          </div>
-                        );
-                      })}
-                  </div>
-                </div>
-              </div>
+          {/* 대시보드 탭 */}
+          {tabConfig.availableTabs.some((tab) => tab.key === "dashboard") && (
+            <TabsContent value="dashboard" className="p-4">
+              <DashboardTab programId={selectedProgram || ""} />
             </TabsContent>
           )}
+
         </Tabs>
       </Card>
 

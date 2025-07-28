@@ -8,6 +8,7 @@ function generateId(): string {
 export interface Participant {
   id: string;
   name: string;
+  english_name?: string;
   email?: string;
   phone?: string;
   birth_date?: string;
@@ -221,13 +222,13 @@ export const financeApi = {
   async getAll(programId: string): Promise<FinanceRecord[]> {
     const supabase = createClient();
     const { data, error } = await supabase
-      .from('finance_records')
-      .select('*')
-      .eq('program_id', programId)
-      .order('date', { ascending: false });
+      .from('programs')
+      .select('finances')
+      .eq('id', programId)
+      .single();
 
     if (error) throw error;
-    return data || [];
+    return Array.isArray(data?.finances) ? data.finances : [];
   },
 
   async create(record: Omit<FinanceRecord, 'id'>): Promise<void> {
@@ -359,13 +360,13 @@ export const attendanceApi = {
   async getAll(programId: string): Promise<AttendanceRecord[]> {
     const supabase = createClient();
     const { data, error } = await supabase
-      .from('attendance_records')
-      .select('*')
-      .eq('program_id', programId)
-      .order('date', { ascending: false });
+      .from('programs')
+      .select('attendance_records')
+      .eq('id', programId)
+      .single();
 
     if (error) throw error;
-    return data || [];
+    return Array.isArray(data?.attendance_records) ? data.attendance_records : [];
   },
 
   async create(record: Omit<AttendanceRecord, 'id'>): Promise<void> {
@@ -403,13 +404,13 @@ export const checklistApi = {
   async getAll(programId: string): Promise<ChecklistItem[]> {
     const supabase = createClient();
     const { data, error } = await supabase
-      .from('checklist_items')
-      .select('*')
-      .eq('program_id', programId)
-      .order('due_date', { ascending: true });
+      .from('programs')
+      .select('checklist_setting')
+      .eq('id', programId)
+      .single();
 
     if (error) throw error;
-    return data || [];
+    return Array.isArray(data?.checklist_setting) ? data.checklist_setting : [];
   },
 
   async create(item: Omit<ChecklistItem, 'id'>): Promise<void> {

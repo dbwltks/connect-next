@@ -30,7 +30,7 @@ interface Program {
 }
 
 // 컴포넌트 임포트
-import OverviewTab from "./components/overview-tab";
+import DashboardTab from "./components/dashboard-tab";
 import ParticipantsTab from "./components/participants-tab";
 import FinanceTab from "./components/finance-tab";
 import CalendarTab from "./components/calendar-tab";
@@ -45,7 +45,7 @@ export default function ProgramDetailPage() {
   const programId = params.id as string;
 
   const [program, setProgram] = useState<Program | null>(null);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("dashboard");
 
   // 프로그램 데이터 로드
   useEffect(() => {
@@ -109,7 +109,7 @@ export default function ProgramDetailPage() {
   }
 
   const availableTabs = [
-    { id: "overview", label: "개요", icon: BarChart3 },
+    { id: "dashboard", label: "대시보드", icon: BarChart3 },
     ...(program.features.includes("participants") ? [{ id: "participants", label: "참여자", icon: Users }] : []),
     ...(program.features.includes("finance") ? [{ id: "finance", label: "재정", icon: DollarSign }] : []),
     ...(program.features.includes("calendar") ? [{ id: "calendar", label: "일정", icon: CalendarIcon }] : []),
@@ -155,8 +155,8 @@ export default function ProgramDetailPage() {
         </TabsList>
 
         {/* 탭 컨텐츠 */}
-        <TabsContent value="overview">
-          <OverviewTab program={program} />
+        <TabsContent value="dashboard">
+          <DashboardTab programId={programId} />
         </TabsContent>
 
         {program.features.includes("participants") && (

@@ -5324,7 +5324,7 @@ export default function LayoutManager(): JSX.Element {
                   <div className="space-y-3">
                     <Label className="text-sm font-medium">기본 탭</Label>
                     <Select
-                      value={editingWidget.settings?.default_tab || "overview"}
+                      value={editingWidget.settings?.default_tab || "dashboard"}
                       onValueChange={(value) =>
                         setEditingWidget({
                           ...editingWidget,
@@ -5339,7 +5339,7 @@ export default function LayoutManager(): JSX.Element {
                         <SelectValue placeholder="기본 탭 선택" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="overview">개요</SelectItem>
+                        <SelectItem value="dashboard">대시보드</SelectItem>
                         <SelectItem value="calendar">일정</SelectItem>
                         <SelectItem value="participants">참가자</SelectItem>
                         <SelectItem value="finance">재정</SelectItem>
@@ -5362,7 +5362,7 @@ export default function LayoutManager(): JSX.Element {
                         { key: "calendar", label: "일정" },
                         { key: "participants", label: "참가자" },
                         { key: "finance", label: "재정" },
-                        { key: "overview", label: "개요" },
+                        { key: "dashboard", label: "대시보드" },
                       ].map((tab) => (
                         <div
                           key={tab.key}
@@ -5415,7 +5415,7 @@ export default function LayoutManager(): JSX.Element {
                         { key: "calendar", label: "일정" },
                         { key: "participants", label: "참가자" },
                         { key: "finance", label: "재정" },
-                        { key: "overview", label: "개요" },
+                        { key: "dashboard", label: "대시보드" },
                       ].map((tab) => (
                         <div
                           key={tab.key}
@@ -5618,10 +5618,10 @@ export default function LayoutManager(): JSX.Element {
                           desc: "확인사항 관리 및 조회 권한",
                         },
                         {
-                          key: "overview",
-                          name: "개요",
+                          key: "dashboard",
+                          name: "대시보드",
                           icon: "📊",
-                          desc: "프로그램 개요 및 통계 조회 권한",
+                          desc: "프로그램 대시보드 및 통계 조회 권한",
                         },
                       ].map((tab) => (
                         <Card key={tab.key} className="p-4">
@@ -5982,193 +5982,6 @@ export default function LayoutManager(): JSX.Element {
                     </Card>
 
                     {/* 빠른 설정 */}
-                    <Card className="p-4 bg-gray-50">
-                      <Label className="text-sm font-medium mb-3 block">
-                        ⚡ 빠른 설정
-                      </Label>
-                      <div className="grid grid-cols-3 gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const defaultPermissions = {
-                              view_permissions: {
-                                calendar: [
-                                  "admin",
-                                  "tier0",
-                                  "tier1",
-                                  "tier2",
-                                  "tier3",
-                                  "guest",
-                                ],
-                                participants: [
-                                  "admin",
-                                  "tier0",
-                                  "tier1",
-                                  "tier2",
-                                  "tier3",
-                                ],
-                                attendance: [
-                                  "admin",
-                                  "tier0",
-                                  "tier1",
-                                  "tier2",
-                                  "tier3",
-                                ],
-                                finance: ["admin", "tier0", "tier1"],
-                                checklist: ["admin", "tier0", "tier1", "tier2"],
-                                overview: [
-                                  "admin",
-                                  "tier0",
-                                  "tier1",
-                                  "tier2",
-                                  "tier3",
-                                  "guest",
-                                ],
-                              },
-                              edit_permissions: {
-                                calendar: ["admin", "tier0"],
-                                participants: ["admin", "tier0"],
-                                attendance: ["admin", "tier0", "tier1"],
-                                finance: ["admin", "tier0"],
-                                checklist: ["admin", "tier0", "tier1"],
-                                overview: ["admin", "tier0"],
-                              },
-                            };
-                            setEditingWidget({
-                              ...editingWidget,
-                              settings: {
-                                ...editingWidget.settings,
-                                ...defaultPermissions,
-                              },
-                            });
-                          }}
-                        >
-                          기본 설정
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const openPermissions = {
-                              view_permissions: {
-                                calendar: [
-                                  "admin",
-                                  "tier0",
-                                  "tier1",
-                                  "tier2",
-                                  "tier3",
-                                  "guest",
-                                ],
-                                participants: [
-                                  "admin",
-                                  "tier0",
-                                  "tier1",
-                                  "tier2",
-                                  "tier3",
-                                  "guest",
-                                ],
-                                attendance: [
-                                  "admin",
-                                  "tier0",
-                                  "tier1",
-                                  "tier2",
-                                  "tier3",
-                                  "guest",
-                                ],
-                                finance: [
-                                  "admin",
-                                  "tier0",
-                                  "tier1",
-                                  "tier2",
-                                  "tier3",
-                                  "guest",
-                                ],
-                                checklist: [
-                                  "admin",
-                                  "tier0",
-                                  "tier1",
-                                  "tier2",
-                                  "tier3",
-                                  "guest",
-                                ],
-                                overview: [
-                                  "admin",
-                                  "tier0",
-                                  "tier1",
-                                  "tier2",
-                                  "tier3",
-                                  "guest",
-                                ],
-                              },
-                              edit_permissions: {
-                                calendar: [
-                                  "admin",
-                                  "tier0",
-                                  "tier1",
-                                  "tier2",
-                                  "tier3",
-                                ],
-                                participants: [
-                                  "admin",
-                                  "tier0",
-                                  "tier1",
-                                  "tier2",
-                                  "tier3",
-                                ],
-                                attendance: [
-                                  "admin",
-                                  "tier0",
-                                  "tier1",
-                                  "tier2",
-                                  "tier3",
-                                ],
-                                finance: ["admin", "tier0", "tier1", "tier2"],
-                                checklist: [
-                                  "admin",
-                                  "tier0",
-                                  "tier1",
-                                  "tier2",
-                                  "tier3",
-                                ],
-                                overview: [
-                                  "admin",
-                                  "tier0",
-                                  "tier1",
-                                  "tier2",
-                                  "tier3",
-                                ],
-                              },
-                            };
-                            setEditingWidget({
-                              ...editingWidget,
-                              settings: {
-                                ...editingWidget.settings,
-                                ...openPermissions,
-                              },
-                            });
-                          }}
-                        >
-                          전체 개방
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setEditingWidget({
-                              ...editingWidget,
-                              settings: {
-                                ...editingWidget.settings,
-                                view_permissions: {},
-                                edit_permissions: {},
-                              },
-                            });
-                          }}
-                        >
-                          초기화
-                        </Button>
-                      </div>
-                    </Card>
                   </div>
                 </TabsContent>
 
