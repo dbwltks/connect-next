@@ -3631,7 +3631,10 @@ export default function ProgramsWidget({
           {/* 대시보드 탭 */}
           {tabConfig.availableTabs.some((tab) => tab.key === "dashboard") && (
             <TabsContent value="dashboard" className="p-4">
-              <DashboardTab programId={selectedProgram || ""} />
+              <DashboardTab 
+                programId={selectedProgram || ""} 
+                onNavigateToTab={setActiveTab}
+              />
             </TabsContent>
           )}
 

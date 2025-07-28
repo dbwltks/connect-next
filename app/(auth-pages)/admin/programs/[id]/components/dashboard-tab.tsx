@@ -38,9 +38,10 @@ import {
 
 interface DashboardTabProps {
   programId: string;
+  onNavigateToTab: (tab: string) => void;
 }
 
-export default function DashboardTab({ programId }: DashboardTabProps) {
+export default function DashboardTab({ programId, onNavigateToTab }: DashboardTabProps) {
   const [loading, setLoading] = useState(true);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [finances, setFinances] = useState<FinanceRecord[]>([]);
@@ -171,14 +172,16 @@ export default function DashboardTab({ programId }: DashboardTabProps) {
     .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
     .slice(0, 3);
 
-  const todayEvents = events.filter((e) => {
-    const eventDate = new Date(e.start_date);
-    return (
-      eventDate.getDate() === now.getDate() &&
-      eventDate.getMonth() === now.getMonth() &&
-      eventDate.getFullYear() === now.getFullYear()
-    );
-  });
+  const todayEvents = events
+    .filter((e) => {
+      const eventDate = new Date(e.start_date);
+      return (
+        eventDate.getDate() === now.getDate() &&
+        eventDate.getMonth() === now.getMonth() &&
+        eventDate.getFullYear() === now.getFullYear()
+      );
+    })
+    .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
 
   // 체크리스트 통계
   const checklistStats = {
@@ -194,7 +197,7 @@ export default function DashboardTab({ programId }: DashboardTabProps) {
     ).length,
   };
 
-  const completionRate = checklists.length > 0 
+  const completionRate = checklistStats.total > 0 
     ? Math.round((checklistStats.completed / checklistStats.total) * 100) 
     : 0;
 
@@ -226,7 +229,7 @@ export default function DashboardTab({ programId }: DashboardTabProps) {
       {/* 오늘 일정과 다가오는 일정을 나란히 배치 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 오늘 일정 */}
-        <Card>
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => onNavigateToTab('calendar')}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5" />
@@ -245,7 +248,12 @@ export default function DashboardTab({ programId }: DashboardTabProps) {
                     <div className="flex-1">
                       <h4 className="font-medium text-sm">{event.title}</h4>
                       <p className="text-xs text-muted-foreground">
-                        {event.start_date && !isNaN(new Date(event.start_date).getTime()) ? format(new Date(event.start_date), 'HH:mm', { locale: ko }) : '--:--'}
+                        {event.start_date && !isNaN(new Date(event.start_date).getTime()) ? 
+                          new Date(event.start_date).toLocaleString('ko-KR', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          }) : '--:--'
+                        }
                         {event.location && ` • ${event.location}`}
                       </p>
                     </div>
@@ -262,7 +270,7 @@ export default function DashboardTab({ programId }: DashboardTabProps) {
         </Card>
 
         {/* 다가오는 일정 */}
-        <Card>
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => onNavigateToTab('calendar')}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Target className="h-5 w-5" />
@@ -286,7 +294,14 @@ export default function DashboardTab({ programId }: DashboardTabProps) {
                       <div className="flex-1">
                         <h4 className="font-medium text-sm">{event.title}</h4>
                         <p className="text-xs text-muted-foreground">
-                          {event.start_date && !isNaN(new Date(event.start_date).getTime()) ? format(new Date(event.start_date), 'MM/dd HH:mm', { locale: ko }) : '--/-- --:--'}
+                          {event.start_date && !isNaN(new Date(event.start_date).getTime()) ? 
+                            new Date(event.start_date).toLocaleString('ko-KR', {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            }) : '--/-- --:--'
+                          }
                           {event.location && ` • ${event.location}`}
                         </p>
                       </div>
@@ -306,7 +321,7 @@ export default function DashboardTab({ programId }: DashboardTabProps) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 참가자 현황 */}
-        <Card>
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => onNavigateToTab('participants')}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
@@ -352,7 +367,7 @@ export default function DashboardTab({ programId }: DashboardTabProps) {
         </Card>
 
         {/* 재정 현황 */}
-        <Card>
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => onNavigateToTab('finance')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">재정 현황</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />

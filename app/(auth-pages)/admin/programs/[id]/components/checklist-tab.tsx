@@ -23,6 +23,7 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
+  PaginationEllipsis,
 } from "@/components/ui/pagination";
 import { CheckCircle, Plus, Edit, Trash2, XCircle, Filter, Triangle, ChevronUp, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
@@ -568,33 +569,44 @@ export default function ChecklistTab({ programId, hasEditPermission = false }: C
                       />
                     </PaginationItem>
 
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      let pageNum;
-                      if (totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (currentPage <= 3) {
-                        pageNum = i + 1;
-                      } else if (currentPage >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i;
+                    {(() => {
+                      let startPage, endPage;
+                      
+                      if (totalPages <= 3) {
+                        startPage = 1;
+                        endPage = totalPages;
+                      } else if (currentPage <= 2) {
+                        startPage = 1;
+                        endPage = 3;
+                      } else if (currentPage >= totalPages - 1) {
+                        startPage = totalPages - 2;
+                        endPage = totalPages;
                       } else {
-                        pageNum = currentPage - 2 + i;
+                        startPage = currentPage - 1;
+                        endPage = currentPage + 1;
                       }
-
-                      return (
-                        <PaginationItem key={pageNum}>
+                      
+                      return Array.from({ length: endPage - startPage + 1 }, (_, i) => (
+                        <PaginationItem key={startPage + i}>
                           <PaginationLink
                             href="#"
                             onClick={(e) => {
                               e.preventDefault();
-                              setCurrentPage(pageNum);
+                              setCurrentPage(startPage + i);
                             }}
-                            isActive={currentPage === pageNum}
+                            isActive={currentPage === startPage + i}
                           >
-                            {pageNum}
+                            {startPage + i}
                           </PaginationLink>
                         </PaginationItem>
-                      );
-                    })}
+                      ));
+                    })()}
+                    
+                    {totalPages > 3 && currentPage < totalPages - 1 && (
+                      <PaginationItem>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    )}
 
                     <PaginationItem>
                       <PaginationNext

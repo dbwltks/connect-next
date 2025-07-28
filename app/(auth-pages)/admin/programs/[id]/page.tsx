@@ -156,7 +156,7 @@ export default function ProgramDetailPage() {
 
         {/* 탭 컨텐츠 */}
         <TabsContent value="dashboard">
-          <DashboardTab programId={programId} />
+          <DashboardTab programId={programId} onNavigateToTab={setActiveTab} />
         </TabsContent>
 
         {program.features.includes("participants") && (
