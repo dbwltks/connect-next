@@ -2205,7 +2205,9 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                     <button
                       onClick={() => {
                         setShowMobileMenu(false);
-                        router.push(`${pathname}/edit`);
+                        router.push(
+                          `${pathname.replace(/\/$/, "")}/${post.id}/edit`
+                        );
                       }}
                       className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-t-lg"
                     >
