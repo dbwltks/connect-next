@@ -49,6 +49,10 @@ import {
   Columns,
   ChevronDown,
   ChevronRight,
+  RefreshCw,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -251,6 +255,31 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
   });
   const [isColumnDropdownOpen, setIsColumnDropdownOpen] = useState(false);
 
+  // 정렬 상태
+  const [sortField, setSortField] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  // 정렬 함수
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // 정렬 아이콘 렌더링 함수
+  const getSortIcon = (field: string) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="h-3 w-3 text-gray-400" />;
+    }
+    return sortDirection === 'asc' ? (
+      <ArrowUp className="h-3 w-3 text-blue-600" />
+    ) : (
+      <ArrowDown className="h-3 w-3 text-blue-600" />
+    );
+  };
 
   // 화면 크기 변화 감지하여 모바일에서 자동으로 컬럼 숨기기
   useEffect(() => {
@@ -275,6 +304,38 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
     // 클린업
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // 데이터 새로고침 함수
+  const refreshData = async () => {
+    if (!programId) return;
+    
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("programs")
+        .select("*")
+        .eq("id", programId)
+        .single();
+
+      if (error) {
+        console.error("프로그램 데이터 로드 오류:", error);
+      } else {
+        // 재정 데이터 programs 테이블의 finances 필드에서 로드
+        setFinances(Array.isArray(data.finances) ? data.finances : []);
+        
+        // finance_settings에서 카테고리와 거래처 로드
+        const financeSettings = data.finance_settings || {};
+        if (Array.isArray(financeSettings.categories)) {
+          setFinanceCategories(financeSettings.categories);
+        }
+        if (Array.isArray(financeSettings.vendors)) {
+          setFinanceVendors(financeSettings.vendors);
+        }
+      }
+    } catch (error) {
+      console.error("데이터 새로고침 실패:", error);
+    }
+  };
 
   // 데이터 로드
   useEffect(() => {
@@ -418,10 +479,58 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
   const endIndex = startIndex + itemsPerPage;
   const paginatedFinances = filteredFinances
     .sort((a, b) => {
-      // datetime으로 정렬 (기존 데이터 호환성을 위해 date도 체크)
-      const aDateTime = new Date(a.datetime || a.date || 0);
-      const bDateTime = new Date(b.datetime || b.date || 0);
-      return bDateTime.getTime() - aDateTime.getTime();
+      // 사용자가 선택한 필드로 정렬
+      if (sortField) {
+        let aValue: any;
+        let bValue: any;
+        
+        switch (sortField) {
+          case 'date':
+            aValue = new Date(a.datetime || a.date || 0).getTime();
+            bValue = new Date(b.datetime || b.date || 0).getTime();
+            break;
+          case 'type':
+            aValue = a.type;
+            bValue = b.type;
+            break;
+          case 'category':
+            aValue = a.category || '';
+            bValue = b.category || '';
+            break;
+          case 'vendor':
+            aValue = a.vendor || '';
+            bValue = b.vendor || '';
+            break;
+          case 'itemName':
+            aValue = a.itemName || '';
+            bValue = b.itemName || '';
+            break;
+          case 'paidBy':
+            aValue = a.paidBy || '';
+            bValue = b.paidBy || '';
+            break;
+          case 'amount':
+            aValue = a.amount || 0;
+            bValue = b.amount || 0;
+            break;
+          default:
+            aValue = 0;
+            bValue = 0;
+        }
+        
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          const result = aValue.localeCompare(bValue);
+          return sortDirection === 'asc' ? result : -result;
+        } else {
+          const result = aValue - bValue;
+          return sortDirection === 'asc' ? result : -result;
+        }
+      } else {
+        // 기본 정렬: datetime으로 내림차순
+        const aDateTime = new Date(a.datetime || a.date || 0);
+        const bDateTime = new Date(b.datetime || b.date || 0);
+        return bDateTime.getTime() - aDateTime.getTime();
+      }
     })
     .slice(startIndex, endIndex);
 
@@ -528,6 +637,10 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
       setEditingFinance(null);
 
       setIsFinanceModalOpen(false);
+      
+      // 데이터 새로고침
+      await refreshData();
+      
       showAlert(
         isEdit ? "수정 완료" : "추가 완료",
         isEdit
@@ -997,6 +1110,16 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
               </div>
             )}
 
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={refreshData}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              새로고침
+            </Button>
+            
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="flex items-center gap-2">
@@ -1121,29 +1244,81 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
             <TableHeader>
               <TableRow>
                 {visibleColumns.date && (
-                  <TableHead className="w-[100px] text-xs sm:text-sm">날짜</TableHead>
+                  <TableHead 
+                    className="w-[100px] text-xs sm:text-sm cursor-pointer hover:bg-gray-50 select-none"
+                    onClick={() => handleSort('date')}
+                  >
+                    <div className="flex items-center gap-1">
+                      날짜
+                      {getSortIcon('date')}
+                    </div>
+                  </TableHead>
                 )}
                 {visibleColumns.type && (
-                  <TableHead className="hidden sm:table-cell w-[80px] text-xs sm:text-sm">구분</TableHead>
+                  <TableHead 
+                    className="hidden sm:table-cell w-[80px] text-xs sm:text-sm cursor-pointer hover:bg-gray-50 select-none"
+                    onClick={() => handleSort('type')}
+                  >
+                    <div className="flex items-center gap-1">
+                      구분
+                      {getSortIcon('type')}
+                    </div>
+                  </TableHead>
                 )}
                 {visibleColumns.category && (
-                  <TableHead className="hidden sm:table-cell w-[120px] text-xs sm:text-sm">
-                    카테고리
+                  <TableHead 
+                    className="hidden sm:table-cell w-[120px] text-xs sm:text-sm cursor-pointer hover:bg-gray-50 select-none"
+                    onClick={() => handleSort('category')}
+                  >
+                    <div className="flex items-center gap-1">
+                      카테고리
+                      {getSortIcon('category')}
+                    </div>
                   </TableHead>
                 )}
                 {visibleColumns.vendor && (
-                  <TableHead className="hidden sm:table-cell w-[120px] text-xs sm:text-sm">
-                    거래처
+                  <TableHead 
+                    className="hidden sm:table-cell w-[120px] text-xs sm:text-sm cursor-pointer hover:bg-gray-50 select-none"
+                    onClick={() => handleSort('vendor')}
+                  >
+                    <div className="flex items-center gap-1">
+                      거래처
+                      {getSortIcon('vendor')}
+                    </div>
                   </TableHead>
                 )}
                 {visibleColumns.itemName && (
-                  <TableHead className="w-[180px] text-xs sm:text-sm">품명</TableHead>
+                  <TableHead 
+                    className="w-[180px] text-xs sm:text-sm cursor-pointer hover:bg-gray-50 select-none"
+                    onClick={() => handleSort('itemName')}
+                  >
+                    <div className="flex items-center gap-1">
+                      품명
+                      {getSortIcon('itemName')}
+                    </div>
+                  </TableHead>
                 )}
                 {visibleColumns.paidBy && (
-                  <TableHead className="w-[100px] text-xs sm:text-sm">거래자</TableHead>
+                  <TableHead 
+                    className="w-[100px] text-xs sm:text-sm cursor-pointer hover:bg-gray-50 select-none"
+                    onClick={() => handleSort('paidBy')}
+                  >
+                    <div className="flex items-center gap-1">
+                      거래자
+                      {getSortIcon('paidBy')}
+                    </div>
+                  </TableHead>
                 )}
                 {visibleColumns.amount && (
-                  <TableHead className="text-right w-[120px] text-xs sm:text-sm">금액</TableHead>
+                  <TableHead 
+                    className="text-right w-[120px] text-xs sm:text-sm cursor-pointer hover:bg-gray-50 select-none"
+                    onClick={() => handleSort('amount')}
+                  >
+                    <div className="flex items-center justify-end gap-1">
+                      금액
+                      {getSortIcon('amount')}
+                    </div>
+                  </TableHead>
                 )}
               </TableRow>
             </TableHeader>
