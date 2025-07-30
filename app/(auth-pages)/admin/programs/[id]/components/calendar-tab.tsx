@@ -3373,14 +3373,17 @@ export default function CalendarTab({
                     })}
                   </Picker.Column>
                   <Picker.Column name="minute">
-                    {Array.from({ length: 60 }, (_, i) => (
-                      <Picker.Item
-                        key={i}
-                        value={i.toString().padStart(2, "0")}
-                      >
-                        {i.toString().padStart(2, "0")}
-                      </Picker.Item>
-                    ))}
+                    {Array.from({ length: 180 }, (_, i) => {
+                      const minute = i % 60; // 0-59가 3번 반복
+                      return (
+                        <Picker.Item
+                          key={i}
+                          value={minute.toString().padStart(2, "0")}
+                        >
+                          {minute.toString().padStart(2, "0")}
+                        </Picker.Item>
+                      );
+                    })}
                   </Picker.Column>
                 </Picker>
               </div>
