@@ -105,9 +105,6 @@ interface CalendarTabProps {
 }
 
 export default function CalendarTab({ programId }: CalendarTabProps) {
-  // 미디어 쿼리로 모바일/태블릿 감지
-  const isMobile = useMediaQuery("(max-width: 768px)");
-
   // 기본 상태
   const [viewMode, setViewMode] = useState<"list" | "week" | "month">("list");
   const [events, setEvents] = useState<Event[]>([]);
@@ -1016,6 +1013,9 @@ export default function CalendarTab({ programId }: CalendarTabProps) {
           throw error;
         }
 
+        // 로컬 상태 업데이트
+        setEvents(updatedEvents);
+
         showAlert(
           "추가 완료",
           `${eventsToCreate.length}개의 반복 일정이 추가되었습니다.`
@@ -1052,10 +1052,11 @@ export default function CalendarTab({ programId }: CalendarTabProps) {
           throw error;
         }
 
+        // 로컬 상태 업데이트
+        setEvents(updatedEvents);
+
         showAlert("추가 완료", "일정이 추가되었습니다.");
       }
-
-      // 데이터가 이미 로컬 상태에 업데이트되었으므로 새로고침 불필요
 
       // 모달 닫기 및 폼 초기화
       setIsEventModalOpen(false);
@@ -1244,15 +1245,9 @@ export default function CalendarTab({ programId }: CalendarTabProps) {
   const programs = []; // 현재 컨텍스트에서는 빈 배열로 설정
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Calendar className="h-5 w-5" />
-          일정 관리 ({events.length}개)
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2 py-2 sm:px-2">
+    <div>
+      <div>
+        <div className="space-y-2 py-2 px-0 sm:px-2">
           {/* 상단 컨트롤 바 */}
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
             <div className="flex items-center gap-2">
@@ -2499,7 +2494,7 @@ export default function CalendarTab({ programId }: CalendarTabProps) {
             </div>
           )}
         </div>
-      </CardContent>
+      </div>
 
       {/* Google Calendar 동기화 로딩 모달 */}
       {isSyncing && (
@@ -2615,6 +2610,6 @@ export default function CalendarTab({ programId }: CalendarTabProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Card>
+    </div>
   );
 }
