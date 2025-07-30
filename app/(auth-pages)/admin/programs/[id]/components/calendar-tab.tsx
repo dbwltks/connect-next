@@ -85,6 +85,7 @@ import {
 } from "date-fns";
 import { ko } from "date-fns/locale";
 import { createClient } from "@/utils/supabase/client";
+import { useAuth } from "@/contexts/auth-context";
 import { type Event, type Team } from "../utils/api";
 import {
   formatHourToKorean,
@@ -113,6 +114,8 @@ export default function CalendarTab({
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const isMobile = useIsMobile();
+  const { user } = useAuth();
+  const supabase = createClient();
 
   // 모달 상태
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
@@ -162,6 +165,7 @@ export default function CalendarTab({
   // 알림 관련 상태
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
+  const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
 
   // 장소 관련 상태
   const [savedLocations, setSavedLocations] = useState<string[]>([]);
@@ -231,23 +235,115 @@ export default function CalendarTab({
     loadProgramData();
   }, [programId]);
 
-  // 알림 권한 확인 및 초기화
+  // Supabase Realtime 구독 - 일정 변경사항 실시간 감지
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      setNotificationPermission(Notification.permission);
-      
-      // 로컬 스토리지에서 알림 설정 불러오기
-      const savedNotificationSetting = localStorage.getItem(`calendar-notifications-${programId}`);
-      if (savedNotificationSetting === 'true' && Notification.permission === 'granted') {
-        setNotificationsEnabled(true);
+    if (!programId) return;
+
+    const channel = supabase
+      .channel(`program-${programId}-events`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'programs',
+          filter: `id=eq.${programId}`
+        },
+        (payload: any) => {
+          console.log('프로그램 변경 감지:', payload);
+          
+          // 일정 관련 변경사항인지 확인
+          if (payload.new && payload.new.events !== payload.old?.events) {
+            // 새 일정이 추가되었는지 확인
+            const oldEvents = Array.isArray(payload.old?.events) ? payload.old.events : [];
+            const newEvents = Array.isArray(payload.new?.events) ? payload.new.events : [];
+            
+            if (newEvents.length > oldEvents.length) {
+              // 새 일정 추가됨
+              const addedEvents = newEvents.filter((newEvent: any) => 
+                !oldEvents.some((oldEvent: any) => oldEvent.id === newEvent.id)
+              );
+              
+              addedEvents.forEach((event: any) => {
+                if (notificationsEnabled) {
+                  const teamName = teams.find(t => t.id === event.team_id)?.name || '';
+                  const startDate = new Date(event.start_date);
+                  const dateStr = format(startDate, 'MM월 dd일 HH:mm');
+                  
+                  sendNotification(
+                    '새 일정이 추가되었습니다',
+                    `${teamName ? `[${teamName}] ` : ''}${event.title} - ${dateStr}`
+                  );
+                }
+              });
+            }
+            
+            // 로컬 상태 업데이트
+            setEvents(newEvents);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [programId, notificationsEnabled, teams, supabase]);
+
+  // 알림 권한 확인 및 기존 구독 정보 불러오기
+  useEffect(() => {
+    const initializeNotifications = async () => {
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        setNotificationPermission(Notification.permission);
+        
+        // 기존 구독 정보 확인
+        try {
+          const userId = user?.id || null;
+          const anonymousId = userId ? null : getAnonymousId();
+          
+          const { data, error } = await supabase
+            .from('notification_subscriptions')
+            .select('*')
+            .eq('program_id', programId)
+            .eq(userId ? 'user_id' : 'anonymous_id', userId || anonymousId)
+            .maybeSingle();
+
+          if (data && !error) {
+            setSubscriptionId(data.id);
+            setNotificationsEnabled(true);
+            localStorage.setItem(`calendar-notifications-${programId}`, 'true');
+          } else {
+            // 로컬 스토리지에서 알림 설정 불러오기 (fallback)
+            const savedNotificationSetting = localStorage.getItem(`calendar-notifications-${programId}`);
+            if (savedNotificationSetting === 'true' && Notification.permission === 'granted') {
+              setNotificationsEnabled(true);
+            }
+          }
+        } catch (error) {
+          console.error('기존 구독 정보 불러오기 실패:', error);
+          // 로컬 스토리지 fallback
+          const savedNotificationSetting = localStorage.getItem(`calendar-notifications-${programId}`);
+          if (savedNotificationSetting === 'true' && Notification.permission === 'granted') {
+            setNotificationsEnabled(true);
+          }
+        }
       }
+    };
+
+    if (programId) {
+      initializeNotifications();
     }
-  }, [programId]);
+  }, [programId, user]);
+
+  // 브라우저 알림 지원 여부 확인
+  const isNotificationSupported = () => {
+    return 'Notification' in window;
+  };
 
   // 알림 권한 요청 함수
   const requestNotificationPermission = async () => {
-    if (!('Notification' in window)) {
-      alert('이 브라우저는 알림을 지원하지 않습니다.');
+    if (!isNotificationSupported()) {
+      alert('이 기기/브라우저는 웹 알림을 지원하지 않습니다.\n\nSafari의 경우 iOS 16.4 이상이 필요합니다.');
       return false;
     }
 
@@ -268,12 +364,37 @@ export default function CalendarTab({
     if (!notificationsEnabled) {
       const granted = await requestNotificationPermission();
       if (granted) {
-        setNotificationsEnabled(true);
-        localStorage.setItem(`calendar-notifications-${programId}`, 'true');
+        try {
+          // 브라우저 푸시 구독 생성 (선택적)
+          const subscriptionData = {
+            endpoint: window.location.origin,
+            userAgent: navigator.userAgent,
+            timestamp: new Date().toISOString()
+          };
+
+          // Supabase에 구독 정보 저장
+          await saveNotificationSubscription(subscriptionData);
+          
+          setNotificationsEnabled(true);
+          localStorage.setItem(`calendar-notifications-${programId}`, 'true');
+        } catch (error) {
+          console.error('알림 구독 저장 실패:', error);
+          alert('알림 설정 저장에 실패했습니다. 다시 시도해주세요.');
+        }
       }
     } else {
-      setNotificationsEnabled(false);
-      localStorage.removeItem(`calendar-notifications-${programId}`);
+      try {
+        // Supabase에서 구독 정보 삭제
+        await removeNotificationSubscription();
+        
+        setNotificationsEnabled(false);
+        localStorage.removeItem(`calendar-notifications-${programId}`);
+      } catch (error) {
+        console.error('알림 구독 삭제 실패:', error);
+        // 로컬 설정은 일단 변경
+        setNotificationsEnabled(false);
+        localStorage.removeItem(`calendar-notifications-${programId}`);
+      }
     }
   };
 
@@ -285,6 +406,65 @@ export default function CalendarTab({
         icon: '/favicon.ico',
         tag: 'calendar-event'
       });
+    }
+  };
+
+  // 익명 사용자 ID 생성/가져오기
+  const getAnonymousId = () => {
+    let anonymousId = localStorage.getItem('calendar-anonymous-id');
+    if (!anonymousId) {
+      anonymousId = `anonymous_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      localStorage.setItem('calendar-anonymous-id', anonymousId);
+    }
+    return anonymousId;
+  };
+
+  // 알림 구독 정보를 Supabase에 저장
+  const saveNotificationSubscription = async (subscriptionData: any) => {
+    try {
+      const userId = user?.id || null;
+      const anonymousId = userId ? null : getAnonymousId();
+
+      const { data, error } = await supabase
+        .from('notification_subscriptions')
+        .upsert({
+          user_id: userId,
+          anonymous_id: anonymousId,
+          program_id: programId,
+          subscription_data: subscriptionData,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: userId ? 'user_id,program_id' : 'anonymous_id,program_id'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      setSubscriptionId(data.id);
+      return data;
+    } catch (error) {
+      console.error('알림 구독 저장 실패:', error);
+      throw error;
+    }
+  };
+
+  // 알림 구독 삭제
+  const removeNotificationSubscription = async () => {
+    try {
+      if (!subscriptionId) return;
+
+      const { error } = await supabase
+        .from('notification_subscriptions')
+        .delete()
+        .eq('id', subscriptionId);
+
+      if (error) throw error;
+      
+      setSubscriptionId(null);
+    } catch (error) {
+      console.error('알림 구독 삭제 실패:', error);
+      throw error;
     }
   };
 
@@ -1166,13 +1346,19 @@ export default function CalendarTab({
                   variant="outline"
                   size="sm"
                   onClick={toggleNotifications}
+                  disabled={!isNotificationSupported()}
                   className={`p-2 ${
-                    notificationsEnabled 
-                      ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100' 
-                      : 'text-gray-600 hover:text-gray-700'
+                    !isNotificationSupported() 
+                      ? 'opacity-50 cursor-not-allowed text-gray-400'
+                      : notificationsEnabled 
+                        ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100' 
+                        : 'text-gray-600 hover:text-gray-700'
                   }`}
+                  title={!isNotificationSupported() ? '이 브라우저는 웹 알림을 지원하지 않습니다' : ''}
                 >
-                  {notificationsEnabled ? (
+                  {!isNotificationSupported() ? (
+                    <BellOff className="h-4 w-4" />
+                  ) : notificationsEnabled ? (
                     <Bell className="h-4 w-4" />
                   ) : (
                     <BellOff className="h-4 w-4" />
