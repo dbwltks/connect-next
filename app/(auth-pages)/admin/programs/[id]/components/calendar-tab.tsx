@@ -3308,16 +3308,7 @@ export default function CalendarTab({
             </DrawerTitle>
           </DrawerHeader>
           <div className="p-4">
-            <div className="py-4">
-              <CalendarComponent
-                mode="single"
-                selected={tempDate}
-                onSelect={(date) => date && setTempDate(date)}
-                className="w-full rounded-md border"
-                locale={ko}
-              />
-            </div>
-            <div className="flex gap-2 pt-4 pb-6">
+            <div className="flex gap-2 pb-4">
               <Button
                 variant="outline"
                 onClick={() => setIsDatePickerOpen(false)}
@@ -3329,21 +3320,36 @@ export default function CalendarTab({
                 선택
               </Button>
             </div>
+            <div className="py-4">
+              <CalendarComponent
+                mode="single"
+                selected={tempDate}
+                onSelect={(date) => date && setTempDate(date)}
+                className="w-full rounded-md border"
+                locale={ko}
+              />
+            </div>
           </div>
         </DrawerContent>
       </Drawer>
 
       {/* 모바일 시간 선택 Drawer - 개선된 휠 피커 */}
-      <Drawer open={isTimePickerOpen} onOpenChange={setIsTimePickerOpen}>
-        <DrawerContent>
+      <Drawer open={isTimePickerOpen} onOpenChange={setIsTimePickerOpen} shouldScaleBackground={false}>
+        <DrawerContent style={{ touchAction: "none" }}>
           <DrawerHeader>
             <DrawerTitle>
               {datePickerMode === "start" ? "시작 시간 선택" : "종료 시간 선택"}
             </DrawerTitle>
           </DrawerHeader>
-          <div className="p-4" style={{ touchAction: "manipulation" }}>
+          <div className="p-4" style={{ touchAction: "none" }}>
             <div className="flex justify-center items-center py-4">
-              <div className="w-full max-w-sm" style={{ touchAction: "pan-y" }}>
+              <div 
+                className="w-full max-w-sm" 
+                style={{ touchAction: "pan-y", overflow: "hidden" }}
+                onTouchStart={(e) => e.stopPropagation()}
+                onTouchMove={(e) => e.stopPropagation()}
+                onTouchEnd={(e) => e.stopPropagation()}
+              >
                 <Picker
                   value={pickerValue}
                   onChange={handlePickerChange}
