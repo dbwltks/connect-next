@@ -76,6 +76,8 @@ export interface Team {
   leader_id?: string;
   member_count: number;
   program_id: string;
+  color?: string;
+  google_calendar_color_id?: string;
 }
 
 export interface MealPlan {

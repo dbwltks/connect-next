@@ -18,6 +18,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -97,6 +104,23 @@ import {
 import { ko } from "date-fns/locale";
 import { createClient } from "@/utils/supabase/client";
 
+// Custom hook for media queries
+const useMediaQuery = (query: string) => {
+  const [matches, setMatches] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    if (media.matches !== matches) {
+      setMatches(media.matches);
+    }
+    const listener = () => setMatches(media.matches);
+    media.addListener(listener);
+    return () => media.removeListener(listener);
+  }, [matches, query]);
+
+  return matches;
+};
+
 interface FinanceRecord {
   id: string;
   type: "income" | "expense";
@@ -118,6 +142,9 @@ interface FinanceTabProps {
 }
 
 export default function FinanceTab({ programId, hasEditPermission = false }: FinanceTabProps) {
+  // 반응형 디바이스 체크 (768px = md breakpoint)
+  const isMobile = useMediaQuery("(max-width: 768px)");
+  
   const [finances, setFinances] = useState<FinanceRecord[]>([]);
 
   // 재정 추가 모달 상태
@@ -549,6 +576,15 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
     .reduce((acc, f) => acc + f.amount, 0);
   const balance = totalIncome - totalExpense;
 
+  // 현금 거래 합계 계산
+  const cashIncome = filteredFinances
+    .filter((f) => f.type === "income" && f.vendor && f.vendor.includes("현금"))
+    .reduce((acc, f) => acc + f.amount, 0);
+  const cashExpense = filteredFinances
+    .filter((f) => f.type === "expense" && f.vendor && f.vendor.includes("현금"))
+    .reduce((acc, f) => acc + f.amount, 0);
+  const cashBalance = cashIncome - cashExpense;
+
   // 재정 데이터 추가 함수
   const handleAddFinance = async () => {
     if (!programId || !newFinance.amount || !newFinance.category) {
@@ -942,6 +978,9 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
             <div className="text-2xl font-bold text-green-600">
               ${totalIncome.toLocaleString()} CAD
             </div>
+            <div className="text-xs text-gray-500 mt-1">
+              현금: ${cashIncome.toLocaleString()} / 비현금: ${(totalIncome - cashIncome).toLocaleString()} CAD
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -949,6 +988,9 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
             <div className="text-sm text-gray-600">총 지출</div>
             <div className="text-2xl font-bold text-red-600">
               ${totalExpense.toLocaleString()} CAD
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              현금: ${cashExpense.toLocaleString()} / 비현금: ${(totalExpense - cashExpense).toLocaleString()} CAD
             </div>
           </CardContent>
         </Card>
@@ -959,6 +1001,9 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
               className={`text-2xl font-bold ${balance >= 0 ? "text-blue-600" : "text-red-600"}`}
             >
               ${balance.toLocaleString()} CAD
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              현금: ${cashBalance.toLocaleString()} / 비현금: ${(balance - cashBalance).toLocaleString()} CAD
             </div>
           </CardContent>
         </Card>
@@ -1493,197 +1538,386 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
         </div>
       </div>
 
-      {/* 재정 추가 모달 */}
-      <Dialog
-        open={isFinanceModalOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            setEditingFinance(null);
-          }
-          setIsFinanceModalOpen(open);
-        }}
-      >
-        <DialogContent className="w-[95vw] max-w-[600px] max-h-[90vh] overflow-y-auto mx-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingFinance ? "거래 수정" : "거래 추가"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            {/* 첫 번째 행: 거래 유형, 카테고리 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="finance-type">거래 유형 *</Label>
-                <Select
-                  value={newFinance.type}
-                  onValueChange={(value: "income" | "expense") =>
-                    setNewFinance((prev) => ({ ...prev, type: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="거래 유형을 선택하세요" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="income">수입</SelectItem>
-                    <SelectItem value="expense">지출</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+      {/* 재정 추가 모달 - 반응형 */}
+      {isMobile ? (
+        <Drawer
+          open={isFinanceModalOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditingFinance(null);
+            }
+            setIsFinanceModalOpen(open);
+          }}
+        >
+          <DrawerContent className="max-h-[90vh]">
+            <DrawerHeader>
+              <DrawerTitle>
+                {editingFinance ? "거래 수정" : "거래 추가"}
+              </DrawerTitle>
+            </DrawerHeader>
+            <div className="px-4 pb-4 overflow-y-auto">
+              <div className="grid gap-4 py-4">
+                {/* 첫 번째 행: 거래 유형, 카테고리 */}
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="finance-type-mobile">거래 유형 *</Label>
+                    <Select
+                      value={newFinance.type}
+                      onValueChange={(value: "income" | "expense") =>
+                        setNewFinance((prev) => ({ ...prev, type: value }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="거래 유형을 선택하세요" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="income">수입</SelectItem>
+                        <SelectItem value="expense">지출</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="finance-category">카테고리 *</Label>
-                <Select
-                  value={newFinance.category}
-                  onValueChange={(value) =>
-                    setNewFinance((prev) => ({ ...prev, category: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="카테고리를 선택하세요" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {financeCategories.map((category) => (
-                      <SelectItem key={category} value={category}>
-                        {category}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <div className="grid gap-2">
+                    <Label htmlFor="finance-category-mobile">카테고리 *</Label>
+                    <Select
+                      value={newFinance.category}
+                      onValueChange={(value) =>
+                        setNewFinance((prev) => ({ ...prev, category: value }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="카테고리를 선택하세요" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {financeCategories.map((category) => (
+                          <SelectItem key={category} value={category}>
+                            {category}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* 두 번째 행: 거래처, 품명 */}
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="finance-vendor-mobile">거래처</Label>
+                    <Select
+                      value={newFinance.vendor}
+                      onValueChange={(value) =>
+                        setNewFinance((prev) => ({ ...prev, vendor: value }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="거래처를 선택하세요" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {financeVendors.map((vendor) => (
+                          <SelectItem key={vendor} value={vendor}>
+                            {vendor}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="finance-itemName-mobile">품명</Label>
+                    <Input
+                      id="finance-itemName-mobile"
+                      value={newFinance.itemName}
+                      onChange={(e) =>
+                        setNewFinance((prev) => ({
+                          ...prev,
+                          itemName: e.target.value,
+                        }))
+                      }
+                      placeholder="품명을 입력하세요"
+                    />
+                  </div>
+                </div>
+
+                {/* 세 번째 행: 금액, 거래자 */}
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="finance-amount-mobile">금액 *</Label>
+                    <Input
+                      id="finance-amount-mobile"
+                      type="number"
+                      value={newFinance.amount}
+                      onChange={(e) =>
+                        setNewFinance((prev) => ({
+                          ...prev,
+                          amount: e.target.value,
+                        }))
+                      }
+                      placeholder="금액을 입력하세요"
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="finance-paidBy-mobile">거래자(결제자)</Label>
+                    <Input
+                      id="finance-paidBy-mobile"
+                      value={newFinance.paidBy}
+                      onChange={(e) =>
+                        setNewFinance((prev) => ({
+                          ...prev,
+                          paidBy: e.target.value,
+                        }))
+                      }
+                      placeholder="결제한 사람을 입력하세요"
+                    />
+                  </div>
+                </div>
+
+                {/* 네 번째 행: 설명 */}
+                <div className="grid gap-2">
+                  <Label htmlFor="finance-description-mobile">설명</Label>
+                  <Textarea
+                    id="finance-description-mobile"
+                    value={newFinance.description}
+                    onChange={(e) =>
+                      setNewFinance((prev) => ({
+                        ...prev,
+                        description: e.target.value,
+                      }))
+                    }
+                    placeholder="거래 설명을 입력하세요"
+                    rows={3}
+                  />
+                </div>
+
+                {/* 다섯 번째 행: 날짜 및 시간 */}
+                <div className="grid gap-2">
+                  <Label htmlFor="finance-datetime-mobile">날짜 및 시간 *</Label>
+                  <Input
+                    id="finance-datetime-mobile"
+                    type="datetime-local"
+                    value={newFinance.datetime}
+                    onChange={(e) =>
+                      setNewFinance((prev) => ({
+                        ...prev,
+                        datetime: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+
+                {/* 버튼 */}
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsFinanceModalOpen(false);
+                      setEditingFinance(null);
+                    }}
+                  >
+                    취소
+                  </Button>
+                  <Button onClick={handleAddFinance}>
+                    {editingFinance ? "수정" : "추가"}
+                  </Button>
+                </div>
               </div>
             </div>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Dialog
+          open={isFinanceModalOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditingFinance(null);
+            }
+            setIsFinanceModalOpen(open);
+          }}
+        >
+          <DialogContent className="w-[95vw] max-w-[600px] max-h-[90vh] overflow-y-auto mx-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {editingFinance ? "거래 수정" : "거래 추가"}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              {/* 첫 번째 행: 거래 유형, 카테고리 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="finance-type">거래 유형 *</Label>
+                  <Select
+                    value={newFinance.type}
+                    onValueChange={(value: "income" | "expense") =>
+                      setNewFinance((prev) => ({ ...prev, type: value }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="거래 유형을 선택하세요" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="income">수입</SelectItem>
+                      <SelectItem value="expense">지출</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            {/* 두 번째 행: 거래처, 품명 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="finance-vendor">거래처</Label>
-                <Select
-                  value={newFinance.vendor}
-                  onValueChange={(value) =>
-                    setNewFinance((prev) => ({ ...prev, vendor: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="거래처를 선택하세요" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {financeVendors.map((vendor) => (
-                      <SelectItem key={vendor} value={vendor}>
-                        {vendor}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="grid gap-2">
+                  <Label htmlFor="finance-category">카테고리 *</Label>
+                  <Select
+                    value={newFinance.category}
+                    onValueChange={(value) =>
+                      setNewFinance((prev) => ({ ...prev, category: value }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="카테고리를 선택하세요" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {financeCategories.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
+              {/* 두 번째 행: 거래처, 품명 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="finance-vendor">거래처</Label>
+                  <Select
+                    value={newFinance.vendor}
+                    onValueChange={(value) =>
+                      setNewFinance((prev) => ({ ...prev, vendor: value }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="거래처를 선택하세요" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {financeVendors.map((vendor) => (
+                        <SelectItem key={vendor} value={vendor}>
+                          {vendor}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="finance-itemName">품명</Label>
+                  <Input
+                    id="finance-itemName"
+                    value={newFinance.itemName}
+                    onChange={(e) =>
+                      setNewFinance((prev) => ({
+                        ...prev,
+                        itemName: e.target.value,
+                      }))
+                    }
+                    placeholder="품명을 입력하세요"
+                  />
+                </div>
+              </div>
+
+              {/* 세 번째 행: 금액, 거래자 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="finance-amount">금액 *</Label>
+                  <Input
+                    id="finance-amount"
+                    type="number"
+                    value={newFinance.amount}
+                    onChange={(e) =>
+                      setNewFinance((prev) => ({
+                        ...prev,
+                        amount: e.target.value,
+                      }))
+                    }
+                    placeholder="금액을 입력하세요"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="finance-paidBy">거래자(결제자)</Label>
+                  <Input
+                    id="finance-paidBy"
+                    value={newFinance.paidBy}
+                    onChange={(e) =>
+                      setNewFinance((prev) => ({
+                        ...prev,
+                        paidBy: e.target.value,
+                      }))
+                    }
+                    placeholder="결제한 사람을 입력하세요"
+                  />
+                </div>
+              </div>
+
+              {/* 네 번째 행: 설명 (전체 너비) */}
               <div className="grid gap-2">
-                <Label htmlFor="finance-itemName">품명</Label>
-                <Input
-                  id="finance-itemName"
-                  value={newFinance.itemName}
+                <Label htmlFor="finance-description">설명</Label>
+                <Textarea
+                  id="finance-description"
+                  value={newFinance.description}
                   onChange={(e) =>
                     setNewFinance((prev) => ({
                       ...prev,
-                      itemName: e.target.value,
+                      description: e.target.value,
                     }))
                   }
-                  placeholder="품명을 입력하세요"
+                  placeholder="거래 설명을 입력하세요"
+                  rows={3}
                 />
               </div>
-            </div>
 
-            {/* 세 번째 행: 금액, 거래자 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* 다섯 번째 행: 날짜 및 시간 (전체 너비) */}
               <div className="grid gap-2">
-                <Label htmlFor="finance-amount">금액 *</Label>
+                <Label htmlFor="finance-datetime">날짜 및 시간 *</Label>
                 <Input
-                  id="finance-amount"
-                  type="number"
-                  value={newFinance.amount}
+                  id="finance-datetime"
+                  type="datetime-local"
+                  value={newFinance.datetime}
                   onChange={(e) =>
                     setNewFinance((prev) => ({
                       ...prev,
-                      amount: e.target.value,
+                      datetime: e.target.value,
                     }))
                   }
-                  placeholder="금액을 입력하세요"
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="finance-paidBy">거래자(결제자)</Label>
-                <Input
-                  id="finance-paidBy"
-                  value={newFinance.paidBy}
-                  onChange={(e) =>
-                    setNewFinance((prev) => ({
-                      ...prev,
-                      paidBy: e.target.value,
-                    }))
-                  }
-                  placeholder="결제한 사람을 입력하세요"
                 />
               </div>
             </div>
-
-            {/* 네 번째 행: 설명 (전체 너비) */}
-            <div className="grid gap-2">
-              <Label htmlFor="finance-description">설명</Label>
-              <Textarea
-                id="finance-description"
-                value={newFinance.description}
-                onChange={(e) =>
-                  setNewFinance((prev) => ({
-                    ...prev,
-                    description: e.target.value,
-                  }))
-                }
-                placeholder="거래 설명을 입력하세요"
-                rows={3}
-              />
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsFinanceModalOpen(false);
+                  setEditingFinance(null);
+                }}
+              >
+                취소
+              </Button>
+              <Button onClick={handleAddFinance}>
+                {editingFinance ? "수정" : "추가"}
+              </Button>
             </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
-            {/* 다섯 번째 행: 날짜 및 시간 (전체 너비) */}
-            <div className="grid gap-2">
-              <Label htmlFor="finance-datetime">날짜 및 시간 *</Label>
-              <Input
-                id="finance-datetime"
-                type="datetime-local"
-                value={newFinance.datetime}
-                onChange={(e) =>
-                  setNewFinance((prev) => ({
-                    ...prev,
-                    datetime: e.target.value,
-                  }))
-                }
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsFinanceModalOpen(false);
-                setEditingFinance(null);
-              }}
-            >
-              취소
-            </Button>
-            <Button onClick={handleAddFinance}>
-              {editingFinance ? "수정" : "추가"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* 재정 카테고리 및 거래처 설정 모달 */}
-      <Dialog
-        open={isFinanceCategorySettingsOpen}
-        onOpenChange={setIsFinanceCategorySettingsOpen}
-      >
-        <DialogContent className="w-[95vw] max-w-[500px] max-h-[90vh] overflow-y-auto mx-auto">
-          <DialogHeader>
-            <DialogTitle>재정 설정</DialogTitle>
-          </DialogHeader>
+      {/* 재정 카테고리 및 거래처 설정 모달 - 반응형 */}
+      {isMobile ? (
+        <Drawer
+          open={isFinanceCategorySettingsOpen}
+          onOpenChange={setIsFinanceCategorySettingsOpen}
+        >
+          <DrawerContent className="max-h-[90vh]">
+            <DrawerHeader>
+              <DrawerTitle>재정 설정</DrawerTitle>
+            </DrawerHeader>
+            <div className="px-4 pb-4 overflow-y-auto">
           <Tabs defaultValue="categories" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="categories">카테고리</TabsTrigger>
@@ -1903,29 +2137,271 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
             </TabsContent>
           </Tabs>
 
-          <div className="flex justify-end mt-4">
-            <Button
-              variant="outline"
-              onClick={() => setIsFinanceCategorySettingsOpen(false)}
-            >
-              닫기
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+            <div className="flex justify-end mt-4">
+              <Button
+                variant="outline"
+                onClick={() => setIsFinanceCategorySettingsOpen(false)}
+              >
+                닫기
+              </Button>
+            </div>
+            </div>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Dialog
+          open={isFinanceCategorySettingsOpen}
+          onOpenChange={setIsFinanceCategorySettingsOpen}
+        >
+          <DialogContent className="w-[95vw] max-w-[500px] max-h-[90vh] overflow-y-auto mx-auto">
+            <DialogHeader>
+              <DialogTitle>재정 설정</DialogTitle>
+            </DialogHeader>
+            <Tabs defaultValue="categories" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="categories">카테고리</TabsTrigger>
+                <TabsTrigger value="vendors">거래처</TabsTrigger>
+              </TabsList>
 
-      {/* 재정 수정/삭제 액션 다이얼로그 */}
-      <AlertDialog
-        open={isFinanceActionDialogOpen}
-        onOpenChange={setIsFinanceActionDialogOpen}
-      >
-        <AlertDialogContent className="w-[95vw] max-w-[500px] max-h-[90vh] overflow-y-auto mx-auto">
-          <AlertDialogHeader>
-            <AlertDialogTitle>거래 내역 관리</AlertDialogTitle>
-            <AlertDialogDescription>
-              선택한 거래 내역을 수정하거나 삭제할 수 있습니다.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+              <TabsContent value="categories" className="space-y-4 mt-4">
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <Input
+                      value={newFinanceCategory}
+                      onChange={(e) => setNewFinanceCategory(e.target.value)}
+                      placeholder="카테고리명을 입력하세요"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          addFinanceCategory();
+                        }
+                      }}
+                    />
+                    <Button
+                      onClick={addFinanceCategory}
+                      disabled={!newFinanceCategory.trim()}
+                    >
+                      추가
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>기존 카테고리</Label>
+                  <div className="max-h-60 overflow-y-auto space-y-1">
+                    {financeCategories.length === 0 ? (
+                      <p className="text-sm text-gray-500 py-2">
+                        등록된 카테고리가 없습니다.
+                      </p>
+                    ) : (
+                      financeCategories.map((category, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between p-2 bg-gray-50 rounded"
+                        >
+                          {editingCategoryIndex === index ? (
+                            <div className="flex gap-2 flex-1">
+                              <Input
+                                value={editingCategoryValue}
+                                onChange={(e) =>
+                                  setEditingCategoryValue(e.target.value)
+                                }
+                                className="text-sm"
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    saveEditCategory();
+                                  } else if (e.key === "Escape") {
+                                    setEditingCategoryIndex(null);
+                                    setEditingCategoryValue("");
+                                  }
+                                }}
+                                autoFocus
+                              />
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={saveEditCategory}
+                                className="h-6 w-6 p-0 text-green-600 hover:text-green-800"
+                              >
+                                ✓
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingCategoryIndex(null);
+                                  setEditingCategoryValue("");
+                                }}
+                                className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700"
+                              >
+                                ×
+                              </Button>
+                            </div>
+                          ) : (
+                            <>
+                              <span className="text-sm">{category}</span>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setEditingCategoryIndex(index);
+                                    setEditingCategoryValue(category);
+                                  }}
+                                  className="h-6 w-6 p-0 text-blue-500 hover:text-blue-700"
+                                >
+                                  ✎
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeFinanceCategory(category)}
+                                  className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                                >
+                                  ×
+                                </Button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="vendors" className="space-y-4 mt-4">
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <Input
+                      value={newFinanceVendor}
+                      onChange={(e) => setNewFinanceVendor(e.target.value)}
+                      placeholder="거래처명을 입력하세요"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          addFinanceVendor();
+                        }
+                      }}
+                    />
+                    <Button
+                      onClick={addFinanceVendor}
+                      disabled={!newFinanceVendor.trim()}
+                    >
+                      추가
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>기존 거래처</Label>
+                  <div className="max-h-60 overflow-y-auto space-y-1">
+                    {financeVendors.length === 0 ? (
+                      <p className="text-sm text-gray-500 py-2">
+                        등록된 거래처가 없습니다.
+                      </p>
+                    ) : (
+                      financeVendors.map((vendor, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between p-2 bg-gray-50 rounded"
+                        >
+                          {editingVendorIndex === index ? (
+                            <div className="flex gap-2 flex-1">
+                              <Input
+                                value={editingVendorValue}
+                                onChange={(e) =>
+                                  setEditingVendorValue(e.target.value)
+                                }
+                                className="text-sm"
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    saveEditVendor();
+                                  } else if (e.key === "Escape") {
+                                    setEditingVendorIndex(null);
+                                    setEditingVendorValue("");
+                                  }
+                                }}
+                                autoFocus
+                              />
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={saveEditVendor}
+                                className="h-6 w-6 p-0 text-green-600 hover:text-green-800"
+                              >
+                                ✓
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingVendorIndex(null);
+                                  setEditingVendorValue("");
+                                }}
+                                className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700"
+                              >
+                                ×
+                              </Button>
+                            </div>
+                          ) : (
+                            <>
+                              <span className="text-sm">{vendor}</span>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setEditingVendorIndex(index);
+                                    setEditingVendorValue(vendor);
+                                  }}
+                                  className="h-6 w-6 p-0 text-blue-500 hover:text-blue-700"
+                                >
+                                  ✎
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeFinanceVendor(vendor)}
+                                  className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                                >
+                                  ×
+                                </Button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+
+            <div className="flex justify-end mt-4">
+              <Button
+                variant="outline"
+                onClick={() => setIsFinanceCategorySettingsOpen(false)}
+              >
+                닫기
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* 재정 수정/삭제 액션 다이얼로그 - 반응형 */}
+      {isMobile ? (
+        <Drawer
+          open={isFinanceActionDialogOpen}
+          onOpenChange={setIsFinanceActionDialogOpen}
+        >
+          <DrawerContent className="max-h-[90vh]">
+            <DrawerHeader>
+              <DrawerTitle>거래 내역 관리</DrawerTitle>
+            </DrawerHeader>
+            <div className="px-4 pb-4 overflow-y-auto">
+              <p className="text-sm text-muted-foreground mb-4">
+                선택한 거래 내역을 수정하거나 삭제할 수 있습니다.
+              </p>
 
           {selectedFinanceForAction && (
             <div className="space-y-4">
@@ -2010,73 +2486,232 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
             </div>
           )}
 
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={() => setIsFinanceActionDialogOpen(false)}
-            >
-              닫기
-            </AlertDialogCancel>
-            {hasEditPermission && (
-              <>
+              <div className="flex justify-end gap-2 mt-6">
                 <Button
                   variant="outline"
-                  onClick={() => {
-                    handleEditFinance(selectedFinanceForAction);
-                    setIsFinanceActionDialogOpen(false);
-                  }}
+                  onClick={() => setIsFinanceActionDialogOpen(false)}
                 >
-                  수정
+                  닫기
                 </Button>
-                <AlertDialogAction
-                  onClick={() => {
-                    setIsFinanceActionDialogOpen(false);
-                    handleDeleteFinance(selectedFinanceForAction.id);
-                  }}
+                {hasEditPermission && (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        handleEditFinance(selectedFinanceForAction);
+                        setIsFinanceActionDialogOpen(false);
+                      }}
+                    >
+                      수정
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setIsFinanceActionDialogOpen(false);
+                        handleDeleteFinance(selectedFinanceForAction.id);
+                      }}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      삭제
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <AlertDialog
+          open={isFinanceActionDialogOpen}
+          onOpenChange={setIsFinanceActionDialogOpen}
+        >
+          <AlertDialogContent className="w-[95vw] max-w-[500px] max-h-[90vh] overflow-y-auto mx-auto">
+            <AlertDialogHeader>
+              <AlertDialogTitle>거래 내역 관리</AlertDialogTitle>
+              <AlertDialogDescription>
+                선택한 거래 내역을 수정하거나 삭제할 수 있습니다.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+
+            {selectedFinanceForAction && (
+              <div className="space-y-4">
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-500">날짜:</span>
+                      <span className="ml-2 font-medium">
+                        {(() => {
+                          try {
+                            if (selectedFinanceForAction.datetime) {
+                              return format(
+                                parseISO(selectedFinanceForAction.datetime),
+                                "yyyy년 MM월 dd일 HH:mm"
+                              );
+                            } else if (selectedFinanceForAction.date) {
+                              return format(
+                                parseISO(selectedFinanceForAction.date),
+                                "yyyy년 MM월 dd일"
+                              );
+                            } else {
+                              return "-";
+                            }
+                          } catch (error) {
+                            console.warn("날짜 포맷 오류:", error);
+                            return "-";
+                          }
+                        })()}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">구분:</span>
+                      <Badge
+                        className={`ml-2 ${selectedFinanceForAction.type === "income" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
+                      >
+                        {selectedFinanceForAction.type === "income"
+                          ? "수입"
+                          : "지출"}
+                      </Badge>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">카테고리:</span>
+                      <span className="ml-2 font-medium">
+                        {selectedFinanceForAction.category || "-"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">거래처:</span>
+                      <span className="ml-2 font-medium">
+                        {selectedFinanceForAction.vendor || "-"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">품명:</span>
+                      <span className="ml-2 font-medium">
+                        {selectedFinanceForAction.itemName || "-"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">금액:</span>
+                      <span className="ml-2 font-medium text-lg">
+                        ${selectedFinanceForAction.amount?.toLocaleString() || 0} CAD
+                      </span>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-gray-500">거래자:</span>
+                      <span className="ml-2 font-medium">
+                        {selectedFinanceForAction.paidBy || "-"}
+                      </span>
+                    </div>
+                    {selectedFinanceForAction.description && (
+                      <div className="col-span-2">
+                        <span className="text-gray-500">설명:</span>
+                        <p className="mt-1 text-sm">
+                          {selectedFinanceForAction.description}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <AlertDialogFooter>
+              <AlertDialogCancel
+                onClick={() => setIsFinanceActionDialogOpen(false)}
+              >
+                닫기
+              </AlertDialogCancel>
+              {hasEditPermission && (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      handleEditFinance(selectedFinanceForAction);
+                      setIsFinanceActionDialogOpen(false);
+                    }}
+                  >
+                    수정
+                  </Button>
+                  <AlertDialogAction
+                    onClick={() => {
+                      setIsFinanceActionDialogOpen(false);
+                      handleDeleteFinance(selectedFinanceForAction.id);
+                    }}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    삭제
+                  </AlertDialogAction>
+                </>
+              )}
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+
+      {/* 재정 삭제 확인 다이얼로그 - 반응형 */}
+      {isMobile ? (
+        <Drawer
+          open={financeDeleteConfirmOpen}
+          onOpenChange={setFinanceDeleteConfirmOpen}
+        >
+          <DrawerContent>
+            <DrawerHeader>
+              <DrawerTitle>거래 내역 삭제</DrawerTitle>
+            </DrawerHeader>
+            <div className="px-4 pb-4">
+              <p className="text-sm text-muted-foreground mb-4">
+                정말로 이 거래 내역을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
+              </p>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setFinanceDeleteConfirmOpen(false)}>
+                  취소
+                </Button>
+                <Button
+                  onClick={confirmDeleteFinance}
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 >
                   삭제
-                </AlertDialogAction>
-              </>
-            )}
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+                </Button>
+              </div>
+            </div>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <AlertDialog
+          open={financeDeleteConfirmOpen}
+          onOpenChange={setFinanceDeleteConfirmOpen}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>거래 내역 삭제</AlertDialogTitle>
+              <AlertDialogDescription>
+                정말로 이 거래 내역을 삭제하시겠습니까? 이 작업은 되돌릴 수
+                없습니다.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>취소</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmDeleteFinance}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                삭제
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
 
-      {/* 재정 삭제 확인 다이얼로그 */}
-      <AlertDialog
-        open={financeDeleteConfirmOpen}
-        onOpenChange={setFinanceDeleteConfirmOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>거래 내역 삭제</AlertDialogTitle>
-            <AlertDialogDescription>
-              정말로 이 거래 내역을 삭제하시겠습니까? 이 작업은 되돌릴 수
-              없습니다.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>취소</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDeleteFinance}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              삭제
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* 재정 필터 모달 */}
-      <Dialog
-        open={isFinanceFilterModalOpen}
-        onOpenChange={setIsFinanceFilterModalOpen}
-      >
-        <DialogContent className="w-[95vw] max-w-[500px] max-h-[90vh] overflow-y-auto mx-auto">
-          <DialogHeader>
-            <DialogTitle>재정 필터</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
+      {/* 재정 필터 모달 - 반응형 */}
+      {isMobile ? (
+        <Drawer
+          open={isFinanceFilterModalOpen}
+          onOpenChange={setIsFinanceFilterModalOpen}
+        >
+          <DrawerContent className="max-h-[90vh]">
+            <DrawerHeader>
+              <DrawerTitle>재정 필터</DrawerTitle>
+            </DrawerHeader>
+            <div className="px-4 pb-4 overflow-y-auto space-y-4">
             {/* 날짜 필터 */}
             <div className="space-y-2">
               <Label>날짜 범위</Label>
@@ -2461,33 +3096,455 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
             </Accordion>
           </div>
 
-          <div className="flex justify-between">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setFinanceFilters({
-                  dateRange: "all",
-                  customDateType: "single",
-                  selectedDate: undefined,
-                  selectedDateRange: undefined,
-                  startDate: "",
-                  endDate: "",
-                  types: [],
-                  categories: [],
-                  vendors: [],
-                  paidBys: [],
-                });
-                setCurrentPage(1);
-              }}
-            >
-              초기화
-            </Button>
-            <Button onClick={() => setIsFinanceFilterModalOpen(false)}>
-              적용
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+            <div className="flex justify-between">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setFinanceFilters({
+                    dateRange: "all",
+                    customDateType: "single",
+                    selectedDate: undefined,
+                    selectedDateRange: undefined,
+                    startDate: "",
+                    endDate: "",
+                    types: [],
+                    categories: [],
+                    vendors: [],
+                    paidBys: [],
+                  });
+                  setCurrentPage(1);
+                }}
+              >
+                초기화
+              </Button>
+              <Button onClick={() => setIsFinanceFilterModalOpen(false)}>
+                적용
+              </Button>
+            </div>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Dialog
+          open={isFinanceFilterModalOpen}
+          onOpenChange={setIsFinanceFilterModalOpen}
+        >
+          <DialogContent className="w-[95vw] max-w-[500px] max-h-[90vh] overflow-y-auto mx-auto">
+            <DialogHeader>
+              <DialogTitle>재정 필터</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              {/* 날짜 필터 */}
+              <div className="space-y-2">
+                <Label>날짜 범위</Label>
+                <Select
+                  value={financeFilters.dateRange}
+                  onValueChange={(value: any) =>
+                    setFinanceFilters((prev) => ({ ...prev, dateRange: value }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">전체</SelectItem>
+                    <SelectItem value="today">오늘</SelectItem>
+                    <SelectItem value="week">이번 주</SelectItem>
+                    <SelectItem value="month">이번 달</SelectItem>
+                    <SelectItem value="custom">사용자 지정</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {financeFilters.dateRange === "custom" && (
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <Button
+                        variant={
+                          financeFilters.customDateType === "single"
+                            ? "default"
+                            : "outline"
+                        }
+                        size="sm"
+                        onClick={() =>
+                          setFinanceFilters((prev) => ({
+                            ...prev,
+                            customDateType: "single",
+                            selectedDateRange: undefined,
+                          }))
+                        }
+                      >
+                        특정 날짜
+                      </Button>
+                      <Button
+                        variant={
+                          financeFilters.customDateType === "range"
+                            ? "default"
+                            : "outline"
+                        }
+                        size="sm"
+                        onClick={() =>
+                          setFinanceFilters((prev) => ({
+                            ...prev,
+                            customDateType: "range",
+                            selectedDate: undefined,
+                          }))
+                        }
+                      >
+                        날짜 범위
+                      </Button>
+                    </div>
+
+                    {financeFilters.customDateType === "single" && (
+                      <Popover
+                        open={isDatePickerOpen}
+                        onOpenChange={setIsDatePickerOpen}
+                      >
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <CalendarDays className="mr-2 h-4 w-4" />
+                            {financeFilters.selectedDate
+                              ? format(
+                                  financeFilters.selectedDate,
+                                  "yyyy년 MM월 dd일",
+                                  { locale: ko }
+                                )
+                              : "날짜를 선택하세요"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={financeFilters.selectedDate}
+                            onSelect={(date) => {
+                              setFinanceFilters((prev) => ({
+                                ...prev,
+                                selectedDate: date,
+                              }));
+                              setIsDatePickerOpen(false);
+                            }}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    )}
+
+                    {financeFilters.customDateType === "range" && (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <CalendarDays className="mr-2 h-4 w-4" />
+                            {financeFilters.selectedDateRange?.from ? (
+                              financeFilters.selectedDateRange.to ? (
+                                <>
+                                  {format(
+                                    financeFilters.selectedDateRange.from,
+                                    "MM/dd",
+                                    { locale: ko }
+                                  )}{" "}
+                                  -{" "}
+                                  {format(
+                                    financeFilters.selectedDateRange.to,
+                                    "MM/dd",
+                                    { locale: ko }
+                                  )}
+                                </>
+                              ) : (
+                                format(
+                                  financeFilters.selectedDateRange.from,
+                                  "MM/dd",
+                                  { locale: ko }
+                                )
+                              )
+                            ) : (
+                              "날짜 범위를 선택하세요"
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="range"
+                            defaultMonth={financeFilters.selectedDateRange?.from}
+                            selected={financeFilters.selectedDateRange}
+                            onSelect={(range) =>
+                              setFinanceFilters((prev) => ({
+                                ...prev,
+                                selectedDateRange: range as { from: Date | undefined; to: Date | undefined; } | undefined,
+                              }))
+                            }
+                            numberOfMonths={2}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <Accordion type="multiple" className="w-full space-y-2">
+                {/* 거래 유형 필터 */}
+                <AccordionItem value="types" className="border rounded-lg px-3">
+                  <AccordionTrigger className="py-3 hover:no-underline">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="filter-types-desktop"
+                        checked={financeFilters.types.length > 0}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setFinanceFilters(prev => ({ ...prev, types: ['income', 'expense'] }));
+                          } else {
+                            setFinanceFilters(prev => ({ ...prev, types: [] }));
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <Label htmlFor="filter-types-desktop" className="text-sm font-medium cursor-pointer">
+                        거래 유형
+                      </Label>
+                      {financeFilters.types.length > 0 && (
+                        <span className="text-xs text-gray-500">({financeFilters.types.length}개 선택)</span>
+                      )}
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-3">
+                    <div className="space-y-2 pl-6">
+                      {['income', 'expense'].map((type) => (
+                        <div key={type} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`type-${type}-desktop`}
+                            checked={financeFilters.types.includes(type)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setFinanceFilters(prev => ({
+                                  ...prev,
+                                  types: [...prev.types, type]
+                                }));
+                              } else {
+                                setFinanceFilters(prev => ({
+                                  ...prev,
+                                  types: prev.types.filter(t => t !== type)
+                                }));
+                              }
+                            }}
+                          />
+                          <Label htmlFor={`type-${type}-desktop`} className="text-sm">
+                            {type === 'income' ? '수입' : '지출'}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* 카테고리 필터 */}
+                <AccordionItem value="categories" className="border rounded-lg px-3">
+                  <AccordionTrigger className="py-3 hover:no-underline">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="filter-categories-desktop"
+                        checked={financeFilters.categories.length > 0}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setFinanceFilters(prev => ({ ...prev, categories: financeCategories }));
+                          } else {
+                            setFinanceFilters(prev => ({ ...prev, categories: [] }));
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <Label htmlFor="filter-categories-desktop" className="text-sm font-medium cursor-pointer">
+                        카테고리
+                      </Label>
+                      {financeFilters.categories.length > 0 && (
+                        <span className="text-xs text-gray-500">({financeFilters.categories.length}개 선택)</span>
+                      )}
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-3">
+                    <div className="max-h-32 overflow-y-auto space-y-2 pl-6">
+                      {financeCategories.map((category) => (
+                        <div key={category} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`category-${category}-desktop`}
+                            checked={financeFilters.categories.includes(category)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setFinanceFilters(prev => ({
+                                  ...prev,
+                                  categories: [...prev.categories, category]
+                                }));
+                              } else {
+                                setFinanceFilters(prev => ({
+                                  ...prev,
+                                  categories: prev.categories.filter(c => c !== category)
+                                }));
+                              }
+                            }}
+                          />
+                          <Label htmlFor={`category-${category}-desktop`} className="text-sm">
+                            {category}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* 거래처 필터 */}
+                <AccordionItem value="vendors" className="border rounded-lg px-3">
+                  <AccordionTrigger className="py-3 hover:no-underline">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="filter-vendors-desktop"
+                        checked={financeFilters.vendors.length > 0}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setFinanceFilters(prev => ({ ...prev, vendors: financeVendors }));
+                          } else {
+                            setFinanceFilters(prev => ({ ...prev, vendors: [] }));
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <Label htmlFor="filter-vendors-desktop" className="text-sm font-medium cursor-pointer">
+                        거래처
+                      </Label>
+                      {financeFilters.vendors.length > 0 && (
+                        <span className="text-xs text-gray-500">({financeFilters.vendors.length}개 선택)</span>
+                      )}
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-3">
+                    <div className="max-h-32 overflow-y-auto space-y-2 pl-6">
+                      {financeVendors.map((vendor) => (
+                        <div key={vendor} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`vendor-${vendor}-desktop`}
+                            checked={financeFilters.vendors.includes(vendor)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setFinanceFilters(prev => ({
+                                  ...prev,
+                                  vendors: [...prev.vendors, vendor]
+                                }));
+                              } else {
+                                setFinanceFilters(prev => ({
+                                  ...prev,
+                                  vendors: prev.vendors.filter(v => v !== vendor)
+                                }));
+                              }
+                            }}
+                          />
+                          <Label htmlFor={`vendor-${vendor}-desktop`} className="text-sm">
+                            {vendor}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* 거래자 필터 */}
+                <AccordionItem value="paidBys" className="border rounded-lg px-3">
+                  <AccordionTrigger className="py-3 hover:no-underline">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="filter-paidBys-desktop"
+                        checked={financeFilters.paidBys.length > 0}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            const allPaidBys = Array.from(
+                              new Set(
+                                finances
+                                  .filter((f) => f.paidBy && f.paidBy.trim())
+                                  .map((f) => f.paidBy!)
+                              )
+                            );
+                            setFinanceFilters(prev => ({ ...prev, paidBys: allPaidBys }));
+                          } else {
+                            setFinanceFilters(prev => ({ ...prev, paidBys: [] }));
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <Label htmlFor="filter-paidBys-desktop" className="text-sm font-medium cursor-pointer">
+                        거래자
+                      </Label>
+                      {financeFilters.paidBys.length > 0 && (
+                        <span className="text-xs text-gray-500">({financeFilters.paidBys.length}개 선택)</span>
+                      )}
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-3">
+                    <div className="max-h-32 overflow-y-auto space-y-2 pl-6">
+                      {Array.from(
+                        new Set(
+                          finances
+                            .filter((f) => f.paidBy && f.paidBy.trim())
+                            .map((f) => f.paidBy!)
+                        )
+                      ).map((paidBy) => (
+                        <div key={paidBy} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`paidBy-${paidBy}-desktop`}
+                            checked={financeFilters.paidBys.includes(paidBy)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setFinanceFilters(prev => ({
+                                  ...prev,
+                                  paidBys: [...prev.paidBys, paidBy]
+                                }));
+                              } else {
+                                setFinanceFilters(prev => ({
+                                  ...prev,
+                                  paidBys: prev.paidBys.filter(p => p !== paidBy)
+                                }));
+                              }
+                            }}
+                          />
+                          <Label htmlFor={`paidBy-${paidBy}-desktop`} className="text-sm">
+                            {paidBy}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </div>
+
+            <div className="flex justify-between">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setFinanceFilters({
+                    dateRange: "all",
+                    customDateType: "single",
+                    selectedDate: undefined,
+                    selectedDateRange: undefined,
+                    startDate: "",
+                    endDate: "",
+                    types: [],
+                    categories: [],
+                    vendors: [],
+                    paidBys: [],
+                  });
+                  setCurrentPage(1);
+                }}
+              >
+                초기화
+              </Button>
+              <Button onClick={() => setIsFinanceFilterModalOpen(false)}>
+                적용
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Alert 다이얼로그 */}
       <AlertDialog open={alertOpen} onOpenChange={setAlertOpen}>

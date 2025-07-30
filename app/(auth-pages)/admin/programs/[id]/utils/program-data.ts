@@ -28,6 +28,10 @@ export interface ProgramData {
   };
   finances?: any[];
   events?: any[];
+  events_settings?: {
+    locations?: string[];
+    defaultDuration?: number;
+  };
   attendance?: any[];
   attendance_sessions?: any[];
   attendance_records?: any[];

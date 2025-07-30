@@ -7,7 +7,17 @@
  * @param hour - 24시간 형식의 시간 (0-23)
  * @returns 한국식 시간 문자열 (예: "오전 9시", "오후 2시")
  */
-export function formatHourToKorean(hour: number): string {
+export function formatHourToKorean(date: Date | string | number): string {
+  let hour: number;
+  
+  if (typeof date === 'string') {
+    hour = new Date(date).getHours();
+  } else if (typeof date === 'number') {
+    hour = date;
+  } else {
+    hour = date.getHours();
+  }
+  
   if (hour === 0) return "오전 12시";
   if (hour < 12) return `오전 ${hour}시`;
   if (hour === 12) return "오후 12시";
@@ -30,9 +40,10 @@ export function formatTimeToKorean(hour: number, minute: number): string {
  * @param date - Date 객체
  * @returns 한국식 시간 문자열 (예: "오전 9시 30분", "오후 2시")
  */
-export function formatDateTimeToKorean(date: Date): string {
-  const hour = date.getHours();
-  const minute = date.getMinutes();
+export function formatDateTimeToKorean(date: Date | string): string {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  const hour = dateObj.getHours();
+  const minute = dateObj.getMinutes();
   return formatTimeToKorean(hour, minute);
 }
 
