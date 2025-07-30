@@ -24,6 +24,7 @@ import {
   Calendar,
   ChevronLeft,
   Edit,
+  Pencil,
   Trash2,
   Heart,
   Share2,
@@ -52,6 +53,13 @@ import {
   DialogTitle,
   DialogClose,
 } from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
 import GlassContainer from "@/components/ui/glass-container";
 import { useAuth } from "@/contexts/auth-context";
 import { useUserProfile } from "@/hooks/use-user-profile";
@@ -1930,79 +1938,36 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
             </button>
 
             {/* 글꼴 설정 버튼 */}
-            <div className="relative">
-              <button
-                onClick={() => {
-                  setShowMobileFontMenu(!showMobileFontMenu);
-                }}
-                className="flex flex-col items-center text-gray-700 hover:text-gray-900"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="h-5 w-5"
-                >
-                  <polyline points="4 7 4 4 20 4 20 7"></polyline>
-                  <line x1="9" y1="20" x2="15" y2="20"></line>
-                  <line x1="12" y1="4" x2="12" y2="20"></line>
-                </svg>
-                <span className="text-xs mt-0.5">글자</span>
-              </button>
-
-              {/* 모바일 글꼴 설정 다이얼로그 */}
-              {showMobileFontMenu && (
-                <div className="fixed inset-0 z-50 lg:hidden">
-                  {/* 배경 오버레이 */}
-                  <div
-                    className="absolute inset-0 bg-black/50"
-                    onClick={() => setShowMobileFontMenu(false)}
-                  />
-
-                  {/* 하단 다이얼로그 */}
-                  <div
-                    className={`absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl transition-transform duration-300 ease-out ${
-                      showMobileFontMenu ? "translate-y-0" : "translate-y-full"
-                    }`}
+            <Drawer open={showMobileFontMenu} onOpenChange={setShowMobileFontMenu}>
+              <DrawerTrigger asChild>
+                <button className="flex flex-col items-center text-gray-700 hover:text-gray-900">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-5 w-5"
                   >
-                    {/* 드래그 핸들 */}
-                    <div className="flex justify-center pt-3 pb-2">
-                      <div className="w-10 h-1 bg-gray-300 rounded-full" />
-                    </div>
+                    <polyline points="4 7 4 4 20 4 20 7"></polyline>
+                    <line x1="9" y1="20" x2="15" y2="20"></line>
+                    <line x1="12" y1="4" x2="12" y2="20"></line>
+                  </svg>
+                  <span className="text-xs mt-0.5">글자</span>
+                </button>
+              </DrawerTrigger>
+              
+              <DrawerContent className="lg:hidden">
+                <DrawerHeader>
+                  <DrawerTitle>글자 설정</DrawerTitle>
+                </DrawerHeader>
 
-                    {/* 헤더 */}
-                    <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        글자 설정
-                      </h3>
-                      <button
-                        onClick={() => setShowMobileFontMenu(false)}
-                        className="p-2 hover:bg-gray-100 rounded-full"
-                      >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M6 18L18 6M6 6l12 12"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-
-                    {/* 글꼴 설정 내용 */}
-                    <div className="p-4 pb-6">
+                {/* 글꼴 설정 내용 */}
+                <div className="p-4 pb-6">
                       {/* 글꼴 크기와 굵기를 한 줄에 배치 */}
                       <div className="mb-4">
                         <div className="grid grid-cols-2 gap-3">
@@ -2139,10 +2104,8 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                         </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-              )}
-            </div>
+              </DrawerContent>
+            </Drawer>
 
             {/* 좋아요 버튼 */}
             <button
@@ -2177,54 +2140,60 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
 
             {/* 작성자인 경우에만 더보기 메뉴 표시 */}
             {isAdmin && (
-              <div className="relative">
-                <button
-                  onClick={() => setShowMobileMenu(!showMobileMenu)}
-                  className="flex flex-col items-center text-gray-700 hover:text-gray-900"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="h-5 w-5"
-                  >
-                    <circle cx="12" cy="12" r="1"></circle>
-                    <circle cx="12" cy="5" r="1"></circle>
-                    <circle cx="12" cy="19" r="1"></circle>
-                  </svg>
-                  <span className="text-xs mt-0.5">더보기</span>
-                </button>
-                {showMobileMenu && (
-                  <div className="absolute bottom-full w-16 right-0 mb-2 bg-white rounded-lg shadow-lg border border-gray-200">
-                    <button
+              <Drawer open={showMobileMenu} onOpenChange={setShowMobileMenu}>
+                <DrawerTrigger asChild>
+                  <button className="flex flex-col items-center text-gray-700 hover:text-gray-900">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-5 w-5"
+                    >
+                      <circle cx="12" cy="12" r="1"></circle>
+                      <circle cx="12" cy="5" r="1"></circle>
+                      <circle cx="12" cy="19" r="1"></circle>
+                    </svg>
+                    <span className="text-xs mt-0.5">더보기</span>
+                  </button>
+                </DrawerTrigger>
+                
+                <DrawerContent className="lg:hidden">
+                  <DrawerHeader>
+                    <DrawerTitle>게시물 관리</DrawerTitle>
+                  </DrawerHeader>
+
+                  <div className="p-4 space-y-3">
+                    <Button
+                      variant="outline"
                       onClick={() => {
                         setShowMobileMenu(false);
                         router.push(
                           `${pathname.replace(/\/$/, "")}/${post.id}/edit`
                         );
                       }}
-                      className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-t-lg"
+                      className="w-full"
                     >
                       수정
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="destructive"
                       onClick={() => {
                         setShowMobileMenu(false);
                         handleDelete();
                       }}
-                      className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 rounded-b-lg"
+                      className="w-full"
                     >
                       삭제
-                    </button>
+                    </Button>
                   </div>
-                )}
-              </div>
+                </DrawerContent>
+              </Drawer>
             )}
           </div>
         </div>

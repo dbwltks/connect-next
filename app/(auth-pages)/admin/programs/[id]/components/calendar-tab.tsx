@@ -163,7 +163,8 @@ export default function CalendarTab({
     number | null
   >(null);
   const [editingLocationValue, setEditingLocationValue] = useState("");
-  const [isCustomLocationSelected, setIsCustomLocationSelected] = useState(false);
+  const [isCustomLocationSelected, setIsCustomLocationSelected] =
+    useState(false);
 
   // 삭제 확인 상태
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -1069,7 +1070,7 @@ export default function CalendarTab({
                 value={selectedTeamFilter}
                 onValueChange={setSelectedTeamFilter}
               >
-                <SelectTrigger className="w-30">
+                <SelectTrigger className="w-30 text-sm">
                   <SelectValue placeholder="팀 선택" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1470,12 +1471,13 @@ export default function CalendarTab({
                                 }))
                               }
                               placeholder="일정 제목을 입력하세요"
+                              className="text-sm"
                             />
                           </div>
 
                           <div className="grid gap-2">
                             <Label htmlFor="description">설명</Label>
-                            <Textarea
+                            <Input
                               id="description"
                               value={newEvent.description}
                               onChange={(e) =>
@@ -1485,8 +1487,7 @@ export default function CalendarTab({
                                 }))
                               }
                               placeholder="일정 설명을 입력하세요"
-                              rows={3}
-                              style={{ resize: 'none' }}
+                              className="text-sm"
                             />
                           </div>
 
@@ -1521,7 +1522,7 @@ export default function CalendarTab({
                                   }));
                                 }}
                                 className="w-full"
-                                style={{ width: '90%', maxWidth: '90%' }}
+                                style={{ width: "95%", maxWidth: "95%" }}
                               />
                             </div>
 
@@ -1544,7 +1545,7 @@ export default function CalendarTab({
                                   }))
                                 }
                                 className="w-full"
-                                style={{ width: '90%', maxWidth: '90%' }}
+                                style={{ width: "95%", maxWidth: "95%" }}
                               />
                             </div>
                           </div>
@@ -1552,7 +1553,11 @@ export default function CalendarTab({
                           <div className="grid gap-2">
                             <Label htmlFor="location">장소</Label>
                             <Select
-                              value={isCustomLocationSelected ? "custom" : newEvent.location}
+                              value={
+                                isCustomLocationSelected
+                                  ? "custom"
+                                  : newEvent.location
+                              }
                               onValueChange={(value) => {
                                 if (value === "custom") {
                                   setIsCustomLocationSelected(true);
@@ -1569,7 +1574,7 @@ export default function CalendarTab({
                                 }
                               }}
                             >
-                              <SelectTrigger>
+                              <SelectTrigger className="text-sm">
                                 <SelectValue placeholder="장소를 선택하거나 직접 입력하세요" />
                               </SelectTrigger>
                               <SelectContent>
@@ -1611,7 +1616,7 @@ export default function CalendarTab({
                                 }))
                               }
                             >
-                              <SelectTrigger>
+                              <SelectTrigger className="text-sm">
                                 <SelectValue placeholder="진행팀을 선택하세요" />
                               </SelectTrigger>
                               <SelectContent>
@@ -1761,7 +1766,7 @@ export default function CalendarTab({
 
                         <div className="grid gap-2">
                           <Label htmlFor="description">설명</Label>
-                          <Textarea
+                          <Input
                             id="description"
                             value={newEvent.description}
                             onChange={(e) =>
@@ -1771,8 +1776,6 @@ export default function CalendarTab({
                               }))
                             }
                             placeholder="일정 설명을 입력하세요"
-                            rows={3}
-                            style={{ resize: 'none' }}
                           />
                         </div>
 
@@ -1800,7 +1803,7 @@ export default function CalendarTab({
                               }));
                             }}
                             className="w-full max-w-full"
-                            style={{ maxWidth: '100%' }}
+                            style={{ maxWidth: "100%" }}
                           />
                         </div>
 
@@ -1817,14 +1820,18 @@ export default function CalendarTab({
                               }))
                             }
                             className="w-full max-w-full"
-                            style={{ maxWidth: '100%' }}
+                            style={{ maxWidth: "100%" }}
                           />
                         </div>
 
                         <div className="grid gap-2">
                           <Label htmlFor="location">장소</Label>
                           <Select
-                            value={isCustomLocationSelected ? "custom" : newEvent.location}
+                            value={
+                              isCustomLocationSelected
+                                ? "custom"
+                                : newEvent.location
+                            }
                             onValueChange={(value) => {
                               if (value === "custom") {
                                 setIsCustomLocationSelected(true);
@@ -1841,7 +1848,7 @@ export default function CalendarTab({
                               }
                             }}
                           >
-                            <SelectTrigger>
+                            <SelectTrigger className="text-sm">
                               <SelectValue placeholder="장소를 선택하거나 직접 입력하세요" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1881,7 +1888,7 @@ export default function CalendarTab({
                               }))
                             }
                           >
-                            <SelectTrigger>
+                            <SelectTrigger className="text-sm">
                               <SelectValue placeholder="진행팀을 선택하세요" />
                             </SelectTrigger>
                             <SelectContent>
@@ -2079,8 +2086,13 @@ export default function CalendarTab({
                                 selectedEvent.recurring_end_date || "",
                             });
                             // 기존 장소가 저장된 장소인지 확인
-                            const isExistingLocation = savedLocations.includes(selectedEvent.location || "");
-                            setIsCustomLocationSelected(!isExistingLocation && Boolean(selectedEvent.location));
+                            const isExistingLocation = savedLocations.includes(
+                              selectedEvent.location || ""
+                            );
+                            setIsCustomLocationSelected(
+                              !isExistingLocation &&
+                                Boolean(selectedEvent.location)
+                            );
                             setIsEditingEvent(true);
                             setIsEventDetailModalOpen(false);
                             setIsEventModalOpen(true);
@@ -2197,8 +2209,13 @@ export default function CalendarTab({
                               selectedEvent.recurring_end_date || "",
                           });
                           // 기존 장소가 저장된 장소인지 확인
-                          const isExistingLocation = savedLocations.includes(selectedEvent.location || "");
-                          setIsCustomLocationSelected(!isExistingLocation && Boolean(selectedEvent.location));
+                          const isExistingLocation = savedLocations.includes(
+                            selectedEvent.location || ""
+                          );
+                          setIsCustomLocationSelected(
+                            !isExistingLocation &&
+                              Boolean(selectedEvent.location)
+                          );
                           setIsEditingEvent(true);
                           setIsEventDetailModalOpen(false);
                           setIsEventModalOpen(true);
