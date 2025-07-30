@@ -295,43 +295,39 @@ export default function CalendarTab({
   useEffect(() => {
     const initializeNotifications = async () => {
       if (typeof window !== 'undefined') {
-        // 브라우저 알림 지원 여부 확인
-        const supported = 'Notification' in window;
-        setIsNotificationSupportedState(supported);
+        // 항상 지원한다고 설정
+        setIsNotificationSupportedState(true);
+        setNotificationPermission('granted');
         
-        if (supported) {
-          setNotificationPermission(Notification.permission);
+        // 기존 구독 정보 확인
+        try {
+          const userId = user?.id || null;
+          const anonymousId = userId ? null : getAnonymousId();
           
-          // 기존 구독 정보 확인
-          try {
-            const userId = user?.id || null;
-            const anonymousId = userId ? null : getAnonymousId();
-            
-            const { data, error } = await supabase
-              .from('notification_subscriptions')
-              .select('*')
-              .eq('program_id', programId)
-              .eq(userId ? 'user_id' : 'anonymous_id', userId || anonymousId)
-              .maybeSingle();
+          const { data, error } = await supabase
+            .from('notification_subscriptions')
+            .select('*')
+            .eq('program_id', programId)
+            .eq(userId ? 'user_id' : 'anonymous_id', userId || anonymousId)
+            .maybeSingle();
 
-            if (data && !error) {
-              setSubscriptionId(data.id);
-              setNotificationsEnabled(true);
-              localStorage.setItem(`calendar-notifications-${programId}`, 'true');
-            } else {
-              // 로컬 스토리지에서 알림 설정 불러오기 (fallback)
-              const savedNotificationSetting = localStorage.getItem(`calendar-notifications-${programId}`);
-              if (savedNotificationSetting === 'true' && Notification.permission === 'granted') {
-                setNotificationsEnabled(true);
-              }
-            }
-          } catch (error) {
-            console.error('기존 구독 정보 불러오기 실패:', error);
-            // 로컬 스토리지 fallback
+          if (data && !error) {
+            setSubscriptionId(data.id);
+            setNotificationsEnabled(true);
+            localStorage.setItem(`calendar-notifications-${programId}`, 'true');
+          } else {
+            // 로컬 스토리지에서 알림 설정 불러오기 (fallback)
             const savedNotificationSetting = localStorage.getItem(`calendar-notifications-${programId}`);
-            if (savedNotificationSetting === 'true' && Notification.permission === 'granted') {
+            if (savedNotificationSetting === 'true') {
               setNotificationsEnabled(true);
             }
+          }
+        } catch (error) {
+          console.error('기존 구독 정보 불러오기 실패:', error);
+          // 로컬 스토리지 fallback
+          const savedNotificationSetting = localStorage.getItem(`calendar-notifications-${programId}`);
+          if (savedNotificationSetting === 'true') {
+            setNotificationsEnabled(true);
           }
         }
       }
@@ -350,7 +346,6 @@ export default function CalendarTab({
   // 알림 권한 요청 함수
   const requestNotificationPermission = async () => {
     if (!isNotificationSupportedState) {
-      alert('이 기기/브라우저는 웹 알림을 지원하지 않습니다.');
       return false;
     }
 
