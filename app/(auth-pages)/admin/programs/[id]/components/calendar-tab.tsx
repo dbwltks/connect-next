@@ -1520,8 +1520,8 @@ export default function CalendarTab({
                                     end_date: endDateTime,
                                   }));
                                 }}
-                                className="w-full max-w-full"
-                                style={{ maxWidth: '100%' }}
+                                className="w-full"
+                                style={{ width: '90%', maxWidth: '90%' }}
                               />
                             </div>
 
@@ -1543,8 +1543,8 @@ export default function CalendarTab({
                                     end_date: e.target.value,
                                   }))
                                 }
-                                className="w-full max-w-full"
-                                style={{ maxWidth: '100%' }}
+                                className="w-full"
+                                style={{ width: '90%', maxWidth: '90%' }}
                               />
                             </div>
                           </div>
