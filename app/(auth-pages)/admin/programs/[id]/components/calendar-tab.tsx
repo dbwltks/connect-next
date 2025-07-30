@@ -163,7 +163,7 @@ export default function CalendarTab({
     number | null
   >(null);
   const [editingLocationValue, setEditingLocationValue] = useState("");
-
+  const [isCustomLocationSelected, setIsCustomLocationSelected] = useState(false);
 
   // 삭제 확인 상태
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -586,7 +586,6 @@ export default function CalendarTab({
     setEditingLocationValue("");
   };
 
-
   // Google Calendar 스마트 동기화 (생성/업데이트)
   const syncEventsToGoogle = async () => {
     try {
@@ -706,6 +705,7 @@ export default function CalendarTab({
 
         // 폼 초기화
         setNewEvent(initializeNewEvent());
+        setIsCustomLocationSelected(false);
         showAlert("수정 완료", "일정이 수정되었습니다.");
         return;
       }
@@ -831,6 +831,7 @@ export default function CalendarTab({
       // 모달 닫기 및 폼 초기화
       setIsEventModalOpen(false);
       setNewEvent(initializeNewEvent());
+      setIsCustomLocationSelected(false);
     } catch (error) {
       console.error("일정 추가 실패:", error);
       showAlert(
@@ -1426,10 +1427,12 @@ export default function CalendarTab({
                             format(oneHourLater, "yyyy-MM-dd'T'HH:mm")
                           )
                         );
+                        setIsCustomLocationSelected(false);
                       } else if (!open) {
                         setNewEvent(initializeNewEvent());
                         setIsEditingEvent(false);
                         setEditingEventData(null);
+                        setIsCustomLocationSelected(false);
                       }
                     }}
                   >
@@ -1441,6 +1444,7 @@ export default function CalendarTab({
                           setIsEditingEvent(false);
                           setEditingEventData(null);
                           setNewEvent(initializeNewEvent());
+                          setIsCustomLocationSelected(false);
                         }}
                       >
                         일정 추가
@@ -1482,23 +1486,33 @@ export default function CalendarTab({
                               }
                               placeholder="일정 설명을 입력하세요"
                               rows={3}
+                              style={{ resize: 'none' }}
                             />
                           </div>
 
                           <div className="space-y-4">
                             <div className="grid gap-2">
-                              <Label htmlFor="start-datetime-mobile">시작 일시 *</Label>
+                              <Label htmlFor="start-datetime-mobile">
+                                시작 일시 *
+                              </Label>
                               <Input
                                 id="start-datetime-mobile"
                                 type="datetime-local"
-                                value={newEvent.start_date ? newEvent.start_date.slice(0, 16) : ""}
+                                value={
+                                  newEvent.start_date
+                                    ? newEvent.start_date.slice(0, 16)
+                                    : ""
+                                }
                                 onChange={(e) => {
                                   const startDateTime = e.target.value;
                                   let endDateTime = "";
                                   if (startDateTime) {
                                     const startDate = new Date(startDateTime);
                                     const endDate = addHours(startDate, 1);
-                                    endDateTime = format(endDate, "yyyy-MM-dd'T'HH:mm");
+                                    endDateTime = format(
+                                      endDate,
+                                      "yyyy-MM-dd'T'HH:mm"
+                                    );
                                   }
                                   setNewEvent((prev) => ({
                                     ...prev,
@@ -1506,23 +1520,27 @@ export default function CalendarTab({
                                     end_date: endDateTime,
                                   }));
                                 }}
-                                className="text-lg h-12"
                               />
                             </div>
 
                             <div className="grid gap-2">
-                              <Label htmlFor="end-datetime-mobile">종료 일시</Label>
+                              <Label htmlFor="end-datetime-mobile">
+                                종료 일시
+                              </Label>
                               <Input
                                 id="end-datetime-mobile"
                                 type="datetime-local"
-                                value={newEvent.end_date ? newEvent.end_date.slice(0, 16) : ""}
+                                value={
+                                  newEvent.end_date
+                                    ? newEvent.end_date.slice(0, 16)
+                                    : ""
+                                }
                                 onChange={(e) =>
                                   setNewEvent((prev) => ({
                                     ...prev,
                                     end_date: e.target.value,
                                   }))
                                 }
-                                className="text-lg h-12"
                               />
                             </div>
                           </div>
@@ -1530,14 +1548,16 @@ export default function CalendarTab({
                           <div className="grid gap-2">
                             <Label htmlFor="location">장소</Label>
                             <Select
-                              value={newEvent.location}
+                              value={isCustomLocationSelected ? "custom" : newEvent.location}
                               onValueChange={(value) => {
                                 if (value === "custom") {
+                                  setIsCustomLocationSelected(true);
                                   setNewEvent((prev) => ({
                                     ...prev,
                                     location: "",
                                   }));
                                 } else {
+                                  setIsCustomLocationSelected(false);
                                   setNewEvent((prev) => ({
                                     ...prev,
                                     location: value,
@@ -1560,8 +1580,7 @@ export default function CalendarTab({
                               </SelectContent>
                             </Select>
 
-                            {(newEvent.location === "" ||
-                              !savedLocations.includes(newEvent.location)) && (
+                            {isCustomLocationSelected && (
                               <Input
                                 id="location-custom"
                                 value={newEvent.location}
@@ -1691,10 +1710,12 @@ export default function CalendarTab({
                             format(oneHourLater, "yyyy-MM-dd'T'HH:mm")
                           )
                         );
+                        setIsCustomLocationSelected(false);
                       } else if (!open) {
                         setNewEvent(initializeNewEvent());
                         setIsEditingEvent(false);
                         setEditingEventData(null);
+                        setIsCustomLocationSelected(false);
                       }
                     }}
                   >
@@ -1706,6 +1727,7 @@ export default function CalendarTab({
                           setIsEditingEvent(false);
                           setEditingEventData(null);
                           setNewEvent(initializeNewEvent());
+                          setIsCustomLocationSelected(false);
                         }}
                       >
                         일정 추가
@@ -1746,6 +1768,7 @@ export default function CalendarTab({
                             }
                             placeholder="일정 설명을 입력하세요"
                             rows={3}
+                            style={{ resize: 'none' }}
                           />
                         </div>
 
@@ -1793,14 +1816,16 @@ export default function CalendarTab({
                         <div className="grid gap-2">
                           <Label htmlFor="location">장소</Label>
                           <Select
-                            value={newEvent.location}
+                            value={isCustomLocationSelected ? "custom" : newEvent.location}
                             onValueChange={(value) => {
                               if (value === "custom") {
+                                setIsCustomLocationSelected(true);
                                 setNewEvent((prev) => ({
                                   ...prev,
                                   location: "",
                                 }));
                               } else {
+                                setIsCustomLocationSelected(false);
                                 setNewEvent((prev) => ({
                                   ...prev,
                                   location: value,
@@ -1821,8 +1846,7 @@ export default function CalendarTab({
                             </SelectContent>
                           </Select>
 
-                          {(newEvent.location === "" ||
-                            !savedLocations.includes(newEvent.location)) && (
+                          {isCustomLocationSelected && (
                             <Input
                               id="location-custom"
                               value={newEvent.location}
@@ -2046,6 +2070,9 @@ export default function CalendarTab({
                               recurringEndDate:
                                 selectedEvent.recurring_end_date || "",
                             });
+                            // 기존 장소가 저장된 장소인지 확인
+                            const isExistingLocation = savedLocations.includes(selectedEvent.location || "");
+                            setIsCustomLocationSelected(!isExistingLocation && Boolean(selectedEvent.location));
                             setIsEditingEvent(true);
                             setIsEventDetailModalOpen(false);
                             setIsEventModalOpen(true);
@@ -2161,6 +2188,9 @@ export default function CalendarTab({
                             recurringEndDate:
                               selectedEvent.recurring_end_date || "",
                           });
+                          // 기존 장소가 저장된 장소인지 확인
+                          const isExistingLocation = savedLocations.includes(selectedEvent.location || "");
+                          setIsCustomLocationSelected(!isExistingLocation && Boolean(selectedEvent.location));
                           setIsEditingEvent(true);
                           setIsEventDetailModalOpen(false);
                           setIsEventModalOpen(true);
@@ -2317,6 +2347,7 @@ export default function CalendarTab({
                                 format(oneHourLater, "yyyy-MM-dd'T'HH:mm")
                               )
                             );
+                            setIsCustomLocationSelected(false);
 
                             setIsEditingEvent(false);
                             setEditingEventData(null);
@@ -3103,7 +3134,6 @@ export default function CalendarTab({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
 
       {/* Alert 다이얼로그 */}
       <AlertDialog open={alertOpen} onOpenChange={setAlertOpen}>
