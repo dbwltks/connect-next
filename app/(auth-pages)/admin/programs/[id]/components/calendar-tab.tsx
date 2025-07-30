@@ -1353,19 +1353,13 @@ export default function CalendarTab({
                   variant="outline"
                   size="sm"
                   onClick={toggleNotifications}
-                  disabled={!isNotificationSupportedState}
                   className={`p-2 ${
-                    !isNotificationSupportedState 
-                      ? 'opacity-50 cursor-not-allowed text-gray-400'
-                      : notificationsEnabled 
-                        ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100' 
-                        : 'text-gray-600 hover:text-gray-700'
+                    notificationsEnabled 
+                      ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100' 
+                      : 'text-gray-600 hover:text-gray-700'
                   }`}
-                  title={!isNotificationSupportedState ? '이 브라우저는 웹 알림을 지원하지 않습니다' : ''}
                 >
-                  {!isNotificationSupportedState ? (
-                    <BellOff className="h-4 w-4" />
-                  ) : notificationsEnabled ? (
+                  {notificationsEnabled ? (
                     <Bell className="h-4 w-4" />
                   ) : (
                     <BellOff className="h-4 w-4" />

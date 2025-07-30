@@ -99,7 +99,11 @@ import {
   parseISO,
 } from "date-fns";
 import { ko } from "date-fns/locale";
-import { formatHourToKorean, formatDateTimeToKorean, formatFullDateTimeToKorean } from "@/lib/time-format";
+import {
+  formatHourToKorean,
+  formatDateTimeToKorean,
+  formatFullDateTimeToKorean,
+} from "@/lib/time-format";
 import ChecklistTab from "@/app/(auth-pages)/admin/programs/[id]/components/checklist-tab";
 import FinanceTab from "@/app/(auth-pages)/admin/programs/[id]/components/finance-tab";
 import AttendanceTab from "@/app/(auth-pages)/admin/programs/[id]/components/attendance-tab";
@@ -141,7 +145,6 @@ interface Participant {
   program_id: string;
   team_id?: string;
 }
-
 
 interface Team {
   id: string;
@@ -565,7 +568,6 @@ export default function ProgramsWidget({
     }
   };
 
-
   // 장소 관리 상태
   const [isLocationSettingsOpen, setIsLocationSettingsOpen] = useState(false);
   const [savedLocations, setSavedLocations] = useState<string[]>([]);
@@ -579,7 +581,6 @@ export default function ProgramsWidget({
   const [isDayEventsModalOpen, setIsDayEventsModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedDateEvents, setSelectedDateEvents] = useState<Event[]>([]);
-
 
   // 반복 일정 삭제 옵션 모달 상태
   const [isRecurringDeleteModalOpen, setIsRecurringDeleteModalOpen] =
@@ -599,13 +600,6 @@ export default function ProgramsWidget({
   // 삭제 확인 다이얼로그 상태
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [eventToDeleteConfirm, setEventToDeleteConfirm] = useState<any>(null);
-
-
-
-
-
-
-
 
   // events_settings 구조: { locations: string[], defaultDuration: number, ... }
   const [newEvent, setNewEvent] = useState({
@@ -810,7 +804,6 @@ export default function ProgramsWidget({
           setTeams(filteredTeams);
           // events JSON 필드에서 직접 가져오기
           setEvents(Array.isArray(data.events) ? data.events : []);
-
         }
       } catch (error) {
         console.error("프로그램 데이터 로드 실패:", error);
@@ -841,7 +834,6 @@ export default function ProgramsWidget({
   })();
 
   const filteredParticipants = participants;
-
 
   // 주간 보기 날짜 계산
   const weekDays = eachDayOfInterval({
@@ -937,7 +929,6 @@ export default function ProgramsWidget({
     // list 모드에서는 날짜 네비게이션 없음
   };
 
-
   // 일정 시간대 판단 함수
   const getEventTimeStatus = (eventDate: Date, endDate?: Date | null) => {
     const now = new Date();
@@ -1008,7 +999,7 @@ export default function ProgramsWidget({
       };
 
       const colors = getDDayColor(diffDays);
-      
+
       return {
         status: "upcoming",
         label: `D-${diffDays}`,
@@ -1889,15 +1880,6 @@ export default function ProgramsWidget({
     }
   }, [selectedProgram]);
 
-
-
-
-
-
-
-
-
-
   // 날짜 클릭 시 해당 날짜의 모든 일정 보기
   const handleDateClick = (date: Date) => {
     const dayEvents = getEventsForDay(date);
@@ -1934,7 +1916,7 @@ export default function ProgramsWidget({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 px-2 lg:px-6">
       {/* 컨트롤 영역 */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 lg:px-0 lg:pt-0 pt-4 px-4">
         <div>
@@ -2084,9 +2066,9 @@ export default function ProgramsWidget({
           {/* 일정 탭 */}
           {tabConfig.availableTabs.some((tab) => tab.key === "calendar") && (
             <TabsContent value="calendar">
-              <CalendarTab 
-                programId={selectedProgram || ""} 
-                hasEditPermission={hasAdminPermission()} 
+              <CalendarTab
+                programId={selectedProgram || ""}
+                hasEditPermission={hasAdminPermission()}
               />
             </TabsContent>
           )}
@@ -2096,8 +2078,8 @@ export default function ProgramsWidget({
             (tab) => tab.key === "participants"
           ) && (
             <TabsContent value="participants" className="p-0">
-              <ParticipantsTab 
-                programId={selectedProgram || ""} 
+              <ParticipantsTab
+                programId={selectedProgram || ""}
                 hasEditPermission={(() => {
                   const participantsManagePermissions =
                     managePermissions.participants || [];
@@ -2225,17 +2207,14 @@ export default function ProgramsWidget({
           {/* 대시보드 탭 */}
           {tabConfig.availableTabs.some((tab) => tab.key === "dashboard") && (
             <TabsContent value="dashboard" className="p-4">
-              <DashboardTab 
-                programId={selectedProgram || ""} 
+              <DashboardTab
+                programId={selectedProgram || ""}
                 onNavigateToTab={setActiveTab}
               />
             </TabsContent>
           )}
-
         </Tabs>
       </Card>
-
-
 
       {/* 구글 캘린더 동기화 로딩 모달 */}
       {isSyncing && (
@@ -2251,7 +2230,6 @@ export default function ProgramsWidget({
           </div>
         </div>
       )}
-
 
       {/* 반복 일정 삭제 옵션 다이얼로그 */}
       <AlertDialog
@@ -2464,7 +2442,6 @@ export default function ProgramsWidget({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
     </div>
   );
 }
