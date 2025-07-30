@@ -166,6 +166,7 @@ export default function CalendarTab({
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
   const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
+  const [isNotificationSupportedState, setIsNotificationSupportedState] = useState(true);
 
   // 장소 관련 상태
   const [savedLocations, setSavedLocations] = useState<string[]>([]);
@@ -293,38 +294,44 @@ export default function CalendarTab({
   // 알림 권한 확인 및 기존 구독 정보 불러오기
   useEffect(() => {
     const initializeNotifications = async () => {
-      if (typeof window !== 'undefined' && 'Notification' in window) {
-        setNotificationPermission(Notification.permission);
+      if (typeof window !== 'undefined') {
+        // 브라우저 알림 지원 여부 확인
+        const supported = 'Notification' in window;
+        setIsNotificationSupportedState(supported);
         
-        // 기존 구독 정보 확인
-        try {
-          const userId = user?.id || null;
-          const anonymousId = userId ? null : getAnonymousId();
+        if (supported) {
+          setNotificationPermission(Notification.permission);
           
-          const { data, error } = await supabase
-            .from('notification_subscriptions')
-            .select('*')
-            .eq('program_id', programId)
-            .eq(userId ? 'user_id' : 'anonymous_id', userId || anonymousId)
-            .maybeSingle();
+          // 기존 구독 정보 확인
+          try {
+            const userId = user?.id || null;
+            const anonymousId = userId ? null : getAnonymousId();
+            
+            const { data, error } = await supabase
+              .from('notification_subscriptions')
+              .select('*')
+              .eq('program_id', programId)
+              .eq(userId ? 'user_id' : 'anonymous_id', userId || anonymousId)
+              .maybeSingle();
 
-          if (data && !error) {
-            setSubscriptionId(data.id);
-            setNotificationsEnabled(true);
-            localStorage.setItem(`calendar-notifications-${programId}`, 'true');
-          } else {
-            // 로컬 스토리지에서 알림 설정 불러오기 (fallback)
+            if (data && !error) {
+              setSubscriptionId(data.id);
+              setNotificationsEnabled(true);
+              localStorage.setItem(`calendar-notifications-${programId}`, 'true');
+            } else {
+              // 로컬 스토리지에서 알림 설정 불러오기 (fallback)
+              const savedNotificationSetting = localStorage.getItem(`calendar-notifications-${programId}`);
+              if (savedNotificationSetting === 'true' && Notification.permission === 'granted') {
+                setNotificationsEnabled(true);
+              }
+            }
+          } catch (error) {
+            console.error('기존 구독 정보 불러오기 실패:', error);
+            // 로컬 스토리지 fallback
             const savedNotificationSetting = localStorage.getItem(`calendar-notifications-${programId}`);
             if (savedNotificationSetting === 'true' && Notification.permission === 'granted') {
               setNotificationsEnabled(true);
             }
-          }
-        } catch (error) {
-          console.error('기존 구독 정보 불러오기 실패:', error);
-          // 로컬 스토리지 fallback
-          const savedNotificationSetting = localStorage.getItem(`calendar-notifications-${programId}`);
-          if (savedNotificationSetting === 'true' && Notification.permission === 'granted') {
-            setNotificationsEnabled(true);
           }
         }
       }
@@ -342,8 +349,8 @@ export default function CalendarTab({
 
   // 알림 권한 요청 함수
   const requestNotificationPermission = async () => {
-    if (!isNotificationSupported()) {
-      alert('이 기기/브라우저는 웹 알림을 지원하지 않습니다.\n\nSafari의 경우 iOS 16.4 이상이 필요합니다.');
+    if (!isNotificationSupportedState) {
+      alert('이 기기/브라우저는 웹 알림을 지원하지 않습니다.');
       return false;
     }
 
@@ -1346,17 +1353,17 @@ export default function CalendarTab({
                   variant="outline"
                   size="sm"
                   onClick={toggleNotifications}
-                  disabled={!isNotificationSupported()}
+                  disabled={!isNotificationSupportedState}
                   className={`p-2 ${
-                    !isNotificationSupported() 
+                    !isNotificationSupportedState 
                       ? 'opacity-50 cursor-not-allowed text-gray-400'
                       : notificationsEnabled 
                         ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100' 
                         : 'text-gray-600 hover:text-gray-700'
                   }`}
-                  title={!isNotificationSupported() ? '이 브라우저는 웹 알림을 지원하지 않습니다' : ''}
+                  title={!isNotificationSupportedState ? '이 브라우저는 웹 알림을 지원하지 않습니다' : ''}
                 >
-                  {!isNotificationSupported() ? (
+                  {!isNotificationSupportedState ? (
                     <BellOff className="h-4 w-4" />
                   ) : notificationsEnabled ? (
                     <Bell className="h-4 w-4" />
@@ -2323,8 +2330,7 @@ export default function CalendarTab({
                       <div className="space-y-3">
                         <div className="flex items-center gap-2">
                           <Calendar size={16} className="text-gray-500" />
-                          <span className="text-sm">
-                            일시:{" "}
+                          <span className="text-sm font-semibold">
                             {(() => {
                               const startDate = parseISO(
                                 selectedEvent.start_date
@@ -2340,15 +2346,14 @@ export default function CalendarTab({
 
                         <div className="flex items-center gap-2">
                           <MapPin size={16} className="text-gray-500" />
-                          <span className="text-sm">
-                            장소: {selectedEvent.location || "미정"}
+                          <span className="text-sm font-semibold">
+{selectedEvent.location || "미정"}
                           </span>
                         </div>
 
                         <div className="flex items-center gap-2">
                           <Users size={16} className="text-gray-500" />
                           <span className="text-sm">
-                            팀:{" "}
                             {selectedEvent.team_id
                               ? teams.find(
                                   (t) => t.id === selectedEvent.team_id
@@ -2448,8 +2453,7 @@ export default function CalendarTab({
                     <div className="space-y-3">
                       <div className="flex items-center gap-2">
                         <Calendar size={16} className="text-gray-500" />
-                        <span className="text-sm">
-                          일시:{" "}
+                        <span className="text-sm font-semibold">
                           {(() => {
                             const startDate = parseISO(
                               selectedEvent.start_date
@@ -2465,15 +2469,14 @@ export default function CalendarTab({
 
                       <div className="flex items-center gap-2">
                         <MapPin size={16} className="text-gray-500" />
-                        <span className="text-sm">
-                          장소: {selectedEvent.location || "미정"}
+                        <span className="text-sm font-semibold">
+{selectedEvent.location || "미정"}
                         </span>
                       </div>
 
                       <div className="flex items-center gap-2">
                         <Users size={16} className="text-gray-500" />
                         <span className="text-sm">
-                          팀:{" "}
                           {selectedEvent.team_id
                             ? teams.find((t) => t.id === selectedEvent.team_id)
                                 ?.name
