@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Select,
   SelectContent,
@@ -56,18 +57,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import {
   Calendar,
-  CalendarDays,
   ChevronLeft,
   ChevronRight,
   Clock,
   MapPin,
   Users,
-  UserCheck,
   Plus,
   Trash2,
-  Edit,
   Settings,
-  CheckCircle,
   Filter,
 } from "lucide-react";
 import { SiGooglecalendar } from "react-icons/si";
@@ -98,18 +95,22 @@ import {
   syncMultipleEvents,
   deleteAllConnectNextEvents,
 } from "@/utils/google-calendar-api";
-import { useMediaQuery } from "@/hooks/use-media-query";
 
 interface CalendarTabProps {
   programId: string;
+  hasEditPermission?: boolean;
 }
 
-export default function CalendarTab({ programId }: CalendarTabProps) {
+export default function CalendarTab({
+  programId,
+  hasEditPermission = false,
+}: CalendarTabProps) {
   // 기본 상태
   const [viewMode, setViewMode] = useState<"list" | "week" | "month">("list");
   const [events, setEvents] = useState<Event[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
+  const isMobile = useIsMobile();
 
   // 모달 상태
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
@@ -136,11 +137,7 @@ export default function CalendarTab({ programId }: CalendarTabProps) {
   const [isGoogleAuthenticated, setIsGoogleAuthenticated] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // 사용자 권한 상태
-  const [userRole, setUserRole] = useState<string>("guest");
-  const [userRoles, setUserRoles] = useState<string[]>([]);
-  const [userPermissions, setUserPermissions] = useState<string[]>([]);
-  const [userTeamId, setUserTeamId] = useState<string | null>(null);
+  // 사용자 권한은 props로 전달받음
 
   // 새 이벤트 상태
   const [newEvent, setNewEvent] = useState({
@@ -166,6 +163,12 @@ export default function CalendarTab({ programId }: CalendarTabProps) {
     number | null
   >(null);
   const [editingLocationValue, setEditingLocationValue] = useState("");
+
+  // 모바일 날짜/시간 선택 상태
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
+  const [datePickerMode, setDatePickerMode] = useState<'start' | 'end'>('start');
+  const [tempDate, setTempDate] = useState(new Date());
 
   // 삭제 확인 상태
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -223,120 +226,6 @@ export default function CalendarTab({ programId }: CalendarTabProps) {
     };
 
     loadProgramData();
-  }, [programId]);
-
-  // 사용자 권한 확인
-  useEffect(() => {
-    const checkUserRole = async () => {
-      try {
-        const supabase = createClient();
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-
-        if (!user) {
-          setUserRole("guest");
-          setUserRoles(["guest"]);
-          setUserPermissions([]);
-          return;
-        }
-
-        // users 테이블에서 역할 및 권한 확인 (다중 역할 포함)
-        const { data: userData, error } = await supabase
-          .from("users")
-          .select(
-            `
-            role, 
-            roles,
-            email, 
-            id
-          `
-          )
-          .eq("id", user.id)
-          .single();
-
-        console.log("🔍 사용자 데이터 조회 결과:", { userData, error });
-
-        if (error || !userData) {
-          // 사용자 데이터가 없으면 관리자 권한으로 가정 (admin 페이지에서 사용하는 경우)
-          console.log(
-            "사용자 데이터를 찾을 수 없습니다. 관리자 권한으로 설정합니다."
-          );
-          setUserRole("admin");
-          return;
-        }
-
-        // JSON roles 필드 사용
-        let userRole = "member"; // 기본값
-        let allUserRoles: string[] = []; // 모든 역할 저장
-        let allUserPermissions: string[] = []; // 권한은 일단 빈 배열
-
-        console.log("🔍 사용자 roles 데이터:", userData.roles);
-
-        // roles JSON 배열 사용
-        if (
-          userData.roles &&
-          Array.isArray(userData.roles) &&
-          userData.roles.length > 0
-        ) {
-          allUserRoles = userData.roles;
-          userRole = userData.roles[0]; // 첫 번째 역할을 주 역할로 설정
-          console.log("🔍 JSON roles 사용:", { userRole, allUserRoles });
-        } else if (userData.role) {
-          // 레거시 단일 role 필드 사용
-          userRole = userData.role;
-          allUserRoles = [userData.role];
-          console.log("🔍 레거시 단일 role 사용:", { userRole, allUserRoles });
-        } else {
-          // 기본값
-          userRole = "member";
-          allUserRoles = ["member"];
-          console.log("🔍 기본값 사용:", { userRole, allUserRoles });
-        }
-
-        setUserRole(userRole);
-        setUserRoles(allUserRoles);
-        setUserPermissions(allUserPermissions);
-
-        // members 테이블에서 사용자의 팀 정보만 확인
-        if (programId) {
-          try {
-            // members 테이블에서 현재 사용자의 팀 정보 조회
-            const { data: memberData } = await supabase
-              .from("members")
-              .select("team_id")
-              .eq("user_id", user.id)
-              .single();
-
-            if (memberData) {
-              console.log("Members 테이블에서 팀 정보 확인:", {
-                userId: user.id,
-                teamId: memberData.team_id,
-              });
-
-              setUserTeamId(memberData.team_id);
-            } else {
-              console.log("Members 테이블에서 사용자 정보를 찾을 수 없음");
-            }
-          } catch (teamError) {
-            console.log("팀 정보 확인 중 오류:", teamError);
-          }
-        }
-
-        console.log("🔍 사용자 권한 디버깅:", {
-          primaryRole: userRole,
-          allRoles: allUserRoles,
-          allPermissions: allUserPermissions,
-          userId: user.id,
-        });
-      } catch (error) {
-        console.error("사용자 권한 확인 실패:", error);
-        // 오류 시 관리자 권한으로 가정 (admin 페이지에서 사용하는 경우)
-        setUserRole("admin");
-      }
-    };
-
-    checkUserRole();
   }, [programId]);
 
   // 유틸리티 함수들
@@ -600,124 +489,9 @@ export default function CalendarTab({ programId }: CalendarTabProps) {
     return "9";
   };
 
-  // 특정 권한 확인 함수
-  const hasPermission = (permission: string) => {
-    const result = userPermissions.includes(permission);
-    console.log("🔍 hasPermission:", {
-      permission,
-      userPermissions,
-      result,
-    });
-    return result;
-  };
-
-  // 여러 권한 중 하나라도 있는지 확인
-  const hasAnyPermission = (permissions: string[]) => {
-    const result = permissions.some((permission) =>
-      userPermissions.includes(permission)
-    );
-    console.log("🔍 hasAnyPermission:", {
-      permissions,
-      userPermissions,
-      result,
-    });
-    return result;
-  };
-
-  // 관리자 권한 확인 함수 - 권한 기반으로 수정
+  // 관리자 권한 확인 함수 - props 기반으로 간소화
   const hasAdminPermission = () => {
-    // 권한 기반 체크 우선
-    const hasManagePermission = hasAnyPermission([
-      "create_programs",
-      "update_programs",
-      "delete_programs",
-      "manage_all",
-    ]);
-
-    // 레거시 역할 기반 체크 (하위 호환성)
-    const adminRoles = ["admin", "tier0", "tier1"];
-    const hasAdminRole =
-      adminRoles.some((role) => userRoles.includes(role)) ||
-      adminRoles.includes(userRole);
-
-    const result = hasManagePermission || hasAdminRole;
-
-    console.log("🔍 hasAdminPermission:", {
-      hasManagePermission,
-      hasAdminRole,
-      result,
-      userRole,
-      userRoles,
-      userPermissions,
-    });
-
-    return result;
-  };
-
-  // 특정 역할 권한 확인 함수 (혼합 권한 시스템)
-  const hasRolePermission = (allowedRoles: string[]) => {
-    if (allowedRoles.length === 0) return false;
-
-    // 계층적 역할 (guest → member → admin)
-    const hierarchicalRoles = ["guest", "member", "admin"];
-    const roleHierarchy: { [key: string]: number } = {
-      guest: 0, // 비회원 (최하위)
-      member: 1, // 교인 (로그인 사용자)
-      admin: 2, // 관리자 (최고 권한)
-    };
-
-    // 허용된 역할 중 계층적 역할과 특별 역할 분리
-    const allowedHierarchicalRoles = allowedRoles.filter((role) =>
-      hierarchicalRoles.includes(role)
-    );
-    const allowedSpecialRoles = allowedRoles.filter(
-      (role) => !hierarchicalRoles.includes(role)
-    );
-
-    // 현재 사용자의 역할 분석
-    const allUserRoles = [...userRoles, userRole].filter(Boolean);
-    const userHierarchicalRoles = allUserRoles.filter((role) =>
-      hierarchicalRoles.includes(role)
-    );
-    const userSpecialRoles = allUserRoles.filter(
-      (role) => !hierarchicalRoles.includes(role)
-    );
-
-    // 사용자의 계층적 레벨 결정
-    let userHierarchicalLevel = 0;
-    if (!userHierarchicalRoles.length && allUserRoles.length > 0) {
-      // 로그인했지만 계층적 역할이 없는 경우 member로 처리
-      userHierarchicalLevel = roleHierarchy["member"];
-    } else if (userHierarchicalRoles.length > 0) {
-      // 가장 높은 계층적 역할의 레벨
-      userHierarchicalLevel = Math.max(
-        ...userHierarchicalRoles.map((role) => roleHierarchy[role] || 0)
-      );
-    } else {
-      // 로그인했지만 특별한 계층적 역할이 없는 경우 member로 처리
-      userHierarchicalLevel = roleHierarchy["member"];
-    }
-
-    let hasAccess = false;
-
-    // 1. 계층적 역할 체크
-    if (allowedHierarchicalRoles.length > 0) {
-      const maxAllowedLevel = Math.max(
-        ...allowedHierarchicalRoles.map((role) => roleHierarchy[role] || 0)
-      );
-      if (userHierarchicalLevel >= maxAllowedLevel) {
-        hasAccess = true;
-      }
-    }
-
-    // 2. 특별 역할 체크 (정확한 매칭)
-    if (!hasAccess && allowedSpecialRoles.length > 0) {
-      hasAccess = allowedSpecialRoles.some((role) =>
-        userSpecialRoles.includes(role)
-      );
-    }
-
-    return hasAccess;
+    return hasEditPermission;
   };
 
   // 장소 관리 함수들
@@ -815,6 +589,90 @@ export default function CalendarTab({ programId }: CalendarTabProps) {
   const cancelEditLocation = () => {
     setEditingLocationIndex(null);
     setEditingLocationValue("");
+  };
+
+  // 모바일 날짜 선택 핸들러
+  const openDatePicker = (mode: 'start' | 'end') => {
+    setDatePickerMode(mode);
+    const currentDate = mode === 'start' 
+      ? (newEvent.start_date ? new Date(newEvent.start_date) : new Date())
+      : (newEvent.end_date ? new Date(newEvent.end_date) : new Date());
+    setTempDate(currentDate);
+    setIsDatePickerOpen(true);
+  };
+
+  const confirmDateSelection = () => {
+    const dateStr = format(tempDate, 'yyyy-MM-dd');
+    
+    if (datePickerMode === 'start') {
+      const time = newEvent.start_date ? newEvent.start_date.split('T')[1] || '09:00' : '09:00';
+      const startDateTime = `${dateStr}T${time}`;
+      
+      let endDateTime = "";
+      if (startDateTime) {
+        const startDate = new Date(startDateTime);
+        const endDate = addHours(startDate, 1);
+        endDateTime = format(endDate, "yyyy-MM-dd'T'HH:mm");
+      }
+      
+      setNewEvent((prev) => ({
+        ...prev,
+        start_date: startDateTime,
+        end_date: endDateTime,
+      }));
+    } else {
+      const time = newEvent.end_date ? newEvent.end_date.split('T')[1] || '10:00' : '10:00';
+      const endDateTime = `${dateStr}T${time}`;
+      
+      setNewEvent((prev) => ({
+        ...prev,
+        end_date: endDateTime,
+      }));
+    }
+    
+    setIsDatePickerOpen(false);
+  };
+
+  // 모바일 시간 선택 핸들러
+  const openTimePicker = (mode: 'start' | 'end') => {
+    setDatePickerMode(mode);
+    const currentDate = mode === 'start' 
+      ? (newEvent.start_date ? new Date(newEvent.start_date) : new Date())
+      : (newEvent.end_date ? new Date(newEvent.end_date) : new Date());
+    setTempDate(currentDate);
+    setIsTimePickerOpen(true);
+  };
+
+  const confirmTimeSelection = () => {
+    const timeStr = format(tempDate, 'HH:mm');
+    
+    if (datePickerMode === 'start') {
+      const date = newEvent.start_date ? newEvent.start_date.split('T')[0] : format(new Date(), 'yyyy-MM-dd');
+      const startDateTime = `${date}T${timeStr}`;
+      
+      let endDateTime = "";
+      if (startDateTime) {
+        const startDate = new Date(startDateTime);
+        const endDate = addHours(startDate, 1);
+        endDateTime = format(endDate, "yyyy-MM-dd'T'HH:mm");
+      }
+      
+      setNewEvent((prev) => ({
+        ...prev,
+        start_date: startDateTime,
+        end_date: endDateTime,
+      }));
+    } else {
+      const date = newEvent.end_date ? newEvent.end_date.split('T')[0] : format(new Date(), 'yyyy-MM-dd');
+      const endDateTime = `${date}T${timeStr}`;
+      
+      setNewEvent((prev) => ({
+        ...prev,
+        end_date: endDateTime,
+      }));
+    }
+    
+    setIsTimePickerOpen(false);
   };
 
   // Google Calendar 스마트 동기화 (생성/업데이트)
@@ -1247,7 +1105,7 @@ export default function CalendarTab({ programId }: CalendarTabProps) {
   return (
     <div>
       <div>
-        <div className="space-y-2 py-2 px-0 sm:px-2">
+        <div className="space-y-2 pb-4 px-2 sm:px-4">
           {/* 상단 컨트롤 바 */}
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
             <div className="flex items-center gap-2">
@@ -1311,686 +1169,1442 @@ export default function CalendarTab({ programId }: CalendarTabProps) {
                 </SelectContent>
               </Select>
 
-              {/* 구글 캘린더 드롭다운 */}
+              {/* 구글 캘린더 메뉴 - 모바일은 Drawer, 데스크톱은 DropdownMenu */}
               {filteredEvents.length > 0 && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <img
-                      src="https://www.gstatic.com/marketing-cms/assets/images/cf/3c/0d56042f479fac9ad22d06855578/calender.webp"
-                      alt="Google Calendar"
-                      className="w-8 h-8 rounded cursor-pointer hover:opacity-80 transition-opacity object-contain"
-                    />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={syncEventsToGoogle}
-                      disabled={isSyncing}
-                    >
-                      <Calendar className="mr-2 h-4 w-4" />
-                      구글캘린더 동기화
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={deleteConnectNextEventsFromGoogle}
-                      disabled={isSyncing}
-                      className="text-destructive focus:text-destructive"
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      동기화 삭제
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <>
+                  {isMobile ? (
+                    <Drawer>
+                      <DrawerTrigger asChild>
+                        <img
+                          src="https://www.gstatic.com/marketing-cms/assets/images/cf/3c/0d56042f479fac9ad22d06855578/calender.webp"
+                          alt="Google Calendar"
+                          className="w-8 h-8 rounded cursor-pointer hover:opacity-80 transition-opacity object-contain"
+                        />
+                      </DrawerTrigger>
+                      <DrawerContent>
+                        <DrawerHeader>
+                          <DrawerTitle>Google Calendar 동기화</DrawerTitle>
+                        </DrawerHeader>
+                        <div className="p-4 space-y-2">
+                          <Button
+                            onClick={syncEventsToGoogle}
+                            disabled={isSyncing}
+                            variant="ghost"
+                            className="w-full justify-start"
+                          >
+                            <Calendar className="mr-2 h-4 w-4" />
+                            구글캘린더 동기화
+                          </Button>
+                          <Button
+                            onClick={deleteConnectNextEventsFromGoogle}
+                            disabled={isSyncing}
+                            variant="ghost"
+                            className="w-full justify-start text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            동기화 삭제
+                          </Button>
+                        </div>
+                      </DrawerContent>
+                    </Drawer>
+                  ) : (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <img
+                          src="https://www.gstatic.com/marketing-cms/assets/images/cf/3c/0d56042f479fac9ad22d06855578/calender.webp"
+                          alt="Google Calendar"
+                          className="w-8 h-8 rounded cursor-pointer hover:opacity-80 transition-opacity object-contain"
+                        />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={syncEventsToGoogle}
+                          disabled={isSyncing}
+                        >
+                          <Calendar className="mr-2 h-4 w-4" />
+                          구글캘린더 동기화
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={deleteConnectNextEventsFromGoogle}
+                          disabled={isSyncing}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          동기화 삭제
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </>
               )}
             </div>
 
             {/* 일정 추가 버튼 */}
             <div className="flex items-center gap-2 justify-end sm:justify-start">
               {/* 장소 설정 버튼 */}
-              <Dialog
-                open={isLocationSettingsOpen}
-                onOpenChange={setIsLocationSettingsOpen}
-              >
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Settings size={16} />
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="w-[95vw] max-w-[425px] max-h-[90vh] overflow-y-auto mx-auto">
-                  <DialogHeader>
-                    <DialogTitle>장소 설정</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label>새 장소 추가</Label>
-                      <div className="flex gap-2">
-                        <Input
-                          value={newLocation}
-                          onChange={(e) => setNewLocation(e.target.value)}
-                          placeholder="장소명을 입력하세요"
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              addLocation();
-                            }
-                          }}
-                        />
-                        <Button
-                          onClick={addLocation}
-                          disabled={!newLocation.trim()}
-                        >
-                          추가
-                        </Button>
-                      </div>
-                    </div>
+              {hasAdminPermission() &&
+                (isMobile ? (
+                  <Drawer
+                    open={isLocationSettingsOpen}
+                    onOpenChange={setIsLocationSettingsOpen}
+                  >
+                    <DrawerTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <Settings size={16} />
+                      </Button>
+                    </DrawerTrigger>
+                    <DrawerContent>
+                      <DrawerHeader>
+                        <DrawerTitle>장소 설정</DrawerTitle>
+                      </DrawerHeader>
+                      <div className="px-4 pb-4 max-h-[60vh] overflow-y-auto">
+                        <div className="space-y-4 py-4">
+                          <div className="space-y-2">
+                            <Label>새 장소 추가</Label>
+                            <div className="flex gap-2">
+                              <Input
+                                value={newLocation}
+                                onChange={(e) => setNewLocation(e.target.value)}
+                                placeholder="장소명을 입력하세요"
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    addLocation();
+                                  }
+                                }}
+                              />
+                              <Button
+                                onClick={addLocation}
+                                disabled={!newLocation.trim()}
+                              >
+                                추가
+                              </Button>
+                            </div>
+                          </div>
 
-                    <div className="space-y-2">
-                      <Label>저장된 장소</Label>
-                      <div className="max-h-40 overflow-y-auto space-y-1">
-                        {savedLocations.length === 0 ? (
-                          <p className="text-sm text-gray-500 py-2">
-                            저장된 장소가 없습니다.
-                          </p>
-                        ) : (
-                          savedLocations.map((location, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center justify-between p-2 bg-gray-50 rounded"
-                            >
-                              {editingLocationIndex === index ? (
-                                <>
-                                  <Input
-                                    value={editingLocationValue}
-                                    onChange={(e) =>
-                                      setEditingLocationValue(e.target.value)
-                                    }
-                                    className="text-sm flex-1 mr-2"
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Enter") {
-                                        saveEditLocation();
-                                      } else if (e.key === "Escape") {
-                                        cancelEditLocation();
-                                      }
-                                    }}
-                                    autoFocus
-                                  />
-                                  <div className="flex gap-1">
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={saveEditLocation}
-                                      className="h-6 w-6 p-0 text-green-500 hover:text-green-700"
-                                    >
-                                      ✓
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={cancelEditLocation}
-                                      className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700"
-                                    >
-                                      ×
-                                    </Button>
-                                  </div>
-                                </>
+                          <div className="space-y-2">
+                            <Label>저장된 장소</Label>
+                            <div className="max-h-40 overflow-y-auto space-y-1">
+                              {savedLocations.length === 0 ? (
+                                <p className="text-sm text-gray-500 py-2">
+                                  저장된 장소가 없습니다.
+                                </p>
                               ) : (
-                                <>
-                                  <span className="text-sm flex-1">
-                                    {location}
-                                  </span>
-                                  <div className="flex gap-1">
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() =>
-                                        startEditLocation(index, location)
-                                      }
-                                      className="h-6 w-6 p-0 text-blue-500 hover:text-blue-700"
-                                    >
-                                      ✏
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => removeLocation(location)}
-                                      className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                                    >
-                                      ×
-                                    </Button>
+                                savedLocations.map((location, index) => (
+                                  <div
+                                    key={index}
+                                    className="flex items-center justify-between p-2 bg-gray-50 rounded"
+                                  >
+                                    {editingLocationIndex === index ? (
+                                      <>
+                                        <Input
+                                          value={editingLocationValue}
+                                          onChange={(e) =>
+                                            setEditingLocationValue(
+                                              e.target.value
+                                            )
+                                          }
+                                          className="text-sm flex-1 mr-2"
+                                          onKeyDown={(e) => {
+                                            if (e.key === "Enter") {
+                                              saveEditLocation();
+                                            } else if (e.key === "Escape") {
+                                              cancelEditLocation();
+                                            }
+                                          }}
+                                          autoFocus
+                                        />
+                                        <div className="flex gap-1">
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={saveEditLocation}
+                                            className="h-6 w-6 p-0 text-green-500 hover:text-green-700"
+                                          >
+                                            ✓
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={cancelEditLocation}
+                                            className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700"
+                                          >
+                                            ×
+                                          </Button>
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <span className="text-sm flex-1">
+                                          {location}
+                                        </span>
+                                        <div className="flex gap-1">
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() =>
+                                              startEditLocation(index, location)
+                                            }
+                                            className="h-6 w-6 p-0 text-blue-500 hover:text-blue-700"
+                                          >
+                                            ✏
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() =>
+                                              removeLocation(location)
+                                            }
+                                            className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                                          >
+                                            ×
+                                          </Button>
+                                        </div>
+                                      </>
+                                    )}
                                   </div>
-                                </>
+                                ))
                               )}
                             </div>
-                          ))
-                        )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
+                    </DrawerContent>
+                  </Drawer>
+                ) : (
+                  <Dialog
+                    open={isLocationSettingsOpen}
+                    onOpenChange={setIsLocationSettingsOpen}
+                  >
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <Settings size={16} />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="w-[95vw] max-w-[425px] max-h-[90vh] overflow-y-auto mx-auto">
+                      <DialogHeader>
+                        <DialogTitle>장소 설정</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label>새 장소 추가</Label>
+                          <div className="flex gap-2">
+                            <Input
+                              value={newLocation}
+                              onChange={(e) => setNewLocation(e.target.value)}
+                              placeholder="장소명을 입력하세요"
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  addLocation();
+                                }
+                              }}
+                            />
+                            <Button
+                              onClick={addLocation}
+                              disabled={!newLocation.trim()}
+                            >
+                              추가
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>저장된 장소</Label>
+                          <div className="max-h-40 overflow-y-auto space-y-1">
+                            {savedLocations.length === 0 ? (
+                              <p className="text-sm text-gray-500 py-2">
+                                저장된 장소가 없습니다.
+                              </p>
+                            ) : (
+                              savedLocations.map((location, index) => (
+                                <div
+                                  key={index}
+                                  className="flex items-center justify-between p-2 bg-gray-50 rounded"
+                                >
+                                  {editingLocationIndex === index ? (
+                                    <>
+                                      <Input
+                                        value={editingLocationValue}
+                                        onChange={(e) =>
+                                          setEditingLocationValue(
+                                            e.target.value
+                                          )
+                                        }
+                                        className="text-sm flex-1 mr-2"
+                                        onKeyDown={(e) => {
+                                          if (e.key === "Enter") {
+                                            saveEditLocation();
+                                          } else if (e.key === "Escape") {
+                                            cancelEditLocation();
+                                          }
+                                        }}
+                                        autoFocus
+                                      />
+                                      <div className="flex gap-1">
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={saveEditLocation}
+                                          className="h-6 w-6 p-0 text-green-500 hover:text-green-700"
+                                        >
+                                          ✓
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={cancelEditLocation}
+                                          className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700"
+                                        >
+                                          ×
+                                        </Button>
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span className="text-sm flex-1">
+                                        {location}
+                                      </span>
+                                      <div className="flex gap-1">
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() =>
+                                            startEditLocation(index, location)
+                                          }
+                                          className="h-6 w-6 p-0 text-blue-500 hover:text-blue-700"
+                                        >
+                                          ✏
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() =>
+                                            removeLocation(location)
+                                          }
+                                          className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                                        >
+                                          ×
+                                        </Button>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                ))}
 
               {/* 일정 추가 모달 */}
-              <Dialog
-                open={isEventModalOpen}
-                onOpenChange={(open) => {
-                  setIsEventModalOpen(open);
-                  if (open && !isEditingEvent) {
-                    const now = new Date();
-                    const oneHourLater = addHours(now, 1);
-                    setNewEvent(
-                      initializeNewEvent(
-                        format(now, "yyyy-MM-dd'T'HH:mm"),
-                        format(oneHourLater, "yyyy-MM-dd'T'HH:mm")
-                      )
-                    );
-                  } else if (!open) {
-                    setNewEvent(initializeNewEvent());
-                    setIsEditingEvent(false);
-                    setEditingEventData(null);
-                  }
-                }}
-              >
-                <DialogTrigger asChild>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => {
-                      setIsEditingEvent(false);
-                      setEditingEventData(null);
-                      setNewEvent(initializeNewEvent());
+              {hasAdminPermission() &&
+                (isMobile ? (
+                  <Drawer
+                    open={isEventModalOpen}
+                    onOpenChange={(open) => {
+                      setIsEventModalOpen(open);
+                      if (open && !isEditingEvent) {
+                        const now = new Date();
+                        const oneHourLater = addHours(now, 1);
+                        setNewEvent(
+                          initializeNewEvent(
+                            format(now, "yyyy-MM-dd'T'HH:mm"),
+                            format(oneHourLater, "yyyy-MM-dd'T'HH:mm")
+                          )
+                        );
+                      } else if (!open) {
+                        setNewEvent(initializeNewEvent());
+                        setIsEditingEvent(false);
+                        setEditingEventData(null);
+                      }
                     }}
                   >
-                    일정 추가
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="w-[95vw] max-w-[425px] max-h-[90vh] overflow-y-auto mx-auto">
-                  <DialogHeader>
-                    <DialogTitle>
-                      {isEditingEvent ? "일정 수정" : "새 일정 추가"}
-                    </DialogTitle>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="title">제목 *</Label>
-                      <Input
-                        id="title"
-                        value={newEvent.title}
-                        onChange={(e) =>
-                          setNewEvent((prev) => ({
-                            ...prev,
-                            title: e.target.value,
-                          }))
-                        }
-                        placeholder="일정 제목을 입력하세요"
-                      />
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label htmlFor="description">설명</Label>
-                      <Textarea
-                        id="description"
-                        value={newEvent.description}
-                        onChange={(e) =>
-                          setNewEvent((prev) => ({
-                            ...prev,
-                            description: e.target.value,
-                          }))
-                        }
-                        placeholder="일정 설명을 입력하세요"
-                        rows={3}
-                      />
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label htmlFor="start_date">시작 일시 *</Label>
-                      <Input
-                        id="start_date"
-                        type="datetime-local"
-                        value={newEvent.start_date}
-                        onChange={(e) => {
-                          const startDateTime = e.target.value;
-                          let endDateTime = "";
-                          if (startDateTime) {
-                            const startDate = new Date(startDateTime);
-                            const endDate = addHours(startDate, 1);
-                            endDateTime = format(endDate, "yyyy-MM-dd'T'HH:mm");
-                          }
-                          setNewEvent((prev) => ({
-                            ...prev,
-                            start_date: startDateTime,
-                            end_date: endDateTime,
-                          }));
-                        }}
-                      />
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label htmlFor="end_date">종료 일시</Label>
-                      <Input
-                        id="end_date"
-                        type="datetime-local"
-                        value={newEvent.end_date}
-                        onChange={(e) =>
-                          setNewEvent((prev) => ({
-                            ...prev,
-                            end_date: e.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label htmlFor="location">장소</Label>
-                      <Select
-                        value={newEvent.location}
-                        onValueChange={(value) => {
-                          if (value === "custom") {
-                            setNewEvent((prev) => ({ ...prev, location: "" }));
-                          } else {
-                            setNewEvent((prev) => ({
-                              ...prev,
-                              location: value,
-                            }));
-                          }
+                    <DrawerTrigger asChild>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => {
+                          setIsEditingEvent(false);
+                          setEditingEventData(null);
+                          setNewEvent(initializeNewEvent());
                         }}
                       >
-                        <SelectTrigger>
-                          <SelectValue placeholder="장소를 선택하거나 직접 입력하세요" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {savedLocations.map((location) => (
-                            <SelectItem key={location} value={location}>
-                              {location}
-                            </SelectItem>
-                          ))}
-                          <SelectItem value="custom">직접 입력</SelectItem>
-                        </SelectContent>
-                      </Select>
-
-                      {(newEvent.location === "" ||
-                        !savedLocations.includes(newEvent.location)) && (
-                        <Input
-                          id="location-custom"
-                          value={newEvent.location}
-                          onChange={(e) =>
-                            setNewEvent((prev) => ({
-                              ...prev,
-                              location: e.target.value,
-                            }))
-                          }
-                          placeholder="장소를 입력하세요"
-                          className="mt-2"
-                        />
-                      )}
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label htmlFor="team">진행팀</Label>
-                      <Select
-                        value={newEvent.team_id}
-                        onValueChange={(value) =>
-                          setNewEvent((prev) => ({
-                            ...prev,
-                            team_id: value === "none" ? "" : value,
-                          }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="진행팀을 선택하세요" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">팀 없음</SelectItem>
-                          {teams.map((team) => (
-                            <SelectItem key={team.id} value={team.id}>
-                              {team.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* 반복 설정 */}
-                    <div className="grid gap-3 pt-4 border-t">
-                      <div className="flex items-center justify-between">
-                        <Label
-                          htmlFor="recurring"
-                          className="text-sm font-medium"
-                        >
-                          매주 반복
-                        </Label>
-                        <Switch
-                          id="recurring"
-                          checked={newEvent.isRecurring}
-                          onCheckedChange={(checked) =>
-                            setNewEvent((prev) => ({
-                              ...prev,
-                              isRecurring: checked,
-                              recurringEndDate: checked
-                                ? prev.recurringEndDate
-                                : "",
-                            }))
-                          }
-                        />
-                      </div>
-
-                      {newEvent.isRecurring && (
-                        <div className="grid gap-3 pl-6 space-y-2">
+                        일정 추가
+                      </Button>
+                    </DrawerTrigger>
+                    <DrawerContent>
+                      <DrawerHeader>
+                        <DrawerTitle>
+                          {isEditingEvent ? "일정 수정" : "새 일정 추가"}
+                        </DrawerTitle>
+                      </DrawerHeader>
+                      <div className="px-4 pb-4 max-h-[70vh] overflow-y-auto">
+                        <div className="grid gap-4 py-4">
                           <div className="grid gap-2">
-                            <Label htmlFor="recurring-end">반복 종료일</Label>
+                            <Label htmlFor="title">제목 *</Label>
                             <Input
-                              id="recurring-end"
-                              type="date"
-                              value={newEvent.recurringEndDate}
+                              id="title"
+                              value={newEvent.title}
                               onChange={(e) =>
                                 setNewEvent((prev) => ({
                                   ...prev,
-                                  recurringEndDate: e.target.value,
+                                  title: e.target.value,
                                 }))
                               }
-                              min={
-                                newEvent.start_date
-                                  ? new Date(newEvent.start_date)
-                                      .toISOString()
-                                      .split("T")[0]
-                                  : new Date().toISOString().split("T")[0]
+                              placeholder="일정 제목을 입력하세요"
+                            />
+                          </div>
+
+                          <div className="grid gap-2">
+                            <Label htmlFor="description">설명</Label>
+                            <Textarea
+                              id="description"
+                              value={newEvent.description}
+                              onChange={(e) =>
+                                setNewEvent((prev) => ({
+                                  ...prev,
+                                  description: e.target.value,
+                                }))
+                              }
+                              placeholder="일정 설명을 입력하세요"
+                              rows={3}
+                            />
+                          </div>
+
+                          <div className="space-y-4">
+                            <div className="grid gap-2">
+                              <Label>시작 일시 *</Label>
+                              <div className="grid grid-cols-2 gap-2">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() => openDatePicker('start')}
+                                  className="justify-start text-left font-normal"
+                                >
+                                  <Calendar className="mr-2 h-4 w-4" />
+                                  {newEvent.start_date 
+                                    ? format(new Date(newEvent.start_date), 'MM월 dd일', { locale: ko })
+                                    : '날짜 선택'
+                                  }
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() => openTimePicker('start')}
+                                  className="justify-start text-left font-normal"
+                                >
+                                  <Clock className="mr-2 h-4 w-4" />
+                                  {newEvent.start_date 
+                                    ? format(new Date(newEvent.start_date), 'HH:mm')
+                                    : '시간 선택'
+                                  }
+                                </Button>
+                              </div>
+                            </div>
+
+                            <div className="grid gap-2">
+                              <Label>종료 일시</Label>
+                              <div className="grid grid-cols-2 gap-2">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() => openDatePicker('end')}
+                                  className="justify-start text-left font-normal"
+                                >
+                                  <Calendar className="mr-2 h-4 w-4" />
+                                  {newEvent.end_date 
+                                    ? format(new Date(newEvent.end_date), 'MM월 dd일', { locale: ko })
+                                    : '날짜 선택'
+                                  }
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() => openTimePicker('end')}
+                                  className="justify-start text-left font-normal"
+                                >
+                                  <Clock className="mr-2 h-4 w-4" />
+                                  {newEvent.end_date 
+                                    ? format(new Date(newEvent.end_date), 'HH:mm')
+                                    : '시간 선택'
+                                  }
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="grid gap-2">
+                            <Label htmlFor="location">장소</Label>
+                            <Select
+                              value={newEvent.location}
+                              onValueChange={(value) => {
+                                if (value === "custom") {
+                                  setNewEvent((prev) => ({
+                                    ...prev,
+                                    location: "",
+                                  }));
+                                } else {
+                                  setNewEvent((prev) => ({
+                                    ...prev,
+                                    location: value,
+                                  }));
+                                }
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="장소를 선택하거나 직접 입력하세요" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {savedLocations.map((location) => (
+                                  <SelectItem key={location} value={location}>
+                                    {location}
+                                  </SelectItem>
+                                ))}
+                                <SelectItem value="custom">
+                                  직접 입력
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+
+                            {(newEvent.location === "" ||
+                              !savedLocations.includes(newEvent.location)) && (
+                              <Input
+                                id="location-custom"
+                                value={newEvent.location}
+                                onChange={(e) =>
+                                  setNewEvent((prev) => ({
+                                    ...prev,
+                                    location: e.target.value,
+                                  }))
+                                }
+                                placeholder="장소를 입력하세요"
+                                className="mt-2"
+                              />
+                            )}
+                          </div>
+
+                          <div className="grid gap-2">
+                            <Label htmlFor="team">진행팀</Label>
+                            <Select
+                              value={newEvent.team_id}
+                              onValueChange={(value) =>
+                                setNewEvent((prev) => ({
+                                  ...prev,
+                                  team_id: value === "none" ? "" : value,
+                                }))
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="진행팀을 선택하세요" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">팀 없음</SelectItem>
+                                {teams.map((team) => (
+                                  <SelectItem key={team.id} value={team.id}>
+                                    {team.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* 반복 설정 */}
+                          <div className="grid gap-3 pt-4 border-t">
+                            <div className="flex items-center justify-between">
+                              <Label
+                                htmlFor="recurring"
+                                className="text-sm font-medium"
+                              >
+                                매주 반복
+                              </Label>
+                              <Switch
+                                id="recurring"
+                                checked={newEvent.isRecurring}
+                                onCheckedChange={(checked) =>
+                                  setNewEvent((prev) => ({
+                                    ...prev,
+                                    isRecurring: checked,
+                                    recurringEndDate: checked
+                                      ? prev.recurringEndDate
+                                      : "",
+                                  }))
+                                }
+                              />
+                            </div>
+
+                            {newEvent.isRecurring && (
+                              <div className="grid gap-3 pl-6 space-y-2">
+                                <div className="grid gap-2">
+                                  <Label htmlFor="recurring-end">
+                                    반복 종료일
+                                  </Label>
+                                  <Input
+                                    id="recurring-end"
+                                    type="date"
+                                    value={newEvent.recurringEndDate}
+                                    onChange={(e) =>
+                                      setNewEvent((prev) => ({
+                                        ...prev,
+                                        recurringEndDate: e.target.value,
+                                      }))
+                                    }
+                                    min={
+                                      newEvent.start_date
+                                        ? new Date(newEvent.start_date)
+                                            .toISOString()
+                                            .split("T")[0]
+                                        : new Date().toISOString().split("T")[0]
+                                    }
+                                  />
+                                </div>
+
+                                <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded">
+                                  💡 위에 설정한 시작일부터 종료일까지 매주 같은
+                                  요일, 같은 시간에 반복됩니다.
+                                  <br />
+                                  예: 월요일 오전 10시~오후 12시 → 매주 월요일
+                                  오전 10시~오후 12시 반복
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => setIsEventModalOpen(false)}
+                          >
+                            취소
+                          </Button>
+                          <Button onClick={handleSaveEvent}>
+                            {isEditingEvent ? "수정" : "추가"}
+                          </Button>
+                        </div>
+                      </div>
+                    </DrawerContent>
+                  </Drawer>
+                ) : (
+                  <Dialog
+                    open={isEventModalOpen}
+                    onOpenChange={(open) => {
+                      setIsEventModalOpen(open);
+                      if (open && !isEditingEvent) {
+                        const now = new Date();
+                        const oneHourLater = addHours(now, 1);
+                        setNewEvent(
+                          initializeNewEvent(
+                            format(now, "yyyy-MM-dd'T'HH:mm"),
+                            format(oneHourLater, "yyyy-MM-dd'T'HH:mm")
+                          )
+                        );
+                      } else if (!open) {
+                        setNewEvent(initializeNewEvent());
+                        setIsEditingEvent(false);
+                        setEditingEventData(null);
+                      }
+                    }}
+                  >
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => {
+                          setIsEditingEvent(false);
+                          setEditingEventData(null);
+                          setNewEvent(initializeNewEvent());
+                        }}
+                      >
+                        일정 추가
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="w-[95vw] max-w-[425px] max-h-[90vh] overflow-y-auto mx-auto">
+                      <DialogHeader>
+                        <DialogTitle>
+                          {isEditingEvent ? "일정 수정" : "새 일정 추가"}
+                        </DialogTitle>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                          <Label htmlFor="title">제목 *</Label>
+                          <Input
+                            id="title"
+                            value={newEvent.title}
+                            onChange={(e) =>
+                              setNewEvent((prev) => ({
+                                ...prev,
+                                title: e.target.value,
+                              }))
+                            }
+                            placeholder="일정 제목을 입력하세요"
+                          />
+                        </div>
+
+                        <div className="grid gap-2">
+                          <Label htmlFor="description">설명</Label>
+                          <Textarea
+                            id="description"
+                            value={newEvent.description}
+                            onChange={(e) =>
+                              setNewEvent((prev) => ({
+                                ...prev,
+                                description: e.target.value,
+                              }))
+                            }
+                            placeholder="일정 설명을 입력하세요"
+                            rows={3}
+                          />
+                        </div>
+
+                        <div className="grid gap-2">
+                          <Label htmlFor="start_date">시작 일시 *</Label>
+                          <Input
+                            id="start_date"
+                            type="datetime-local"
+                            value={newEvent.start_date}
+                            onChange={(e) => {
+                              const startDateTime = e.target.value;
+                              let endDateTime = "";
+                              if (startDateTime) {
+                                const startDate = new Date(startDateTime);
+                                const endDate = addHours(startDate, 1);
+                                endDateTime = format(
+                                  endDate,
+                                  "yyyy-MM-dd'T'HH:mm"
+                                );
+                              }
+                              setNewEvent((prev) => ({
+                                ...prev,
+                                start_date: startDateTime,
+                                end_date: endDateTime,
+                              }));
+                            }}
+                          />
+                        </div>
+
+                        <div className="grid gap-2">
+                          <Label htmlFor="end_date">종료 일시</Label>
+                          <Input
+                            id="end_date"
+                            type="datetime-local"
+                            value={newEvent.end_date}
+                            onChange={(e) =>
+                              setNewEvent((prev) => ({
+                                ...prev,
+                                end_date: e.target.value,
+                              }))
+                            }
+                          />
+                        </div>
+
+                        <div className="grid gap-2">
+                          <Label htmlFor="location">장소</Label>
+                          <Select
+                            value={newEvent.location}
+                            onValueChange={(value) => {
+                              if (value === "custom") {
+                                setNewEvent((prev) => ({
+                                  ...prev,
+                                  location: "",
+                                }));
+                              } else {
+                                setNewEvent((prev) => ({
+                                  ...prev,
+                                  location: value,
+                                }));
+                              }
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="장소를 선택하거나 직접 입력하세요" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {savedLocations.map((location) => (
+                                <SelectItem key={location} value={location}>
+                                  {location}
+                                </SelectItem>
+                              ))}
+                              <SelectItem value="custom">직접 입력</SelectItem>
+                            </SelectContent>
+                          </Select>
+
+                          {(newEvent.location === "" ||
+                            !savedLocations.includes(newEvent.location)) && (
+                            <Input
+                              id="location-custom"
+                              value={newEvent.location}
+                              onChange={(e) =>
+                                setNewEvent((prev) => ({
+                                  ...prev,
+                                  location: e.target.value,
+                                }))
+                              }
+                              placeholder="장소를 입력하세요"
+                              className="mt-2"
+                            />
+                          )}
+                        </div>
+
+                        <div className="grid gap-2">
+                          <Label htmlFor="team">진행팀</Label>
+                          <Select
+                            value={newEvent.team_id}
+                            onValueChange={(value) =>
+                              setNewEvent((prev) => ({
+                                ...prev,
+                                team_id: value === "none" ? "" : value,
+                              }))
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="진행팀을 선택하세요" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">팀 없음</SelectItem>
+                              {teams.map((team) => (
+                                <SelectItem key={team.id} value={team.id}>
+                                  {team.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* 반복 설정 */}
+                        <div className="grid gap-3 pt-4 border-t">
+                          <div className="flex items-center justify-between">
+                            <Label
+                              htmlFor="recurring"
+                              className="text-sm font-medium"
+                            >
+                              매주 반복
+                            </Label>
+                            <Switch
+                              id="recurring"
+                              checked={newEvent.isRecurring}
+                              onCheckedChange={(checked) =>
+                                setNewEvent((prev) => ({
+                                  ...prev,
+                                  isRecurring: checked,
+                                  recurringEndDate: checked
+                                    ? prev.recurringEndDate
+                                    : "",
+                                }))
                               }
                             />
                           </div>
 
-                          <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded">
-                            💡 위에 설정한 시작일부터 종료일까지 매주 같은 요일,
-                            같은 시간에 반복됩니다.
-                            <br />
-                            예: 월요일 오전 10시~오후 12시 → 매주 월요일 오전
-                            10시~오후 12시 반복
-                          </div>
+                          {newEvent.isRecurring && (
+                            <div className="grid gap-3 pl-6 space-y-2">
+                              <div className="grid gap-2">
+                                <Label htmlFor="recurring-end">
+                                  반복 종료일
+                                </Label>
+                                <Input
+                                  id="recurring-end"
+                                  type="date"
+                                  value={newEvent.recurringEndDate}
+                                  onChange={(e) =>
+                                    setNewEvent((prev) => ({
+                                      ...prev,
+                                      recurringEndDate: e.target.value,
+                                    }))
+                                  }
+                                  min={
+                                    newEvent.start_date
+                                      ? new Date(newEvent.start_date)
+                                          .toISOString()
+                                          .split("T")[0]
+                                      : new Date().toISOString().split("T")[0]
+                                  }
+                                />
+                              </div>
+
+                              <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded">
+                                💡 위에 설정한 시작일부터 종료일까지 매주 같은
+                                요일, 같은 시간에 반복됩니다.
+                                <br />
+                                예: 월요일 오전 10시~오후 12시 → 매주 월요일
+                                오전 10시~오후 12시 반복
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsEventModalOpen(false)}
-                    >
-                      취소
-                    </Button>
-                    <Button onClick={handleSaveEvent}>
-                      {isEditingEvent ? "수정" : "추가"}
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => setIsEventModalOpen(false)}
+                        >
+                          취소
+                        </Button>
+                        <Button onClick={handleSaveEvent}>
+                          {isEditingEvent ? "수정" : "추가"}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                ))}
             </div>
           </div>
 
           {/* 일정 상세보기 모달 */}
-          <Dialog
-            open={isEventDetailModalOpen}
-            onOpenChange={setIsEventDetailModalOpen}
-          >
-            <DialogContent className="w-[95vw] max-w-[500px] max-h-[90vh] overflow-y-auto mx-auto">
-              <DialogHeader>
-                <DialogTitle>일정 상세보기</DialogTitle>
-              </DialogHeader>
-              {selectedEvent && (
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <h3 className="text-lg font-semibold">
-                      {selectedEvent.title}
-                    </h3>
-                    {selectedEvent.description && (
-                      <p className="text-gray-600">
-                        {selectedEvent.description}
-                      </p>
+          {isMobile ? (
+            <Drawer
+              open={isEventDetailModalOpen}
+              onOpenChange={setIsEventDetailModalOpen}
+            >
+              <DrawerContent>
+                <DrawerHeader>
+                  <DrawerTitle>일정 상세보기</DrawerTitle>
+                </DrawerHeader>
+                <div className="px-4 pb-4">
+                  {selectedEvent && (
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <h3 className="text-lg font-semibold">
+                          {selectedEvent.title}
+                        </h3>
+                        {selectedEvent.description && (
+                          <p className="text-gray-600">
+                            {selectedEvent.description}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Calendar size={16} className="text-gray-500" />
+                          <span className="text-sm">
+                            일시:{" "}
+                            {(() => {
+                              const startDate = parseISO(
+                                selectedEvent.start_date
+                              );
+                              return formatFullDateTimeToKorean(startDate, ko);
+                            })()}
+                            {selectedEvent.end_date &&
+                              ` - ${formatDateTimeToKorean(
+                                parseISO(selectedEvent.end_date)
+                              )}`}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <MapPin size={16} className="text-gray-500" />
+                          <span className="text-sm">
+                            장소: {selectedEvent.location || "미정"}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <Users size={16} className="text-gray-500" />
+                          <span className="text-sm">
+                            팀:{" "}
+                            {selectedEvent.team_id
+                              ? teams.find(
+                                  (t) => t.id === selectedEvent.team_id
+                                )?.name
+                              : "팀 없음"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsEventDetailModalOpen(false)}
+                    >
+                      닫기
+                    </Button>
+                    {hasAdminPermission() && selectedEvent && (
+                      <Button
+                        variant="destructive"
+                        onClick={() => handleDeleteEvent(selectedEvent.id)}
+                      >
+                        삭제
+                      </Button>
+                    )}
+                    {hasAdminPermission() && (
+                      <Button
+                        onClick={() => {
+                          if (selectedEvent) {
+                            setEditingEventData(selectedEvent);
+                            setNewEvent({
+                              title: selectedEvent.title || "",
+                              description: selectedEvent.description || "",
+                              start_date: selectedEvent.start_date
+                                ? format(
+                                    parseISO(selectedEvent.start_date),
+                                    "yyyy-MM-dd'T'HH:mm"
+                                  )
+                                : "",
+                              end_date: selectedEvent.end_date
+                                ? format(
+                                    parseISO(selectedEvent.end_date),
+                                    "yyyy-MM-dd'T'HH:mm"
+                                  )
+                                : "",
+                              location: selectedEvent.location || "",
+                              program_id: selectedEvent.program_id || "",
+                              team_id: selectedEvent.team_id || "",
+                              isRecurring: selectedEvent.is_recurring || false,
+                              recurringEndDate:
+                                selectedEvent.recurring_end_date || "",
+                            });
+                            setIsEditingEvent(true);
+                            setIsEventDetailModalOpen(false);
+                            setIsEventModalOpen(true);
+                          }
+                        }}
+                      >
+                        수정
+                      </Button>
                     )}
                   </div>
-
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Calendar size={16} className="text-gray-500" />
-                      <span className="text-sm">
-                        일시:{" "}
-                        {(() => {
-                          const startDate = parseISO(selectedEvent.start_date);
-                          return formatFullDateTimeToKorean(startDate, ko);
-                        })()}
-                        {selectedEvent.end_date &&
-                          ` - ${formatDateTimeToKorean(
-                            parseISO(selectedEvent.end_date)
-                          )}`}
-                      </span>
+                </div>
+              </DrawerContent>
+            </Drawer>
+          ) : (
+            <Dialog
+              open={isEventDetailModalOpen}
+              onOpenChange={setIsEventDetailModalOpen}
+            >
+              <DialogContent className="w-[95vw] max-w-[500px] max-h-[90vh] overflow-y-auto mx-auto">
+                <DialogHeader>
+                  <DialogTitle>일정 상세보기</DialogTitle>
+                </DialogHeader>
+                {selectedEvent && (
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-semibold">
+                        {selectedEvent.title}
+                      </h3>
+                      {selectedEvent.description && (
+                        <p className="text-gray-600">
+                          {selectedEvent.description}
+                        </p>
+                      )}
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <MapPin size={16} className="text-gray-500" />
-                      <span className="text-sm">
-                        장소: {selectedEvent.location || "미정"}
-                      </span>
-                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Calendar size={16} className="text-gray-500" />
+                        <span className="text-sm">
+                          일시:{" "}
+                          {(() => {
+                            const startDate = parseISO(
+                              selectedEvent.start_date
+                            );
+                            return formatFullDateTimeToKorean(startDate, ko);
+                          })()}
+                          {selectedEvent.end_date &&
+                            ` - ${formatDateTimeToKorean(
+                              parseISO(selectedEvent.end_date)
+                            )}`}
+                        </span>
+                      </div>
 
-                    <div className="flex items-center gap-2">
-                      <Users size={16} className="text-gray-500" />
-                      <span className="text-sm">
-                        팀:{" "}
-                        {selectedEvent.team_id
-                          ? teams.find((t) => t.id === selectedEvent.team_id)
-                              ?.name
-                          : "팀 없음"}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <MapPin size={16} className="text-gray-500" />
+                        <span className="text-sm">
+                          장소: {selectedEvent.location || "미정"}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Users size={16} className="text-gray-500" />
+                        <span className="text-sm">
+                          팀:{" "}
+                          {selectedEvent.team_id
+                            ? teams.find((t) => t.id === selectedEvent.team_id)
+                                ?.name
+                            : "팀 없음"}
+                        </span>
+                      </div>
                     </div>
                   </div>
+                )}
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsEventDetailModalOpen(false)}
+                  >
+                    닫기
+                  </Button>
+                  {hasAdminPermission() && selectedEvent && (
+                    <Button
+                      variant="destructive"
+                      onClick={() => handleDeleteEvent(selectedEvent.id)}
+                    >
+                      삭제
+                    </Button>
+                  )}
+                  {hasAdminPermission() && (
+                    <Button
+                      onClick={() => {
+                        if (selectedEvent) {
+                          setEditingEventData(selectedEvent);
+                          setNewEvent({
+                            title: selectedEvent.title || "",
+                            description: selectedEvent.description || "",
+                            start_date: selectedEvent.start_date
+                              ? format(
+                                  parseISO(selectedEvent.start_date),
+                                  "yyyy-MM-dd'T'HH:mm"
+                                )
+                              : "",
+                            end_date: selectedEvent.end_date
+                              ? format(
+                                  parseISO(selectedEvent.end_date),
+                                  "yyyy-MM-dd'T'HH:mm"
+                                )
+                              : "",
+                            location: selectedEvent.location || "",
+                            program_id: selectedEvent.program_id || "",
+                            team_id: selectedEvent.team_id || "",
+                            isRecurring: selectedEvent.is_recurring || false,
+                            recurringEndDate:
+                              selectedEvent.recurring_end_date || "",
+                          });
+                          setIsEditingEvent(true);
+                          setIsEventDetailModalOpen(false);
+                          setIsEventModalOpen(true);
+                        }
+                      }}
+                    >
+                      수정
+                    </Button>
+                  )}
                 </div>
-              )}
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsEventDetailModalOpen(false)}
-                >
-                  닫기
-                </Button>
-                {hasAdminPermission() && selectedEvent && (
-                  <Button
-                    variant="destructive"
-                    onClick={() => handleDeleteEvent(selectedEvent.id)}
-                  >
-                    삭제
-                  </Button>
-                )}
-                {hasAdminPermission() && (
-                  <Button
-                    onClick={() => {
-                      if (selectedEvent) {
-                        setEditingEventData(selectedEvent);
-                        setNewEvent({
-                          title: selectedEvent.title || "",
-                          description: selectedEvent.description || "",
-                          start_date: selectedEvent.start_date
-                            ? format(
-                                parseISO(selectedEvent.start_date),
-                                "yyyy-MM-dd'T'HH:mm"
-                              )
-                            : "",
-                          end_date: selectedEvent.end_date
-                            ? format(
-                                parseISO(selectedEvent.end_date),
-                                "yyyy-MM-dd'T'HH:mm"
-                              )
-                            : "",
-                          location: selectedEvent.location || "",
-                          program_id: selectedEvent.program_id || "",
-                          team_id: selectedEvent.team_id || "",
-                          isRecurring: selectedEvent.is_recurring || false,
-                          recurringEndDate:
-                            selectedEvent.recurring_end_date || "",
-                        });
-                        setIsEditingEvent(true);
-                        setIsEventDetailModalOpen(false);
-                        setIsEventModalOpen(true);
-                      }
-                    }}
-                  >
-                    수정
-                  </Button>
-                )}
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogContent>
+            </Dialog>
+          )}
 
           {/* 날짜별 일정 보기 모달 */}
-          <Dialog
-            open={isDayEventsModalOpen}
-            onOpenChange={setIsDayEventsModalOpen}
-          >
-            <DialogContent className="w-[95vw] max-w-[600px] max-h-[90vh] overflow-y-auto mx-auto">
-              <DialogHeader>
-                <DialogTitle>
-                  {selectedDate && (
-                    <>
-                      {format(selectedDate, "yyyy년 M월 d일 (EEE)", {
-                        locale: ko,
-                      })}
-                      의 일정
-                    </>
-                  )}
-                </DialogTitle>
-              </DialogHeader>
-              <div className="max-h-[60vh] overflow-y-auto">
-                {selectedDateEvents.length > 0 ? (
-                  <div className="space-y-3">
-                    {selectedDateEvents
-                      .sort(
-                        (a, b) =>
-                          new Date(a.start_date).getTime() -
-                          new Date(b.start_date).getTime()
-                      )
-                      .map((event) => {
-                        const team = teams.find((t) => t.id === event.team_id);
-                        const eventDate = parseISO(event.start_date);
-                        const endDate = event.end_date
-                          ? parseISO(event.end_date)
-                          : null;
-                        const timeStatus = getEventTimeStatus(
-                          eventDate,
-                          endDate
-                        );
+          {isMobile ? (
+            <Drawer
+              open={isDayEventsModalOpen}
+              onOpenChange={setIsDayEventsModalOpen}
+            >
+              <DrawerContent>
+                <DrawerHeader>
+                  <DrawerTitle>
+                    {selectedDate && (
+                      <>
+                        {format(selectedDate, "yyyy년 M월 d일 (EEE)", {
+                          locale: ko,
+                        })}
+                        의 일정
+                      </>
+                    )}
+                  </DrawerTitle>
+                </DrawerHeader>
+                <div className="px-4 pb-4">
+                  <div className="max-h-[60vh] overflow-y-auto">
+                    {selectedDateEvents.length > 0 ? (
+                      <div className="space-y-3">
+                        {selectedDateEvents
+                          .sort(
+                            (a, b) =>
+                              new Date(a.start_date).getTime() -
+                              new Date(b.start_date).getTime()
+                          )
+                          .map((event) => {
+                            const team = teams.find(
+                              (t) => t.id === event.team_id
+                            );
+                            const eventDate = parseISO(event.start_date);
+                            const endDate = event.end_date
+                              ? parseISO(event.end_date)
+                              : null;
+                            const timeStatus = getEventTimeStatus(
+                              eventDate,
+                              endDate
+                            );
 
-                        return (
-                          <div
-                            key={event.id}
-                            className={`border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer ${
-                              timeStatus.status === "past" ? "opacity-75" : ""
-                            }`}
-                            onClick={() => {
-                              setSelectedEvent(event);
-                              setIsEventDetailModalOpen(true);
-                              setIsDayEventsModalOpen(false);
-                            }}
-                          >
-                            <div className="flex justify-between items-start">
-                              <div className="flex-1">
-                                <div className="flex items-start gap-2 mb-2">
-                                  <h3
-                                    className={`font-semibold flex-1 ${
-                                      timeStatus.status === "past"
-                                        ? "text-gray-600"
-                                        : ""
-                                    }`}
-                                  >
-                                    {event.title}
-                                  </h3>
-                                  <div className="flex gap-2 flex-shrink-0">
-                                    <span
-                                      className={`text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap ${timeStatus.bgColor} ${timeStatus.color}`}
-                                    >
-                                      {timeStatus.icon} {timeStatus.label}
-                                    </span>
-                                    {team && (
-                                      <span
-                                        className="text-xs px-2 py-1 rounded border whitespace-nowrap"
-                                        style={getTeamStyle(event.team_id)}
+                            return (
+                              <div
+                                key={event.id}
+                                className={`border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer ${
+                                  timeStatus.status === "past"
+                                    ? "opacity-75"
+                                    : ""
+                                }`}
+                                onClick={() => {
+                                  setSelectedEvent(event);
+                                  setIsEventDetailModalOpen(true);
+                                  setIsDayEventsModalOpen(false);
+                                }}
+                              >
+                                <div className="flex justify-between items-start">
+                                  <div className="flex-1">
+                                    <div className="flex items-start gap-2 mb-2">
+                                      <h3
+                                        className={`font-semibold flex-1 ${
+                                          timeStatus.status === "past"
+                                            ? "text-gray-600"
+                                            : ""
+                                        }`}
                                       >
-                                        {team.name}
-                                      </span>
-                                    )}
+                                        {event.title}
+                                      </h3>
+                                      <div className="flex gap-2 flex-shrink-0">
+                                        <span
+                                          className={`text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap ${timeStatus.bgColor} ${timeStatus.color}`}
+                                        >
+                                          {timeStatus.icon} {timeStatus.label}
+                                        </span>
+                                        {team && (
+                                          <span
+                                            className="text-xs px-2 py-1 rounded border whitespace-nowrap"
+                                            style={getTeamStyle(event.team_id)}
+                                          >
+                                            {team.name}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                      <div className="flex items-center gap-1">
+                                        <Clock
+                                          size={16}
+                                          className="text-gray-600"
+                                        />
+                                        <span className="font-medium text-sm">
+                                          {formatDateTimeToKorean(eventDate)}
+                                          {endDate &&
+                                            ` - ${formatDateTimeToKorean(endDate)}`}
+                                        </span>
+                                      </div>
+                                      {event.location && (
+                                        <div className="flex items-center gap-1">
+                                          <MapPin
+                                            size={16}
+                                            className="text-gray-600"
+                                          />
+                                          <span className="font-medium text-sm">
+                                            {event.location}
+                                          </span>
+                                        </div>
+                                      )}
+                                      {event.description && (
+                                        <p className="text-gray-500 text-sm mt-2">
+                                          {event.description}
+                                        </p>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
-                                <div className="space-y-2">
-                                  <div className="flex items-center gap-1">
-                                    <Clock
-                                      size={16}
-                                      className="text-gray-600"
-                                    />
-                                    <span className="font-medium text-sm">
-                                      {formatDateTimeToKorean(eventDate)}
-                                      {endDate &&
-                                        ` - ${formatDateTimeToKorean(endDate)}`}
-                                    </span>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        이 날짜에는 등록된 일정이 없습니다.
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex justify-between">
+                    {hasAdminPermission() && (
+                      <Button
+                        onClick={() => {
+                          if (selectedDate) {
+                            const now = new Date();
+                            const selectedDateTime = new Date(selectedDate);
+                            selectedDateTime.setHours(now.getHours());
+                            selectedDateTime.setMinutes(now.getMinutes());
+                            const oneHourLater = addHours(selectedDateTime, 1);
+
+                            setNewEvent(
+                              initializeNewEvent(
+                                format(selectedDateTime, "yyyy-MM-dd'T'HH:mm"),
+                                format(oneHourLater, "yyyy-MM-dd'T'HH:mm")
+                              )
+                            );
+
+                            setIsEditingEvent(false);
+                            setEditingEventData(null);
+                            setIsDayEventsModalOpen(false);
+                            setIsEventModalOpen(true);
+                          }
+                        }}
+                      >
+                        일정 추가
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsDayEventsModalOpen(false)}
+                    >
+                      닫기
+                    </Button>
+                  </div>
+                </div>
+              </DrawerContent>
+            </Drawer>
+          ) : (
+            <Dialog
+              open={isDayEventsModalOpen}
+              onOpenChange={setIsDayEventsModalOpen}
+            >
+              <DialogContent className="w-[95vw] max-w-[600px] max-h-[90vh] overflow-y-auto mx-auto">
+                <DialogHeader>
+                  <DialogTitle>
+                    {selectedDate && (
+                      <>
+                        {format(selectedDate, "yyyy년 M월 d일 (EEE)", {
+                          locale: ko,
+                        })}
+                        의 일정
+                      </>
+                    )}
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="max-h-[60vh] overflow-y-auto">
+                  {selectedDateEvents.length > 0 ? (
+                    <div className="space-y-3">
+                      {selectedDateEvents
+                        .sort(
+                          (a, b) =>
+                            new Date(a.start_date).getTime() -
+                            new Date(b.start_date).getTime()
+                        )
+                        .map((event) => {
+                          const team = teams.find(
+                            (t) => t.id === event.team_id
+                          );
+                          const eventDate = parseISO(event.start_date);
+                          const endDate = event.end_date
+                            ? parseISO(event.end_date)
+                            : null;
+                          const timeStatus = getEventTimeStatus(
+                            eventDate,
+                            endDate
+                          );
+
+                          return (
+                            <div
+                              key={event.id}
+                              className={`border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer ${
+                                timeStatus.status === "past" ? "opacity-75" : ""
+                              }`}
+                              onClick={() => {
+                                setSelectedEvent(event);
+                                setIsEventDetailModalOpen(true);
+                                setIsDayEventsModalOpen(false);
+                              }}
+                            >
+                              <div className="flex justify-between items-start">
+                                <div className="flex-1">
+                                  <div className="flex items-start gap-2 mb-2">
+                                    <h3
+                                      className={`font-semibold flex-1 ${
+                                        timeStatus.status === "past"
+                                          ? "text-gray-600"
+                                          : ""
+                                      }`}
+                                    >
+                                      {event.title}
+                                    </h3>
+                                    <div className="flex gap-2 flex-shrink-0">
+                                      <span
+                                        className={`text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap ${timeStatus.bgColor} ${timeStatus.color}`}
+                                      >
+                                        {timeStatus.icon} {timeStatus.label}
+                                      </span>
+                                      {team && (
+                                        <span
+                                          className="text-xs px-2 py-1 rounded border whitespace-nowrap"
+                                          style={getTeamStyle(event.team_id)}
+                                        >
+                                          {team.name}
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
-                                  {event.location && (
+                                  <div className="space-y-2">
                                     <div className="flex items-center gap-1">
-                                      <MapPin
+                                      <Clock
                                         size={16}
                                         className="text-gray-600"
                                       />
                                       <span className="font-medium text-sm">
-                                        {event.location}
+                                        {formatDateTimeToKorean(eventDate)}
+                                        {endDate &&
+                                          ` - ${formatDateTimeToKorean(endDate)}`}
                                       </span>
                                     </div>
-                                  )}
-                                  {event.description && (
-                                    <p className="text-gray-500 text-sm mt-2">
-                                      {event.description}
-                                    </p>
-                                  )}
+                                    {event.location && (
+                                      <div className="flex items-center gap-1">
+                                        <MapPin
+                                          size={16}
+                                          className="text-gray-600"
+                                        />
+                                        <span className="font-medium text-sm">
+                                          {event.location}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {event.description && (
+                                      <p className="text-gray-500 text-sm mt-2">
+                                        {event.description}
+                                      </p>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    이 날짜에는 등록된 일정이 없습니다.
-                  </div>
-                )}
-              </div>
-              <div className="flex justify-between">
-                {hasAdminPermission() && (
+                          );
+                        })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      이 날짜에는 등록된 일정이 없습니다.
+                    </div>
+                  )}
+                </div>
+                <div className="flex justify-between">
+                  {hasAdminPermission() && (
+                    <Button
+                      onClick={() => {
+                        if (selectedDate) {
+                          const now = new Date();
+                          const selectedDateTime = new Date(selectedDate);
+                          selectedDateTime.setHours(now.getHours());
+                          selectedDateTime.setMinutes(now.getMinutes());
+                          const oneHourLater = addHours(selectedDateTime, 1);
+
+                          setNewEvent(
+                            initializeNewEvent(
+                              format(selectedDateTime, "yyyy-MM-dd'T'HH:mm"),
+                              format(oneHourLater, "yyyy-MM-dd'T'HH:mm")
+                            )
+                          );
+
+                          setIsEditingEvent(false);
+                          setEditingEventData(null);
+                          setIsDayEventsModalOpen(false);
+                          setIsEventModalOpen(true);
+                        }
+                      }}
+                    >
+                      일정 추가
+                    </Button>
+                  )}
                   <Button
-                    onClick={() => {
-                      if (selectedDate) {
-                        const now = new Date();
-                        const selectedDateTime = new Date(selectedDate);
-                        selectedDateTime.setHours(now.getHours());
-                        selectedDateTime.setMinutes(now.getMinutes());
-                        const oneHourLater = addHours(selectedDateTime, 1);
-
-                        setNewEvent(
-                          initializeNewEvent(
-                            format(selectedDateTime, "yyyy-MM-dd'T'HH:mm"),
-                            format(oneHourLater, "yyyy-MM-dd'T'HH:mm")
-                          )
-                        );
-
-                        setIsEditingEvent(false);
-                        setEditingEventData(null);
-                        setIsDayEventsModalOpen(false);
-                        setIsEventModalOpen(true);
-                      }
-                    }}
+                    variant="outline"
+                    onClick={() => setIsDayEventsModalOpen(false)}
                   >
-                    일정 추가
+                    닫기
                   </Button>
-                )}
-                <Button
-                  variant="outline"
-                  onClick={() => setIsDayEventsModalOpen(false)}
-                >
-                  닫기
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
 
           {/* 날짜 네비게이션 */}
           {viewMode !== "list" && (
@@ -2597,6 +3211,144 @@ export default function CalendarTab({ programId }: CalendarTabProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* 모바일 날짜 선택 Drawer */}
+      <Drawer open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>
+              {datePickerMode === 'start' ? '시작 날짜 선택' : '종료 날짜 선택'}
+            </DrawerTitle>
+          </DrawerHeader>
+          <div className="p-4">
+            <CalendarComponent
+              mode="single"
+              selected={tempDate}
+              onSelect={(date) => date && setTempDate(date)}
+              className="rounded-md border w-full"
+              locale={ko}
+            />
+            <div className="flex gap-2 mt-4">
+              <Button
+                variant="outline"
+                onClick={() => setIsDatePickerOpen(false)}
+                className="flex-1"
+              >
+                취소
+              </Button>
+              <Button
+                onClick={confirmDateSelection}
+                className="flex-1"
+              >
+                선택
+              </Button>
+            </div>
+          </div>
+        </DrawerContent>
+      </Drawer>
+
+      {/* 모바일 시간 선택 Drawer - 휠 스타일 */}
+      <Drawer open={isTimePickerOpen} onOpenChange={setIsTimePickerOpen}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>
+              {datePickerMode === 'start' ? '시작 시간 선택' : '종료 시간 선택'}
+            </DrawerTitle>
+          </DrawerHeader>
+          <div className="p-4">
+            <div className="flex justify-center items-center gap-4 py-8">
+              {/* 시간 휠 */}
+              <div className="relative">
+                <div className="text-center text-sm text-muted-foreground mb-2">시</div>
+                <div className="relative h-40 w-16 overflow-hidden">
+                  {/* 선택 영역 표시 */}
+                  <div className="absolute top-1/2 left-0 right-0 h-10 border-t border-b border-border bg-accent/20 -translate-y-1/2 z-10" />
+                  
+                  <div 
+                    className="absolute inset-0 flex flex-col items-center transition-transform duration-200"
+                    style={{
+                      transform: `translateY(${80 - tempDate.getHours() * 40}px)`,
+                    }}
+                  >
+                    {Array.from({ length: 24 }, (_, i) => (
+                      <button
+                        key={i}
+                        className={`h-10 w-full flex items-center justify-center text-2xl transition-colors ${
+                          i === tempDate.getHours()
+                            ? 'text-foreground font-bold'
+                            : 'text-muted-foreground'
+                        }`}
+                        onClick={() => {
+                          const newDate = new Date(tempDate);
+                          newDate.setHours(i);
+                          setTempDate(newDate);
+                        }}
+                      >
+                        {i.toString().padStart(2, '0')}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-2xl font-bold text-muted-foreground">:</div>
+
+              {/* 분 휠 */}
+              <div className="relative">
+                <div className="text-center text-sm text-muted-foreground mb-2">분</div>
+                <div className="relative h-40 w-16 overflow-hidden">
+                  {/* 선택 영역 표시 */}
+                  <div className="absolute top-1/2 left-0 right-0 h-10 border-t border-b border-border bg-accent/20 -translate-y-1/2 z-10" />
+                  
+                  <div 
+                    className="absolute inset-0 flex flex-col items-center transition-transform duration-200"
+                    style={{
+                      transform: `translateY(${80 - (tempDate.getMinutes() / 5) * 40}px)`,
+                    }}
+                  >
+                    {Array.from({ length: 12 }, (_, i) => {
+                      const minute = i * 5;
+                      return (
+                        <button
+                          key={minute}
+                          className={`h-10 w-full flex items-center justify-center text-2xl transition-colors ${
+                            minute === tempDate.getMinutes()
+                              ? 'text-foreground font-bold'
+                              : 'text-muted-foreground'
+                          }`}
+                          onClick={() => {
+                            const newDate = new Date(tempDate);
+                            newDate.setMinutes(minute);
+                            setTempDate(newDate);
+                          }}
+                        >
+                          {minute.toString().padStart(2, '0')}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-4">
+              <Button
+                variant="outline"
+                onClick={() => setIsTimePickerOpen(false)}
+                className="flex-1"
+              >
+                취소
+              </Button>
+              <Button
+                onClick={confirmTimeSelection}
+                className="flex-1"
+              >
+                선택
+              </Button>
+            </div>
+          </div>
+        </DrawerContent>
+      </Drawer>
 
       {/* Alert 다이얼로그 */}
       <AlertDialog open={alertOpen} onOpenChange={setAlertOpen}>

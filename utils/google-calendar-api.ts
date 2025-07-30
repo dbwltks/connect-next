@@ -119,6 +119,11 @@ export async function getSupabaseGoogleToken(): Promise<string | null> {
   }
 }
 
+// 데스크톱인지 모바일인지 확인
+function isMobileDevice(): boolean {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+}
+
 // Calendar API 전용 인증 (직접 Google OAuth 사용)
 export async function authenticateCalendarAPI(): Promise<boolean> {
   try {
@@ -146,23 +151,67 @@ export async function authenticateCalendarAPI(): Promise<boolean> {
 
     console.log('Google Calendar API 인증을 요청합니다...');
     
-    // 로그인 방식처럼 리디렉션으로 인증
     const scope = GOOGLE_CALENDAR_CONFIG.SCOPES.join(' ');
-    const responseType = 'code';
-    const accessType = 'offline';
-    const prompt = 'consent';
     
-    const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-    authUrl.searchParams.set('client_id', GOOGLE_CALENDAR_CONFIG.CLIENT_ID);
-    authUrl.searchParams.set('redirect_uri', `${window.location.origin}/calendar-callback`);
-    authUrl.searchParams.set('scope', scope);
-    authUrl.searchParams.set('response_type', responseType);
-    authUrl.searchParams.set('access_type', accessType);
-    authUrl.searchParams.set('prompt', prompt);
-    authUrl.searchParams.set('state', window.location.href); // 현재 페이지로 돌아가기
-    
-    window.location.href = authUrl.toString();
-    return true; // 리디렉션이므로 항상 true 반환
+    // 데스크톱에서는 팝업, 모바일에서는 리디렉션
+    if (isMobileDevice()) {
+      // 모바일: 리디렉션 방식
+      const responseType = 'code';
+      const accessType = 'offline';
+      const prompt = 'consent';
+      
+      const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+      authUrl.searchParams.set('client_id', GOOGLE_CALENDAR_CONFIG.CLIENT_ID);
+      authUrl.searchParams.set('redirect_uri', `${window.location.origin}/calendar-callback`);
+      authUrl.searchParams.set('scope', scope);
+      authUrl.searchParams.set('response_type', responseType);
+      authUrl.searchParams.set('access_type', accessType);
+      authUrl.searchParams.set('prompt', prompt);
+      authUrl.searchParams.set('state', window.location.href);
+      
+      window.location.href = authUrl.toString();
+      return true;
+    } else {
+      // 데스크톱: 팝업 방식 (Google Identity Services 사용)
+      return new Promise((resolve) => {
+        const client = window.google.accounts.oauth2.initTokenClient({
+          client_id: GOOGLE_CALENDAR_CONFIG.CLIENT_ID,
+          scope: scope,
+          callback: (tokenResponse: any) => {
+            if (tokenResponse.access_token) {
+              // 토큰 저장
+              sessionStorage.setItem('calendar_access_token', tokenResponse.access_token);
+              
+              // gapi 클라이언트에 토큰 설정
+              if (window.gapi?.client) {
+                window.gapi.client.setToken(tokenResponse);
+              }
+              
+              console.log('Google Calendar 인증 성공');
+              
+              // 짧은 지연 후 resolve (팝업이 자동으로 닫힘)
+              setTimeout(() => {
+                resolve(true);
+              }, 100);
+            } else {
+              console.error('토큰을 받지 못했습니다:', tokenResponse);
+              resolve(false);
+            }
+          },
+          error_callback: (error: any) => {
+            console.error('Google Calendar 인증 실패:', error);
+            resolve(false);
+          }
+        });
+        
+        // 팝업으로 인증 시작 (자동 닫힘 설정)
+        client.requestAccessToken({ 
+          prompt: 'consent',
+          hint: '',
+          hosted_domain: ''
+        });
+      });
+    }
   } catch (error) {
     console.error('Calendar API 인증 실패:', error);
     return false;

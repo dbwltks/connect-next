@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { createClient } from "@/utils/supabase/client";
+import { useUserProfile } from "@/hooks/use-user-profile";
+import { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -43,9 +46,30 @@ export default function ProgramDetailPage() {
   const params = useParams();
   const router = useRouter();
   const programId = params.id as string;
+  const supabase = createClient();
 
   const [program, setProgram] = useState<Program | null>(null);
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [user, setUser] = useState<User | null>(null);
+  const { profile } = useUserProfile(user);
+
+  // 사용자 정보 가져오기
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    };
+    getUser();
+  }, [supabase]);
+
+  // 권한 체크 함수
+  const hasEditPermission = () => {
+    if (!profile) return false;
+    
+    // admin, tier0, tier1 역할은 편집 권한 있음
+    const adminRoles = ["admin", "tier0", "tier1"];
+    return adminRoles.includes(profile.role);
+  };
 
   // 프로그램 데이터 로드
   useEffect(() => {
@@ -167,13 +191,13 @@ export default function ProgramDetailPage() {
 
         {program.features.includes("finance") && (
           <TabsContent value="finance">
-            <FinanceTab programId={programId} />
+            <FinanceTab programId={programId} hasEditPermission={hasEditPermission()} />
           </TabsContent>
         )}
 
         {program.features.includes("calendar") && (
           <TabsContent value="calendar">
-            <CalendarTab programId={programId} />
+            <CalendarTab programId={programId} hasEditPermission={hasEditPermission()} />
           </TabsContent>
         )}
 
