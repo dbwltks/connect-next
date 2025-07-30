@@ -68,6 +68,7 @@ import {
   Filter,
 } from "lucide-react";
 import { SiGooglecalendar } from "react-icons/si";
+import Picker from "react-mobile-picker";
 import {
   format,
   addDays,
@@ -167,8 +168,45 @@ export default function CalendarTab({
   // 모바일 날짜/시간 선택 상태
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
-  const [datePickerMode, setDatePickerMode] = useState<'start' | 'end'>('start');
+  const [datePickerMode, setDatePickerMode] = useState<"start" | "end">(
+    "start"
+  );
   const [tempDate, setTempDate] = useState(new Date());
+
+  // react-mobile-picker 상태
+  const [pickerValue, setPickerValue] = useState({
+    ampm: "오전",
+    hour: "1-1", // hour-cycle 형식
+    minute: "00",
+  });
+
+  // 시간 변경 핸들러 (아이폰/구글 캘린더 스타일)
+  const handlePickerChange = (newValue: typeof pickerValue) => {
+    // 시간이 변경되었을 때 12→1 또는 1→12 경계에서 오전/오후 자동 변경
+    if (newValue.hour !== pickerValue.hour) {
+      const prevHourData = pickerValue.hour.split("-");
+      const newHourData = newValue.hour.split("-");
+
+      const prevHour = parseInt(prevHourData[0]);
+      const newHour = parseInt(newHourData[0]);
+      const prevCycle = parseInt(prevHourData[1]);
+      const newCycle = parseInt(newHourData[1]);
+
+      // 사이클이 변경되었을 때 (12시간 주기를 넘어갔을 때) 오전/오후 토글
+      if (prevCycle !== newCycle) {
+        // 다음 사이클로 넘어갔을 때 (12 → 1)
+        if (newCycle > prevCycle) {
+          newValue.ampm = newValue.ampm === "오전" ? "오후" : "오전";
+        }
+        // 이전 사이클로 돌아갔을 때 (1 → 12)
+        else if (newCycle < prevCycle) {
+          newValue.ampm = newValue.ampm === "오전" ? "오후" : "오전";
+        }
+      }
+    }
+
+    setPickerValue(newValue);
+  };
 
   // 삭제 확인 상태
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -592,86 +630,125 @@ export default function CalendarTab({
   };
 
   // 모바일 날짜 선택 핸들러
-  const openDatePicker = (mode: 'start' | 'end') => {
+  const openDatePicker = (mode: "start" | "end") => {
     setDatePickerMode(mode);
-    const currentDate = mode === 'start' 
-      ? (newEvent.start_date ? new Date(newEvent.start_date) : new Date())
-      : (newEvent.end_date ? new Date(newEvent.end_date) : new Date());
+    const currentDate =
+      mode === "start"
+        ? newEvent.start_date
+          ? new Date(newEvent.start_date)
+          : new Date()
+        : newEvent.end_date
+          ? new Date(newEvent.end_date)
+          : new Date();
     setTempDate(currentDate);
     setIsDatePickerOpen(true);
   };
 
   const confirmDateSelection = () => {
-    const dateStr = format(tempDate, 'yyyy-MM-dd');
-    
-    if (datePickerMode === 'start') {
-      const time = newEvent.start_date ? newEvent.start_date.split('T')[1] || '09:00' : '09:00';
+    const dateStr = format(tempDate, "yyyy-MM-dd");
+
+    if (datePickerMode === "start") {
+      const time = newEvent.start_date
+        ? newEvent.start_date.split("T")[1] || "09:00"
+        : "09:00";
       const startDateTime = `${dateStr}T${time}`;
-      
+
       let endDateTime = "";
       if (startDateTime) {
         const startDate = new Date(startDateTime);
         const endDate = addHours(startDate, 1);
         endDateTime = format(endDate, "yyyy-MM-dd'T'HH:mm");
       }
-      
+
       setNewEvent((prev) => ({
         ...prev,
         start_date: startDateTime,
         end_date: endDateTime,
       }));
     } else {
-      const time = newEvent.end_date ? newEvent.end_date.split('T')[1] || '10:00' : '10:00';
+      const time = newEvent.end_date
+        ? newEvent.end_date.split("T")[1] || "10:00"
+        : "10:00";
       const endDateTime = `${dateStr}T${time}`;
-      
+
       setNewEvent((prev) => ({
         ...prev,
         end_date: endDateTime,
       }));
     }
-    
+
     setIsDatePickerOpen(false);
   };
 
   // 모바일 시간 선택 핸들러
-  const openTimePicker = (mode: 'start' | 'end') => {
+  const openTimePicker = (mode: "start" | "end") => {
     setDatePickerMode(mode);
-    const currentDate = mode === 'start' 
-      ? (newEvent.start_date ? new Date(newEvent.start_date) : new Date())
-      : (newEvent.end_date ? new Date(newEvent.end_date) : new Date());
+    const currentDate =
+      mode === "start"
+        ? newEvent.start_date
+          ? new Date(newEvent.start_date)
+          : new Date()
+        : newEvent.end_date
+          ? new Date(newEvent.end_date)
+          : new Date();
     setTempDate(currentDate);
+
+    // picker 값 초기화 (12시간 형식)
+    const hours24 = currentDate.getHours();
+    const ampm = hours24 < 12 ? "오전" : "오후";
+    const hours12 = hours24 === 0 ? 12 : hours24 > 12 ? hours24 - 12 : hours24;
+
+    setPickerValue({
+      ampm: ampm,
+      hour: `${hours12}-1`, // 중간 사이클(1)로 시작
+      minute: currentDate.getMinutes().toString().padStart(2, "0"),
+    });
+
     setIsTimePickerOpen(true);
   };
 
   const confirmTimeSelection = () => {
-    const timeStr = format(tempDate, 'HH:mm');
-    
-    if (datePickerMode === 'start') {
-      const date = newEvent.start_date ? newEvent.start_date.split('T')[0] : format(new Date(), 'yyyy-MM-dd');
+    // 12시간 형식을 24시간 형식으로 변환
+    const hourData = pickerValue.hour.split("-");
+    let hour24 = parseInt(hourData[0]);
+    if (pickerValue.ampm === "오후" && hour24 !== 12) {
+      hour24 += 12;
+    } else if (pickerValue.ampm === "오전" && hour24 === 12) {
+      hour24 = 0;
+    }
+
+    const timeStr = `${hour24.toString().padStart(2, "0")}:${pickerValue.minute}`;
+
+    if (datePickerMode === "start") {
+      const date = newEvent.start_date
+        ? newEvent.start_date.split("T")[0]
+        : format(new Date(), "yyyy-MM-dd");
       const startDateTime = `${date}T${timeStr}`;
-      
+
       let endDateTime = "";
       if (startDateTime) {
         const startDate = new Date(startDateTime);
         const endDate = addHours(startDate, 1);
         endDateTime = format(endDate, "yyyy-MM-dd'T'HH:mm");
       }
-      
+
       setNewEvent((prev) => ({
         ...prev,
         start_date: startDateTime,
         end_date: endDateTime,
       }));
     } else {
-      const date = newEvent.end_date ? newEvent.end_date.split('T')[0] : format(new Date(), 'yyyy-MM-dd');
+      const date = newEvent.end_date
+        ? newEvent.end_date.split("T")[0]
+        : format(new Date(), "yyyy-MM-dd");
       const endDateTime = `${date}T${timeStr}`;
-      
+
       setNewEvent((prev) => ({
         ...prev,
         end_date: endDateTime,
       }));
     }
-    
+
     setIsTimePickerOpen(false);
   };
 
@@ -1580,26 +1657,31 @@ export default function CalendarTab({
                                 <Button
                                   type="button"
                                   variant="outline"
-                                  onClick={() => openDatePicker('start')}
+                                  onClick={() => openDatePicker("start")}
                                   className="justify-start text-left font-normal"
                                 >
                                   <Calendar className="mr-2 h-4 w-4" />
-                                  {newEvent.start_date 
-                                    ? format(new Date(newEvent.start_date), 'MM월 dd일', { locale: ko })
-                                    : '날짜 선택'
-                                  }
+                                  {newEvent.start_date
+                                    ? format(
+                                        new Date(newEvent.start_date),
+                                        "MM월 dd일",
+                                        { locale: ko }
+                                      )
+                                    : "날짜 선택"}
                                 </Button>
                                 <Button
                                   type="button"
                                   variant="outline"
-                                  onClick={() => openTimePicker('start')}
+                                  onClick={() => openTimePicker("start")}
                                   className="justify-start text-left font-normal"
                                 >
                                   <Clock className="mr-2 h-4 w-4" />
-                                  {newEvent.start_date 
-                                    ? format(new Date(newEvent.start_date), 'HH:mm')
-                                    : '시간 선택'
-                                  }
+                                  {newEvent.start_date
+                                    ? format(
+                                        new Date(newEvent.start_date),
+                                        "HH:mm"
+                                      )
+                                    : "시간 선택"}
                                 </Button>
                               </div>
                             </div>
@@ -1610,26 +1692,31 @@ export default function CalendarTab({
                                 <Button
                                   type="button"
                                   variant="outline"
-                                  onClick={() => openDatePicker('end')}
+                                  onClick={() => openDatePicker("end")}
                                   className="justify-start text-left font-normal"
                                 >
                                   <Calendar className="mr-2 h-4 w-4" />
-                                  {newEvent.end_date 
-                                    ? format(new Date(newEvent.end_date), 'MM월 dd일', { locale: ko })
-                                    : '날짜 선택'
-                                  }
+                                  {newEvent.end_date
+                                    ? format(
+                                        new Date(newEvent.end_date),
+                                        "MM월 dd일",
+                                        { locale: ko }
+                                      )
+                                    : "날짜 선택"}
                                 </Button>
                                 <Button
                                   type="button"
                                   variant="outline"
-                                  onClick={() => openTimePicker('end')}
+                                  onClick={() => openTimePicker("end")}
                                   className="justify-start text-left font-normal"
                                 >
                                   <Clock className="mr-2 h-4 w-4" />
-                                  {newEvent.end_date 
-                                    ? format(new Date(newEvent.end_date), 'HH:mm')
-                                    : '시간 선택'
-                                  }
+                                  {newEvent.end_date
+                                    ? format(
+                                        new Date(newEvent.end_date),
+                                        "HH:mm"
+                                      )
+                                    : "시간 선택"}
                                 </Button>
                               </div>
                             </div>
@@ -3217,18 +3304,20 @@ export default function CalendarTab({
         <DrawerContent>
           <DrawerHeader>
             <DrawerTitle>
-              {datePickerMode === 'start' ? '시작 날짜 선택' : '종료 날짜 선택'}
+              {datePickerMode === "start" ? "시작 날짜 선택" : "종료 날짜 선택"}
             </DrawerTitle>
           </DrawerHeader>
           <div className="p-4">
-            <CalendarComponent
-              mode="single"
-              selected={tempDate}
-              onSelect={(date) => date && setTempDate(date)}
-              className="rounded-md border w-full"
-              locale={ko}
-            />
-            <div className="flex gap-2 mt-4">
+            <div className="py-4">
+              <CalendarComponent
+                mode="single"
+                selected={tempDate}
+                onSelect={(date) => date && setTempDate(date)}
+                className="w-full rounded-md border"
+                locale={ko}
+              />
+            </div>
+            <div className="flex gap-2 pt-4 pb-6">
               <Button
                 variant="outline"
                 onClick={() => setIsDatePickerOpen(false)}
@@ -3236,10 +3325,7 @@ export default function CalendarTab({
               >
                 취소
               </Button>
-              <Button
-                onClick={confirmDateSelection}
-                className="flex-1"
-              >
+              <Button onClick={confirmDateSelection} className="flex-1">
                 선택
               </Button>
             </div>
@@ -3247,102 +3333,62 @@ export default function CalendarTab({
         </DrawerContent>
       </Drawer>
 
-      {/* 모바일 시간 선택 Drawer - 휠 스타일 */}
+      {/* 모바일 시간 선택 Drawer - 개선된 휠 피커 */}
       <Drawer open={isTimePickerOpen} onOpenChange={setIsTimePickerOpen}>
         <DrawerContent>
           <DrawerHeader>
             <DrawerTitle>
-              {datePickerMode === 'start' ? '시작 시간 선택' : '종료 시간 선택'}
+              {datePickerMode === "start" ? "시작 시간 선택" : "종료 시간 선택"}
             </DrawerTitle>
           </DrawerHeader>
-          <div className="p-4">
-            <div className="flex justify-center items-center gap-4 py-8">
-              {/* 시간 휠 */}
-              <div className="relative">
-                <div className="text-center text-sm text-muted-foreground mb-2">시</div>
-                <div className="relative h-40 w-16 overflow-hidden">
-                  {/* 선택 영역 표시 */}
-                  <div className="absolute top-1/2 left-0 right-0 h-10 border-t border-b border-border bg-accent/20 -translate-y-1/2 z-10" />
-                  
-                  <div 
-                    className="absolute inset-0 flex flex-col items-center transition-transform duration-200"
-                    style={{
-                      transform: `translateY(${80 - tempDate.getHours() * 40}px)`,
-                    }}
-                  >
-                    {Array.from({ length: 24 }, (_, i) => (
-                      <button
-                        key={i}
-                        className={`h-10 w-full flex items-center justify-center text-2xl transition-colors ${
-                          i === tempDate.getHours()
-                            ? 'text-foreground font-bold'
-                            : 'text-muted-foreground'
-                        }`}
-                        onClick={() => {
-                          const newDate = new Date(tempDate);
-                          newDate.setHours(i);
-                          setTempDate(newDate);
-                        }}
-                      >
-                        {i.toString().padStart(2, '0')}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="text-2xl font-bold text-muted-foreground">:</div>
-
-              {/* 분 휠 */}
-              <div className="relative">
-                <div className="text-center text-sm text-muted-foreground mb-2">분</div>
-                <div className="relative h-40 w-16 overflow-hidden">
-                  {/* 선택 영역 표시 */}
-                  <div className="absolute top-1/2 left-0 right-0 h-10 border-t border-b border-border bg-accent/20 -translate-y-1/2 z-10" />
-                  
-                  <div 
-                    className="absolute inset-0 flex flex-col items-center transition-transform duration-200"
-                    style={{
-                      transform: `translateY(${80 - (tempDate.getMinutes() / 5) * 40}px)`,
-                    }}
-                  >
-                    {Array.from({ length: 12 }, (_, i) => {
-                      const minute = i * 5;
+          <div className="p-4" style={{ touchAction: "manipulation" }}>
+            <div className="flex justify-center items-center py-4">
+              <div className="w-full max-w-sm" style={{ touchAction: "pan-y" }}>
+                <Picker
+                  value={pickerValue}
+                  onChange={handlePickerChange}
+                  wheelMode="natural"
+                  height={200}
+                  itemHeight={40}
+                >
+                  <Picker.Column name="ampm">
+                    <Picker.Item value="오전">오전</Picker.Item>
+                    <Picker.Item value="오후">오후</Picker.Item>
+                  </Picker.Column>
+                  <Picker.Column name="hour">
+                    {Array.from({ length: 36 }, (_, i) => {
+                      const hour = (i % 12) + 1; // 1-12가 3번 반복 (더 부드러운 스크롤을 위해)
+                      const cycle = Math.floor(i / 12); // 0, 1, 2 사이클
                       return (
-                        <button
-                          key={minute}
-                          className={`h-10 w-full flex items-center justify-center text-2xl transition-colors ${
-                            minute === tempDate.getMinutes()
-                              ? 'text-foreground font-bold'
-                              : 'text-muted-foreground'
-                          }`}
-                          onClick={() => {
-                            const newDate = new Date(tempDate);
-                            newDate.setMinutes(minute);
-                            setTempDate(newDate);
-                          }}
-                        >
-                          {minute.toString().padStart(2, '0')}
-                        </button>
+                        <Picker.Item key={i} value={`${hour}-${cycle}`}>
+                          {hour}
+                        </Picker.Item>
                       );
                     })}
-                  </div>
-                </div>
+                  </Picker.Column>
+                  <Picker.Column name="minute">
+                    {Array.from({ length: 60 }, (_, i) => (
+                      <Picker.Item
+                        key={i}
+                        value={i.toString().padStart(2, "0")}
+                      >
+                        {i.toString().padStart(2, "0")}
+                      </Picker.Item>
+                    ))}
+                  </Picker.Column>
+                </Picker>
               </div>
             </div>
 
-            <div className="flex gap-2 mt-4">
+            <div className="flex gap-2 pt-4 pb-6">
               <Button
                 variant="outline"
                 onClick={() => setIsTimePickerOpen(false)}
-                className="flex-1"
+                className="flex-1 h-12"
               >
                 취소
               </Button>
-              <Button
-                onClick={confirmTimeSelection}
-                className="flex-1"
-              >
+              <Button onClick={confirmTimeSelection} className="flex-1 h-12">
                 선택
               </Button>
             </div>
