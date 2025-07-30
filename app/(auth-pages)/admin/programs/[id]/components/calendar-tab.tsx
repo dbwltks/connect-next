@@ -66,6 +66,8 @@ import {
   Trash2,
   Settings,
   Filter,
+  Bell,
+  BellOff,
 } from "lucide-react";
 import { SiGooglecalendar } from "react-icons/si";
 import {
@@ -150,11 +152,16 @@ export default function CalendarTab({
     team_id: "",
     isRecurring: false,
     recurringEndDate: "",
+    sendNotification: false,
   });
 
   // 필터 및 네비게이션 상태
   const [selectedTeamFilter, setSelectedTeamFilter] = useState<string>("all");
   const [currentDate, setCurrentDate] = useState(new Date());
+
+  // 알림 관련 상태
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
 
   // 장소 관련 상태
   const [savedLocations, setSavedLocations] = useState<string[]>([]);
@@ -223,6 +230,63 @@ export default function CalendarTab({
 
     loadProgramData();
   }, [programId]);
+
+  // 알림 권한 확인 및 초기화
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setNotificationPermission(Notification.permission);
+      
+      // 로컬 스토리지에서 알림 설정 불러오기
+      const savedNotificationSetting = localStorage.getItem(`calendar-notifications-${programId}`);
+      if (savedNotificationSetting === 'true' && Notification.permission === 'granted') {
+        setNotificationsEnabled(true);
+      }
+    }
+  }, [programId]);
+
+  // 알림 권한 요청 함수
+  const requestNotificationPermission = async () => {
+    if (!('Notification' in window)) {
+      alert('이 브라우저는 알림을 지원하지 않습니다.');
+      return false;
+    }
+
+    if (Notification.permission === 'granted') {
+      return true;
+    } else if (Notification.permission !== 'denied') {
+      const permission = await Notification.requestPermission();
+      setNotificationPermission(permission);
+      return permission === 'granted';
+    } else {
+      alert('알림이 차단되어 있습니다. 브라우저 설정에서 알림을 허용해주세요.');
+      return false;
+    }
+  };
+
+  // 알림 토글 함수
+  const toggleNotifications = async () => {
+    if (!notificationsEnabled) {
+      const granted = await requestNotificationPermission();
+      if (granted) {
+        setNotificationsEnabled(true);
+        localStorage.setItem(`calendar-notifications-${programId}`, 'true');
+      }
+    } else {
+      setNotificationsEnabled(false);
+      localStorage.removeItem(`calendar-notifications-${programId}`);
+    }
+  };
+
+  // 알림 전송 함수
+  const sendNotification = (title: string, body: string) => {
+    if (notificationsEnabled && Notification.permission === 'granted') {
+      new Notification(title, {
+        body,
+        icon: '/favicon.ico',
+        tag: 'calendar-event'
+      });
+    }
+  };
 
   // 유틸리티 함수들
   const getTeamStyle = (teamId?: string) => {
@@ -407,6 +471,7 @@ export default function CalendarTab({
       team_id: "",
       isRecurring: false,
       recurringEndDate: "",
+      sendNotification: false,
     };
   };
 
@@ -827,6 +892,18 @@ export default function CalendarTab({
         setEvents(updatedEvents);
 
         showAlert("추가 완료", "일정이 추가되었습니다.");
+        
+        // 알림 전송 (새 일정 추가시에만)
+        if (newEvent.sendNotification && !isEditingEvent) {
+          const teamName = teams.find(t => t.id === newEvent.team_id)?.name || '';
+          const startDate = new Date(newEvent.start_date);
+          const dateStr = format(startDate, 'MM월 dd일 HH:mm');
+          
+          sendNotification(
+            '새 일정이 추가되었습니다',
+            `${teamName ? `[${teamName}] ` : ''}${newEvent.title} - ${dateStr}`
+          );
+        }
       }
 
       // 모달 닫기 및 폼 초기화
@@ -1082,6 +1159,26 @@ export default function CalendarTab({
                   ))}
                 </SelectContent>
               </Select>
+
+              {/* 알림 버튼 - 모바일/태블릿에서만 표시 */}
+              {isMobile && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleNotifications}
+                  className={`p-2 ${
+                    notificationsEnabled 
+                      ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100' 
+                      : 'text-gray-600 hover:text-gray-700'
+                  }`}
+                >
+                  {notificationsEnabled ? (
+                    <Bell className="h-4 w-4" />
+                  ) : (
+                    <BellOff className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
 
               {/* 구글 캘린더 메뉴 - 모바일은 Drawer, 데스크톱은 DropdownMenu */}
               {filteredEvents.length > 0 && (
@@ -1690,6 +1787,39 @@ export default function CalendarTab({
                               </div>
                             )}
                           </div>
+
+                          {/* 알림 설정 */}
+                          <div className="grid gap-3 pt-4 border-t">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <Label
+                                  htmlFor="notification"
+                                  className="text-sm font-medium"
+                                >
+                                  알림 전송
+                                </Label>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  일정이 추가되면 알림을 받습니다
+                                </p>
+                              </div>
+                              <Switch
+                                id="notification"
+                                checked={newEvent.sendNotification}
+                                onCheckedChange={(checked) =>
+                                  setNewEvent((prev) => ({
+                                    ...prev,
+                                    sendNotification: checked,
+                                  }))
+                                }
+                                disabled={!notificationsEnabled}
+                              />
+                            </div>
+                            {!notificationsEnabled && (
+                              <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                                💡 알림을 받으려면 먼저 캘린더 상단의 '알림 ON' 버튼을 눌러주세요.
+                              </div>
+                            )}
+                          </div>
                         </div>
                         <div className="flex justify-end gap-2">
                           <Button
@@ -2084,6 +2214,7 @@ export default function CalendarTab({
                               isRecurring: selectedEvent.is_recurring || false,
                               recurringEndDate:
                                 selectedEvent.recurring_end_date || "",
+                              sendNotification: false,
                             });
                             // 기존 장소가 저장된 장소인지 확인
                             const isExistingLocation = savedLocations.includes(
@@ -2207,6 +2338,7 @@ export default function CalendarTab({
                             isRecurring: selectedEvent.is_recurring || false,
                             recurringEndDate:
                               selectedEvent.recurring_end_date || "",
+                            sendNotification: false,
                           });
                           // 기존 장소가 저장된 장소인지 확인
                           const isExistingLocation = savedLocations.includes(
