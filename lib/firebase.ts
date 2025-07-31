@@ -27,14 +27,23 @@ export const getFCMToken = async () => {
   if (!messaging) return null;
 
   try {
-    // Service Worker 등록 확인
+    // Service Worker 등록 (모바일 전용 처리)
     if ('serviceWorker' in navigator) {
-      const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-      await navigator.serviceWorker.ready;
+      try {
+        await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+          scope: '/',
+          updateViaCache: 'none'
+        });
+        await navigator.serviceWorker.ready;
+      } catch (swError) {
+        console.error("Service Worker 등록 실패:", swError);
+        return null;
+      }
     }
 
     const currentToken = await getToken(messaging, {
       vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
+      serviceWorkerRegistration: await navigator.serviceWorker.getRegistration('/')
     });
 
     if (currentToken) {

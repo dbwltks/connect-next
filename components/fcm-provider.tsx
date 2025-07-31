@@ -8,10 +8,13 @@ export default function FCMProvider() {
   const [token, setToken] = useState<string | null>(null);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
 
-  // FCM 토큰 가져오기 및 저장
+  // FCM 토큰 가져오기 및 저장 (모바일 최적화)
   const requestNotificationPermission = async () => {
     try {
-      console.log('현재 알림 권한 상태:', Notification.permission);
+      // 브라우저 지원 확인
+      if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+        return false;
+      }
       
       // 권한이 이미 granted인 경우
       if (Notification.permission === 'granted') {
@@ -19,29 +22,39 @@ export default function FCMProvider() {
         if (fcmToken) {
           setToken(fcmToken);
           (window as any).currentFCMToken = fcmToken;
-          saveFCMTokenToDatabase(fcmToken);
           return true;
         }
         return false;
       }
       
-      // 권한 요청
-      const permission = await Notification.requestPermission();
-      console.log('권한 요청 결과:', permission);
+      // 권한 요청 (모바일에서도 작동하도록)
+      let permission;
+      
+      if (Notification.requestPermission.length === 0) {
+        // 새로운 Promise 기반 API
+        permission = await Notification.requestPermission();
+      } else {
+        // 구버전 콜백 기반 API (일부 모바일 브라우저)
+        permission = await new Promise((resolve) => {
+          Notification.requestPermission(resolve);
+        });
+      }
+      
       setNotificationPermission(permission);
 
       if (permission === 'granted') {
+        // 약간의 지연 후 토큰 생성 (모바일에서 안정성 향상)
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         const fcmToken = await getFCMToken();
         if (fcmToken) {
           setToken(fcmToken);
           (window as any).currentFCMToken = fcmToken;
-          saveFCMTokenToDatabase(fcmToken);
           return true;
         }
       }
       return false;
     } catch (error) {
-      console.error('알림 권한 요청 실패:', error);
       return false;
     }
   };
