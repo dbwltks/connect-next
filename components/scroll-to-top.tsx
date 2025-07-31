@@ -72,8 +72,14 @@ export default function ScrollToTop() {
     });
   };
 
-  // 300px 이하에서는 렌더링하지 않음
-  if (typeof window !== 'undefined' && window.scrollY < 300 && !showButton) return null;
+  // 클라이언트에서만 렌더링
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
 
   return (
     <button

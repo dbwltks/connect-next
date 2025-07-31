@@ -359,31 +359,31 @@ export default function CalendarTab({
 
   // 알림 권한 요청 함수
   const requestNotificationPermission = async () => {
-    return true;
+    if ((window as any).requestFCMPermission) {
+      return await (window as any).requestFCMPermission();
+    }
+    return false;
   };
 
   // 알림 토글 함수
   const toggleNotifications = async () => {
-    alert(
-      "버튼 클릭됨! 현재 상태: " + (notificationsEnabled ? "켜짐" : "꺼짐")
-    );
 
     if (!notificationsEnabled) {
-      alert("알림 활성화 시도 중...");
       const granted = await requestNotificationPermission();
-      alert("권한 결과: " + granted);
+      console.log("FCM 권한 결과:", granted);
 
       if (granted) {
+        console.log("권한 승인됨, 구독 처리 시작");
         try {
-          alert("데이터베이스 저장 시작");
 
           // 데이터베이스에 구독 정보 저장
           const userId = user?.id || null;
           const anonymousId = userId ? null : getAnonymousId();
-          alert(
-            "사용자 정보: userId=" + userId + ", anonymousId=" + anonymousId
-          );
 
+          // FCM 토큰 가져오기 - 직접 호출
+          const { getFCMToken } = await import('@/lib/firebase');
+          const fcmToken = await getFCMToken();
+          
           const { data, error } = await supabase
             .from("notification_subscriptions")
             .upsert(
@@ -392,6 +392,9 @@ export default function CalendarTab({
                 anonymous_id: anonymousId,
                 program_id: programId,
                 subscription_data: null,
+                fcm_token: fcmToken,
+                active: true,
+                notifications_enabled: true
               },
               {
                 onConflict: userId
@@ -403,7 +406,7 @@ export default function CalendarTab({
             .single();
 
           if (error) {
-            alert("데이터베이스 오류: " + JSON.stringify(error));
+            console.error("데이터베이스 오류:", error);
             throw error;
           }
 
@@ -411,15 +414,12 @@ export default function CalendarTab({
           setNotificationsEnabled(true);
           localStorage.setItem(`calendar-notifications-${programId}`, "true");
 
-          alert("알림 구독 성공! ID: " + data.id);
         } catch (error: any) {
-          alert("알림 구독 실패: " + error.message);
+          console.error("알림 구독 실패:", error);
         }
       } else {
-        alert("권한이 허용되지 않았습니다");
       }
     } else {
-      alert("알림 비활성화 시도 중...");
       // 알림 해제
       try {
         if (subscriptionId) {
@@ -429,7 +429,7 @@ export default function CalendarTab({
             .eq("id", subscriptionId);
 
           if (error) {
-            alert("구독 삭제 실패: " + JSON.stringify(error));
+            console.error("구독 삭제 실패:", error);
             throw error;
           }
         }
@@ -438,9 +438,8 @@ export default function CalendarTab({
         setNotificationsEnabled(false);
         localStorage.removeItem(`calendar-notifications-${programId}`);
 
-        alert("알림 구독 해제 성공");
       } catch (error: any) {
-        alert("알림 구독 해제 실패: " + error.message);
+        console.error("알림 구독 해제 실패:", error);
       }
     }
   };
@@ -1393,25 +1392,23 @@ export default function CalendarTab({
                 </SelectContent>
               </Select>
 
-              {/* 알림 버튼 - 모바일/태블릿에서만 표시 */}
-              {isMobile && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={toggleNotifications}
-                  className={`p-2 ${
-                    notificationsEnabled
-                      ? "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
-                      : "text-gray-600 hover:text-gray-700"
-                  }`}
-                >
-                  {notificationsEnabled ? (
-                    <Bell className="h-4 w-4" />
-                  ) : (
-                    <BellOff className="h-4 w-4" />
-                  )}
-                </Button>
-              )}
+              {/* 알림 버튼 */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={toggleNotifications}
+                className={`p-2 ${
+                  notificationsEnabled
+                    ? "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                    : "text-gray-600 hover:text-gray-700"
+                }`}
+              >
+                {notificationsEnabled ? (
+                  <Bell className="h-4 w-4" />
+                ) : (
+                  <BellOff className="h-4 w-4" />
+                )}
+              </Button>
 
               {/* 구글 캘린더 메뉴 - 모바일은 Drawer, 데스크톱은 DropdownMenu */}
               {filteredEvents.length > 0 && (
@@ -2044,15 +2041,8 @@ export default function CalendarTab({
                                     sendNotification: checked,
                                   }))
                                 }
-                                disabled={!notificationsEnabled}
                               />
                             </div>
-                            {!notificationsEnabled && (
-                              <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
-                                💡 알림을 받으려면 먼저 캘린더 상단의 '알림 ON'
-                                버튼을 눌러주세요.
-                              </div>
-                            )}
                           </div>
                         </div>
                         <div className="flex justify-end gap-2">
@@ -2325,6 +2315,33 @@ export default function CalendarTab({
                               </div>
                             </div>
                           )}
+                        </div>
+
+                        {/* 알림 설정 - 데스크톱 Dialog용 */}
+                        <div className="grid gap-3 pt-4 border-t">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <Label
+                                htmlFor="notification-desktop"
+                                className="text-sm font-medium"
+                              >
+                                알림 전송
+                              </Label>
+                              <p className="text-xs text-gray-500 mt-1">
+                                일정이 추가되면 알림을 받습니다
+                              </p>
+                            </div>
+                            <Switch
+                              id="notification-desktop"
+                              checked={newEvent.sendNotification}
+                              onCheckedChange={(checked) =>
+                                setNewEvent((prev) => ({
+                                  ...prev,
+                                  sendNotification: checked,
+                                }))
+                              }
+                            />
+                          </div>
                         </div>
                       </div>
                       <div className="flex justify-end gap-2">
