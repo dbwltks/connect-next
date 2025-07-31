@@ -1124,17 +1124,34 @@ export default function CalendarTab({
 
         showAlert("추가 완료", "일정이 추가되었습니다.");
 
-        // 알림 전송 (새 일정 추가시에만)
+        // FCM 알림 전송 (새 일정 추가시에만)
         if (newEvent.sendNotification && !isEditingEvent) {
           const teamName =
             teams.find((t) => t.id === newEvent.team_id)?.name || "";
           const startDate = new Date(newEvent.start_date);
           const dateStr = format(startDate, "MM월 dd일 HH:mm");
 
-          sendNotification(
-            "새 일정이 추가되었습니다",
-            `${teamName ? `[${teamName}] ` : ""}${newEvent.title} - ${dateStr}`
-          );
+          // FCM Edge Function 호출
+          try {
+            const response = await fetch('/api/send-fcm-notification', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                title: "새 일정이 추가되었습니다",
+                body: `${teamName ? `[${teamName}] ` : ""}${newEvent.title} - ${dateStr}`
+              })
+            });
+            
+            if (response.ok) {
+              console.log('FCM 알림 전송 성공');
+            } else {
+              console.error('FCM 알림 전송 실패:', await response.text());
+            }
+          } catch (error) {
+            console.error('FCM 알림 전송 오류:', error);
+          }
         }
       }
 

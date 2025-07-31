@@ -77,12 +77,17 @@ export default function FCMProvider() {
     if ('Notification' in window) {
       setNotificationPermission(Notification.permission);
       
-      // 이미 권한이 있으면 자동으로 토큰 가져오기
-      if (Notification.permission === 'granted') {
+      // 이미 권한이 있으면 자동으로 토큰 가져오기 (모바일에서는 제외)
+      if (Notification.permission === 'granted' && !isMobileDevice()) {
         requestNotificationPermission();
       }
     }
   }, []);
+
+  // 모바일 디바이스 감지
+  const isMobileDevice = () => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  };
 
   // 전역 함수로 노출 (캘린더에서 사용할 수 있도록)
   useEffect(() => {
