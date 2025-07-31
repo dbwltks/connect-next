@@ -40,7 +40,7 @@ export default function FCMProvider() {
         });
       }
       
-      setNotificationPermission(permission);
+      setNotificationPermission(permission as NotificationPermission);
 
       if (permission === 'granted') {
         // 약간의 지연 후 토큰 생성 (모바일에서 안정성 향상)
