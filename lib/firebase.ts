@@ -11,6 +11,7 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+
 // Firebase 앱 초기화
 const app = initializeApp(firebaseConfig);
 
