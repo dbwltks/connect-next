@@ -164,9 +164,11 @@ export default function CalendarTab({
 
   // 알림 관련 상태
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
+  const [notificationPermission, setNotificationPermission] =
+    useState<NotificationPermission>("default");
   const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
-  const [isNotificationSupportedState, setIsNotificationSupportedState] = useState(true);
+  const [isNotificationSupportedState, setIsNotificationSupportedState] =
+    useState(true);
 
   // 장소 관련 상태
   const [savedLocations, setSavedLocations] = useState<string[]>([]);
@@ -243,42 +245,50 @@ export default function CalendarTab({
     const channel = supabase
       .channel(`program-${programId}-events`)
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'programs',
-          filter: `id=eq.${programId}`
+          event: "*",
+          schema: "public",
+          table: "programs",
+          filter: `id=eq.${programId}`,
         },
         (payload: any) => {
-          console.log('프로그램 변경 감지:', payload);
-          
+          console.log("프로그램 변경 감지:", payload);
+
           // 일정 관련 변경사항인지 확인
           if (payload.new && payload.new.events !== payload.old?.events) {
             // 새 일정이 추가되었는지 확인
-            const oldEvents = Array.isArray(payload.old?.events) ? payload.old.events : [];
-            const newEvents = Array.isArray(payload.new?.events) ? payload.new.events : [];
-            
+            const oldEvents = Array.isArray(payload.old?.events)
+              ? payload.old.events
+              : [];
+            const newEvents = Array.isArray(payload.new?.events)
+              ? payload.new.events
+              : [];
+
             if (newEvents.length > oldEvents.length) {
               // 새 일정 추가됨
-              const addedEvents = newEvents.filter((newEvent: any) => 
-                !oldEvents.some((oldEvent: any) => oldEvent.id === newEvent.id)
+              const addedEvents = newEvents.filter(
+                (newEvent: any) =>
+                  !oldEvents.some(
+                    (oldEvent: any) => oldEvent.id === newEvent.id
+                  )
               );
-              
+
               addedEvents.forEach((event: any) => {
                 if (notificationsEnabled) {
-                  const teamName = teams.find(t => t.id === event.team_id)?.name || '';
+                  const teamName =
+                    teams.find((t) => t.id === event.team_id)?.name || "";
                   const startDate = new Date(event.start_date);
-                  const dateStr = format(startDate, 'MM월 dd일 HH:mm');
-                  
+                  const dateStr = format(startDate, "MM월 dd일 HH:mm");
+
                   sendNotification(
-                    '새 일정이 추가되었습니다',
-                    `${teamName ? `[${teamName}] ` : ''}${event.title} - ${dateStr}`
+                    "새 일정이 추가되었습니다",
+                    `${teamName ? `[${teamName}] ` : ""}${event.title} - ${dateStr}`
                   );
                 }
               });
             }
-            
+
             // 로컬 상태 업데이트
             setEvents(newEvents);
           }
@@ -294,39 +304,43 @@ export default function CalendarTab({
   // 알림 권한 확인 및 기존 구독 정보 불러오기
   useEffect(() => {
     const initializeNotifications = async () => {
-      if (typeof window !== 'undefined') {
+      if (typeof window !== "undefined") {
         // 항상 지원한다고 설정
         setIsNotificationSupportedState(true);
-        setNotificationPermission('granted');
-        
+        setNotificationPermission("granted");
+
         // 기존 구독 정보 확인
         try {
           const userId = user?.id || null;
           const anonymousId = userId ? null : getAnonymousId();
-          
+
           const { data, error } = await supabase
-            .from('notification_subscriptions')
-            .select('*')
-            .eq('program_id', programId)
-            .eq(userId ? 'user_id' : 'anonymous_id', userId || anonymousId)
+            .from("notification_subscriptions")
+            .select("*")
+            .eq("program_id", programId)
+            .eq(userId ? "user_id" : "anonymous_id", userId || anonymousId)
             .maybeSingle();
 
           if (data && !error) {
             setSubscriptionId(data.id);
             setNotificationsEnabled(true);
-            localStorage.setItem(`calendar-notifications-${programId}`, 'true');
+            localStorage.setItem(`calendar-notifications-${programId}`, "true");
           } else {
             // 로컬 스토리지에서 알림 설정 불러오기 (fallback)
-            const savedNotificationSetting = localStorage.getItem(`calendar-notifications-${programId}`);
-            if (savedNotificationSetting === 'true') {
+            const savedNotificationSetting = localStorage.getItem(
+              `calendar-notifications-${programId}`
+            );
+            if (savedNotificationSetting === "true") {
               setNotificationsEnabled(true);
             }
           }
         } catch (error) {
-          console.error('기존 구독 정보 불러오기 실패:', error);
+          console.error("기존 구독 정보 불러오기 실패:", error);
           // 로컬 스토리지 fallback
-          const savedNotificationSetting = localStorage.getItem(`calendar-notifications-${programId}`);
-          if (savedNotificationSetting === 'true') {
+          const savedNotificationSetting = localStorage.getItem(
+            `calendar-notifications-${programId}`
+          );
+          if (savedNotificationSetting === "true") {
             setNotificationsEnabled(true);
           }
         }
@@ -340,7 +354,7 @@ export default function CalendarTab({
 
   // 브라우저 알림 지원 여부 확인
   const isNotificationSupported = () => {
-    return 'Notification' in window;
+    return "Notification" in window;
   };
 
   // 알림 권한 요청 함수
@@ -350,63 +364,72 @@ export default function CalendarTab({
 
   // 알림 토글 함수
   const toggleNotifications = async () => {
-    alert('버튼 클릭됨! 현재 상태: ' + (notificationsEnabled ? '켜짐' : '꺼짐'));
-    
+    alert(
+      "버튼 클릭됨! 현재 상태: " + (notificationsEnabled ? "켜짐" : "꺼짐")
+    );
+
     if (!notificationsEnabled) {
-      alert('알림 활성화 시도 중...');
+      alert("알림 활성화 시도 중...");
       const granted = await requestNotificationPermission();
-      alert('권한 결과: ' + granted);
-      
+      alert("권한 결과: " + granted);
+
       if (granted) {
         try {
-          alert('데이터베이스 저장 시작');
-          
+          alert("데이터베이스 저장 시작");
+
           // 데이터베이스에 구독 정보 저장
           const userId = user?.id || null;
           const anonymousId = userId ? null : getAnonymousId();
-          alert('사용자 정보: userId=' + userId + ', anonymousId=' + anonymousId);
+          alert(
+            "사용자 정보: userId=" + userId + ", anonymousId=" + anonymousId
+          );
 
           const { data, error } = await supabase
-            .from('notification_subscriptions')
-            .upsert({
-              user_id: userId,
-              anonymous_id: anonymousId,
-              program_id: programId,
-              subscription_data: null
-            }, {
-              onConflict: userId ? 'user_id,program_id' : 'anonymous_id,program_id'
-            })
+            .from("notification_subscriptions")
+            .upsert(
+              {
+                user_id: userId,
+                anonymous_id: anonymousId,
+                program_id: programId,
+                subscription_data: null,
+              },
+              {
+                onConflict: userId
+                  ? "user_id,program_id"
+                  : "anonymous_id,program_id",
+              }
+            )
             .select()
             .single();
 
           if (error) {
-            alert('데이터베이스 오류: ' + JSON.stringify(error));
+            alert("데이터베이스 오류: " + JSON.stringify(error));
             throw error;
           }
 
           setSubscriptionId(data.id);
           setNotificationsEnabled(true);
-          localStorage.setItem(`calendar-notifications-${programId}`, 'true');
-          
-          alert('알림 구독 성공! ID: ' + data.id);
+          localStorage.setItem(`calendar-notifications-${programId}`, "true");
+
+          alert("알림 구독 성공! ID: " + data.id);
         } catch (error: any) {
-          alert('알림 구독 실패: ' + error.message);
+          alert("알림 구독 실패: " + error.message);
         }
       } else {
-        alert('권한이 허용되지 않았습니다');
+        alert("권한이 허용되지 않았습니다");
       }
     } else {
-      alert('알림 비활성화 시도 중...');
+      alert("알림 비활성화 시도 중...");
       // 알림 해제
       try {
         if (subscriptionId) {
           const { error } = await supabase
-            .from('notification_subscriptions')
+            .from("notification_subscriptions")
             .delete()
-            .eq('id', subscriptionId);
+            .eq("id", subscriptionId);
 
           if (error) {
-            alert('구독 삭제 실패: ' + JSON.stringify(error));
+            alert("구독 삭제 실패: " + JSON.stringify(error));
             throw error;
           }
         }
@@ -414,31 +437,31 @@ export default function CalendarTab({
         setSubscriptionId(null);
         setNotificationsEnabled(false);
         localStorage.removeItem(`calendar-notifications-${programId}`);
-        
-        alert('알림 구독 해제 성공');
+
+        alert("알림 구독 해제 성공");
       } catch (error: any) {
-        alert('알림 구독 해제 실패: ' + error.message);
+        alert("알림 구독 해제 실패: " + error.message);
       }
     }
   };
 
   // 알림 전송 함수
   const sendNotification = (title: string, body: string) => {
-    if (notificationsEnabled && Notification.permission === 'granted') {
+    if (notificationsEnabled && Notification.permission === "granted") {
       new Notification(title, {
         body,
-        icon: '/favicon.ico',
-        tag: 'calendar-event'
+        icon: "/favicon.ico",
+        tag: "calendar-event",
       });
     }
   };
 
   // 익명 사용자 ID 생성/가져오기
   const getAnonymousId = () => {
-    let anonymousId = localStorage.getItem('calendar-anonymous-id');
+    let anonymousId = localStorage.getItem("calendar-anonymous-id");
     if (!anonymousId) {
       anonymousId = `anonymous_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      localStorage.setItem('calendar-anonymous-id', anonymousId);
+      localStorage.setItem("calendar-anonymous-id", anonymousId);
     }
     return anonymousId;
   };
@@ -450,25 +473,30 @@ export default function CalendarTab({
       const anonymousId = userId ? null : getAnonymousId();
 
       const { data, error } = await supabase
-        .from('notification_subscriptions')
-        .upsert({
-          user_id: userId,
-          anonymous_id: anonymousId,
-          program_id: programId,
-          subscription_data: subscriptionData,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: userId ? 'user_id,program_id' : 'anonymous_id,program_id'
-        })
+        .from("notification_subscriptions")
+        .upsert(
+          {
+            user_id: userId,
+            anonymous_id: anonymousId,
+            program_id: programId,
+            subscription_data: subscriptionData,
+            updated_at: new Date().toISOString(),
+          },
+          {
+            onConflict: userId
+              ? "user_id,program_id"
+              : "anonymous_id,program_id",
+          }
+        )
         .select()
         .single();
 
       if (error) throw error;
-      
+
       setSubscriptionId(data.id);
       return data;
     } catch (error) {
-      console.error('알림 구독 저장 실패:', error);
+      console.error("알림 구독 저장 실패:", error);
       throw error;
     }
   };
@@ -479,15 +507,15 @@ export default function CalendarTab({
       if (!subscriptionId) return;
 
       const { error } = await supabase
-        .from('notification_subscriptions')
+        .from("notification_subscriptions")
         .delete()
-        .eq('id', subscriptionId);
+        .eq("id", subscriptionId);
 
       if (error) throw error;
-      
+
       setSubscriptionId(null);
     } catch (error) {
-      console.error('알림 구독 삭제 실패:', error);
+      console.error("알림 구독 삭제 실패:", error);
       throw error;
     }
   };
@@ -1096,16 +1124,17 @@ export default function CalendarTab({
         setEvents(updatedEvents);
 
         showAlert("추가 완료", "일정이 추가되었습니다.");
-        
+
         // 알림 전송 (새 일정 추가시에만)
         if (newEvent.sendNotification && !isEditingEvent) {
-          const teamName = teams.find(t => t.id === newEvent.team_id)?.name || '';
+          const teamName =
+            teams.find((t) => t.id === newEvent.team_id)?.name || "";
           const startDate = new Date(newEvent.start_date);
-          const dateStr = format(startDate, 'MM월 dd일 HH:mm');
-          
+          const dateStr = format(startDate, "MM월 dd일 HH:mm");
+
           sendNotification(
-            '새 일정이 추가되었습니다',
-            `${teamName ? `[${teamName}] ` : ''}${newEvent.title} - ${dateStr}`
+            "새 일정이 추가되었습니다",
+            `${teamName ? `[${teamName}] ` : ""}${newEvent.title} - ${dateStr}`
           );
         }
       }
@@ -1371,9 +1400,9 @@ export default function CalendarTab({
                   size="sm"
                   onClick={toggleNotifications}
                   className={`p-2 ${
-                    notificationsEnabled 
-                      ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100' 
-                      : 'text-gray-600 hover:text-gray-700'
+                    notificationsEnabled
+                      ? "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                      : "text-gray-600 hover:text-gray-700"
                   }`}
                 >
                   {notificationsEnabled ? (
@@ -2020,7 +2049,8 @@ export default function CalendarTab({
                             </div>
                             {!notificationsEnabled && (
                               <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
-                                💡 알림을 받으려면 먼저 캘린더 상단의 '알림 ON' 버튼을 눌러주세요.
+                                💡 알림을 받으려면 먼저 캘린더 상단의 '알림 ON'
+                                버튼을 눌러주세요.
                               </div>
                             )}
                           </div>
@@ -2358,7 +2388,7 @@ export default function CalendarTab({
                         <div className="flex items-center gap-2">
                           <MapPin size={16} className="text-gray-500" />
                           <span className="text-sm font-semibold">
-{selectedEvent.location || "미정"}
+                            {selectedEvent.location || "미정"}
                           </span>
                         </div>
 
@@ -2481,7 +2511,7 @@ export default function CalendarTab({
                       <div className="flex items-center gap-2">
                         <MapPin size={16} className="text-gray-500" />
                         <span className="text-sm font-semibold">
-{selectedEvent.location || "미정"}
+                          {selectedEvent.location || "미정"}
                         </span>
                       </div>
 

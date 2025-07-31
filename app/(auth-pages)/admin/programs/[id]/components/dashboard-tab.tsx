@@ -35,33 +35,62 @@ import {
   type ChecklistItem,
   type AttendanceRecord,
 } from "../utils/api";
+import { createClient } from "@/utils/supabase/client";
 
 interface DashboardTabProps {
   programId: string;
   onNavigateToTab: (tab: string) => void;
 }
 
-export default function DashboardTab({ programId, onNavigateToTab }: DashboardTabProps) {
+interface Program {
+  id: string;
+  name: string;
+  start_date?: string;
+  end_date?: string;
+  status?: string;
+  teams?: any[];
+}
+
+export default function DashboardTab({
+  programId,
+  onNavigateToTab,
+}: DashboardTabProps) {
   const [loading, setLoading] = useState(true);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [finances, setFinances] = useState<FinanceRecord[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [checklists, setChecklists] = useState<ChecklistItem[]>([]);
   const [attendances, setAttendances] = useState<AttendanceRecord[]>([]);
+  const [program, setProgram] = useState<Program | null>(null);
 
   // 데이터 로드
   const loadAllData = async () => {
     try {
       setLoading(true);
-      
-      const [participantsData, financesData, eventsData, checklistsData, attendancesData] = await Promise.all([
+
+      // 프로그램 정보 로드
+      const supabase = createClient();
+      const { data: programData } = await supabase
+        .from("programs")
+        .select("id, name, start_date, end_date, status, teams")
+        .eq("id", programId)
+        .single();
+
+      const [
+        participantsData,
+        financesData,
+        eventsData,
+        checklistsData,
+        attendancesData,
+      ] = await Promise.all([
         participantsApi.getAll(programId).catch(() => []),
         financeApi.getAll(programId).catch(() => []),
         eventsApi.getAll(programId).catch(() => []),
         checklistApi.getAll(programId).catch(() => []),
-        attendanceApi.getAll(programId).catch(() => [])
+        attendanceApi.getAll(programId).catch(() => []),
       ]);
 
+      setProgram(programData);
       setParticipants(participantsData || []);
       setFinances(financesData || []);
       setEvents(eventsData || []);
@@ -83,40 +112,59 @@ export default function DashboardTab({ programId, onNavigateToTab }: DashboardTa
   // 참가자 통계
   const participantStats = {
     total: participants.length,
-    byStatus: participants.reduce((acc, p) => {
-      acc[p.status] = (acc[p.status] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>),
-    byGender: (() => {
-      const genderGroups = participants.reduce((acc, p) => {
-        const gender = p.gender || '미입력';
-        acc[gender] = (acc[gender] || 0) + 1;
+    byStatus: participants.reduce(
+      (acc, p) => {
+        acc[p.status] = (acc[p.status] || 0) + 1;
         return acc;
-      }, {} as Record<string, number>);
+      },
+      {} as Record<string, number>
+    ),
+    byGender: (() => {
+      const genderGroups = participants.reduce(
+        (acc, p) => {
+          const gender = p.gender || "미입력";
+          acc[gender] = (acc[gender] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>
+      );
 
       // 실제 데이터 확인을 위해 로그 추가
-      console.log('Gender groups:', genderGroups);
-      console.log('Participants:', participants.map(p => ({ name: p.name, gender: p.gender })));
+      console.log("Gender groups:", genderGroups);
+      console.log(
+        "Participants:",
+        participants.map((p) => ({ name: p.name, gender: p.gender }))
+      );
 
       // 실제 데이터에 맞춰 매핑
       const orderedGenderGroups: Record<string, number> = {};
-      
+
       // 실제 저장된 성별 값들을 확인하고 표준화
-      Object.keys(genderGroups).forEach(originalGender => {
+      Object.keys(genderGroups).forEach((originalGender) => {
         let displayGender = originalGender;
-        
+
         // 다양한 성별 표기를 표준화
-        if (originalGender === 'male' || originalGender === 'M' || originalGender === '남성') {
-          displayGender = '남자';
-        } else if (originalGender === 'female' || originalGender === 'F' || originalGender === '여성') {
-          displayGender = '여자';
+        if (
+          originalGender === "male" ||
+          originalGender === "M" ||
+          originalGender === "남성"
+        ) {
+          displayGender = "남자";
+        } else if (
+          originalGender === "female" ||
+          originalGender === "F" ||
+          originalGender === "여성"
+        ) {
+          displayGender = "여자";
         }
-        
-        orderedGenderGroups[displayGender] = (orderedGenderGroups[displayGender] || 0) + genderGroups[originalGender];
+
+        orderedGenderGroups[displayGender] =
+          (orderedGenderGroups[displayGender] || 0) +
+          genderGroups[originalGender];
       });
 
       // 기본 항목들 0으로 설정 (미입력 제외)
-      ['남자', '여자'].forEach(gender => {
+      ["남자", "여자"].forEach((gender) => {
         if (!orderedGenderGroups[gender]) {
           orderedGenderGroups[gender] = 0;
         }
@@ -125,25 +173,29 @@ export default function DashboardTab({ programId, onNavigateToTab }: DashboardTa
       return orderedGenderGroups;
     })(),
     byAge: (() => {
-      const ageGroups = participants.reduce((acc, p) => {
-        if (p.birth_date) {
-          const age = new Date().getFullYear() - new Date(p.birth_date).getFullYear();
-          let ageGroup = '미입력';
-          if (age < 20) ageGroup = '10대';
-          else if (age < 30) ageGroup = '20대';
-          else if (age < 40) ageGroup = '30대';
-          else ageGroup = '40대+';
-          acc[ageGroup] = (acc[ageGroup] || 0) + 1;
-        } else {
-          acc['미입력'] = (acc['미입력'] || 0) + 1;
-        }
-        return acc;
-      }, {} as Record<string, number>);
+      const ageGroups = participants.reduce(
+        (acc, p) => {
+          if (p.birth_date) {
+            const age =
+              new Date().getFullYear() - new Date(p.birth_date).getFullYear();
+            let ageGroup = "미입력";
+            if (age < 20) ageGroup = "10대";
+            else if (age < 30) ageGroup = "20대";
+            else if (age < 40) ageGroup = "30대";
+            else ageGroup = "40대+";
+            acc[ageGroup] = (acc[ageGroup] || 0) + 1;
+          } else {
+            acc["미입력"] = (acc["미입력"] || 0) + 1;
+          }
+          return acc;
+        },
+        {} as Record<string, number>
+      );
 
       // 지정된 순서로 정렬 (0인 것도 표시, 미입력 제외)
       const orderedAgeGroups: Record<string, number> = {};
-      const order = ['10대', '20대', '30대', '40대+'];
-      order.forEach(ageGroup => {
+      const order = ["10대", "20대", "30대", "40대+"];
+      order.forEach((ageGroup) => {
         orderedAgeGroups[ageGroup] = ageGroups[ageGroup] || 0;
       });
       return orderedAgeGroups;
@@ -169,7 +221,10 @@ export default function DashboardTab({ programId, onNavigateToTab }: DashboardTa
   const now = new Date();
   const upcomingEvents = events
     .filter((e) => isAfter(new Date(e.start_date), now))
-    .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
+    .sort(
+      (a, b) =>
+        new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
+    )
     .slice(0, 3);
 
   const todayEvents = events
@@ -181,25 +236,28 @@ export default function DashboardTab({ programId, onNavigateToTab }: DashboardTa
         eventDate.getFullYear() === now.getFullYear()
       );
     })
-    .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
+    .sort(
+      (a, b) =>
+        new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
+    );
 
   // 체크리스트 통계
   const checklistStats = {
     total: checklists.length,
     completed: checklists.filter((c) => c.is_completed).length,
-    overdue: checklists.filter((c) => 
-      c.due_date && 
-      !c.is_completed && 
-      isBefore(new Date(c.due_date), now)
+    overdue: checklists.filter(
+      (c) =>
+        c.due_date && !c.is_completed && isBefore(new Date(c.due_date), now)
     ).length,
-    highPriority: checklists.filter((c) => 
-      c.priority === "high" && !c.is_completed
+    highPriority: checklists.filter(
+      (c) => c.priority === "high" && !c.is_completed
     ).length,
   };
 
-  const completionRate = checklistStats.total > 0 
-    ? Math.round((checklistStats.completed / checklistStats.total) * 100) 
-    : 0;
+  const completionRate =
+    checklistStats.total > 0
+      ? Math.round((checklistStats.completed / checklistStats.total) * 100)
+      : 0;
 
   // 최근 출석 통계
   const recentAttendance = attendances
@@ -212,9 +270,10 @@ export default function DashboardTab({ programId, onNavigateToTab }: DashboardTa
     late: recentAttendance.filter((a) => a.status === "late").length,
   };
 
-  const attendanceRate = recentAttendance.length > 0
-    ? Math.round((attendanceStats.present / recentAttendance.length) * 100)
-    : 0;
+  const attendanceRate =
+    recentAttendance.length > 0
+      ? Math.round((attendanceStats.present / recentAttendance.length) * 100)
+      : 0;
 
   if (loading) {
     return (
@@ -226,243 +285,518 @@ export default function DashboardTab({ programId, onNavigateToTab }: DashboardTa
 
   return (
     <div className="space-y-6">
-      {/* 오늘 일정과 다가오는 일정을 나란히 배치 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 오늘 일정 */}
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => onNavigateToTab('calendar')}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              오늘 일정
-              <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary hover:bg-secondary/80 text-sm text-blue-400">
-                {todayEvents.length}
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {todayEvents.length > 0 ? (
-              <div className="space-y-3">
-                {todayEvents.map((event) => (
-                  <div key={event.id} className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
-                    <Clock className="h-4 w-4 text-blue-600 mt-0.5" />
-                    <div className="flex-1">
-                      <h4 className="font-medium text-sm">{event.title}</h4>
-                      <p className="text-xs text-muted-foreground">
-                        {event.start_date && !isNaN(new Date(event.start_date).getTime()) ? 
-                          new Date(event.start_date).toLocaleString('ko-KR', {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          }) : '--:--'
-                        }
-                        {event.location && ` • ${event.location}`}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+      {/* 모든 카드들을 하나의 그리드로 통합 */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* 총 참가자 카드 */}
+        <div
+          className="bg-white cursor-pointer overflow-hidden border-gray-100 widget-scale border rounded-lg hover:shadow-md block p-4 group relative"
+          onClick={() => onNavigateToTab("participants")}
+        >
+          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-500/10 to-blue-600/5 rounded-bl-full"></div>
+          <div className="relative">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg group-hover:shadow-blue-500/25 transition-all">
+                <Users className="h-6 w-6 text-white" />
               </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">오늘 예정된 일정이 없습니다.</p>
+              <div className="text-right">
+                <div className="text-3xl font-bold text-slate-900">
+                  {participants.length}
+                </div>
+                <div className="text-xs text-blue-600 font-semibold bg-blue-50 px-2 py-1 rounded-full">
+                  명 참가
+                </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900">총 참가자</h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                프로그램 참가자
+              </p>
+            </div>
+          </div>
+        </div>
 
-        {/* 다가오는 일정 */}
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => onNavigateToTab('calendar')}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5" />
-              다가오는 일정
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {upcomingEvents.length > 0 ? (
-              <div className="space-y-3">
-                {upcomingEvents.map((event) => {
-                  const daysUntil = Math.ceil(
-                    (new Date(event.start_date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+        {/* 팀 수 카드 */}
+        <div
+          className="bg-white cursor-pointer overflow-hidden border-gray-100 widget-scale border rounded-lg hover:shadow-md block p-4 group relative"
+          onClick={() => onNavigateToTab("participants")}
+        >
+          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-purple-500/10 to-purple-600/5 rounded-bl-full"></div>
+          <div className="relative">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg group-hover:shadow-purple-500/25 transition-all">
+                <Users className="h-6 w-6 text-white" />
+              </div>
+              <div className="text-right">
+                <div className="text-3xl font-bold text-slate-900">
+                  {program?.teams && Array.isArray(program.teams)
+                    ? program.teams.length
+                    : 0}
+                </div>
+                <div className="text-xs text-purple-600 font-semibold bg-purple-50 px-2 py-1 rounded-full">
+                  개 팀
+                </div>
+              </div>
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900">구성된 팀</h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                프로그램 참여 팀 수
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* 프로그램 기간 카드 */}
+        <div className="bg-white cursor-pointer overflow-hidden border-gray-100 widget-scale border rounded-lg hover:shadow-md block p-4 group relative">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-amber-500/10 to-amber-600/5 rounded-bl-full"></div>
+          <div className="relative">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl shadow-lg group-hover:shadow-amber-500/25 transition-all">
+                <Calendar className="h-6 w-6 text-white" />
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold text-slate-900">
+                  {(() => {
+                    if (program?.start_date && program?.end_date) {
+                      const start = new Date(program.start_date);
+                      const end = new Date(program.end_date);
+                      const diffTime = Math.abs(end.getTime() - start.getTime());
+                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                      return `${diffDays}일`;
+                    }
+                    return '--';
+                  })()}
+                </div>
+                <div className="text-xs text-amber-600 font-semibold bg-amber-50 px-2 py-1 rounded-full">
+                  운영 기간
+                </div>
+              </div>
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900 mb-2">프로그램 기간</h3>
+              {(() => {
+                if (program?.start_date && program?.end_date) {
+                  const startDate = format(
+                    parseISO(program.start_date),
+                    "yy.MM.dd",
+                    { locale: ko }
                   );
+                  const endDate = format(
+                    parseISO(program.end_date),
+                    "yy.MM.dd",
+                    { locale: ko }
+                  );
+
                   return (
-                    <div key={event.id} className="flex items-start gap-3 p-3 border rounded-lg">
-                      <div className="flex flex-col items-center">
-                        <Badge variant={daysUntil <= 3 ? "destructive" : "secondary"} className="text-xs">
-                          D-{daysUntil}
-                        </Badge>
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-medium text-sm">{event.title}</h4>
-                        <p className="text-xs text-muted-foreground">
-                          {event.start_date && !isNaN(new Date(event.start_date).getTime()) ? 
-                            new Date(event.start_date).toLocaleString('ko-KR', {
-                              month: 'short',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            }) : '--/-- --:--'
-                          }
+                    <div className="text-sm font-semibold text-slate-700">
+                      {startDate} ~ {endDate}
+                    </div>
+                  );
+                } else if (program?.start_date) {
+                  const startDate = format(
+                    parseISO(program.start_date),
+                    "yy.MM.dd",
+                    { locale: ko }
+                  );
+
+                  return (
+                    <div className="text-sm font-semibold text-slate-700">
+                      {startDate} ~ <span className="text-slate-400">미정</span>
+                    </div>
+                  );
+                } else {
+                  return (
+                    <div className="text-sm font-semibold text-slate-400">
+                      기간 미정
+                    </div>
+                  );
+                }
+              })()}
+            </div>
+          </div>
+        </div>
+
+        {/* 일정 카드 */}
+        {todayEvents.length > 0 ? (
+          /* 오늘 일정 있을 때 */
+          <div
+            className="bg-white cursor-pointer overflow-hidden border-gray-100 widget-scale border rounded-lg hover:shadow-md block p-4 group relative"
+            onClick={() => onNavigateToTab("calendar")}
+          >
+            <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-indigo-500/10 to-indigo-600/5 rounded-bl-full"></div>
+            <div className="relative">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl shadow-lg transition-all">
+                  <Calendar className="h-6 w-6 text-white" />
+                </div>
+                <div className="text-right">
+                  <div className="text-3xl font-bold text-slate-900">
+                    {todayEvents.length}
+                  </div>
+                  <div className="text-xs text-indigo-600 font-semibold bg-indigo-50 px-2 py-1 rounded-full">
+                    오늘 일정
+                  </div>
+                </div>
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 mb-3">오늘의 일정</h3>
+                <div className="space-y-2">
+                  {todayEvents.slice(0, 3).map((event) => (
+                    <div
+                      key={event.id}
+                      className="flex items-start gap-3 p-2 bg-indigo-50/50 rounded-lg"
+                    >
+                      <Clock className="h-3 w-3 text-indigo-600 mt-1" />
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-xs text-slate-900 truncate">
+                          {event.title}
+                        </h4>
+                        <p className="text-xs text-slate-500">
+                          {event.start_date &&
+                          !isNaN(new Date(event.start_date).getTime())
+                            ? new Date(event.start_date).toLocaleString(
+                                "ko-KR",
+                                {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                }
+                              )
+                            : "--:--"}
                           {event.location && ` • ${event.location}`}
                         </p>
                       </div>
                     </div>
-                  );
-                })}
+                  ))}
+                  {todayEvents.length > 3 && (
+                    <p className="text-xs text-slate-400 text-center pt-1">
+                      외 {todayEvents.length - 3}개 더
+                    </p>
+                  )}
+                </div>
               </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Target className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">예정된 일정이 없습니다.</p>
+            </div>
+          </div>
+        ) : upcomingEvents.length > 0 ? (
+          /* 오늘 일정 없고 다가오는 일정 있을 때 */
+          <div
+            className="bg-white cursor-pointer overflow-hidden border-gray-100 border rounded-lg hover:shadow-md widget-scale block p-4 group relative"
+            onClick={() => onNavigateToTab("calendar")}
+          >
+            <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-orange-500/10 to-orange-600/5 rounded-bl-full"></div>
+            <div className="relative">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg transition-all">
+                  <Target className="h-6 w-6 text-white" />
+                </div>
+                <div className="text-right">
+                  <div className="text-3xl font-bold text-slate-900">
+                    {upcomingEvents.length}
+                  </div>
+                  <div className="text-xs text-orange-600 font-semibold bg-orange-50 px-2 py-1 rounded-full">
+                    다가오는 일정
+                  </div>
+                </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+              <div>
+                <h3 className="font-bold text-slate-900 mb-3">다가오는 일정</h3>
+                <div className="space-y-2">
+                  {upcomingEvents.slice(0, 3).map((event) => {
+                    const daysUntil = Math.ceil(
+                      (new Date(event.start_date).getTime() - now.getTime()) /
+                        (1000 * 60 * 60 * 24)
+                    );
+                    return (
+                      <div
+                        key={event.id}
+                        className="flex items-start gap-3 p-2 bg-orange-50/50 rounded-lg"
+                      >
+                        <div className="flex flex-col items-center">
+                          <Badge
+                            variant={
+                              daysUntil <= 3 ? "destructive" : "secondary"
+                            }
+                            className="text-xs h-5"
+                          >
+                            D-{daysUntil}
+                          </Badge>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-xs text-slate-900 truncate">
+                            {event.title}
+                          </h4>
+                          <p className="text-xs text-slate-500">
+                            {event.start_date &&
+                            !isNaN(new Date(event.start_date).getTime())
+                              ? new Date(event.start_date).toLocaleString(
+                                  "ko-KR",
+                                  {
+                                    month: "short",
+                                    day: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  }
+                                )
+                              : "--/-- --:--"}
+                            {event.location && ` • ${event.location}`}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {upcomingEvents.length > 3 && (
+                    <p className="text-xs text-slate-400 text-center pt-1">
+                      외 {upcomingEvents.length - 3}개 더
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* 일정이 전혀 없을 때 */
+          <div
+            className="bg-white cursor-pointer overflow-hidden border-gray-100 border rounded-lg hover:shadow-md widget-scale block p-4 group relative"
+            onClick={() => onNavigateToTab("calendar")}
+          >
+            <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-gray-500/10 to-gray-600/5 rounded-bl-full"></div>
+            <div className="relative">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-gradient-to-br from-gray-500 to-gray-600 rounded-xl shadow-lg transition-all">
+                  <Calendar className="h-6 w-6 text-white" />
+                </div>
+                <div className="text-right">
+                  <div className="text-3xl font-bold text-slate-900">
+                    0
+                  </div>
+                  <div className="text-xs text-gray-600 font-semibold bg-gray-50 px-2 py-1 rounded-full">
+                    일정 없음
+                  </div>
+                </div>
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 mb-3">예정된 일정</h3>
+                <div className="text-center py-4">
+                  <Calendar className="h-8 w-8 mx-auto mb-2 opacity-30 text-gray-400" />
+                  <p className="text-xs text-slate-400">
+                    등록된 일정이 없습니다
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 참가자 현황 */}
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => onNavigateToTab('participants')}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              참가자 현황
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              {/* 상태별 분포 */}
-              <div className="space-y-2">
-                {Object.entries(participantStats.byStatus).map(([status, count]) => (
-                  <div key={status} className="flex items-center justify-between">
-                    <Badge variant="outline" className="text-xs">{status}</Badge>
-                    <span className="text-sm font-medium">{count}명</span>
-                  </div>
-                ))}
+        <div
+          className="bg-white cursor-pointer overflow-hidden border-gray-100 widget-scale border rounded-lg hover:shadow-md block p-4 group relative"
+          onClick={() => onNavigateToTab("participants")}
+        >
+          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-teal-500/10 to-teal-600/5 rounded-bl-full"></div>
+          <div className="relative">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl shadow-lg transition-all">
+                <Users className="h-6 w-6 text-white" />
               </div>
-
-              {/* 성별 분포 */}
-              <div className="space-y-2 border-l pl-4">
-                {Object.entries(participantStats.byGender).map(([gender, count]) => (
-                  <div key={gender} className="flex items-center justify-between">
-                    <span className="text-sm">{gender}</span>
-                    <span className="text-sm font-medium">{count}명</span>
-                  </div>
-                ))}
+              <div className="text-right">
+                <div className="text-3xl font-bold text-slate-900">
+                  {participants.length}
+                </div>
+                <div className="text-xs text-teal-600 font-semibold bg-teal-50 px-2 py-1 rounded-full">
+                  참가자 현황
+                </div>
               </div>
             </div>
-            
-            {/* 연령대 분포 */}
-            <div className="border-t pt-3 mt-3">
-              <div className="text-xs font-medium text-muted-foreground mb-2">연령대 분포</div>
-              <div className="grid grid-cols-2 gap-2">
-                {Object.entries(participantStats.byAge).map(([ageGroup, count]) => (
-                  <div key={ageGroup} className="flex items-center justify-between text-sm p-2 rounded-sm bg-gray-50">
-                    <span>{ageGroup}</span>
-                    <span className="font-medium">{count}명</span>
-                  </div>
-                ))}
+            <div>
+              <h3 className="font-bold text-slate-900 mb-3">참가자 분포</h3>
+              <div className="grid grid-cols-2 gap-3">
+                {/* 상태별 분포 */}
+                <div className="space-y-2">
+                  {Object.entries(participantStats.byStatus)
+                    .slice(0, 3)
+                    .map(([status, count]) => (
+                      <div
+                        key={status}
+                        className="flex items-center justify-between"
+                      >
+                        <Badge variant="outline" className="text-xs">
+                          {status}
+                        </Badge>
+                        <span className="text-xs font-medium">{count}명</span>
+                      </div>
+                    ))}
+                </div>
+                {/* 성별 분포 */}
+                <div className="space-y-2">
+                  {Object.entries(participantStats.byGender)
+                    .slice(0, 3)
+                    .map(([gender, count]) => (
+                      <div
+                        key={gender}
+                        className="flex items-center justify-between"
+                      >
+                        <Badge variant="outline" className="text-xs">
+                          {gender}
+                        </Badge>
+                        <span className="text-xs font-medium">{count}명</span>
+                      </div>
+                    ))}
+                </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* 재정 현황 */}
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => onNavigateToTab('finance')}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">재정 현황</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              ${balance.toLocaleString()} CAD
+        <div
+          className="bg-white cursor-pointer overflow-hidden border-gray-100 widget-scale border rounded-lg hover:shadow-md block p-4 group relative"
+          onClick={() => onNavigateToTab("finance")}
+        >
+          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-green-500/10 to-green-600/5 rounded-bl-full"></div>
+          <div className="relative">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg transition-all">
+                <DollarSign className="h-6 w-6 text-white" />
+              </div>
+              <div className="text-right">
+                <div
+                  className={`text-2xl font-bold ${balance >= 0 ? "text-green-600" : "text-red-600"}`}
+                >
+                  ${balance.toLocaleString()}
+                </div>
+                <div className="text-xs text-green-600 font-semibold bg-green-50 px-2 py-1 rounded-full">
+                  순이익 CAD
+                </div>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              수입 ${financeStats.totalIncome.toLocaleString()} CAD - 지출 ${financeStats.totalExpense.toLocaleString()} CAD
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+            <div>
+              <h3 className="font-bold text-slate-900">재정 현황</h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                수입 ${financeStats.totalIncome.toLocaleString()} - 지출 $
+                {financeStats.totalExpense.toLocaleString()}
+              </p>
+            </div>
+          </div>
+        </div>
 
-      {/* 하단 지표 카드들 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* 체크리스트 진행률 */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">체크리스트</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{completionRate}%</div>
-            <Progress value={completionRate} className="h-2 mt-2" />
-            <p className="text-xs text-muted-foreground mt-1">
-              {checklistStats.completed}/{checklistStats.total} 완료
-            </p>
-          </CardContent>
-        </Card>
+        <div
+          className="bg-white cursor-pointer overflow-hidden border-gray-100 widget-scale border rounded-lg hover:shadow-md block p-4 group relative"
+          onClick={() => onNavigateToTab("checklist")}
+        >
+          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-violet-500/10 to-violet-600/5 rounded-bl-full"></div>
+          <div className="relative">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-gradient-to-br from-violet-500 to-violet-600 rounded-xl shadow-lg transition-all">
+                <CheckCircle className="h-6 w-6 text-white" />
+              </div>
+              <div className="text-right">
+                <div className="text-3xl font-bold text-slate-900">
+                  {completionRate}%
+                </div>
+                <div className="text-xs text-violet-600 font-semibold bg-violet-50 px-2 py-1 rounded-full">
+                  완료율
+                </div>
+              </div>
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900 mb-2">체크리스트</h3>
+              <Progress value={completionRate} className="h-2" />
+              <p className="text-xs text-slate-500">
+                {checklistStats.completed}/{checklistStats.total} 완료
+              </p>
+            </div>
+          </div>
+        </div>
 
         {/* 출석률 */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">최근 출석률</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{attendanceRate}%</div>
-            <p className="text-xs text-muted-foreground">
-              출석 {attendanceStats.present} / 지각 {attendanceStats.late} / 결석 {attendanceStats.absent}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* 중요 체크리스트 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5" />
-            중요 체크리스트
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {/* 연체된 항목 */}
-            {checklistStats.overdue > 0 && (
-              <div className="p-3 bg-red-50 border-red-200 border rounded-lg">
-                <div className="flex items-center gap-2 text-red-800">
-                  <AlertCircle className="h-4 w-4" />
-                  <span className="font-medium text-sm">연체된 항목 {checklistStats.overdue}개</span>
+        <div
+          className="bg-white cursor-pointer overflow-hidden border-gray-100 widget-scale border rounded-lg hover:shadow-md block p-4 group relative"
+          onClick={() => onNavigateToTab("attendance")}
+        >
+          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-cyan-500/10 to-cyan-600/5 rounded-bl-full"></div>
+          <div className="relative">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-xl shadow-lg group-hover:shadow-cyan-500/25 transition-all">
+                <Activity className="h-6 w-6 text-white" />
+              </div>
+              <div className="text-right">
+                <div className="text-3xl font-bold text-slate-900">
+                  {attendanceRate}%
+                </div>
+                <div className="text-xs text-cyan-600 font-semibold bg-cyan-50 px-2 py-1 rounded-full">
+                  출석률
                 </div>
               </div>
-            )}
-
-            {/* 높은 우선순위 항목 */}
-            {checklistStats.highPriority > 0 && (
-              <div className="p-3 bg-orange-50 border-orange-200 border rounded-lg">
-                <div className="flex items-center gap-2 text-orange-800">
-                  <Target className="h-4 w-4" />
-                  <span className="font-medium text-sm">높은 우선순위 {checklistStats.highPriority}개</span>
-                </div>
-              </div>
-            )}
-
-            {/* 진행률 표시 */}
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">전체 진행률</span>
-                <span className="text-sm text-muted-foreground">{completionRate}%</span>
-              </div>
-              <Progress value={completionRate} className="h-2" />
             </div>
-
-            {checklistStats.overdue === 0 && checklistStats.highPriority === 0 && (
-              <div className="text-center py-4 text-muted-foreground">
-                <CheckCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">긴급한 항목이 없습니다.</p>
-              </div>
-            )}
+            <div>
+              <h3 className="font-bold text-slate-900">최근 출석률</h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                출석 {attendanceStats.present} / 지각 {attendanceStats.late} /
+                결석 {attendanceStats.absent}
+              </p>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* 중요 체크리스트 */}
+        <div className="bg-white cursor-pointer overflow-hidden border-gray-100 widget-scale border rounded-lg hover:shadow-md block p-4 group relative">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-red-500/10 to-red-600/5 rounded-bl-full"></div>
+          <div className="relative">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-3 bg-gradient-to-br from-red-500 to-red-600 rounded-xl shadow-lg transition-all">
+                <AlertCircle className="h-6 w-6 text-white" />
+              </div>
+              <h3 className="font-bold text-slate-900">중요 체크리스트</h3>
+            </div>
+            
+            <div className="space-y-3">
+              {/* 연체된 항목 */}
+              {checklistStats.overdue > 0 && (
+                <div className="p-3 bg-red-50 border-red-200 border rounded-lg">
+                  <div className="flex items-center gap-2 text-red-800">
+                    <AlertCircle className="h-4 w-4" />
+                    <span className="font-medium text-sm">
+                      연체된 항목 {checklistStats.overdue}개
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* 높은 우선순위 항목 */}
+              {checklistStats.highPriority > 0 && (
+                <div className="p-3 bg-orange-50 border-orange-200 border rounded-lg">
+                  <div className="flex items-center gap-2 text-orange-800">
+                    <Target className="h-4 w-4" />
+                    <span className="font-medium text-sm">
+                      높은 우선순위 {checklistStats.highPriority}개
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* 진행률 표시 */}
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">전체 진행률</span>
+                  <span className="text-sm text-slate-500">
+                    {completionRate}%
+                  </span>
+                </div>
+                <Progress value={completionRate} className="h-2" />
+              </div>
+
+              {checklistStats.overdue === 0 &&
+                checklistStats.highPriority === 0 && (
+                  <div className="text-center py-4 text-slate-400">
+                    <CheckCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">긴급한 항목이 없습니다.</p>
+                  </div>
+                )}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
