@@ -6,7 +6,7 @@ import { ChevronUp } from 'lucide-react';
 
 export default function ScrollToTop() {
   const pathname = usePathname();
-  const [showButton, setShowButton] = useState(true);
+  const [showButton, setShowButton] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 

@@ -345,57 +345,79 @@ export default function CalendarTab({
 
   // 알림 권한 요청 함수
   const requestNotificationPermission = async () => {
-    if (!isNotificationSupportedState) {
-      return false;
-    }
-
-    if (Notification.permission === 'granted') {
-      return true;
-    } else if (Notification.permission !== 'denied') {
-      const permission = await Notification.requestPermission();
-      setNotificationPermission(permission);
-      return permission === 'granted';
-    } else {
-      alert('알림이 차단되어 있습니다. 브라우저 설정에서 알림을 허용해주세요.');
-      return false;
-    }
+    return true;
   };
 
   // 알림 토글 함수
   const toggleNotifications = async () => {
+    alert('버튼 클릭됨! 현재 상태: ' + (notificationsEnabled ? '켜짐' : '꺼짐'));
+    
     if (!notificationsEnabled) {
+      alert('알림 활성화 시도 중...');
       const granted = await requestNotificationPermission();
+      alert('권한 결과: ' + granted);
+      
       if (granted) {
         try {
-          // 브라우저 푸시 구독 생성 (선택적)
-          const subscriptionData = {
-            endpoint: window.location.origin,
-            userAgent: navigator.userAgent,
-            timestamp: new Date().toISOString()
-          };
-
-          // Supabase에 구독 정보 저장
-          await saveNotificationSubscription(subscriptionData);
+          alert('데이터베이스 저장 시작');
           
+          // 데이터베이스에 구독 정보 저장
+          const userId = user?.id || null;
+          const anonymousId = userId ? null : getAnonymousId();
+          alert('사용자 정보: userId=' + userId + ', anonymousId=' + anonymousId);
+
+          const { data, error } = await supabase
+            .from('notification_subscriptions')
+            .upsert({
+              user_id: userId,
+              anonymous_id: anonymousId,
+              program_id: programId,
+              subscription_data: null
+            }, {
+              onConflict: userId ? 'user_id,program_id' : 'anonymous_id,program_id'
+            })
+            .select()
+            .single();
+
+          if (error) {
+            alert('데이터베이스 오류: ' + JSON.stringify(error));
+            throw error;
+          }
+
+          setSubscriptionId(data.id);
           setNotificationsEnabled(true);
           localStorage.setItem(`calendar-notifications-${programId}`, 'true');
-        } catch (error) {
-          console.error('알림 구독 저장 실패:', error);
-          alert('알림 설정 저장에 실패했습니다. 다시 시도해주세요.');
+          
+          alert('알림 구독 성공! ID: ' + data.id);
+        } catch (error: any) {
+          alert('알림 구독 실패: ' + error.message);
         }
+      } else {
+        alert('권한이 허용되지 않았습니다');
       }
     } else {
+      alert('알림 비활성화 시도 중...');
+      // 알림 해제
       try {
-        // Supabase에서 구독 정보 삭제
-        await removeNotificationSubscription();
+        if (subscriptionId) {
+          const { error } = await supabase
+            .from('notification_subscriptions')
+            .delete()
+            .eq('id', subscriptionId);
+
+          if (error) {
+            alert('구독 삭제 실패: ' + JSON.stringify(error));
+            throw error;
+          }
+        }
+
+        setSubscriptionId(null);
+        setNotificationsEnabled(false);
+        localStorage.removeItem(`calendar-notifications-${programId}`);
         
-        setNotificationsEnabled(false);
-        localStorage.removeItem(`calendar-notifications-${programId}`);
-      } catch (error) {
-        console.error('알림 구독 삭제 실패:', error);
-        // 로컬 설정은 일단 변경
-        setNotificationsEnabled(false);
-        localStorage.removeItem(`calendar-notifications-${programId}`);
+        alert('알림 구독 해제 성공');
+      } catch (error: any) {
+        alert('알림 구독 해제 실패: ' + error.message);
       }
     }
   };
