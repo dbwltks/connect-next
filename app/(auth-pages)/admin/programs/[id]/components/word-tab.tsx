@@ -22,6 +22,7 @@ import Highlight from "@tiptap/extension-highlight";
 import Subscript from "@tiptap/extension-subscript";
 import Superscript from "@tiptap/extension-superscript";
 import Image from "@tiptap/extension-image";
+import History from "@tiptap/extension-history";
 
 // CustomTableCell with backgroundColor attribute
 const CustomTableCell = TableCell.extend({
@@ -178,8 +179,9 @@ const SimpleEditorToolbar = ({ editor }: { editor: any }) => {
             variant="ghost"
             size="sm"
             onClick={() => editor.chain().focus().undo().run()}
-            disabled={!editor.can().chain().focus().undo().run()}
+            disabled={!editor.can().undo()}
             className="h-8 w-8 p-0"
+            title="되돌리기"
           >
             <Undo className="h-4 w-4" />
           </Button>
@@ -187,8 +189,9 @@ const SimpleEditorToolbar = ({ editor }: { editor: any }) => {
             variant="ghost"
             size="sm"
             onClick={() => editor.chain().focus().redo().run()}
-            disabled={!editor.can().chain().focus().redo().run()}
+            disabled={!editor.can().redo()}
             className="h-8 w-8 p-0"
+            title="다시실행"
           >
             <Redo className="h-4 w-4" />
           </Button>
@@ -399,26 +402,36 @@ const SimpleEditorToolbar = ({ editor }: { editor: any }) => {
         {/* Lists */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 px-3">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 px-3"
+            >
               <List className="h-4 w-4 mr-1" />
               <ChevronDown className="h-3 w-3 ml-1" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent>
+          <DropdownMenuContent onCloseAutoFocus={(e) => e.preventDefault()}>
             <DropdownMenuItem
-              onClick={() => editor?.chain().focus().toggleBulletList().run()}
+              onClick={() => {
+                editor?.chain().focus().toggleBulletList().run();
+              }}
             >
               <List className="h-4 w-4 mr-2" />
               글머리 기호
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+              onClick={() => {
+                editor?.chain().focus().toggleOrderedList().run();
+              }}
             >
               <ListOrdered className="h-4 w-4 mr-2" />
               번호 목록
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={() => editor?.chain().focus().toggleTaskList().run()}
+              onClick={() => {
+                editor?.chain().focus().toggleTaskList().run();
+              }}
             >
               <CheckSquare className="h-4 w-4 mr-2" />
               할 일 목록
@@ -958,9 +971,12 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
   // 선택된 문서가 변경되면 에디터 내용 업데이트
   useEffect(() => {
     if (editor && selectedDocument) {
-      editor.commands.setContent(selectedDocument.content);
+      const currentContent = editor.getHTML();
+      if (currentContent !== selectedDocument.content) {
+        editor.commands.setContent(selectedDocument.content, false);
+      }
     }
-  }, [selectedDocument, editor]);
+  }, [selectedDocument?.id, editor]);
 
   // 문서 및 폴더 로드
   const loadDocuments = async () => {
@@ -2402,6 +2418,157 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
                   .ProseMirror {
                     outline: none !important;
                     min-height: calc(100vh - 350px);
+                    padding: 16px;
+                    white-space: pre-wrap;
+                  }
+
+                  .ProseMirror ul, .ProseMirror ol {
+                    padding-left: 1rem;
+                    margin: 1rem 0;
+                  }
+
+                  .ProseMirror ul li {
+                    list-style-type: disc;
+                    margin-bottom: 0.5rem;
+                    margin-left: 1rem;
+                    cursor: text;
+                    min-height: 1.2em;
+                  }
+
+                  .ProseMirror ul:not([data-type="taskList"]) li {
+                    cursor: text;
+                    position: relative;
+                  }
+
+                  .ProseMirror ul:not([data-type="taskList"]) li::marker {
+                    color: currentColor;
+                  }
+
+                  .ProseMirror ol li {
+                    list-style-type: decimal;
+                    margin-bottom: 0.5rem;
+                    margin-left: 1rem;
+                    cursor: text;
+                    min-height: 1.2em;
+                  }
+
+                  .ProseMirror ul[data-type="taskList"] {
+                    list-style: none;
+                    padding-left: 0;
+                    margin: 1rem 0;
+                  }
+
+                  .ProseMirror ul[data-type="taskList"] li {
+                    display: flex;
+                    align-items: center;
+                    margin-bottom: 0.25rem;
+                    margin-left: 0;
+                    list-style: none;
+                  }
+
+                  .ProseMirror ul[data-type="taskList"] li input[type="checkbox"] {
+                    margin-right: 0.25rem;
+                    cursor: pointer;
+                    width: 16px;
+                    height: 16px;
+                  }
+
+                  .ProseMirror ul[data-type="taskList"] li > label {
+                    flex: 0 0 auto;
+                    margin-right: 0.25rem;
+                    user-select: none;
+                    display: flex;
+                    align-items: center;
+                  }
+
+                  .ProseMirror ul[data-type="taskList"] li > div {
+                    flex: 1 1 auto;
+                    cursor: text;
+                  }
+
+                  .ProseMirror ul[data-type="taskList"] li > div > p {
+                    margin: 0;
+                    min-height: 1.2em;
+                  }
+
+                  .ProseMirror ul[data-type="taskList"] li[data-checked="true"] {
+                    text-decoration: line-through;
+                    color: #6b7280;
+                  }
+
+                  .ProseMirror blockquote {
+                    border-left: 4px solid #e5e7eb;
+                    padding-left: 1rem;
+                    margin: 1rem 0;
+                    font-style: italic;
+                    color: #6b7280;
+                  }
+
+                  .ProseMirror code {
+                    background-color: #f3f4f6;
+                    padding: 0.125rem 0.25rem;
+                    border-radius: 0.25rem;
+                    font-family: ui-monospace, SFMono-Regular, 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+                  }
+
+                  .ProseMirror pre {
+                    background-color: #f3f4f6;
+                    padding: 1rem;
+                    border-radius: 0.5rem;
+                    overflow-x: auto;
+                    margin: 1rem 0;
+                  }
+
+                  .ProseMirror pre code {
+                    background: none;
+                    padding: 0;
+                    border-radius: 0;
+                  }
+
+                  .ProseMirror h1, .ProseMirror h2, .ProseMirror h3, .ProseMirror h4, .ProseMirror h5, .ProseMirror h6 {
+                    font-weight: bold;
+                    margin: 1rem 0 0.5rem 0;
+                  }
+
+                  .ProseMirror h1 { font-size: 2rem; }
+                  .ProseMirror h2 { font-size: 1.5rem; }
+                  .ProseMirror h3 { font-size: 1.25rem; }
+
+                  .ProseMirror p {
+                    margin: 0.5rem 0;
+                  }
+
+                  .ProseMirror strong {
+                    font-weight: bold;
+                  }
+
+                  .ProseMirror em {
+                    font-style: italic;
+                  }
+
+                  .ProseMirror u {
+                    text-decoration: underline;
+                  }
+
+                  .ProseMirror s {
+                    text-decoration: line-through;
+                  }
+
+                  .ProseMirror mark {
+                    background-color: yellow;
+                    padding: 0.125rem 0;
+                  }
+
+                  .ProseMirror a {
+                    color: #3b82f6;
+                    text-decoration: underline;
+                  }
+
+                  .ProseMirror img {
+                    max-width: 100%;
+                    height: auto;
+                    border-radius: 0.5rem;
+                    margin: 1rem 0;
                   }
 
                   .ProseMirror table {

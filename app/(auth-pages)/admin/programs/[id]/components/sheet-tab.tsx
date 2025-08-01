@@ -144,7 +144,7 @@ export default function SheetTab({
         name: newSheetName,
         description: '',
         data: defaultData,
-        team_id: null,
+        team_id: undefined,
       };
 
       const updatedSpreadsheets = [...spreadsheets, newSheet];

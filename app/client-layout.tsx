@@ -11,8 +11,8 @@ import { toast } from "@/components/ui/toaster";
 import ScrollToTop from "@/components/scroll-to-top";
 import { AuthProvider } from "@/contexts/auth-context";
 import { swrGlobalConfig } from "@/config/swr-config";
-import ServiceWorkerRegister from "@/components/service-worker-register";
-import FCMProvider from "@/components/fcm-provider";
+// import ServiceWorkerRegister from "@/components/service-worker-register";
+// import FCMProvider from "@/components/fcm-provider";
 
 export default function ClientLayout({
   children,
@@ -63,8 +63,8 @@ export default function ClientLayout({
             {!isAdminPage && <Footer menus={footerMenus} settings={footerSettings} />}
             <Toaster />
             <ScrollToTop />
-            <ServiceWorkerRegister />
-            <FCMProvider />
+            {/* <ServiceWorkerRegister /> */}
+            {/* <FCMProvider /> */}
           </div>
         </ThemeProvider>
       </SWRConfig>
