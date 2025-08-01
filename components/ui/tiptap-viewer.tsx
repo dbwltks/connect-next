@@ -211,7 +211,6 @@ export default function TipTapViewer({
     ],
     content,
     editable: false,
-    immediatelyRender: false,
   });
 
   useEffect(() => {
