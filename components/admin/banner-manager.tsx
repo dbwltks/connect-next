@@ -269,6 +269,7 @@ function TiptapEditor({
   placeholder?: string;
 }) {
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit,
       Heading.configure({ levels: [1, 2, 3] }),
@@ -291,7 +292,7 @@ function TiptapEditor({
   // content prop이 바뀌면 editor 내용도 동기화
   React.useEffect(() => {
     if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content || "", false);
+      editor.commands.setContent(content || "", { emitUpdate: false });
     }
     // eslint-disable-next-line
   }, [content]);

@@ -8,29 +8,29 @@ import {
   ReactNodeViewRenderer,
   NodeViewProps,
 } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Link from "@tiptap/extension-link";
-import Image from "@tiptap/extension-image";
-import TextAlign from "@tiptap/extension-text-align";
-import TextStyle from "@tiptap/extension-text-style";
-import Color from "@tiptap/extension-color";
-import FontFamily from "@tiptap/extension-font-family";
-import Typography from "@tiptap/extension-typography";
+import { StarterKit } from "@tiptap/starter-kit";
+import { Link } from "@tiptap/extension-link";
+import { Image } from "@tiptap/extension-image";
+import { TextAlign } from "@tiptap/extension-text-align";
+import { TextStyle } from "@tiptap/extension-text-style";
+import { Color } from "@tiptap/extension-color";
+import { FontFamily } from "@tiptap/extension-font-family";
+import { Typography } from "@tiptap/extension-typography";
 import { Node, Extension } from "@tiptap/core";
-import Placeholder from "@tiptap/extension-placeholder";
-import Underline from "@tiptap/extension-underline";
-import Subscript from "@tiptap/extension-subscript";
-import Superscript from "@tiptap/extension-superscript";
-import Highlight from "@tiptap/extension-highlight";
-import Table from "@tiptap/extension-table";
-import TableRow from "@tiptap/extension-table-row";
-import TableHeader from "@tiptap/extension-table-header";
-import TableCell from "@tiptap/extension-table-cell";
-import BulletList from "@tiptap/extension-bullet-list";
-import OrderedList from "@tiptap/extension-ordered-list";
-import ListItem from "@tiptap/extension-list-item";
-import Dropcursor from "@tiptap/extension-dropcursor";
-import Gapcursor from "@tiptap/extension-gapcursor";
+import { Placeholder } from "@tiptap/extension-placeholder";
+import { Underline } from "@tiptap/extension-underline";
+import { Subscript } from "@tiptap/extension-subscript";
+import { Superscript } from "@tiptap/extension-superscript";
+import { Highlight } from "@tiptap/extension-highlight";
+import { Table } from "@tiptap/extension-table";
+import { TableRow } from "@tiptap/extension-table-row";
+import { TableHeader } from "@tiptap/extension-table-header";
+import { TableCell } from "@tiptap/extension-table-cell";
+import { BulletList } from "@tiptap/extension-bullet-list";
+import { OrderedList } from "@tiptap/extension-ordered-list";
+import { ListItem } from "@tiptap/extension-list-item";
+import { Dropcursor } from "@tiptap/extension-dropcursor";
+import { Gapcursor } from "@tiptap/extension-gapcursor";
 import React, {
   useEffect,
   useState,
@@ -1843,6 +1843,7 @@ const TipTapEditor = forwardRef(function TipTapEditor(
 
   // TipTap 에디터 초기화
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         // StarterKit에서 기본 리스트들을 비활성화하고 따로 설정
@@ -1909,115 +1910,7 @@ const TipTapEditor = forwardRef(function TipTapEditor(
         showOnlyCurrent: false,
         includeChildren: true,
       }),
-      Image.extend({
-        addAttributes() {
-          return {
-            ...this.parent?.(),
-            width: {
-              default: null,
-              parseHTML: (element) =>
-                element.getAttribute("width") || element.style.width,
-              renderHTML: (attributes) => {
-                if (!attributes.width) return {};
-                return {
-                  width: attributes.width,
-                  style: `width: ${attributes.width}`,
-                };
-              },
-            },
-            height: {
-              default: null,
-              parseHTML: (element) =>
-                element.getAttribute("height") || element.style.height,
-              renderHTML: (attributes) => {
-                if (!attributes.height) return {};
-                return {
-                  height: attributes.height,
-                  style: `height: ${attributes.height}`,
-                };
-              },
-            },
-            align: {
-              default: null,
-              parseHTML: (element) => element.getAttribute("align"),
-              renderHTML: (attributes) => {
-                if (!attributes.align) return {};
-                return {
-                  align: attributes.align,
-                };
-              },
-            },
-          };
-        },
-        addNodeView() {
-          return ReactNodeViewRenderer(ImageResizeComponent);
-        },
-        draggable: true,
-        selectable: true,
-        allowGapCursor: true,
-        priority: 50,
-        atom: true,
-        addKeyboardShortcuts() {
-          return {
-            Backspace: () => {
-              const { state } = this.editor;
-              const { selection } = state;
-              const pos = selection.$head.pos;
-              const node = state.doc.nodeAt(pos - 1);
-
-              if (node?.type.name === "image") {
-                const imageUrl = node.attrs.src;
-                if (typeof setUploadedFiles === "function") {
-                  setUploadedFiles(
-                    uploadedFiles.filter((file) => file.url !== imageUrl)
-                  );
-                }
-                if (selectedThumbnail === imageUrl) {
-                  setSelectedThumbnail(undefined);
-                  if (onThumbnailChange) {
-                    onThumbnailChange("");
-                  }
-                }
-                showToast({
-                  title: "이미지 삭제",
-                  description: "이미지가 삭제되었습니다.",
-                  variant: "default",
-                });
-                return true;
-              }
-              return false;
-            },
-            Delete: () => {
-              const { state } = this.editor;
-              const { selection } = state;
-              const pos = selection.$head.pos;
-              const node = state.doc.nodeAt(pos);
-
-              if (node?.type.name === "image") {
-                const imageUrl = node.attrs.src;
-                if (typeof setUploadedFiles === "function") {
-                  setUploadedFiles(
-                    uploadedFiles.filter((file) => file.url !== imageUrl)
-                  );
-                }
-                if (selectedThumbnail === imageUrl) {
-                  setSelectedThumbnail(undefined);
-                  if (onThumbnailChange) {
-                    onThumbnailChange("");
-                  }
-                }
-                showToast({
-                  title: "이미지 삭제",
-                  description: "이미지가 삭제되었습니다.",
-                  variant: "default",
-                });
-                return true;
-              }
-              return false;
-            },
-          };
-        },
-      }),
+      Image,
       YouTube,
     ],
     content: content || "",
@@ -2302,6 +2195,11 @@ const TipTapEditor = forwardRef(function TipTapEditor(
             uploadedAt: new Date().toISOString(),
           };
           newUploadedFiles.push(newFile);
+
+          // 썸네일이 설정되지 않은 경우 첫 번째 이미지를 썸네일로 설정
+          if (!thumbnailUrl && i === 0 && onThumbnailChange) {
+            onThumbnailChange(publicUrl);
+          }
 
           // 개별 파일 업로드 완료 토스트
           showToast({

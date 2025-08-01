@@ -1,28 +1,28 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { useEditor, EditorContent, BubbleMenu } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import BulletList from "@tiptap/extension-bullet-list";
-import OrderedList from "@tiptap/extension-ordered-list";
-import ListItem from "@tiptap/extension-list-item";
-import Blockquote from "@tiptap/extension-blockquote";
-import CodeBlock from "@tiptap/extension-code-block";
-import Link from "@tiptap/extension-link";
-import Table from "@tiptap/extension-table";
-import TableRow from "@tiptap/extension-table-row";
-import TableHeader from "@tiptap/extension-table-header";
-import TableCell from "@tiptap/extension-table-cell";
-import Placeholder from "@tiptap/extension-placeholder";
-import Underline from "@tiptap/extension-underline";
+import { useEditor, EditorContent } from "@tiptap/react";
+import { StarterKit } from "@tiptap/starter-kit";
+import { BulletList } from "@tiptap/extension-bullet-list";
+import { OrderedList } from "@tiptap/extension-ordered-list";
+import { ListItem } from "@tiptap/extension-list-item";
+import { Blockquote } from "@tiptap/extension-blockquote";
+import { CodeBlock } from "@tiptap/extension-code-block";
+import { Link } from "@tiptap/extension-link";
+import { Table } from "@tiptap/extension-table";
+import { TableRow } from "@tiptap/extension-table-row";
+import { TableHeader } from "@tiptap/extension-table-header";
+import { TableCell } from "@tiptap/extension-table-cell";
+import { Placeholder } from "@tiptap/extension-placeholder";
+import { Underline } from "@tiptap/extension-underline";
 import { TaskList, TaskItem } from "@tiptap/extension-list";
-import TextAlign from "@tiptap/extension-text-align";
-import Typography from "@tiptap/extension-typography";
-import Highlight from "@tiptap/extension-highlight";
-import Subscript from "@tiptap/extension-subscript";
-import Superscript from "@tiptap/extension-superscript";
-import Image from "@tiptap/extension-image";
-import History from "@tiptap/extension-history";
+import { TextAlign } from "@tiptap/extension-text-align";
+import { Typography } from "@tiptap/extension-typography";
+import { Highlight } from "@tiptap/extension-highlight";
+import { Subscript } from "@tiptap/extension-subscript";
+import { Superscript } from "@tiptap/extension-superscript";
+import { Image } from "@tiptap/extension-image";
+import { History } from "@tiptap/extension-history";
 
 // CustomTableCell with backgroundColor attribute
 const CustomTableCell = TableCell.extend({
@@ -67,9 +67,9 @@ export const tableHTML = `
   </table>
 `;
 
-import TextStyle from "@tiptap/extension-text-style";
-import Color from "@tiptap/extension-color";
-import Gapcursor from "@tiptap/extension-gapcursor";
+import { TextStyle } from "@tiptap/extension-text-style";
+import { Color } from "@tiptap/extension-color";
+import { Gapcursor } from "@tiptap/extension-gapcursor";
 import {
   DndContext,
   closestCenter,
@@ -816,6 +816,7 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
 
   // Tiptap 에디터 설정
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit,
       Underline,
@@ -973,7 +974,7 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
     if (editor && selectedDocument) {
       const currentContent = editor.getHTML();
       if (currentContent !== selectedDocument.content) {
-        editor.commands.setContent(selectedDocument.content, false);
+        editor.commands.setContent(selectedDocument.content, { emitUpdate: false });
       }
     }
   }, [selectedDocument?.id, editor]);
@@ -2372,7 +2373,8 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
             {/* 에디터 영역 */}
             <div className="flex-1 bg-white overflow-y-auto">
               <div className="max-w-4xl mx-auto p-8 min-h-full">
-                {editor && (
+                {/* BubbleMenu removed for TipTap v3 compatibility */}
+                {/* {editor && (
                   <BubbleMenu
                     editor={editor}
                     className="bg-white border border-gray-200 rounded-lg shadow-lg p-1 flex items-center gap-1"
@@ -2403,7 +2405,7 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
                       <UnderlineIcon className="h-4 w-4" />
                     </Button>
                   </BubbleMenu>
-                )}
+                )} */}
                 {editor ? (
                   <EditorContent
                     editor={editor}
