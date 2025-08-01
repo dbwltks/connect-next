@@ -26,6 +26,9 @@ import {
   ChevronRight,
   ChevronUp,
   ChevronDown,
+  MoreVertical,
+  Edit3,
+  Check,
 } from "lucide-react";
 import { format, isAfter, isBefore, addDays, parseISO } from "date-fns";
 import { ko } from "date-fns/locale";
@@ -65,14 +68,14 @@ interface DashboardCard {
 
 // 기본 카드 순서
 const DEFAULT_CARD_ORDER = [
-  'schedule',
-  'participants', 
-  'teams',
-  'program-period',
-  'finance',
-  'checklist',
-  'attendance',
-  'important-checklist'
+  "schedule",
+  "participants",
+  "teams",
+  "program-period",
+  "finance",
+  "checklist",
+  "attendance",
+  "important-checklist",
 ];
 
 export default function DashboardTab({
@@ -86,20 +89,22 @@ export default function DashboardTab({
   const [checklists, setChecklists] = useState<ChecklistItem[]>([]);
   const [attendances, setAttendances] = useState<AttendanceRecord[]>([]);
   const [program, setProgram] = useState<Program | null>(null);
-  
+
   // 카드 순서 커스터마이징 관련 상태
   const [isEditMode, setIsEditMode] = useState(false);
   const [cardOrder, setCardOrder] = useState<string[]>(DEFAULT_CARD_ORDER);
 
   // localStorage에서 카드 순서 로드
   useEffect(() => {
-    const savedOrder = localStorage.getItem(`dashboard-card-order-${programId}`);
+    const savedOrder = localStorage.getItem(
+      `dashboard-card-order-${programId}`
+    );
     if (savedOrder) {
       try {
         const parsedOrder = JSON.parse(savedOrder);
         setCardOrder(parsedOrder);
       } catch (error) {
-        console.error('Failed to parse saved card order:', error);
+        console.error("Failed to parse saved card order:", error);
         setCardOrder(DEFAULT_CARD_ORDER);
       }
     }
@@ -108,9 +113,11 @@ export default function DashboardTab({
   // 카드 순서 저장
   const saveCardOrder = (newOrder: string[]) => {
     setCardOrder(newOrder);
-    localStorage.setItem(`dashboard-card-order-${programId}`, JSON.stringify(newOrder));
+    localStorage.setItem(
+      `dashboard-card-order-${programId}`,
+      JSON.stringify(newOrder)
+    );
   };
-
 
   // 기본값으로 복원
   const resetToDefault = () => {
@@ -118,14 +125,17 @@ export default function DashboardTab({
   };
 
   // 카드 이동 함수들
-  const moveCard = (cardId: string, direction: 'left' | 'right' | 'up' | 'down') => {
+  const moveCard = (
+    cardId: string,
+    direction: "left" | "right" | "up" | "down"
+  ) => {
     const currentIndex = cardOrder.indexOf(cardId);
     if (currentIndex === -1) return;
 
     let newIndex: number;
-    
+
     // 데스크톱에서는 좌우, 모바일에서는 위아래
-    if (direction === 'left' || direction === 'up') {
+    if (direction === "left" || direction === "up") {
       newIndex = Math.max(0, currentIndex - 1);
     } else {
       newIndex = Math.min(cardOrder.length - 1, currentIndex + 1);
@@ -140,7 +150,8 @@ export default function DashboardTab({
   };
 
   const canMoveLeft = (cardId: string) => cardOrder.indexOf(cardId) > 0;
-  const canMoveRight = (cardId: string) => cardOrder.indexOf(cardId) < cardOrder.length - 1;
+  const canMoveRight = (cardId: string) =>
+    cardOrder.indexOf(cardId) < cardOrder.length - 1;
 
   // 데이터 로드
   const loadAllData = async () => {
@@ -356,18 +367,17 @@ export default function DashboardTab({
 
   // 개별 카드 렌더링 함수들
   const renderScheduleCard = () => {
-    
     if (todayEvents.length > 0) {
       return (
         <div
           className={`bg-white overflow-hidden border-gray-100 widget-scale border rounded-lg block p-4 group relative h-full ${
-          isEditMode ? 'cursor-default' : 'cursor-pointer hover:shadow-md'
-        }`}
+            isEditMode ? "cursor-default" : "cursor-pointer hover:shadow-md"
+          }`}
           onClick={isEditMode ? undefined : () => onNavigateToTab("calendar")}
         >
           <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-indigo-500/10 to-indigo-600/5 rounded-bl-full"></div>
           <div className="relative">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-2">
               <div className="p-3 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl shadow-lg transition-all">
                 <Calendar className="h-6 w-6 text-white" />
               </div>
@@ -396,13 +406,10 @@ export default function DashboardTab({
                       <p className="text-xs text-slate-500">
                         {event.start_date &&
                         !isNaN(new Date(event.start_date).getTime())
-                          ? new Date(event.start_date).toLocaleString(
-                              "ko-KR",
-                              {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              }
-                            )
+                          ? new Date(event.start_date).toLocaleString("ko-KR", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
                           : "--:--"}
                         {event.location && ` • ${event.location}`}
                       </p>
@@ -427,7 +434,7 @@ export default function DashboardTab({
         >
           <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-orange-500/10 to-orange-600/5 rounded-bl-full"></div>
           <div className="relative">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-2">
               <div className="p-3 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg transition-all">
                 <Target className="h-6 w-6 text-white" />
               </div>
@@ -455,9 +462,7 @@ export default function DashboardTab({
                     >
                       <div className="flex flex-col items-center">
                         <Badge
-                          variant={
-                            daysUntil <= 3 ? "destructive" : "secondary"
-                          }
+                          variant={daysUntil <= 3 ? "destructive" : "secondary"}
                           className="text-xs h-5"
                         >
                           D-{daysUntil}
@@ -504,14 +509,12 @@ export default function DashboardTab({
         >
           <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-gray-500/10 to-gray-600/5 rounded-bl-full"></div>
           <div className="relative">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-2">
               <div className="p-3 bg-gradient-to-br from-gray-500 to-gray-600 rounded-xl shadow-lg transition-all">
                 <Calendar className="h-6 w-6 text-white" />
               </div>
               <div className="text-right">
-                <div className="text-3xl font-bold text-slate-900">
-                  0
-                </div>
+                <div className="text-3xl font-bold text-slate-900">0</div>
                 <div className="text-xs text-gray-600 font-semibold bg-gray-50 px-2 py-1 rounded-full">
                   일정 없음
                 </div>
@@ -521,9 +524,7 @@ export default function DashboardTab({
               <h3 className="font-bold text-slate-900 mb-3">예정된 일정</h3>
               <div className="text-center py-4">
                 <Calendar className="h-8 w-8 mx-auto mb-2 opacity-30 text-gray-400" />
-                <p className="text-xs text-slate-400">
-                  등록된 일정이 없습니다
-                </p>
+                <p className="text-xs text-slate-400">등록된 일정이 없습니다</p>
               </div>
             </div>
           </div>
@@ -536,13 +537,13 @@ export default function DashboardTab({
     return (
       <div
         className={`bg-white overflow-hidden border-gray-100 widget-scale border rounded-lg block p-4 group relative h-full ${
-          isEditMode ? 'cursor-default' : 'cursor-pointer hover:shadow-md'
+          isEditMode ? "cursor-default" : "cursor-pointer hover:shadow-md"
         }`}
         onClick={isEditMode ? undefined : () => onNavigateToTab("participants")}
       >
         <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-500/10 to-blue-600/5 rounded-bl-full"></div>
         <div className="relative">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-2">
             <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg group-hover:shadow-blue-500/25 transition-all">
               <Users className="h-6 w-6 text-white" />
             </div>
@@ -556,10 +557,14 @@ export default function DashboardTab({
             </div>
           </div>
           <div className="flex-1 flex flex-col justify-center">
-            <h3 className="font-bold text-slate-900 mb-4">참가자 현황 및 분포</h3>
+            <h3 className="font-bold text-slate-900 mb-2">
+              참가자 현황 및 분포
+            </h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-3">
-                <h4 className="text-sm font-semibold text-slate-700 border-b pb-1">상태별</h4>
+                <h4 className="text-sm font-semibold text-slate-700 border-b pb-1">
+                  상태별
+                </h4>
                 <div className="space-y-2">
                   {Object.entries(participantStats.byStatus)
                     .slice(0, 4)
@@ -571,13 +576,17 @@ export default function DashboardTab({
                         <Badge variant="outline" className="text-xs">
                           {status}
                         </Badge>
-                        <span className="text-sm font-medium text-slate-900">{count}명</span>
+                        <span className="text-sm font-medium text-slate-900">
+                          {count}명
+                        </span>
                       </div>
                     ))}
                 </div>
               </div>
               <div className="space-y-3">
-                <h4 className="text-sm font-semibold text-slate-700 border-b pb-1">성별</h4>
+                <h4 className="text-sm font-semibold text-slate-700 border-b pb-1">
+                  성별
+                </h4>
                 <div className="space-y-2">
                   {Object.entries(participantStats.byGender)
                     .slice(0, 4)
@@ -589,7 +598,9 @@ export default function DashboardTab({
                         <Badge variant="outline" className="text-xs">
                           {gender}
                         </Badge>
-                        <span className="text-sm font-medium text-slate-900">{count}명</span>
+                        <span className="text-sm font-medium text-slate-900">
+                          {count}명
+                        </span>
                       </div>
                     ))}
                 </div>
@@ -605,13 +616,13 @@ export default function DashboardTab({
     return (
       <div
         className={`bg-white overflow-hidden border-gray-100 widget-scale border rounded-lg block p-4 group relative h-full ${
-          isEditMode ? 'cursor-default' : 'cursor-pointer hover:shadow-md'
+          isEditMode ? "cursor-default" : "cursor-pointer hover:shadow-md"
         }`}
         onClick={isEditMode ? undefined : () => onNavigateToTab("participants")}
       >
         <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-purple-500/10 to-purple-600/5 rounded-bl-full"></div>
         <div className="relative">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-2">
             <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg group-hover:shadow-purple-500/25 transition-all">
               <Users className="h-6 w-6 text-white" />
             </div>
@@ -642,7 +653,7 @@ export default function DashboardTab({
       <div className="bg-white cursor-pointer overflow-hidden border-gray-100 widget-scale border rounded-lg hover:shadow-md block p-4 group relative h-full">
         <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-amber-500/10 to-amber-600/5 rounded-bl-full"></div>
         <div className="relative">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-2">
             <div className="p-3 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl shadow-lg group-hover:shadow-amber-500/25 transition-all">
               <Calendar className="h-6 w-6 text-white" />
             </div>
@@ -653,10 +664,12 @@ export default function DashboardTab({
                     const start = new Date(program.start_date);
                     const end = new Date(program.end_date);
                     const diffTime = Math.abs(end.getTime() - start.getTime());
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    const diffDays = Math.ceil(
+                      diffTime / (1000 * 60 * 60 * 24)
+                    );
                     return `${diffDays}일`;
                   }
-                  return '--';
+                  return "--";
                 })()}
               </div>
               <div className="text-xs text-amber-600 font-semibold bg-amber-50 px-2 py-1 rounded-full">
@@ -673,11 +686,9 @@ export default function DashboardTab({
                   "yy.MM.dd",
                   { locale: ko }
                 );
-                const endDate = format(
-                  parseISO(program.end_date),
-                  "yy.MM.dd",
-                  { locale: ko }
-                );
+                const endDate = format(parseISO(program.end_date), "yy.MM.dd", {
+                  locale: ko,
+                });
 
                 return (
                   <div className="text-sm font-semibold text-slate-700">
@@ -714,13 +725,13 @@ export default function DashboardTab({
     return (
       <div
         className={`bg-white overflow-hidden border-gray-100 widget-scale border rounded-lg block p-4 group relative h-full ${
-          isEditMode ? 'cursor-default' : 'cursor-pointer hover:shadow-md'
+          isEditMode ? "cursor-default" : "cursor-pointer hover:shadow-md"
         }`}
         onClick={isEditMode ? undefined : () => onNavigateToTab("finance")}
       >
         <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-green-500/10 to-green-600/5 rounded-bl-full"></div>
         <div className="relative">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-2">
             <div className="p-3 bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg transition-all">
               <DollarSign className="h-6 w-6 text-white" />
             </div>
@@ -751,13 +762,13 @@ export default function DashboardTab({
     return (
       <div
         className={`bg-white overflow-hidden border-gray-100 widget-scale border rounded-lg block p-4 group relative h-full ${
-          isEditMode ? 'cursor-default' : 'cursor-pointer hover:shadow-md'
+          isEditMode ? "cursor-default" : "cursor-pointer hover:shadow-md"
         }`}
         onClick={isEditMode ? undefined : () => onNavigateToTab("checklist")}
       >
         <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-violet-500/10 to-violet-600/5 rounded-bl-full"></div>
         <div className="relative">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-2">
             <div className="p-3 bg-gradient-to-br from-violet-500 to-violet-600 rounded-xl shadow-lg transition-all">
               <CheckCircle className="h-6 w-6 text-white" />
             </div>
@@ -786,13 +797,13 @@ export default function DashboardTab({
     return (
       <div
         className={`bg-white overflow-hidden border-gray-100 widget-scale border rounded-lg block p-4 group relative h-full ${
-          isEditMode ? 'cursor-default' : 'cursor-pointer hover:shadow-md'
+          isEditMode ? "cursor-default" : "cursor-pointer hover:shadow-md"
         }`}
         onClick={isEditMode ? undefined : () => onNavigateToTab("attendance")}
       >
         <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-cyan-500/10 to-cyan-600/5 rounded-bl-full"></div>
         <div className="relative">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-2">
             <div className="p-3 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-xl shadow-lg group-hover:shadow-cyan-500/25 transition-all">
               <Activity className="h-6 w-6 text-white" />
             </div>
@@ -822,13 +833,13 @@ export default function DashboardTab({
       <div className="bg-white cursor-pointer overflow-hidden border-gray-100 widget-scale border rounded-lg hover:shadow-md block p-4 group relative h-full">
         <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-red-500/10 to-red-600/5 rounded-bl-full"></div>
         <div className="relative">
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-2">
             <div className="p-3 bg-gradient-to-br from-red-500 to-red-600 rounded-xl shadow-lg transition-all">
               <AlertCircle className="h-6 w-6 text-white" />
             </div>
             <h3 className="font-bold text-slate-900">중요 체크리스트</h3>
           </div>
-          
+
           <div className="space-y-3 flex-1 flex flex-col justify-center">
             {checklistStats.overdue > 0 && (
               <div className="p-3 bg-red-50 border-red-200 border rounded-lg">
@@ -886,21 +897,21 @@ export default function DashboardTab({
   // 카드 매핑 함수
   const getCardComponent = (cardId: string) => {
     switch (cardId) {
-      case 'schedule':
+      case "schedule":
         return renderScheduleCard();
-      case 'participants':
+      case "participants":
         return renderParticipantsCard();
-      case 'teams':
+      case "teams":
         return renderTeamsCard();
-      case 'program-period':
+      case "program-period":
         return renderProgramPeriodCard();
-      case 'finance':
+      case "finance":
         return renderFinanceCard();
-      case 'checklist':
+      case "checklist":
         return renderChecklistCard();
-      case 'attendance':
+      case "attendance":
         return renderAttendanceCard();
-      case 'important-checklist':
+      case "important-checklist":
         return renderImportantChecklistCard();
       default:
         return null;
@@ -909,41 +920,22 @@ export default function DashboardTab({
 
   const getCardColSpan = (cardId: string) => {
     switch (cardId) {
-      case 'schedule':
-        return 'col-span-1 sm:col-span-2'; // 2 columns on larger screens
+      case "schedule":
+        return "col-span-1 sm:col-span-2"; // 2 columns on larger screens
       default:
-        return 'col-span-1'; // 1 column
+        return "col-span-1"; // 1 column
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* 편집 모드 토글 및 설정 */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-slate-900">대시보드</h2>
-        <div className="flex items-center gap-2">
-          {isEditMode && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={resetToDefault}
-              className="text-slate-600 hover:text-slate-900"
-            >
-              <RotateCcw className="h-4 w-4 mr-1" />
-              기본값 복원
-            </Button>
-          )}
-          <Button
-            variant={isEditMode ? "default" : "outline"}
-            size="sm"
-            onClick={() => setIsEditMode(!isEditMode)}
-            className={isEditMode ? "bg-blue-600 text-white" : "text-slate-600 hover:text-slate-900"}
-          >
-            <Settings className="h-4 w-4 mr-1" />
-            {isEditMode ? '완료' : '편집'}
-          </Button>
+      {/* 모바일: 편집 모드일 때만 상단에 표시 */}
+      {isEditMode && (
+        <div className="flex items-center gap-2 sm:hidden">
+          <Edit3 className="h-5 w-5 text-blue-600" />
+          <span className="text-lg font-semibold text-blue-600">편집 모드</span>
         </div>
-      </div>
+      )}
 
       {/* 카드 그리드 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -955,13 +947,15 @@ export default function DashboardTab({
             <div
               key={cardId}
               className={`${getCardColSpan(cardId)} transition-all duration-200 h-full ${
-                isEditMode ? 'hover:shadow-lg' : ''
+                isEditMode ? "hover:shadow-lg" : ""
               }`}
             >
               {/* 카드 컨테이너 */}
-              <div 
+              <div
                 className={`relative h-full ${
-                  isEditMode ? 'ring-2 ring-blue-200 ring-opacity-50 hover:ring-blue-300 rounded-lg' : ''
+                  isEditMode
+                    ? "ring-2 ring-blue-200 ring-opacity-50 hover:ring-blue-300 rounded-lg"
+                    : ""
                 }`}
               >
                 {/* 편집 모드 컨트롤 버튼들 */}
@@ -970,52 +964,52 @@ export default function DashboardTab({
                     {/* 데스크톱: 좌우 버튼 */}
                     <div className="hidden sm:flex gap-1">
                       <button
-                        onClick={() => moveCard(cardId, 'left')}
+                        onClick={() => moveCard(cardId, "left")}
                         disabled={!canMoveLeft(cardId)}
                         className={`p-1 rounded-full shadow-sm border transition-all duration-200 ${
                           canMoveLeft(cardId)
-                            ? 'bg-white/90 border-gray-300 hover:bg-blue-50 hover:border-blue-300 cursor-pointer'
-                            : 'bg-gray-100 border-gray-200 cursor-not-allowed opacity-50'
+                            ? "bg-white/90 border-gray-300 hover:bg-blue-50 hover:border-blue-300 cursor-pointer"
+                            : "bg-gray-100 border-gray-200 cursor-not-allowed opacity-50"
                         }`}
                         title="왼쪽으로 이동"
                       >
                         <ChevronLeft className="h-3 w-3 text-gray-600" />
                       </button>
                       <button
-                        onClick={() => moveCard(cardId, 'right')}
+                        onClick={() => moveCard(cardId, "right")}
                         disabled={!canMoveRight(cardId)}
                         className={`p-1 rounded-full shadow-sm border transition-all duration-200 ${
                           canMoveRight(cardId)
-                            ? 'bg-white/90 border-gray-300 hover:bg-blue-50 hover:border-blue-300 cursor-pointer'
-                            : 'bg-gray-100 border-gray-200 cursor-not-allowed opacity-50'
+                            ? "bg-white/90 border-gray-300 hover:bg-blue-50 hover:border-blue-300 cursor-pointer"
+                            : "bg-gray-100 border-gray-200 cursor-not-allowed opacity-50"
                         }`}
                         title="오른쪽으로 이동"
                       >
                         <ChevronRight className="h-3 w-3 text-gray-600" />
                       </button>
                     </div>
-                    
+
                     {/* 모바일: 위아래 버튼 */}
                     <div className="flex sm:hidden flex-col gap-1">
                       <button
-                        onClick={() => moveCard(cardId, 'up')}
+                        onClick={() => moveCard(cardId, "up")}
                         disabled={!canMoveLeft(cardId)}
                         className={`p-1 rounded-full shadow-sm border transition-all duration-200 ${
                           canMoveLeft(cardId)
-                            ? 'bg-white/90 border-gray-300 hover:bg-blue-50 hover:border-blue-300 cursor-pointer'
-                            : 'bg-gray-100 border-gray-200 cursor-not-allowed opacity-50'
+                            ? "bg-white/90 border-gray-300 hover:bg-blue-50 hover:border-blue-300 cursor-pointer"
+                            : "bg-gray-100 border-gray-200 cursor-not-allowed opacity-50"
                         }`}
                         title="위로 이동"
                       >
                         <ChevronUp className="h-3 w-3 text-gray-600" />
                       </button>
                       <button
-                        onClick={() => moveCard(cardId, 'down')}
+                        onClick={() => moveCard(cardId, "down")}
                         disabled={!canMoveRight(cardId)}
                         className={`p-1 rounded-full shadow-sm border transition-all duration-200 ${
                           canMoveRight(cardId)
-                            ? 'bg-white/90 border-gray-300 hover:bg-blue-50 hover:border-blue-300 cursor-pointer'
-                            : 'bg-gray-100 border-gray-200 cursor-not-allowed opacity-50'
+                            ? "bg-white/90 border-gray-300 hover:bg-blue-50 hover:border-blue-300 cursor-pointer"
+                            : "bg-gray-100 border-gray-200 cursor-not-allowed opacity-50"
                         }`}
                         title="아래로 이동"
                       >
@@ -1044,16 +1038,61 @@ export default function DashboardTab({
               </div>
             </div>
             <div>
-              <h4 className="font-medium text-blue-900 mb-1">카드 순서 편집 모드</h4>
+              <h4 className="font-medium text-blue-900 mb-1">
+                카드 순서 편집 모드
+              </h4>
               <p className="text-sm text-blue-700">
-                <span className="hidden sm:inline">카드 오른쪽 상단의 좌우 화살표 버튼을 클릭하여</span>
-                <span className="inline sm:hidden">카드 오른쪽 상단의 위아래 화살표 버튼을 클릭하여</span>
-                {' '}카드 순서를 변경할 수 있습니다. 변경된 순서는 자동으로 저장됩니다.
+                <span className="hidden sm:inline">
+                  카드 오른쪽 상단의 좌우 화살표 버튼을 클릭하여
+                </span>
+                <span className="inline sm:hidden">
+                  카드 오른쪽 상단의 위아래 화살표 버튼을 클릭하여
+                </span>{" "}
+                카드 순서를 변경할 수 있습니다. 변경된 순서는 자동으로
+                저장됩니다.
               </p>
             </div>
           </div>
         </div>
       )}
+
+      {/* 플로팅 편집 버튼 */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2">
+        {/* 기본값 복원 버튼 (편집 모드일 때만) */}
+        {isEditMode && (
+          <button
+            onClick={resetToDefault}
+            className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 rounded-full shadow-lg border border-gray-200 transition-all duration-200 hover:shadow-xl"
+            title="기본값 복원"
+          >
+            <RotateCcw className="h-4 w-4" />
+            <span className="text-sm font-medium">기본값 복원</span>
+          </button>
+        )}
+
+        {/* 메인 편집 버튼 */}
+        <button
+          onClick={() => setIsEditMode(!isEditMode)}
+          className={`flex items-center gap-2 px-6 py-3 rounded-full shadow-lg transition-all duration-200 hover:shadow-xl hover:scale-105 ${
+            isEditMode
+              ? "bg-blue-600 hover:bg-blue-700 text-white"
+              : "bg-slate-800 hover:bg-slate-900 text-white"
+          }`}
+          title={isEditMode ? "편집 완료" : "카드 순서 편집"}
+        >
+          {isEditMode ? (
+            <>
+              <Check className="h-5 w-5" />
+              <span className="font-medium">완료</span>
+            </>
+          ) : (
+            <>
+              <Settings className="h-5 w-5" />
+              <span className="font-medium">편집</span>
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 }

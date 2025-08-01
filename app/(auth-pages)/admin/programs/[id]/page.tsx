@@ -17,6 +17,8 @@ import {
   BarChart3,
   CheckCircle,
   ClipboardList,
+  FileSpreadsheet,
+  FileText,
 } from "lucide-react";
 import { loadProgramData, type ProgramData } from "./utils/program-data";
 
@@ -41,6 +43,9 @@ import AttendanceTab from "./components/attendance-tab";
 import ChecklistTab from "./components/checklist-tab";
 import TeamsTab from "./components/teams-tab";
 import MealTab from "./components/meal-tab";
+import SheetTab from "./components/sheet-tab";
+import WordTab from "./components/word-tab";
+import SettingsTab from "./components/settings-tab";
 
 export default function ProgramDetailPage() {
   const params = useParams();
@@ -100,7 +105,7 @@ export default function ProgramDetailPage() {
             startDate: new Date().toISOString().split('T')[0],
             endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             description: "새로운 프로그램입니다.",
-            features: ["participants", "finance", "calendar", "attendance", "checklist", "teams", "meal"],
+            features: ["participants", "finance", "calendar", "attendance", "checklist", "teams", "meal", "sheet"],
           };
           setProgram(mockProgram);
         }
@@ -141,6 +146,8 @@ export default function ProgramDetailPage() {
     ...(program.features.includes("checklist") ? [{ id: "checklist", label: "확인사항", icon: CheckCircle }] : []),
     ...(program.features.includes("teams") ? [{ id: "teams", label: "팀 관리", icon: Users }] : []),
     ...(program.features.includes("meal") ? [{ id: "meal", label: "식단", icon: ClipboardList }] : []),
+    ...(program.features.includes("sheet") ? [{ id: "sheet", label: "스프레드시트", icon: FileSpreadsheet }] : []),
+    ...(program.features.includes("word") ? [{ id: "word", label: "문서", icon: FileText }] : []),
     { id: "settings", label: "설정", icon: Settings },
   ];
 
@@ -225,10 +232,20 @@ export default function ProgramDetailPage() {
           </TabsContent>
         )}
 
+        {program.features.includes("sheet") && (
+          <TabsContent value="sheet">
+            <SheetTab programId={programId} onNavigateToTab={setActiveTab} />
+          </TabsContent>
+        )}
+
+        {program.features.includes("word") && (
+          <TabsContent value="word">
+            <WordTab programId={programId} onNavigateToTab={setActiveTab} />
+          </TabsContent>
+        )}
+
         <TabsContent value="settings">
-          <div className="text-center py-12 text-muted-foreground">
-            설정 기능은 곧 추가될 예정입니다.
-          </div>
+          <SettingsTab programId={programId} />
         </TabsContent>
       </Tabs>
     </div>

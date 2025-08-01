@@ -3286,13 +3286,13 @@ export default function CalendarTab({
                       );
 
                       if (currentEventIndex === 0) {
-                        eventWidth = `calc(${dayWidth} - 4px)`;
+                        eventWidth = `calc((${dayWidth} / 2) - 4px)`;
                         eventLeft = `calc(60px + ${dayIndex} * ${dayWidth} + 2px)`;
                         zIndex = 10;
                       } else {
-                        eventWidth = `calc(${dayWidth} - 8px)`;
-                        eventLeft = `calc(60px + ${dayIndex} * ${dayWidth} + 6px)`;
-                        zIndex = 20;
+                        eventWidth = `calc((${dayWidth} / 2) - 4px)`;
+                        eventLeft = `calc(60px + ${dayIndex} * ${dayWidth} + (${dayWidth} / 2) + 2px)`;
+                        zIndex = 10;
                       }
                     } else {
                       eventWidth = `calc(${dayWidth} - 4px)`;
