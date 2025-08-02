@@ -45,7 +45,7 @@
     "@tiptap/extension-history": "^3.0.8",
     "@tiptap/extension-image": "^3.0.8",
     "@tiptap/extension-link": "^3.0.8",
-    "@tiptap/extension-list": "^3.0.8",
+    "@tiptap/extension-list": "^3.0.9",
     "@tiptap/extension-list-item": "^3.0.8",
     "@tiptap/extension-ordered-list": "^3.0.8",
     "@tiptap/extension-placeholder": "^3.0.8",

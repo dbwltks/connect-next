@@ -162,6 +162,7 @@ import { createClient } from "@/utils/supabase/client";
 interface WordTabProps {
   programId: string;
   onNavigateToTab: (tab: string) => void;
+  hasEditPermission?: boolean;
 }
 
 // Simple Editor Toolbar (TipTap 스타일)
@@ -196,6 +197,19 @@ const SimpleEditorToolbar = ({ editor }: { editor: any }) => {
             <Redo className="h-4 w-4" />
           </Button>
         </div>
+
+        <div className="h-4 w-px bg-gray-300 mx-1" />
+
+        {/* Task List */}
+        <Button
+          variant={editor.isActive("taskList") ? "default" : "ghost"}
+          size="sm"
+          onClick={() => editor.chain().focus().toggleTaskList().run()}
+          className="h-8 w-8 p-0"
+          title="체크리스트"
+        >
+          <CheckSquare className="h-4 w-4" />
+        </Button>
 
         <div className="h-4 w-px bg-gray-300 mx-1" />
 
@@ -255,14 +269,22 @@ const SimpleEditorToolbar = ({ editor }: { editor: any }) => {
           <PopoverContent className="w-48">
             <div className="grid grid-cols-4 gap-2">
               {[
-                "#fef3c7", "#fed7aa", "#fecaca", "#f3e8ff",
-                "#dbeafe", "#d1fae5", "#fce7f3", "#f3f4f6"
+                "#fef3c7",
+                "#fed7aa",
+                "#fecaca",
+                "#f3e8ff",
+                "#dbeafe",
+                "#d1fae5",
+                "#fce7f3",
+                "#f3f4f6",
               ].map((color) => (
                 <button
                   key={color}
                   className="w-8 h-8 rounded border"
                   style={{ backgroundColor: color }}
-                  onClick={() => editor.chain().focus().toggleHighlight({ color }).run()}
+                  onClick={() =>
+                    editor.chain().focus().toggleHighlight({ color }).run()
+                  }
                 />
               ))}
               <button
@@ -307,7 +329,9 @@ const SimpleEditorToolbar = ({ editor }: { editor: any }) => {
           <AlignLeft className="h-4 w-4" />
         </Button>
         <Button
-          variant={editor.isActive({ textAlign: "center" }) ? "default" : "ghost"}
+          variant={
+            editor.isActive({ textAlign: "center" }) ? "default" : "ghost"
+          }
           size="sm"
           onClick={() => editor.chain().focus().setTextAlign("center").run()}
           className="h-8 w-8 p-0"
@@ -315,7 +339,9 @@ const SimpleEditorToolbar = ({ editor }: { editor: any }) => {
           <AlignCenter className="h-4 w-4" />
         </Button>
         <Button
-          variant={editor.isActive({ textAlign: "right" }) ? "default" : "ghost"}
+          variant={
+            editor.isActive({ textAlign: "right" }) ? "default" : "ghost"
+          }
           size="sm"
           onClick={() => editor.chain().focus().setTextAlign("right").run()}
           className="h-8 w-8 p-0"
@@ -323,7 +349,9 @@ const SimpleEditorToolbar = ({ editor }: { editor: any }) => {
           <AlignRight className="h-4 w-4" />
         </Button>
         <Button
-          variant={editor.isActive({ textAlign: "justify" }) ? "default" : "ghost"}
+          variant={
+            editor.isActive({ textAlign: "justify" }) ? "default" : "ghost"
+          }
           size="sm"
           onClick={() => editor.chain().focus().setTextAlign("justify").run()}
           className="h-8 w-8 p-0"
@@ -346,7 +374,11 @@ const SimpleEditorToolbar = ({ editor }: { editor: any }) => {
               if (file) {
                 const reader = new FileReader();
                 reader.onload = () => {
-                  editor.chain().focus().setImage({ src: reader.result as string }).run();
+                  editor
+                    .chain()
+                    .focus()
+                    .setImage({ src: reader.result as string })
+                    .run();
                 };
                 reader.readAsDataURL(file);
               }
@@ -375,22 +407,30 @@ const SimpleEditorToolbar = ({ editor }: { editor: any }) => {
               본문
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+              onClick={() =>
+                editor.chain().focus().toggleHeading({ level: 1 }).run()
+              }
             >
               제목 1
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+              onClick={() =>
+                editor.chain().focus().toggleHeading({ level: 2 }).run()
+              }
             >
               제목 2
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+              onClick={() =>
+                editor.chain().focus().toggleHeading({ level: 3 }).run()
+              }
             >
               제목 3
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()}
+              onClick={() =>
+                editor.chain().focus().toggleHeading({ level: 4 }).run()
+              }
             >
               제목 4
             </DropdownMenuItem>
@@ -402,11 +442,7 @@ const SimpleEditorToolbar = ({ editor }: { editor: any }) => {
         {/* Lists */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-8 px-3"
-            >
+            <Button variant="ghost" size="sm" className="h-8 px-3">
               <List className="h-4 w-4 mr-1" />
               <ChevronDown className="h-3 w-3 ml-1" />
             </Button>
@@ -433,8 +469,7 @@ const SimpleEditorToolbar = ({ editor }: { editor: any }) => {
                 editor?.chain().focus().toggleTaskList().run();
               }}
             >
-              <CheckSquare className="h-4 w-4 mr-2" />
-              할 일 목록
+              <CheckSquare className="h-4 w-4 mr-2" />할 일 목록
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -653,16 +688,14 @@ const TableEditDropdown = ({ editor }: { editor: any }) => {
           disabled={!editor.can().deleteRow()}
           className="text-red-600"
         >
-          <Trash2 className="h-4 w-4 mr-2" />
-          행 삭제
+          <Trash2 className="h-4 w-4 mr-2" />행 삭제
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => editor.chain().focus().deleteColumn().run()}
           disabled={!editor.can().deleteColumn()}
           className="text-red-600"
         >
-          <Trash2 className="h-4 w-4 mr-2" />
-          열 삭제
+          <Trash2 className="h-4 w-4 mr-2" />열 삭제
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => editor.chain().focus().mergeCells().run()}
@@ -700,16 +733,14 @@ const TableEditDropdown = ({ editor }: { editor: any }) => {
             !editor.can().setCellAttribute("backgroundColor", "#FAF594")
           }
         >
-          <Palette className="h-4 w-4 mr-2" />
-          셀 색상 변경
+          <Palette className="h-4 w-4 mr-2" />셀 색상 변경
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => editor.chain().focus().deleteTable().run()}
           disabled={!editor.can().deleteTable()}
           className="text-red-600"
         >
-          <Trash2 className="h-4 w-4 mr-2" />
-          표 삭제
+          <Trash2 className="h-4 w-4 mr-2" />표 삭제
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -741,7 +772,11 @@ interface Program {
   folders?: FolderData[];
 }
 
-export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
+export default function WordTab({
+  programId,
+  onNavigateToTab,
+  hasEditPermission = true,
+}: WordTabProps) {
   const [loading, setLoading] = useState(true);
   const [program, setProgram] = useState<Program | null>(null);
   const [documents, setDocuments] = useState<DocumentData[]>([]);
@@ -766,13 +801,13 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
     parentFolderId?: string;
   }>({ open: false, type: "document" });
 
-
   // 사이드바 상태
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // 이름 편집 상태
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [editingName, setEditingName] = useState<string>("");
+  const [isComposing, setIsComposing] = useState(false);
 
   // 드래그 상태
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -815,154 +850,161 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
   const supabase = createClient();
 
   // Tiptap 에디터 설정
-  const editor = useEditor({
-    immediatelyRender: false,
-    extensions: [
-      StarterKit,
-      Underline,
-      Link.configure({
-        openOnClick: false,
-      }),
-      Image,
-      Table.configure({
-        resizable: true,
-      }),
-      TableRow,
-      TableHeader,
-      CustomTableCell,
-      TextAlign.configure({
-        types: ["heading", "paragraph"],
-      }),
-      Placeholder.configure({
-        placeholder: "새 문서를 작성해보세요.",
-        emptyEditorClass: "is-editor-empty",
-      }),
-      TaskList,
-      TaskItem.configure({
-        nested: true,
-      }),
-      Typography,
-      Highlight.configure({
-        multicolor: true,
-      }),
-      Superscript,
-      Subscript,
-    ],
-    content: selectedDocument?.content || "",
-    editorProps: {
-      attributes: {
-        class: "prose prose-lg max-w-none focus:outline-none min-h-[calc(100vh-350px)]",
-        autocomplete: "off",
-        autocorrect: "off",
-        autocapitalize: "off", 
-        spellcheck: "false",
-      },
-      handlePaste: (view, event, slice) => {
-        const items = Array.from(event.clipboardData?.items || []);
-        const htmlItem = items.find((item) => item.type === "text/html");
-        const textItem = items.find((item) => item.type === "text/plain");
+  const editor = useEditor(
+    {
+      immediatelyRender: false,
+      extensions: [
+        StarterKit,
+        Underline,
+        Link.configure({
+          openOnClick: false,
+        }),
+        Image,
+        Table.configure({
+          resizable: true,
+        }),
+        TableRow,
+        TableHeader,
+        CustomTableCell,
+        TextAlign.configure({
+          types: ["heading", "paragraph"],
+        }),
+        Placeholder.configure({
+          placeholder: "새 문서를 작성해보세요.",
+          emptyEditorClass: "is-editor-empty",
+        }),
+        TaskList,
+        TaskItem.configure({
+          nested: true,
+        }),
+        Typography,
+        Highlight.configure({
+          multicolor: true,
+        }),
+        Superscript,
+        Subscript,
+      ],
+      content: selectedDocument?.content || "",
+      editable: hasEditPermission,
+      editorProps: {
+        attributes: {
+          class:
+            "prose prose-lg max-w-none focus:outline-none min-h-[calc(100vh-350px)]",
+          autocomplete: "off",
+          autocorrect: "off",
+          autocapitalize: "off",
+          spellcheck: "false",
+        },
+        handlePaste: (view, event, slice) => {
+          const items = Array.from(event.clipboardData?.items || []);
+          const htmlItem = items.find((item) => item.type === "text/html");
+          const textItem = items.find((item) => item.type === "text/plain");
 
-        if (htmlItem) {
-          htmlItem.getAsString((html) => {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, "text/html");
-            const tables = doc.querySelectorAll("table");
+          if (htmlItem) {
+            htmlItem.getAsString((html) => {
+              const parser = new DOMParser();
+              const doc = parser.parseFromString(html, "text/html");
+              const tables = doc.querySelectorAll("table");
 
-            if (tables.length > 0) {
-              const table = tables[0];
-              const rows = table.querySelectorAll("tr");
-              const tableData: string[][] = [];
+              if (tables.length > 0) {
+                const table = tables[0];
+                const rows = table.querySelectorAll("tr");
+                const tableData: string[][] = [];
 
-              rows.forEach((row) => {
-                const cells = row.querySelectorAll("td, th");
-                const rowData: string[] = [];
-                cells.forEach((cell) => {
-                  // HTML 태그 제거하고 텍스트만 추출
-                  const text =
-                    cell.textContent?.replace(/\s+/g, " ").trim() || "";
-                  rowData.push(text);
+                rows.forEach((row) => {
+                  const cells = row.querySelectorAll("td, th");
+                  const rowData: string[] = [];
+                  cells.forEach((cell) => {
+                    // HTML 태그 제거하고 텍스트만 추출
+                    const text =
+                      cell.textContent?.replace(/\s+/g, " ").trim() || "";
+                    rowData.push(text);
+                  });
+                  if (rowData.length > 0) {
+                    tableData.push(rowData);
+                  }
                 });
-                if (rowData.length > 0) {
-                  tableData.push(rowData);
-                }
-              });
 
-              if (tableData.length > 0 && tableData[0].length > 1) {
+                if (tableData.length > 0 && tableData[0].length > 1) {
+                  const maxCols = Math.max(
+                    ...tableData.map((row) => row.length)
+                  );
+
+                  // 표 삽입
+                  setTimeout(() => {
+                    editor
+                      ?.chain()
+                      .focus()
+                      .insertTable({
+                        rows: tableData.length,
+                        cols: maxCols,
+                        withHeaderRow: false,
+                      })
+                      .run();
+
+                    // 테이블 생성 완료 - 사용자가 수동으로 내용 입력 필요
+                    // goToCell 메소드가 현재 TipTap 버전에서 지원되지 않음
+                  }, 100);
+
+                  event.preventDefault();
+                  return true;
+                }
+              }
+            });
+          }
+
+          // 텭으로 구분된 텍스트 (Excel/Google Sheets에서 복사한 경우)
+          if (textItem && !htmlItem) {
+            textItem.getAsString((text) => {
+              const lines = text.split("\n").filter((line) => line.trim());
+              const isTabularData =
+                lines.some((line) => line.includes("\t")) && lines.length > 1;
+
+              if (isTabularData) {
+                const tableData = lines.map((line) => line.split("\t"));
                 const maxCols = Math.max(...tableData.map((row) => row.length));
 
-                // 표 삽입
-                setTimeout(() => {
-                  editor
-                    ?.chain()
-                    .focus()
-                    .insertTable({
-                      rows: tableData.length,
-                      cols: maxCols,
-                      withHeaderRow: false,
-                    })
-                    .run();
-
-                  // 테이블 생성 완료 - 사용자가 수동으로 내용 입력 필요
-                  // goToCell 메소드가 현재 TipTap 버전에서 지원되지 않음
-                }, 100);
-
-                event.preventDefault();
-                return true;
-              }
-            }
-          });
-        }
-
-        // 텭으로 구분된 텍스트 (Excel/Google Sheets에서 복사한 경우)
-        if (textItem && !htmlItem) {
-          textItem.getAsString((text) => {
-            const lines = text.split("\n").filter((line) => line.trim());
-            const isTabularData =
-              lines.some((line) => line.includes("\t")) && lines.length > 1;
-
-            if (isTabularData) {
-              const tableData = lines.map((line) => line.split("\t"));
-              const maxCols = Math.max(...tableData.map((row) => row.length));
-
-              if (maxCols > 1) {
-                setTimeout(() => {
-                  editor
-                    ?.chain()
-                    .focus()
-                    .insertTable({
-                      rows: tableData.length,
-                      cols: maxCols,
-                      withHeaderRow: false,
-                    })
-                    .run();
-
+                if (maxCols > 1) {
                   setTimeout(() => {
-                    // 테이블 생성 완료 후 사용자가 수동으로 내용 입력
-                    // goToCell 메소드가 현재 TipTap 버전에서 지원되지 않음
-                  }, 200);
-                }, 100);
+                    editor
+                      ?.chain()
+                      .focus()
+                      .insertTable({
+                        rows: tableData.length,
+                        cols: maxCols,
+                        withHeaderRow: false,
+                      })
+                      .run();
 
-                event.preventDefault();
-                return true;
+                    setTimeout(() => {
+                      // 테이블 생성 완료 후 사용자가 수동으로 내용 입력
+                      // goToCell 메소드가 현재 TipTap 버전에서 지원되지 않음
+                    }, 200);
+                  }, 100);
+
+                  event.preventDefault();
+                  return true;
+                }
               }
-            }
-          });
-        }
+            });
+          }
 
-        return false;
+          return false;
+        },
+      },
+      onUpdate: ({ editor }) => {
+        if (selectedDocument) {
+          const updatedDocument = {
+            ...selectedDocument,
+            content: editor.getHTML(),
+            updatedAt: new Date().toISOString(),
+          };
+          setSelectedDocument(updatedDocument);
+        }
       },
     },
-    onUpdate: ({ editor }) => {
-      if (selectedDocument) {
-        const updatedDocument = {
-          ...selectedDocument,
-          content: editor.getHTML(),
-          updatedAt: new Date().toISOString(),
-        };
-        setSelectedDocument(updatedDocument);
-      }
-    },
-  }, [selectedDocument?.id]);
+    [selectedDocument?.id]
+  );
 
   // 프로그램 데이터 로드
   useEffect(() => {
@@ -974,7 +1016,9 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
     if (editor && selectedDocument) {
       const currentContent = editor.getHTML();
       if (currentContent !== selectedDocument.content) {
-        editor.commands.setContent(selectedDocument.content, { emitUpdate: false });
+        editor.commands.setContent(selectedDocument.content, {
+          emitUpdate: false,
+        });
       }
     }
   }, [selectedDocument?.id, editor]);
@@ -1246,8 +1290,15 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
   };
 
   // 이름 편집 완료
-  const finishEditingName = async () => {
-    if (!editingItem || !editingName.trim()) {
+  const finishEditingName = async (newName?: string) => {
+    const nameToUse = newName || editingName;
+    console.log("finishEditingName called with:", {
+      editingItem,
+      nameToUse,
+      editingName,
+    });
+
+    if (!editingItem || !nameToUse.trim()) {
       setEditingItem(null);
       setEditingName("");
       return;
@@ -1258,19 +1309,34 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
 
       if (isFolder) {
         const updatedFolders = folders.map((f) =>
-          f.id === editingItem ? { ...f, name: editingName.trim() } : f
+          f.id === editingItem ? { ...f, name: nameToUse.trim() } : f
         );
         setFolders(updatedFolders);
         await saveOrderToDatabase(documents, updatedFolders);
       } else {
         const updatedDocuments = documents.map((d) =>
-          d.id === editingItem ? { ...d, name: editingName.trim() } : d
+          d.id === editingItem
+            ? {
+                ...d,
+                name: nameToUse.trim(),
+                updatedAt: new Date().toISOString(),
+              }
+            : d
         );
         setDocuments(updatedDocuments);
+
+        // 현재 선택된 문서가 이름이 변경된 문서라면 업데이트
+        if (selectedDocument && selectedDocument.id === editingItem) {
+          setSelectedDocument(
+            updatedDocuments.find((d) => d.id === editingItem) || null
+          );
+        }
+
         await saveOrderToDatabase(updatedDocuments, folders);
       }
     } catch (error) {
       console.error("Error renaming item:", error);
+      alert("이름 변경에 실패했습니다.");
     }
 
     setEditingItem(null);
@@ -1721,14 +1787,15 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
     }
   };
 
-
   // Sortable 트리 아이템
   const SortableTreeItem = ({
     item,
     level = 0,
+    globalDragging = false,
   }: {
     item: FolderData | DocumentData;
     level?: number;
+    globalDragging?: boolean;
   }) => {
     const {
       attributes,
@@ -1756,7 +1823,10 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
     return (
       <div
         ref={setNodeRef}
-        style={style}
+        style={{
+          ...style,
+          pointerEvents: globalDragging && !isDragging ? "none" : "auto",
+        }}
         {...attributes}
         {...listeners}
         className={isDragging ? "z-50" : ""}
@@ -1811,10 +1881,18 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
         .sort((a, b) => (a.order || 0) - (b.order || 0));
 
       return (
-        <div>
-          <div className="px-4">
+        <div className="relative">
+          {/* 드래그 중일 때 폴더 전체를 덮는 투명한 오버레이 */}
+          {globalDragging && folder.expanded && (
             <div
-              className={`flex items-center justify-between gap-2 px-3 py-2 hover:bg-gray-100 hover:rounded-xl cursor-grab group relative transition-all duration-150 ${
+              className="absolute inset-0 z-20"
+              style={{ pointerEvents: "auto" }}
+            />
+          )}
+
+          <div className="px-2">
+            <div
+              className={`flex items-center justify-between gap-2 px-2 py-2 hover:bg-gray-100 hover:rounded-xl cursor-grab group relative transition-all duration-150 ${
                 dragOverlay
                   ? "bg-blue-100 rounded-xl !bg-blue-100"
                   : isDragging
@@ -1823,7 +1901,10 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
                       ? "bg-blue-50 rounded-xl"
                       : ""
               }`}
-              style={{ paddingLeft: paddingLeft + 12 }}
+              style={{
+                paddingLeft: paddingLeft,
+                zIndex: folder.expanded ? 10 : "auto",
+              }}
               onClick={() => {
                 setSelectedFolderId(folder.id);
               }}
@@ -1839,7 +1920,7 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
                     className="absolute -top-0.5 h-1 bg-blue-500 rounded-full z-20 flex items-center"
                     style={{
                       left: paddingLeft + "px",
-                      right: "12px",
+                      right: "0px",
                     }}
                   >
                     <div className="w-2 h-2 bg-blue-500 rounded-full -ml-1 mr-1 flex-shrink-0" />
@@ -1851,7 +1932,7 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
                     className="absolute -bottom-0.5 h-1 bg-blue-500 rounded-full z-20 flex items-center"
                     style={{
                       left: paddingLeft + "px",
-                      right: "12px",
+                      right: "0px",
                     }}
                   >
                     <div className="w-2 h-2 bg-blue-500 rounded-full -ml-1 mr-1 flex-shrink-0" />
@@ -1862,15 +1943,15 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
                   <div
                     className="absolute -bottom-0.5 h-1 bg-blue-500 rounded-full z-20 flex items-center"
                     style={{
-                      left: paddingLeft + 32 + "px",
-                      right: "12px",
+                      left: paddingLeft + 20 + "px",
+                      right: "0px",
                     }}
                   >
                     <div className="w-2 h-2 bg-blue-500 rounded-full -ml-1 mr-1 flex-shrink-0" />
                   </div>
                 )}
 
-              <div className="flex items-center gap-2 flex-1">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
                 <div
                   onClick={(e) => {
                     e.stopPropagation();
@@ -1879,35 +1960,44 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
                   className="cursor-pointer p-1 hover:bg-gray-200 rounded"
                 >
                   {folder.expanded ? (
-                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                    <ChevronDown className="h-4 w-4 text-gray-400 flex-shrink-0" />
                   ) : (
-                    <ChevronRight className="h-4 w-4 text-gray-400" />
+                    <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
                   )}
                 </div>
                 {folder.expanded ? (
-                  <FolderOpen className="h-4 w-4 text-blue-600" />
+                  <FolderOpen className="h-4 w-4 text-blue-600 flex-shrink-0" />
                 ) : (
-                  <Folder className="h-4 w-4 text-blue-600" />
+                  <Folder className="h-4 w-4 text-blue-600 flex-shrink-0" />
                 )}
                 {editingItem === folder.id ? (
                   <input
-                    value={editingName}
-                    onChange={(e) => setEditingName(e.target.value)}
-                    onBlur={finishEditingName}
+                    defaultValue={editingName}
+                    onBlur={(e) => {
+                      console.log("onBlur triggered:", e.target.value);
+                      const newValue = e.target.value;
+                      setTimeout(() => {
+                        setEditingName(newValue);
+                        finishEditingName(newValue);
+                      }, 0);
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
-                        finishEditingName();
+                        (e.target as HTMLInputElement).blur(); // 포커스를 잃어서 onBlur 트리거
                       } else if (e.key === "Escape") {
                         cancelEditingName();
                       }
                     }}
                     className="text-sm font-medium text-gray-700 bg-white border rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     autoFocus
-                    onClick={(e) => e.stopPropagation()}
+                    autoComplete="off"
+                    spellCheck={false}
+                    lang="ko"
+                    inputMode="text"
                   />
                 ) : (
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-700">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-sm font-medium text-gray-700 truncate min-w-0">
                       {folder.name}
                     </span>
                     {/* 하위 항목 개수 뱃지 - 드래그 중이거나 접혀있을 때만 표시 */}
@@ -1937,85 +2027,109 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
                 )}
               </div>
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={(e) => e.stopPropagation()}
-                    className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 text-gray-500 hover:text-gray-700"
-                  >
-                    <MoreVertical className="h-3 w-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setCreateDialog({
-                        open: true,
-                        type: "document",
-                        parentFolderId: folder.id,
-                      });
-                    }}
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    하위 문서 추가
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setCreateDialog({
-                        open: true,
-                        type: "folder",
-                        parentFolderId: folder.id,
-                      });
-                    }}
-                  >
-                    <FolderPlus className="h-4 w-4 mr-2" />
-                    하위 폴더 추가
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDeleteDialog({
-                        open: true,
-                        type: "folder",
-                        id: folder.id,
-                        name: folder.name,
-                      });
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    삭제
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      startEditingName(folder);
-                    }}
-                  >
-                    <Edit3 className="h-4 w-4 mr-2" />
-                    이름 바꾸기
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {hasEditPermission && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => e.stopPropagation()}
+                      className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 text-gray-500 hover:text-gray-700"
+                    >
+                      <MoreVertical className="h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCreateDialog({
+                          open: true,
+                          type: "document",
+                          parentFolderId: folder.id,
+                        });
+                      }}
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      하위 문서 추가
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCreateDialog({
+                          open: true,
+                          type: "folder",
+                          parentFolderId: folder.id,
+                        });
+                      }}
+                    >
+                      <FolderPlus className="h-4 w-4 mr-2" />
+                      하위 폴더 추가
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteDialog({
+                          open: true,
+                          type: "folder",
+                          id: folder.id,
+                          name: folder.name,
+                        });
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      삭제
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        startEditingName(folder);
+                      }}
+                    >
+                      <Edit3 className="h-4 w-4 mr-2" />
+                      이름 바꾸기
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
           </div>
 
           {folder.expanded &&
             !(isDragging || (globalDragging && activeId === folder.id)) && (
-              <div>
+              <div
+                className="relative"
+                style={{
+                  pointerEvents: globalDragging ? "none" : "auto",
+                }}
+              >
                 {childFolders.map((childFolder) => (
                   <SortableTreeItem
                     key={childFolder.id}
                     item={childFolder}
                     level={level + 1}
+                    globalDragging={!!activeId}
                   />
                 ))}
                 {childDocuments.map((doc) => (
-                  <SortableTreeItem key={doc.id} item={doc} level={level + 1} />
+                  <SortableTreeItem
+                    key={doc.id}
+                    item={doc}
+                    level={level + 1}
+                    globalDragging={!!activeId}
+                  />
                 ))}
+              </div>
+            )}
+
+          {/* 펼쳐진 폴더 전체에 대한 inside 인디케이터 */}
+          {folder.expanded &&
+            dropIndicator?.id === folder.id &&
+            dropIndicator.position === "inside" && (
+              <div className="absolute inset-0 border-2 border-blue-500 border-dashed rounded-lg bg-blue-50 bg-opacity-30 z-10 pointer-events-none">
+                <div className="absolute top-2 left-4 text-xs text-blue-600 font-medium">
+                  폴더 안으로 이동
+                </div>
               </div>
             )}
         </div>
@@ -2023,9 +2137,9 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
     } else {
       const document = item as DocumentData;
       return (
-        <div className="px-4">
+        <div className="px-2">
           <div
-            className={`flex items-center justify-between gap-2 px-3 py-2 hover:bg-gray-100 hover:rounded-xl cursor-grab group relative transition-all duration-150 ${
+            className={`flex items-center justify-between gap-2 px-2 py-2 hover:bg-gray-100 hover:rounded-xl cursor-grab group relative transition-all duration-150 ${
               dragOverlay
                 ? "bg-blue-100 rounded-xl !bg-blue-100"
                 : isDragging
@@ -2034,7 +2148,7 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
                     ? "bg-blue-50 rounded-xl"
                     : ""
             }`}
-            style={{ paddingLeft: paddingLeft + 32 }}
+            style={{ paddingLeft: paddingLeft + 20 }}
             onClick={() => {
               setSelectedDocument(document);
               setSelectedFolderId(null); // 문서 선택 시 폴더 선택 해제
@@ -2050,7 +2164,7 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
                 <div
                   className="absolute -top-0.5 h-1 bg-blue-500 rounded-full z-20 flex items-center"
                   style={{
-                    left: paddingLeft + 12 + "px",
+                    left: paddingLeft + "px",
                     right: "12px",
                   }}
                 >
@@ -2062,7 +2176,7 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
                 <div
                   className="absolute -bottom-0.5 h-1 bg-blue-500 rounded-full z-20 flex items-center"
                   style={{
-                    left: paddingLeft + 12 + "px",
+                    left: paddingLeft + "px",
                     right: "12px",
                   }}
                 >
@@ -2070,68 +2184,80 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
                 </div>
               )}
 
-            <div className="flex items-center gap-2 flex-1">
-              <FileText className="h-4 w-4 text-gray-600" />
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <FileText className="h-4 w-4 text-gray-600 flex-shrink-0" />
               {editingItem === document.id ? (
                 <input
-                  value={editingName}
-                  onChange={(e) => setEditingName(e.target.value)}
-                  onBlur={finishEditingName}
+                  defaultValue={editingName}
+                  onBlur={(e) => {
+                    console.log("onBlur triggered:", e.target.value);
+                    const newValue = e.target.value;
+                    setTimeout(() => {
+                      setEditingName(newValue);
+                      finishEditingName(newValue);
+                    }, 0);
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      finishEditingName();
+                      (e.target as HTMLInputElement).blur(); // 포커스를 잃어서 onBlur 트리거
                     } else if (e.key === "Escape") {
                       cancelEditingName();
                     }
                   }}
                   className="text-sm text-gray-700 bg-white border rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500 flex-1"
                   autoFocus
+                  autoComplete="off"
+                  spellCheck={false}
+                  lang="ko"
+                  inputMode="text"
                   onClick={(e) => e.stopPropagation()}
                 />
               ) : (
-                <span className="text-sm text-gray-700 truncate">
+                <span className="text-sm text-gray-700 truncate min-w-0">
                   {document.name}
                 </span>
               )}
             </div>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={(e) => e.stopPropagation()}
-                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 text-gray-500 hover:text-gray-700"
-                >
-                  <MoreVertical className="h-3 w-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDeleteDialog({
-                      open: true,
-                      type: "document",
-                      id: document.id,
-                      name: document.name,
-                    });
-                  }}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  삭제
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    startEditingName(document);
-                  }}
-                >
-                  <Edit3 className="h-4 w-4 mr-2" />
-                  이름 바꾸기
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {hasEditPermission && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={(e) => e.stopPropagation()}
+                    className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 text-gray-500 hover:text-gray-700"
+                  >
+                    <MoreVertical className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteDialog({
+                        open: true,
+                        type: "document",
+                        id: document.id,
+                        name: document.name,
+                      });
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    삭제
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      startEditingName(document);
+                    }}
+                  >
+                    <Edit3 className="h-4 w-4 mr-2" />
+                    이름 바꾸기
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
       );
@@ -2150,10 +2276,10 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
     <div className="h-[calc(100vh-180px)] flex bg-gray-50 rounded-lg overflow-hidden border border-gray-200">
       {/* 왼쪽 사이드바 - 문서 목록 */}
       <div
-        className={`${sidebarCollapsed ? "w-16" : "w-80"} bg-white border-r border-gray-200 flex flex-col h-full transition-all duration-300 ease-in-out`}
+        className={`${sidebarCollapsed ? "w-16" : "w-64"} bg-white border-r border-gray-200 flex flex-col h-full transition-all duration-300 ease-in-out`}
       >
         {/* 사이드바 헤더 */}
-        <div className="p-4 border-b border-gray-200">
+        <div className="p-3 border-b border-gray-200">
           <div className="flex items-center justify-between mb-3">
             <div
               className={`flex items-center ${sidebarCollapsed ? "-ml-3" : ""}`}
@@ -2181,7 +2307,7 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
                 </span>
               )}
             </div>
-            {!sidebarCollapsed && (
+            {!sidebarCollapsed && hasEditPermission && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -2218,22 +2344,24 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
         {!sidebarCollapsed && (
           <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
             {folders.length === 0 && documents.length === 0 ? (
-              <div className="text-center py-12">
-                <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
+              <div className="text-center py-8 px-2">
+                <FileText className="h-10 w-10 mx-auto text-gray-400 mb-3" />
+                <h3 className="text-base font-medium text-gray-900 mb-2">
                   문서가 없습니다
                 </h3>
-                <p className="text-gray-500 mb-4">
+                <p className="text-sm text-gray-500 mb-4">
                   첫 번째 문서를 만들어보세요
                 </p>
-                <Button
-                  onClick={() =>
-                    setCreateDialog({ open: true, type: "document" })
-                  }
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  <Plus className="h-4 w-4 mr-2" />새 문서 만들기
-                </Button>
+                {hasEditPermission && (
+                  <Button
+                    onClick={() =>
+                      setCreateDialog({ open: true, type: "document" })
+                    }
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />새 문서 만들기
+                  </Button>
+                )}
               </div>
             ) : (
               <DndContext
@@ -2248,7 +2376,7 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
                 <SortableContext
                   items={[...folders, ...documents].map((item) => item.id)}
                 >
-                  <div className="py-2">
+                  <div className="py-1 px-1">
                     {folders
                       .filter((f) => !f.parentId)
                       .sort((a, b) => (a.order || 0) - (b.order || 0))
@@ -2257,6 +2385,7 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
                           key={folder.id}
                           item={folder}
                           level={0}
+                          globalDragging={!!activeId}
                         />
                       ))}
 
@@ -2264,7 +2393,12 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
                       .filter((d) => !d.folderId)
                       .sort((a, b) => (a.order || 0) - (b.order || 0))
                       .map((doc) => (
-                        <SortableTreeItem key={doc.id} item={doc} level={0} />
+                        <SortableTreeItem
+                          key={doc.id}
+                          item={doc}
+                          level={0}
+                          globalDragging={!!activeId}
+                        />
                       ))}
                   </div>
                 </SortableContext>
@@ -2357,17 +2491,21 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
                     )}
                   </p>
                 </div>
-                <Button
-                  onClick={saveDocument}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  저장
-                </Button>
+                {hasEditPermission && (
+                  <Button
+                    onClick={saveDocument}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    저장
+                  </Button>
+                )}
               </div>
 
               {/* 개선된 에디터 도구모음 */}
-              {editor && <SimpleEditorToolbar editor={editor} />}
+              {editor && hasEditPermission && (
+                <SimpleEditorToolbar editor={editor} />
+              )}
             </div>
 
             {/* 에디터 영역 */}
@@ -2424,7 +2562,8 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
                     white-space: pre-wrap;
                   }
 
-                  .ProseMirror ul, .ProseMirror ol {
+                  .ProseMirror ul,
+                  .ProseMirror ol {
                     padding-left: 1rem;
                     margin: 1rem 0;
                   }
@@ -2468,7 +2607,10 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
                     list-style: none;
                   }
 
-                  .ProseMirror ul[data-type="taskList"] li input[type="checkbox"] {
+                  .ProseMirror
+                    ul[data-type="taskList"]
+                    li
+                    input[type="checkbox"] {
                     margin-right: 0.25rem;
                     cursor: pointer;
                     width: 16px;
@@ -2493,7 +2635,9 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
                     min-height: 1.2em;
                   }
 
-                  .ProseMirror ul[data-type="taskList"] li[data-checked="true"] {
+                  .ProseMirror
+                    ul[data-type="taskList"]
+                    li[data-checked="true"] {
                     text-decoration: line-through;
                     color: #6b7280;
                   }
@@ -2510,7 +2654,9 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
                     background-color: #f3f4f6;
                     padding: 0.125rem 0.25rem;
                     border-radius: 0.25rem;
-                    font-family: ui-monospace, SFMono-Regular, 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+                    font-family:
+                      ui-monospace, SFMono-Regular, "SF Mono", Consolas,
+                      "Liberation Mono", Menlo, monospace;
                   }
 
                   .ProseMirror pre {
@@ -2527,14 +2673,25 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
                     border-radius: 0;
                   }
 
-                  .ProseMirror h1, .ProseMirror h2, .ProseMirror h3, .ProseMirror h4, .ProseMirror h5, .ProseMirror h6 {
+                  .ProseMirror h1,
+                  .ProseMirror h2,
+                  .ProseMirror h3,
+                  .ProseMirror h4,
+                  .ProseMirror h5,
+                  .ProseMirror h6 {
                     font-weight: bold;
                     margin: 1rem 0 0.5rem 0;
                   }
 
-                  .ProseMirror h1 { font-size: 2rem; }
-                  .ProseMirror h2 { font-size: 1.5rem; }
-                  .ProseMirror h3 { font-size: 1.25rem; }
+                  .ProseMirror h1 {
+                    font-size: 2rem;
+                  }
+                  .ProseMirror h2 {
+                    font-size: 1.5rem;
+                  }
+                  .ProseMirror h3 {
+                    font-size: 1.25rem;
+                  }
 
                   .ProseMirror p {
                     margin: 0.5rem 0;
@@ -2685,14 +2842,16 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
               <p className="text-gray-500 mb-6">
                 왼쪽에서 문서를 선택하거나 새 문서를 만들어보세요
               </p>
-              <Button
-                onClick={() =>
-                  setCreateDialog({ open: true, type: "document" })
-                }
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                <Plus className="h-4 w-4 mr-2" />새 문서 만들기
-              </Button>
+              {hasEditPermission && (
+                <Button
+                  onClick={() =>
+                    setCreateDialog({ open: true, type: "document" })
+                  }
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <Plus className="h-4 w-4 mr-2" />새 문서 만들기
+                </Button>
+              )}
             </div>
           </div>
         )}
@@ -2740,7 +2899,12 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
                 }
               }}
               onKeyDown={(e) => {
+                // IME 조합 중에는 키 이벤트 무시
+                if (e.nativeEvent.isComposing) {
+                  return;
+                }
                 if (e.key === "Enter") {
+                  e.preventDefault();
                   if (createDialog.type === "document") {
                     createNewDocument();
                   } else {
@@ -2749,6 +2913,10 @@ export default function WordTab({ programId, onNavigateToTab }: WordTabProps) {
                 }
               }}
               autoFocus
+              autoComplete="off"
+              spellCheck={false}
+              lang="ko"
+              inputMode="text"
             />
           </div>
           <DialogFooter>

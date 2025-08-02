@@ -5344,6 +5344,7 @@ export default function LayoutManager(): JSX.Element {
                         <SelectItem value="participants">참가자</SelectItem>
                         <SelectItem value="finance">재정</SelectItem>
                         <SelectItem value="teams">팀</SelectItem>
+                        <SelectItem value="word">문서</SelectItem>
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-gray-500">
@@ -5355,29 +5356,32 @@ export default function LayoutManager(): JSX.Element {
                 <TabsContent value="tabs" className="space-y-4">
                   <div className="space-y-3">
                     <Label className="text-sm font-medium">
-                      공통 탭에 표시할 기능
+                      표시할 탭 선택
                     </Label>
                     <div className="grid grid-cols-2 gap-2">
                       {[
+                        { key: "dashboard", label: "대시보드" },
                         { key: "calendar", label: "일정" },
                         { key: "participants", label: "참가자" },
+                        { key: "attendance", label: "출석" },
                         { key: "finance", label: "재정" },
-                        { key: "dashboard", label: "대시보드" },
+                        { key: "checklist", label: "확인사항" },
+                        { key: "word", label: "문서" },
                       ].map((tab) => (
                         <div
                           key={tab.key}
                           className="flex items-center space-x-2"
                         >
                           <Checkbox
-                            id={`common-${tab.key}`}
+                            id={`tab-${tab.key}`}
                             checked={
-                              editingWidget.settings?.common_tabs?.includes(
+                              editingWidget.settings?.enabled_tabs?.includes(
                                 tab.key
                               ) || false
                             }
                             onCheckedChange={(checked) => {
                               const currentTabs =
-                                editingWidget.settings?.common_tabs || [];
+                                editingWidget.settings?.enabled_tabs || [];
                               const newTabs = checked
                                 ? [...currentTabs, tab.key]
                                 : currentTabs.filter(
@@ -5387,13 +5391,13 @@ export default function LayoutManager(): JSX.Element {
                                 ...editingWidget,
                                 settings: {
                                   ...editingWidget.settings,
-                                  common_tabs: newTabs,
+                                  enabled_tabs: newTabs,
                                 },
                               });
                             }}
                           />
                           <Label
-                            htmlFor={`common-${tab.key}`}
+                            htmlFor={`tab-${tab.key}`}
                             className="text-sm font-normal"
                           >
                             {tab.label}
@@ -5402,60 +5406,7 @@ export default function LayoutManager(): JSX.Element {
                       ))}
                     </div>
                     <p className="text-xs text-gray-500">
-                      공통 탭에서 표시할 기능들을 선택합니다.
-                    </p>
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium">
-                      팀 탭에 표시할 기능
-                    </Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        { key: "calendar", label: "일정" },
-                        { key: "participants", label: "참가자" },
-                        { key: "finance", label: "재정" },
-                        { key: "dashboard", label: "대시보드" },
-                      ].map((tab) => (
-                        <div
-                          key={tab.key}
-                          className="flex items-center space-x-2"
-                        >
-                          <Checkbox
-                            id={`team-${tab.key}`}
-                            checked={
-                              editingWidget.settings?.team_tabs?.includes(
-                                tab.key
-                              ) || false
-                            }
-                            onCheckedChange={(checked) => {
-                              const currentTabs =
-                                editingWidget.settings?.team_tabs || [];
-                              const newTabs = checked
-                                ? [...currentTabs, tab.key]
-                                : currentTabs.filter(
-                                    (t: string) => t !== tab.key
-                                  );
-                              setEditingWidget({
-                                ...editingWidget,
-                                settings: {
-                                  ...editingWidget.settings,
-                                  team_tabs: newTabs,
-                                },
-                              });
-                            }}
-                          />
-                          <Label
-                            htmlFor={`team-${tab.key}`}
-                            className="text-sm font-normal"
-                          >
-                            {tab.label}
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      팀 탭에서 표시할 기능들을 선택합니다.
+                      위젯에서 표시할 탭들을 선택합니다.
                     </p>
                   </div>
 
@@ -5622,6 +5573,12 @@ export default function LayoutManager(): JSX.Element {
                           name: "대시보드",
                           icon: "📊",
                           desc: "프로그램 대시보드 및 통계 조회 권한",
+                        },
+                        {
+                          key: "word",
+                          name: "문서",
+                          icon: "📝",
+                          desc: "문서 작성, 편집 및 조회 권한",
                         },
                       ].map((tab) => (
                         <Card key={tab.key} className="p-4">

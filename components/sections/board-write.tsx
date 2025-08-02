@@ -63,7 +63,7 @@ import { ITag } from "@/types/index";
 // TipTap 에디터 컴포넌트를 동적으로 불러옴 (SSR 방지)
 // 동적 임포트 방식을 수정하여 ChunkLoadError 해결
 const TipTapEditor = dynamic(
-  () => import("@/components/ui/tiptap-editor").then((mod) => mod.default),
+  () => import("@/components/editor/tiptap-editor").then((mod) => mod.default),
   {
     ssr: false,
     loading: () => (

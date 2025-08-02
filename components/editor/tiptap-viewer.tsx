@@ -23,7 +23,7 @@ import { OrderedList } from "@tiptap/extension-ordered-list";
 import { ListItem } from "@tiptap/extension-list-item";
 import { Node } from "@tiptap/core";
 import React, { useEffect, useState } from "react";
-import ImageViewer from "./image-viewer";
+import ImageViewer from "@/components/ui/image-viewer";
 
 // 유튜브 비디오 노드 확장
 const Youtube = Node.create({

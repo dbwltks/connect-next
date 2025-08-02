@@ -26,9 +26,31 @@ import { Table } from "@tiptap/extension-table";
 import { TableRow } from "@tiptap/extension-table-row";
 import { TableHeader } from "@tiptap/extension-table-header";
 import { TableCell } from "@tiptap/extension-table-cell";
+
+const CustomTableCell = TableCell.extend({
+  addAttributes() {
+    return {
+      // extend the existing attributes …
+      ...this.parent?.(),
+
+      // and add a new one …
+      backgroundColor: {
+        default: null,
+        parseHTML: (element) => element.getAttribute("data-background-color"),
+        renderHTML: (attributes) => {
+          return {
+            "data-background-color": attributes.backgroundColor,
+            style: `background-color: ${attributes.backgroundColor}`,
+          };
+        },
+      },
+    };
+  },
+});
 import { BulletList } from "@tiptap/extension-bullet-list";
 import { OrderedList } from "@tiptap/extension-ordered-list";
 import { ListItem } from "@tiptap/extension-list-item";
+import { TaskList, TaskItem } from "@tiptap/extension-list";
 import { Dropcursor } from "@tiptap/extension-dropcursor";
 import { Gapcursor } from "@tiptap/extension-gapcursor";
 import React, {
@@ -39,21 +61,14 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from "react";
-import imageCompression from 'browser-image-compression';
+import imageCompression from "browser-image-compression";
 import {
-  Bold,
-  Italic,
-  Strikethrough,
   Link as LinkIcon,
   Image as ImageIcon,
-  List,
-  ListOrdered,
   Heading1,
   Heading2,
-  Code,
+  Heading3,
   Quote,
-  Undo,
-  Redo,
   Loader2,
   Upload,
   AlignLeft,
@@ -84,17 +99,30 @@ import {
   Heading,
   Minus as HorizontalRule,
   CornerDownLeft,
+  CheckSquare,
 } from "lucide-react";
-import { Button } from "./button";
-import { Input } from "./input";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { createClient } from "@/utils/supabase/client";
+import {
+  BoldIcon,
+  ItalicIcon,
+  StrikethroughIcon,
+  CodeIcon,
+  CodeBlockIcon,
+  BulletListIcon,
+  OrderedListIcon,
+  UndoIcon,
+  RedoIcon,
+  ListTodoIcon,
+} from "./icons";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "./select";
+} from "@/components/ui/select";
 import {
   Toast,
   ToastClose,
@@ -102,7 +130,7 @@ import {
   ToastProvider,
   ToastViewport,
   ToastTitle,
-} from "./toast";
+} from "@/components/ui/toast";
 
 // 토스트 상태 관리를 위한 이벤트 시스템
 const toastEventTarget = new EventTarget();
@@ -226,8 +254,9 @@ const parseStyleString = (styleStr: string): any => {
     const [property, value] = declaration.split(":").map((s: any) => s.trim());
     if (property && value) {
       // CSS 속성명을 camelCase로 변환
-      const camelProperty = property.replace(/-([a-z])/g, (_: any, letter: string) =>
-        letter.toUpperCase()
+      const camelProperty = property.replace(
+        /-([a-z])/g,
+        (_: any, letter: string) => letter.toUpperCase()
       );
       styles[camelProperty] = value;
     }
@@ -1006,7 +1035,7 @@ const MenuBar = ({
             size="sm"
             className="h-8 px-2"
           >
-            <Undo className="h-4 w-4" />
+            <UndoIcon className="h-4 w-4" />
           </Button>
           <Button
             type="button"
@@ -1016,7 +1045,7 @@ const MenuBar = ({
             size="sm"
             className="h-8 px-2"
           >
-            <Redo className="h-4 w-4" />
+            <RedoIcon className="h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -1032,7 +1061,7 @@ const MenuBar = ({
             size="sm"
             className="h-8 px-2"
           >
-            <Bold className="h-4 w-4" />
+            <BoldIcon className="h-4 w-4" />
           </Button>
           <Button
             type="button"
@@ -1041,7 +1070,7 @@ const MenuBar = ({
             size="sm"
             className="h-8 px-2"
           >
-            <Italic className="h-4 w-4" />
+            <ItalicIcon className="h-4 w-4" />
           </Button>
           <Button
             type="button"
@@ -1050,7 +1079,7 @@ const MenuBar = ({
             size="sm"
             className="h-8 px-2"
           >
-            <Strikethrough className="h-4 w-4" />
+            <StrikethroughIcon className="h-4 w-4" />
           </Button>
           <Button
             type="button"
@@ -1060,6 +1089,16 @@ const MenuBar = ({
             className="h-8 px-2"
           >
             <span className="text-sm font-bold underline">U</span>
+          </Button>
+          <Button
+            type="button"
+            onClick={() => editor.chain().focus().toggleTaskList().run()}
+            variant={editor.isActive("taskList") ? "secondary" : "ghost"}
+            size="sm"
+            className="h-8 px-2"
+            title="체크리스트"
+          >
+            <ListTodoIcon className="h-4 w-4" />
           </Button>
         </div>
 
@@ -1400,7 +1439,7 @@ const MenuBar = ({
             size="sm"
             className="h-8 px-2"
           >
-            <List className="h-4 w-4" />
+            <BulletListIcon className="h-4 w-4" />
           </Button>
           <Button
             type="button"
@@ -1409,7 +1448,7 @@ const MenuBar = ({
             size="sm"
             className="h-8 px-2"
           >
-            <ListOrdered className="h-4 w-4" />
+            <OrderedListIcon className="h-4 w-4" />
           </Button>
           <Button
             type="button"
@@ -1433,17 +1472,18 @@ const MenuBar = ({
             className="h-8 px-2"
             title="인라인 코드"
           >
-            <Code className="h-4 w-4" />
+            <CodeIcon className="h-4 w-4" />
           </Button>
           <Button
             type="button"
             onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+            disabled={!editor.can().chain().focus().toggleCodeBlock().run()}
             variant={editor.isActive("codeBlock") ? "secondary" : "ghost"}
             size="sm"
             className="h-8 px-2"
             title="코드 블록"
           >
-            <span className="text-xs font-mono">{`{}`}</span>
+            <CodeBlockIcon className="h-4 w-4" />
           </Button>
         </div>
 
@@ -1527,82 +1567,110 @@ const MenuBar = ({
 
       {/* 테이블 컨텍스트 툴바 */}
       {editor.isActive("table") && (
-        <div className="border-t border-gray-200 bg-gray-50 p-1">
-          <div className="flex items-center gap-1">
+        <div className="border-t border-gray-200 bg-gray-50 p-3">
+          <div className="grid grid-cols-3 gap-2 max-w-md">
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              className="h-8 px-2"
+              className="h-8 px-2 justify-start text-xs"
               onClick={() => editor.chain().focus().addColumnBefore().run()}
+              disabled={!editor.can().addColumnBefore()}
               title="열 추가(앞)"
             >
-              <Plus className="h-4 w-4 mr-1" />열 추가(앞)
+              <Plus className="h-3 w-3 mr-1" />열 추가(앞)
             </Button>
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              className="h-8 px-2"
+              className="h-8 px-2 justify-start text-xs"
               onClick={() => editor.chain().focus().addColumnAfter().run()}
+              disabled={!editor.can().addColumnAfter()}
               title="열 추가(뒤)"
             >
-              <Plus className="h-4 w-4 mr-1" />열 추가(뒤)
+              <Plus className="h-3 w-3 mr-1" />열 추가(뒤)
             </Button>
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              className="h-8 px-2"
-              onClick={() => editor.chain().focus().addRowBefore().run()}
-              title="행 추가(위)"
-            >
-              <Plus className="h-4 w-4 mr-1" />행 추가(위)
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-8 px-2"
-              onClick={() => editor.chain().focus().addRowAfter().run()}
-              title="행 추가(아래)"
-            >
-              <Plus className="h-4 w-4 mr-1" />행 추가(아래)
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-8 px-2 text-red-600 hover:text-red-700"
+              className="h-8 px-2 text-red-600 hover:text-red-700 justify-start text-xs"
               onClick={() => editor.chain().focus().deleteColumn().run()}
+              disabled={!editor.can().deleteColumn()}
               title="열 삭제"
             >
-              <Trash2 className="h-4 w-4 mr-1" />열 삭제
+              <Trash2 className="h-3 w-3 mr-1" />열 삭제
             </Button>
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              className="h-8 px-2 text-red-600 hover:text-red-700"
+              className="h-8 px-2 justify-start text-xs"
+              onClick={() => editor.chain().focus().addRowBefore().run()}
+              disabled={!editor.can().addRowBefore()}
+              title="행 추가(위)"
+            >
+              <Plus className="h-3 w-3 mr-1" />행 추가(위)
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 justify-start text-xs"
+              onClick={() => editor.chain().focus().addRowAfter().run()}
+              disabled={!editor.can().addRowAfter()}
+              title="행 추가(아래)"
+            >
+              <Plus className="h-3 w-3 mr-1" />행 추가(아래)
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-red-600 hover:text-red-700 justify-start text-xs"
               onClick={() => editor.chain().focus().deleteRow().run()}
+              disabled={!editor.can().deleteRow()}
               title="행 삭제"
             >
-              <Trash2 className="h-4 w-4 mr-1" />행 삭제
+              <Trash2 className="h-3 w-3 mr-1" />행 삭제
             </Button>
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              className="h-8 px-2 text-red-600 hover:text-red-700"
+              className="h-8 px-2 justify-start text-xs"
+              onClick={() => editor.chain().focus().mergeCells().run()}
+              disabled={!editor.can().mergeCells()}
+              title="셀 병합"
+            >
+              <Square className="h-3 w-3 mr-1" />셀 병합
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 justify-start text-xs"
+              onClick={() => editor.chain().focus().splitCell().run()}
+              disabled={!editor.can().splitCell()}
+              title="셀 분할"
+            >
+              <Minus className="h-3 w-3 mr-1" />셀 분할
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-red-600 hover:text-red-700 justify-start text-xs"
               onClick={() => editor.chain().focus().deleteTable().run()}
+              disabled={!editor.can().deleteTable()}
               title="표 삭제"
             >
-              <Trash2 className="h-4 w-4 mr-1" />표 삭제
+              <Trash2 className="h-3 w-3 mr-1" />표 삭제
             </Button>
           </div>
         </div>
       )}
-
     </div>
   );
 };
@@ -1803,7 +1871,6 @@ const TipTapEditor = forwardRef(function TipTapEditor(
     setUploadedFiles,
   } = props;
 
-
   const category = _category;
   const pageId = _pageId;
   const [selectedThumbnail, setSelectedThumbnail] = useState<
@@ -1850,6 +1917,12 @@ const TipTapEditor = forwardRef(function TipTapEditor(
         bulletList: false,
         orderedList: false,
         listItem: false,
+        // CodeBlock 명시적으로 활성화
+        codeBlock: {
+          HTMLAttributes: {
+            class: "tiptap-code-block",
+          },
+        },
       }),
       Underline,
       Subscript,
@@ -1859,10 +1932,11 @@ const TipTapEditor = forwardRef(function TipTapEditor(
       }),
       Table.configure({
         resizable: true,
+        allowTableNodeSelection: true,
       }),
       TableRow,
       TableHeader,
-      TableCell,
+      CustomTableCell,
       BulletList.configure({
         HTMLAttributes: {
           class: "tiptap-bullet-list",
@@ -1874,6 +1948,10 @@ const TipTapEditor = forwardRef(function TipTapEditor(
         },
       }),
       ListItem,
+      TaskList,
+      TaskItem.configure({
+        nested: true,
+      }),
       Dropcursor.configure({
         color: "#3b82f6",
         width: 2,
@@ -1935,12 +2013,12 @@ const TipTapEditor = forwardRef(function TipTapEditor(
       if (exists) return;
 
       // 이미지 개수 제한 체크 (최대 10개)
-      const currentImageCount = uploadedFiles.filter(file => 
+      const currentImageCount = uploadedFiles.filter((file) =>
         ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(
-          (file.type || file.url.split('.').pop() || '').toLowerCase()
+          (file.type || file.url.split(".").pop() || "").toLowerCase()
         )
       ).length;
-      
+
       if (currentImageCount >= 10) {
         showToast({
           title: "이미지 개수 초과",
@@ -2009,27 +2087,30 @@ const TipTapEditor = forwardRef(function TipTapEditor(
   const compressImage = useCallback(async (file: File): Promise<File> => {
     try {
       const options = {
-        maxSizeMB: 1,          // 최대 1MB로 압축
+        maxSizeMB: 1, // 최대 1MB로 압축
         maxWidthOrHeight: 1920, // 최대 해상도 1920px
-        useWebWorker: true,     // Web Worker 사용으로 성능 향상
-        fileType: 'image/webp', // WebP 형식으로 변환
-        quality: 0.8           // 품질 80%
+        useWebWorker: true, // Web Worker 사용으로 성능 향상
+        fileType: "image/webp", // WebP 형식으로 변환
+        quality: 0.8, // 품질 80%
       };
-      
+
       const compressedFile = await imageCompression(file, options);
-      
+
       // 압축률 계산
-      const compressionRatio = ((file.size - compressedFile.size) / file.size * 100).toFixed(1);
-      
+      const compressionRatio = (
+        ((file.size - compressedFile.size) / file.size) *
+        100
+      ).toFixed(1);
+
       showToast({
         title: "이미지 압축 완료",
-        description: `${file.name}: ${(file.size/1024/1024).toFixed(1)}MB → ${(compressedFile.size/1024/1024).toFixed(1)}MB (${compressionRatio}% 절약)`,
+        description: `${file.name}: ${(file.size / 1024 / 1024).toFixed(1)}MB → ${(compressedFile.size / 1024 / 1024).toFixed(1)}MB (${compressionRatio}% 절약)`,
         variant: "default",
       });
-      
+
       return compressedFile;
     } catch (error) {
-      console.error('이미지 압축 실패:', error);
+      console.error("이미지 압축 실패:", error);
       showToast({
         title: "압축 실패",
         description: `${file.name}: 원본 파일을 사용합니다.`,
@@ -2046,12 +2127,12 @@ const TipTapEditor = forwardRef(function TipTapEditor(
       if (!files || files.length === 0 || !editor) return;
 
       // 이미지 개수 제한 체크 (최대 10개)
-      const currentImageCount = uploadedFiles.filter(file => 
+      const currentImageCount = uploadedFiles.filter((file) =>
         ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(
-          (file.type || file.url.split('.').pop() || '').toLowerCase()
+          (file.type || file.url.split(".").pop() || "").toLowerCase()
         )
       ).length;
-      
+
       if (currentImageCount + files.length > 10) {
         showToast({
           title: "이미지 개수 초과",
@@ -2064,12 +2145,14 @@ const TipTapEditor = forwardRef(function TipTapEditor(
 
       // 파일 크기 체크 (압축 후 기준으로 2MB로 조정)
       const maxFileSize = 2 * 1024 * 1024; // 2MB (압축을 고려하여 조정)
-      const oversizedFiles = Array.from(files).filter(file => file.size > 10 * 1024 * 1024); // 10MB 이상은 압축해도 큰 파일
-      
+      const oversizedFiles = Array.from(files).filter(
+        (file) => file.size > 10 * 1024 * 1024
+      ); // 10MB 이상은 압축해도 큰 파일
+
       if (oversizedFiles.length > 0) {
         showToast({
           title: "파일 크기 초과",
-          description: `다음 파일들이 너무 큽니다 (10MB 초과): ${oversizedFiles.map(f => f.name).join(', ')}`,
+          description: `다음 파일들이 너무 큽니다 (10MB 초과): ${oversizedFiles.map((f) => f.name).join(", ")}`,
           variant: "destructive",
         });
         event.target.value = "";
@@ -2097,16 +2180,18 @@ const TipTapEditor = forwardRef(function TipTapEditor(
       for (let i = 0; i < files.length; i++) {
         const originalFile = files[i];
         const fileExt = originalFile.name.split(".").pop()?.toLowerCase() || "";
-        const isImage = ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(fileExt);
-        
+        const isImage = ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(
+          fileExt
+        );
+
         if (!isImage) continue;
 
         try {
           setUploadingFileName(originalFile.name);
-          
+
           // 압축 단계 (SVG는 압축하지 않음)
           let processedFile = originalFile;
-          if (fileExt !== 'svg') {
+          if (fileExt !== "svg") {
             showToast({
               title: "이미지 압축 중",
               description: `${originalFile.name} 압축 중...`,
@@ -2114,7 +2199,7 @@ const TipTapEditor = forwardRef(function TipTapEditor(
             });
             processedFile = await compressImage(originalFile);
           }
-          
+
           const currentProgress = Math.round(((i + 1) / files.length) * 100);
           setUploadProgress(currentProgress);
 
@@ -2127,7 +2212,8 @@ const TipTapEditor = forwardRef(function TipTapEditor(
 
           // 파일명 생성 (압축된 파일은 WebP 확장자 사용)
           const timestamp = Date.now() + i;
-          const finalExt = processedFile.type === 'image/webp' ? 'webp' : fileExt;
+          const finalExt =
+            processedFile.type === "image/webp" ? "webp" : fileExt;
           const fileName = `${timestamp}-${Math.random().toString(36).substring(2, 11)}.${finalExt}`;
           const filePath = `temp/images/${yyyy}/${mm}/${fileName}`;
 
@@ -2146,7 +2232,8 @@ const TipTapEditor = forwardRef(function TipTapEditor(
                 status: "",
                 category: category,
                 pageId: pageId,
-                compressed: fileExt !== 'svg' && processedFile.size < originalFile.size,
+                compressed:
+                  fileExt !== "svg" && processedFile.size < originalFile.size,
               },
             });
 
@@ -2176,7 +2263,8 @@ const TipTapEditor = forwardRef(function TipTapEditor(
 
           // 업로드 완료 후 에디터에 이미지 삽입
           const currentPosition = editor.state.selection.from;
-          editor.chain()
+          editor
+            .chain()
             .insertContentAt(currentPosition, {
               type: "image",
               attrs: {
@@ -2207,7 +2295,6 @@ const TipTapEditor = forwardRef(function TipTapEditor(
             description: `${originalFile.name} 업로드 완료 (${i + 1}/${files.length})`,
             variant: "default",
           });
-
         } catch (uploadError) {
           showToast({
             title: "이미지 업로드 예외 발생",
@@ -2218,7 +2305,10 @@ const TipTapEditor = forwardRef(function TipTapEditor(
       }
 
       // 모든 파일 업로드 완료 후 상태 업데이트
-      if (newUploadedFiles.length > 0 && typeof setUploadedFiles === "function") {
+      if (
+        newUploadedFiles.length > 0 &&
+        typeof setUploadedFiles === "function"
+      ) {
         const allFiles = [...uploadedFiles, ...newUploadedFiles];
         setUploadedFiles(allFiles);
       }
@@ -2235,13 +2325,7 @@ const TipTapEditor = forwardRef(function TipTapEditor(
       setUploadingFileName("");
       event.target.value = "";
     },
-    [
-      editor,
-      setUploadedFiles,
-      category,
-      pageId,
-      uploadedFiles,
-    ]
+    [editor, setUploadedFiles, category, pageId, uploadedFiles]
   );
 
   // 파일 업로드 핸들러
@@ -2252,12 +2336,14 @@ const TipTapEditor = forwardRef(function TipTapEditor(
 
       // 파일 크기 체크 (최대 5MB)
       const maxFileSize = 5 * 1024 * 1024; // 5MB
-      const oversizedFiles = Array.from(files).filter(file => file.size > maxFileSize);
-      
+      const oversizedFiles = Array.from(files).filter(
+        (file) => file.size > maxFileSize
+      );
+
       if (oversizedFiles.length > 0) {
         showToast({
           title: "파일 크기 초과",
-          description: `다음 파일들이 5MB를 초과합니다: ${oversizedFiles.map(f => f.name).join(', ')}`,
+          description: `다음 파일들이 5MB를 초과합니다: ${oversizedFiles.map((f) => f.name).join(", ")}`,
           variant: "destructive",
         });
         event.target.value = "";
@@ -2270,7 +2356,7 @@ const TipTapEditor = forwardRef(function TipTapEditor(
       const now = new Date();
       const yyyy = now.getFullYear();
       const mm = String(now.getMonth() + 1).padStart(2, "0");
-      
+
       // 업로드된 파일 정보를 저장할 배열
       const newUploadedFiles: IFileInfo[] = [];
 
@@ -2355,7 +2441,10 @@ const TipTapEditor = forwardRef(function TipTapEditor(
       }
 
       // 모든 파일 업로드 완료 후 상태 업데이트
-      if (newUploadedFiles.length > 0 && typeof setUploadedFiles === "function") {
+      if (
+        newUploadedFiles.length > 0 &&
+        typeof setUploadedFiles === "function"
+      ) {
         const allFiles = [...uploadedFiles, ...newUploadedFiles];
         setUploadedFiles(allFiles);
       }
@@ -2376,12 +2465,14 @@ const TipTapEditor = forwardRef(function TipTapEditor(
 
       // 파일 크기 체크 (최대 5MB)
       const maxFileSize = 5 * 1024 * 1024; // 5MB
-      const oversizedFiles = Array.from(files).filter(file => file.size > maxFileSize);
-      
+      const oversizedFiles = Array.from(files).filter(
+        (file) => file.size > maxFileSize
+      );
+
       if (oversizedFiles.length > 0) {
         showToast({
           title: "파일 크기 초과",
-          description: `다음 파일들이 5MB를 초과합니다: ${oversizedFiles.map(f => f.name).join(', ')}`,
+          description: `다음 파일들이 5MB를 초과합니다: ${oversizedFiles.map((f) => f.name).join(", ")}`,
           variant: "destructive",
         });
         event.target.value = "";
@@ -2392,7 +2483,7 @@ const TipTapEditor = forwardRef(function TipTapEditor(
       const now = new Date();
       const yyyy = now.getFullYear();
       const mm = String(now.getMonth() + 1).padStart(2, "0");
-      
+
       // 업로드된 파일 정보를 저장할 배열
       const newUploadedFiles: IFileInfo[] = [];
 
@@ -2459,13 +2550,16 @@ const TipTapEditor = forwardRef(function TipTapEditor(
           });
         }
       }
-      
+
       // 모든 파일 업로드 완료 후 상태 업데이트
-      if (newUploadedFiles.length > 0 && typeof setUploadedFiles === "function") {
+      if (
+        newUploadedFiles.length > 0 &&
+        typeof setUploadedFiles === "function"
+      ) {
         const allFiles = [...uploadedFiles, ...newUploadedFiles];
         setUploadedFiles(allFiles);
       }
-      
+
       // 파일 input 초기화
       event.target.value = "";
     },
@@ -2477,7 +2571,9 @@ const TipTapEditor = forwardRef(function TipTapEditor(
       <ToastProvider>
         <Toast
           open={toastState.open}
-          onOpenChange={(open) => setToastState((prev: any) => ({ ...prev, open }))}
+          onOpenChange={(open) =>
+            setToastState((prev: any) => ({ ...prev, open }))
+          }
         >
           {toastState.title && <ToastTitle>{toastState.title}</ToastTitle>}
           {toastState.description && (
@@ -2610,8 +2706,69 @@ const TipTapEditor = forwardRef(function TipTapEditor(
               margin-left: 1.5rem;
             }
 
-            .tiptap-editor .ProseMirror li {
+            .tiptap-editor .ProseMirror ul:not([data-type="taskList"]) li {
               margin: 0.25rem 0;
+              cursor: text;
+              position: relative;
+            }
+
+            .tiptap-editor
+              .ProseMirror
+              ul:not([data-type="taskList"])
+              li::marker {
+              color: currentColor;
+            }
+
+            .tiptap-editor .ProseMirror ul[data-type="taskList"] {
+              list-style: none;
+              padding-left: 0;
+              margin: 1rem 0;
+            }
+
+            .tiptap-editor .ProseMirror ul[data-type="taskList"] li {
+              display: flex;
+              align-items: center;
+              margin-bottom: 0.25rem;
+              margin-left: 0;
+              list-style: none;
+              cursor: text;
+            }
+
+            .tiptap-editor
+              .ProseMirror
+              ul[data-type="taskList"]
+              li
+              input[type="checkbox"] {
+              margin-right: 0.25rem;
+              cursor: pointer;
+              width: 16px;
+              height: 16px;
+            }
+
+            .tiptap-editor .ProseMirror ul[data-type="taskList"] li > label {
+              flex: 0 0 auto;
+              margin-right: 0.25rem;
+              user-select: none;
+              display: flex;
+              align-items: center;
+            }
+
+            .tiptap-editor .ProseMirror ul[data-type="taskList"] li > div {
+              flex: 1 1 auto;
+              cursor: text;
+            }
+
+            .tiptap-editor .ProseMirror ul[data-type="taskList"] li > div > p {
+              margin: 0;
+              min-height: 1.2em;
+            }
+
+            .tiptap-editor
+              .ProseMirror
+              ul[data-type="taskList"]
+              li[data-checked="true"] {
+              text-decoration: line-through;
+              color: #6b7280;
             }
 
             .tiptap-editor .ProseMirror h1 {
@@ -2660,12 +2817,13 @@ const TipTapEditor = forwardRef(function TipTapEditor(
 
             .tiptap-editor .ProseMirror table td,
             .tiptap-editor .ProseMirror table th {
-              min-width: 1em;
               border: 1px solid #d1d5db;
               padding: 0.5rem;
               vertical-align: top;
               box-sizing: border-box;
               position: relative;
+              overflow: hidden;
+              text-overflow: ellipsis;
             }
 
             .tiptap-editor .ProseMirror table th {
@@ -2694,6 +2852,7 @@ const TipTapEditor = forwardRef(function TipTapEditor(
               width: 4px;
               background-color: #3b82f6;
               pointer-events: none;
+              z-index: 20;
             }
 
             .tiptap-editor .ProseMirror table p {
@@ -2703,31 +2862,107 @@ const TipTapEditor = forwardRef(function TipTapEditor(
             .tiptap-editor .ProseMirror .tableWrapper {
               padding: 1rem 0;
               overflow-x: auto;
+              max-width: 100%;
             }
 
-            .tiptap-editor .ProseMirror .resize-cursor {
+            .tiptap-editor .ProseMirror .tableWrapper table {
+              max-width: 100%;
+            }
+
+            .tiptap-editor .ProseMirror.resize-cursor {
               cursor: ew-resize;
               cursor: col-resize;
             }
 
-            /* 코드 블록 스타일 */
+            /* Basic editor styles from TipTap official example */
+            .tiptap-editor .ProseMirror:first-child {
+              margin-top: 0;
+            }
+
+            /* List styles */
+            .tiptap-editor .ProseMirror ul,
+            .tiptap-editor .ProseMirror ol {
+              padding: 0 1rem;
+              margin: 1.25rem 1rem 1.25rem 0.4rem;
+            }
+
+            .tiptap-editor .ProseMirror ul li p,
+            .tiptap-editor .ProseMirror ol li p {
+              margin-top: 0.25em;
+              margin-bottom: 0.25em;
+            }
+
+            /* Heading styles */
+            .tiptap-editor .ProseMirror h1,
+            .tiptap-editor .ProseMirror h2,
+            .tiptap-editor .ProseMirror h3,
+            .tiptap-editor .ProseMirror h4,
+            .tiptap-editor .ProseMirror h5,
+            .tiptap-editor .ProseMirror h6 {
+              line-height: 1.1;
+              margin-top: 2.5rem;
+              text-wrap: pretty;
+            }
+
+            .tiptap-editor .ProseMirror h1,
+            .tiptap-editor .ProseMirror h2 {
+              margin-top: 3.5rem;
+              margin-bottom: 1.5rem;
+            }
+
+            .tiptap-editor .ProseMirror h1 {
+              font-size: 1.4rem;
+            }
+
+            .tiptap-editor .ProseMirror h2 {
+              font-size: 1.2rem;
+            }
+
+            .tiptap-editor .ProseMirror h3 {
+              font-size: 1.1rem;
+            }
+
+            .tiptap-editor .ProseMirror h4,
+            .tiptap-editor .ProseMirror h5,
+            .tiptap-editor .ProseMirror h6 {
+              font-size: 1rem;
+            }
+
+            /* Code and preformatted text styles */
+            .tiptap-editor .ProseMirror code {
+              background-color: #f3f4f6;
+              border-radius: 0.4rem;
+              color: #374151;
+              font-size: 0.85rem;
+              padding: 0.25em 0.3em;
+            }
+
             .tiptap-editor .ProseMirror pre {
               background: #1f2937;
-              color: #f9fafb;
-              font-family:
-                "JetBrains Mono", "Fira Code", Consolas, "Liberation Mono",
-                Menlo, Courier, monospace;
-              padding: 1rem;
               border-radius: 0.5rem;
-              overflow-x: auto;
-              margin: 1rem 0;
+              color: #f9fafb;
+              font-family: "JetBrainsMono", monospace;
+              margin: 1.5rem 0;
+              padding: 0.75rem 1rem;
             }
 
             .tiptap-editor .ProseMirror pre code {
-              color: inherit;
-              padding: 0;
               background: none;
-              font-size: inherit;
+              color: inherit;
+              font-size: 0.8rem;
+              padding: 0;
+            }
+
+            .tiptap-editor .ProseMirror blockquote {
+              border-left: 3px solid #d1d5db;
+              margin: 1.5rem 0;
+              padding-left: 1rem;
+            }
+
+            .tiptap-editor .ProseMirror hr {
+              border: none;
+              border-top: 1px solid #e5e7eb;
+              margin: 2rem 0;
             }
 
             /* 가로선 스타일 */

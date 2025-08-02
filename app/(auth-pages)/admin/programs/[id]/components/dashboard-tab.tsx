@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { format, isAfter, isBefore, addDays, parseISO } from "date-fns";
 import { ko } from "date-fns/locale";
+import { formatDateTimeToKorean } from "@/lib/time-format";
 import {
   participantsApi,
   financeApi,
@@ -398,7 +399,7 @@ export default function DashboardTab({
                     key={event.id}
                     className="flex items-start gap-3 p-2 bg-indigo-50/50 rounded-lg"
                   >
-                    <Clock className="h-3 w-3 text-indigo-600 mt-1" />
+                    {/* <Clock className="h-3 w-3 text-indigo-600 mt-1" /> */}
                     <div className="flex-1 min-w-0">
                       <h4 className="font-medium text-xs text-slate-900 truncate">
                         {event.title}
@@ -406,10 +407,7 @@ export default function DashboardTab({
                       <p className="text-xs text-slate-500">
                         {event.start_date &&
                         !isNaN(new Date(event.start_date).getTime())
-                          ? new Date(event.start_date).toLocaleString("ko-KR", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
+                          ? formatDateTimeToKorean(event.start_date)
                           : "--:--"}
                         {event.location && ` • ${event.location}`}
                       </p>
@@ -475,15 +473,7 @@ export default function DashboardTab({
                         <p className="text-xs text-slate-500">
                           {event.start_date &&
                           !isNaN(new Date(event.start_date).getTime())
-                            ? new Date(event.start_date).toLocaleString(
-                                "ko-KR",
-                                {
-                                  month: "short",
-                                  day: "numeric",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                }
-                              )
+                            ? `${format(new Date(event.start_date), "M.d", { locale: ko })} ${formatDateTimeToKorean(event.start_date)}`
                             : "--/-- --:--"}
                           {event.location && ` • ${event.location}`}
                         </p>
@@ -919,12 +909,7 @@ export default function DashboardTab({
   };
 
   const getCardColSpan = (cardId: string) => {
-    switch (cardId) {
-      case "schedule":
-        return "col-span-1 sm:col-span-2"; // 2 columns on larger screens
-      default:
-        return "col-span-1"; // 1 column
-    }
+    return "col-span-1"; // 모든 카드가 1칸씩 차지
   };
 
   return (

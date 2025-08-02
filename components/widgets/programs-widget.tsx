@@ -29,6 +29,7 @@ import {
   DollarSign,
   CheckCircle,
   BarChart3,
+  FileText,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ko } from "date-fns/locale";
@@ -37,6 +38,7 @@ import FinanceTab from "@/app/(auth-pages)/admin/programs/[id]/components/financ
 import AttendanceTab from "@/app/(auth-pages)/admin/programs/[id]/components/attendance-tab";
 import ParticipantsTab from "@/app/(auth-pages)/admin/programs/[id]/components/participants-tab";
 import DashboardTab from "@/app/(auth-pages)/admin/programs/[id]/components/dashboard-tab";
+import WordTab from "@/app/(auth-pages)/admin/programs/[id]/components/word-tab";
 import { createClient } from "@/utils/supabase/client";
 
 interface Program {
@@ -445,6 +447,7 @@ export default function ProgramsWidget({
       { key: "attendance", label: "출석" },
       { key: "finance", label: "재정" },
       { key: "checklist", label: "확인사항" },
+      { key: "word", label: "문서" },
     ];
 
     // 권한 확인 로직 - 레이아웃 매니저의 view_permissions 기반으로 수정
@@ -571,6 +574,7 @@ export default function ProgramsWidget({
                   {tab.key === "finance" && <DollarSign size={16} />}
                   {tab.key === "checklist" && <CheckCircle size={16} />}
                   {tab.key === "dashboard" && <BarChart3 size={16} />}
+                  {tab.key === "word" && <FileText size={16} />}
                   <span className="hidden sm:inline">{tab.label}</span>
                 </button>
               ))}
@@ -695,6 +699,16 @@ export default function ProgramsWidget({
               className="px-4 py-2 sm:py-4 sm:px-6"
             >
               <DashboardTab
+                programId={selectedProgram || ""}
+                onNavigateToTab={setActiveTab}
+              />
+            </TabsContent>
+          )}
+
+          {/* 문서 탭 */}
+          {tabConfig.availableTabs.some((tab) => tab.key === "word") && (
+            <TabsContent value="word" className="p-0">
+              <WordTab
                 programId={selectedProgram || ""}
                 onNavigateToTab={setActiveTab}
               />

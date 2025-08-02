@@ -45,7 +45,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { useUserProfile } from "@/hooks/use-user-profile";
 
 // TipTap 에디터 컴포넌트
-const TipTapEditor = dynamic(() => import("@/components/ui/tiptap-editor"), {
+const TipTapEditor = dynamic(() => import("@/components/editor/tiptap-editor"), {
   ssr: false,
   loading: () => <p>에디터 로드중...</p>,
 });

@@ -105,7 +105,7 @@ export default function ProgramDetailPage() {
             startDate: new Date().toISOString().split('T')[0],
             endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             description: "새로운 프로그램입니다.",
-            features: ["participants", "finance", "calendar", "attendance", "checklist", "teams", "meal", "sheet"],
+            features: ["participants", "finance", "calendar", "attendance", "checklist", "teams", "meal", "sheet", "word"],
           };
           setProgram(mockProgram);
         }
@@ -240,7 +240,11 @@ export default function ProgramDetailPage() {
 
         {program.features.includes("word") && (
           <TabsContent value="word">
-            <WordTab programId={programId} onNavigateToTab={setActiveTab} />
+            <WordTab 
+              programId={programId} 
+              onNavigateToTab={setActiveTab}
+              hasEditPermission={hasEditPermission()}
+            />
           </TabsContent>
         )}
 

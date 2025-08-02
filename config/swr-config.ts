@@ -20,10 +20,11 @@ export const swrGlobalConfig: SWRConfiguration = {
     if (process.env.NODE_ENV === 'development') {
       console.error(`🔴 SWR Error for ${key}:`, error);
       console.error('Error details:', {
-        message: error.message,
-        code: error.code,
-        details: error.details,
-        hint: error.hint
+        message: error?.message || 'Unknown error',
+        code: error?.code || null,
+        details: error?.details || null,
+        hint: error?.hint || null,
+        stack: error?.stack || null
       });
     }
   },

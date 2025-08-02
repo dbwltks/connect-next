@@ -63,7 +63,7 @@ import {
 import GlassContainer from "@/components/ui/glass-container";
 import { useAuth } from "@/contexts/auth-context";
 import { useUserProfile } from "@/hooks/use-user-profile";
-import TipTapViewer from "@/components/ui/tiptap-viewer";
+import TipTapViewer from "@/components/editor/tiptap-viewer";
 import { logBoardPostDelete } from "@/services/activityLogService";
 import { ITag } from "@/types/index";
 
