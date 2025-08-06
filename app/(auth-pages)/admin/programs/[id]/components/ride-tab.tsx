@@ -170,7 +170,8 @@ export default function RideTab({ programId, hasEditPermission = true }: RideTab
         const rideLocations = programData.ride_settings?.locations || DEFAULT_LOCATIONS;
         
         // 중복 제거하여 통합 장소 목록 생성
-        const combinedLocations = [...new Set([...eventsLocations, ...rideLocations])];
+        const combinedSet = new Set([...eventsLocations, ...rideLocations]);
+        const combinedLocations = Array.from(combinedSet);
         const finalLocations = combinedLocations.length > 0 ? combinedLocations : DEFAULT_LOCATIONS;
         
         if (programData.ride_settings) {
