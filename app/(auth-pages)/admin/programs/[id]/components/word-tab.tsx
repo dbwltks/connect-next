@@ -130,6 +130,22 @@ export default function WordTab({
 
   // 사이드바 상태
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // 모바일 체크
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (mobile) {
+        setSidebarCollapsed(true); // 모바일에서는 기본적으로 사이드바 닫기
+      }
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // 이름 편집 상태
   const [editingItem, setEditingItem] = useState<string | null>(null);
@@ -182,16 +198,19 @@ export default function WordTab({
   }, [programId]);
 
   // 에디터 내용 업데이트 핸들러
-  const handleEditorUpdate = React.useCallback((content: string) => {
-    if (selectedDocument && selectedDocument.content !== content) {
-      const updatedDocument = {
-        ...selectedDocument,
-        content,
-        updatedAt: new Date().toISOString(),
-      };
-      setSelectedDocument(updatedDocument);
-    }
-  }, [selectedDocument]);
+  const handleEditorUpdate = React.useCallback(
+    (content: string) => {
+      if (selectedDocument && selectedDocument.content !== content) {
+        const updatedDocument = {
+          ...selectedDocument,
+          content,
+          updatedAt: new Date().toISOString(),
+        };
+        setSelectedDocument(updatedDocument);
+      }
+    },
+    [selectedDocument]
+  );
 
   // 문서 및 폴더 로드
   const loadDocuments = async () => {
@@ -1442,75 +1461,79 @@ export default function WordTab({
   }
 
   return (
-    <div className="h-[calc(100vh-180px)] flex bg-gray-50 rounded-lg overflow-hidden border border-gray-200">
+    <div className="h-[calc(100vh-180px)] flex overflow-hidden relative">
+      {/* 모바일 오버레이 배경 */}
+      {!sidebarCollapsed && isMobile && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setSidebarCollapsed(true)}
+        />
+      )}
+      
       {/* 왼쪽 사이드바 - 문서 목록 */}
-      <div
-        className={`${sidebarCollapsed ? "w-16" : "w-64"} bg-white border-r border-gray-200 flex flex-col h-full transition-all duration-300 ease-in-out`}
-      >
-        {/* 사이드바 헤더 */}
-        <div className="p-3 border-b border-gray-200">
-          <div className="flex items-center justify-between mb-3">
-            <div
-              className={`flex items-center ${sidebarCollapsed ? "-ml-3" : ""}`}
-            >
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="h-8 w-8 p-0 flex-shrink-0"
-                title={
-                  sidebarCollapsed
-                    ? `사이드바 펼치기 (문서 ${documents.length}개)`
-                    : "사이드바 접기"
-                }
-              >
-                {sidebarCollapsed ? (
-                  <Menu className="h-4 w-4" />
-                ) : (
-                  <ChevronLeft className="h-4 w-4" />
-                )}
-              </Button>
-              {sidebarCollapsed && (
-                <span className="text-[10px] font-medium text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded-full min-w-[16px] text-center leading-tight -ml-1">
-                  {documents.length}
-                </span>
-              )}
-            </div>
-            {!sidebarCollapsed && hasEditPermission && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+      {!sidebarCollapsed && (
+        <div className={`w-64 bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ease-in-out ${
+          isMobile ? 'fixed left-0 top-0 bottom-0 z-50 shadow-lg' : 'relative h-full'
+        }`}>
+          {/* 사이드바 헤더 */}
+          <div className="h-16 px-4 border-b border-gray-200 flex items-center justify-between w-full">
+              <div className="flex items-center">
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-blue-600 text-white mr-3">
+                  <FileText className="size-4" />
+                </div>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-semibold">문서 관리</span>
+                  <span className="truncate text-xs text-gray-500">
+                    {documents.length}개 문서
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {isMobile && (
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-8 w-8 p-0"
-                    title="추가"
+                    onClick={() => setSidebarCollapsed(true)}
+                    className="h-8 w-8 p-0 flex-shrink-0 md:hidden"
+                    title="사이드바 닫기"
                   >
-                    <Plus className="h-4 w-4" />
+                    <ChevronLeft className="h-4 w-4" />
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onClick={() =>
-                      setCreateDialog({ open: true, type: "document" })
-                    }
-                  >
-                    <FileText className="h-4 w-4 mr-2" />새 문서
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() =>
-                      setCreateDialog({ open: true, type: "folder" })
-                    }
-                  >
-                    <FolderPlus className="h-4 w-4 mr-2" />새 폴더
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+                )}
+                {hasEditPermission && (
+                  <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0"
+                      title="추가"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() =>
+                        setCreateDialog({ open: true, type: "document" })
+                      }
+                    >
+                      <FileText className="h-4 w-4 mr-2" />새 문서
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() =>
+                        setCreateDialog({ open: true, type: "folder" })
+                      }
+                    >
+                      <FolderPlus className="h-4 w-4 mr-2" />새 폴더
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                )}
+              </div>
           </div>
-        </div>
 
-        {/* 문서 및 폴더 목록 */}
-        {!sidebarCollapsed && (
+          {/* 문서 및 폴더 목록 */}
           <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
             {folders.length === 0 && documents.length === 0 ? (
               <div className="text-center py-8 px-2">
@@ -1591,8 +1614,8 @@ export default function WordTab({
               </DndContext>
             )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* 삭제 다이얼로그 */}
       <AlertDialog
@@ -1647,18 +1670,37 @@ export default function WordTab({
         {selectedDocument ? (
           <>
             {/* 에디터 헤더 */}
-            <div className="bg-white p-4">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-900">
-                    {selectedDocument.name}
-                  </h2>
-                  <p className="text-sm text-gray-500">
-                    마지막 수정:{" "}
-                    {new Date(selectedDocument.updatedAt).toLocaleDateString(
-                      "ko-KR"
+            <div className="h-16 bg-white px-4 border-b border-gray-200 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                      className="h-8 w-8 p-0 flex-shrink-0"
+                      title={
+                        sidebarCollapsed ? "사이드바 펼치기" : "사이드바 접기"
+                      }
+                    >
+                      <Menu className="h-4 w-4" />
+                    </Button>
+                    {sidebarCollapsed && (
+                      <span className="text-[10px] font-medium text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded-full min-w-[16px] text-center leading-tight">
+                        {documents.length}
+                      </span>
                     )}
-                  </p>
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900">
+                      {selectedDocument.name}
+                    </h2>
+                    <p className="text-sm text-gray-500">
+                      마지막 수정:{" "}
+                      {new Date(selectedDocument.updatedAt).toLocaleDateString(
+                        "ko-KR"
+                      )}
+                    </p>
+                  </div>
                 </div>
                 {hasEditPermission && (
                   <Button
@@ -1669,7 +1711,6 @@ export default function WordTab({
                     저장
                   </Button>
                 )}
-              </div>
             </div>
 
             {/* 에디터 영역 */}
@@ -1961,25 +2002,45 @@ export default function WordTab({
           </>
         ) : (
           /* 문서 선택 안내 */
-          <div className="flex-1 flex items-center justify-center bg-white h-full">
-            <div className="text-center">
-              <FileText className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-xl font-medium text-gray-900 mb-2">
-                문서를 선택하세요
-              </h3>
-              <p className="text-gray-500 mb-6">
-                왼쪽에서 문서를 선택하거나 새 문서를 만들어보세요
-              </p>
-              {hasEditPermission && (
+          <div className="flex-1 flex flex-col bg-white h-full">
+            <div className="h-16 px-4 border-b border-gray-200 flex items-center">
+              <div className="flex items-center gap-2">
                 <Button
-                  onClick={() =>
-                    setCreateDialog({ open: true, type: "document" })
-                  }
-                  className="bg-blue-600 hover:bg-blue-700"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                  className="h-8 w-8 p-0 flex-shrink-0"
+                  title={sidebarCollapsed ? "사이드바 펼치기" : "사이드바 접기"}
                 >
-                  <Plus className="h-4 w-4 mr-2" />새 문서 만들기
+                  <Menu className="h-4 w-4" />
                 </Button>
-              )}
+                {sidebarCollapsed && (
+                  <span className="text-[10px] font-medium text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded-full min-w-[16px] text-center leading-tight">
+                    {documents.length}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <FileText className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-xl font-medium text-gray-900 mb-2">
+                  문서를 선택하세요
+                </h3>
+                <p className="text-gray-500 mb-6">
+                  왼쪽에서 문서를 선택하거나 새 문서를 만들어보세요
+                </p>
+                {hasEditPermission && (
+                  <Button
+                    onClick={() =>
+                      setCreateDialog({ open: true, type: "document" })
+                    }
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />새 문서 만들기
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         )}

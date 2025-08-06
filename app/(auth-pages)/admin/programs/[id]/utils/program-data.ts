@@ -44,6 +44,15 @@ export interface ProgramData {
     categories: any[];
     plans: any[];
   };
+  rides?: any[];
+  ride_settings?: {
+    locations?: string[];
+    statuses?: {
+      id: string;
+      label: string;
+      color: string;
+    }[];
+  };
   user_id?: string;
   created_at?: string;
   updated_at?: string;

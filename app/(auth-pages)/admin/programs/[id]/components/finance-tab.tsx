@@ -197,6 +197,43 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
     null
   );
   const [editingVendorValue, setEditingVendorValue] = useState("");
+  
+  // 순서 편집 모드 상태
+  const [isOrderEditMode, setIsOrderEditMode] = useState(false);
+
+  // 카테고리 순서 변경 함수
+  const moveCategoryUp = async (index: number) => {
+    if (index === 0) return;
+    const newCategories = [...financeCategories];
+    [newCategories[index - 1], newCategories[index]] = [newCategories[index], newCategories[index - 1]];
+    await updateFinanceSettings({ categories: newCategories });
+    setFinanceCategories(newCategories);
+  };
+
+  const moveCategoryDown = async (index: number) => {
+    if (index === financeCategories.length - 1) return;
+    const newCategories = [...financeCategories];
+    [newCategories[index], newCategories[index + 1]] = [newCategories[index + 1], newCategories[index]];
+    await updateFinanceSettings({ categories: newCategories });
+    setFinanceCategories(newCategories);
+  };
+
+  // 거래처 순서 변경 함수
+  const moveVendorUp = async (index: number) => {
+    if (index === 0) return;
+    const newVendors = [...financeVendors];
+    [newVendors[index - 1], newVendors[index]] = [newVendors[index], newVendors[index - 1]];
+    await updateFinanceSettings({ vendors: newVendors });
+    setFinanceVendors(newVendors);
+  };
+
+  const moveVendorDown = async (index: number) => {
+    if (index === financeVendors.length - 1) return;
+    const newVendors = [...financeVendors];
+    [newVendors[index], newVendors[index + 1]] = [newVendors[index + 1], newVendors[index]];
+    await updateFinanceSettings({ vendors: newVendors });
+    setFinanceVendors(newVendors);
+  };
 
   // 재정 수정 상태
   const [editingFinance, setEditingFinance] = useState<string | null>(null);
@@ -2240,6 +2277,28 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
                             <>
                               <span className="text-sm">{category}</span>
                               <div className="flex gap-1">
+                                {isOrderEditMode && (
+                                  <>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => moveCategoryUp(index)}
+                                      disabled={index === 0}
+                                      className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700 disabled:opacity-30"
+                                    >
+                                      <ArrowUp className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => moveCategoryDown(index)}
+                                      disabled={index === financeCategories.length - 1}
+                                      className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700 disabled:opacity-30"
+                                    >
+                                      <ArrowDown className="h-3 w-3" />
+                                    </Button>
+                                  </>
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -2346,6 +2405,28 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
                             <>
                               <span className="text-sm">{vendor}</span>
                               <div className="flex gap-1">
+                                {isOrderEditMode && (
+                                  <>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => moveVendorUp(index)}
+                                      disabled={index === 0}
+                                      className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700 disabled:opacity-30"
+                                    >
+                                      <ArrowUp className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => moveVendorDown(index)}
+                                      disabled={index === financeVendors.length - 1}
+                                      className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700 disabled:opacity-30"
+                                    >
+                                      <ArrowDown className="h-3 w-3" />
+                                    </Button>
+                                  </>
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -2376,7 +2457,14 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
               </TabsContent>
             </Tabs>
 
-            <div className="flex justify-end mt-4">
+            <div className="flex justify-between items-center mt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsOrderEditMode(!isOrderEditMode)}
+              >
+                {isOrderEditMode ? "완료" : "편집"}
+              </Button>
               <Button
                 variant="outline"
                 onClick={() => setIsFinanceCategorySettingsOpen(false)}

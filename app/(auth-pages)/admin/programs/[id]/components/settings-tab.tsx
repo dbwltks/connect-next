@@ -18,6 +18,7 @@ import {
   FileSpreadsheet,
   FileText,
   Settings,
+  Car,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { loadProgramData, saveProgramData, type ProgramData } from "../utils/program-data";
@@ -34,6 +35,7 @@ const AVAILABLE_FEATURES = [
   { id: "checklist", label: "확인사항", icon: CheckCircle, description: "할 일 및 체크리스트" },
   { id: "teams", label: "팀 관리", icon: Users, description: "팀 구성 및 관리" },
   { id: "meal", label: "식단 관리", icon: ClipboardList, description: "식단 계획 및 관리" },
+  { id: "ride", label: "라이드 관리", icon: Car, description: "차량 및 승객 관리" },
   { id: "sheet", label: "스프레드시트", icon: FileSpreadsheet, description: "데이터 시트 및 분석" },
   { id: "word", label: "문서 관리", icon: FileText, description: "문서 작성 및 관리" },
 ];

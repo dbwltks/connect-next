@@ -19,6 +19,7 @@ import {
   ClipboardList,
   FileSpreadsheet,
   FileText,
+  Car,
 } from "lucide-react";
 import { loadProgramData, type ProgramData } from "./utils/program-data";
 
@@ -45,6 +46,7 @@ import TeamsTab from "./components/teams-tab";
 import MealTab from "./components/meal-tab";
 import SheetTab from "./components/sheet-tab";
 import WordTab from "./components/word-tab";
+import RideTab from "./components/ride-tab";
 import SettingsTab from "./components/settings-tab";
 
 export default function ProgramDetailPage() {
@@ -105,7 +107,7 @@ export default function ProgramDetailPage() {
             startDate: new Date().toISOString().split('T')[0],
             endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             description: "새로운 프로그램입니다.",
-            features: ["participants", "finance", "calendar", "attendance", "checklist", "teams", "meal", "sheet", "word"],
+            features: ["participants", "finance", "calendar", "attendance", "checklist", "teams", "meal", "ride", "sheet", "word"],
           };
           setProgram(mockProgram);
         }
@@ -146,6 +148,7 @@ export default function ProgramDetailPage() {
     ...(program.features.includes("checklist") ? [{ id: "checklist", label: "확인사항", icon: CheckCircle }] : []),
     ...(program.features.includes("teams") ? [{ id: "teams", label: "팀 관리", icon: Users }] : []),
     ...(program.features.includes("meal") ? [{ id: "meal", label: "식단", icon: ClipboardList }] : []),
+    ...(program.features.includes("ride") ? [{ id: "ride", label: "라이드", icon: Car }] : []),
     ...(program.features.includes("sheet") ? [{ id: "sheet", label: "스프레드시트", icon: FileSpreadsheet }] : []),
     ...(program.features.includes("word") ? [{ id: "word", label: "문서", icon: FileText }] : []),
     { id: "settings", label: "설정", icon: Settings },
@@ -235,6 +238,15 @@ export default function ProgramDetailPage() {
         {program.features.includes("sheet") && (
           <TabsContent value="sheet">
             <SheetTab programId={programId} onNavigateToTab={setActiveTab} />
+          </TabsContent>
+        )}
+
+        {program.features.includes("ride") && (
+          <TabsContent value="ride">
+            <RideTab 
+              programId={programId} 
+              hasEditPermission={hasEditPermission()}
+            />
           </TabsContent>
         )}
 
