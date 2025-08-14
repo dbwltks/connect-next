@@ -31,6 +31,7 @@ export interface FinanceRecord {
   description?: string;
   date: string;
   program_id: string;
+  isActual?: boolean;
 }
 
 export interface Event {

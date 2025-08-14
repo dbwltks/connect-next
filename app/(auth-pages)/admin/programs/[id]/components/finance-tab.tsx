@@ -1,6 +1,24 @@
 "use client";
 
 import { useState, useEffect } from "react";
+
+// 확장된 Finance 타입 정의
+interface ExtendedFinanceRecord {
+  id: string;
+  type: 'income' | 'expense';
+  category: string;
+  vendor?: string;
+  itemName?: string;
+  amount: number;
+  paidBy?: string;
+  description?: string;
+  date?: string;
+  datetime?: string;
+  program_id?: string;
+  isActual?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,6 +61,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   DollarSign,
   Plus,
@@ -141,10 +160,13 @@ interface FinanceTabProps {
   hasEditPermission?: boolean;
 }
 
-export default function FinanceTab({ programId, hasEditPermission = false }: FinanceTabProps) {
+export default function FinanceTab({
+  programId,
+  hasEditPermission = false,
+}: FinanceTabProps) {
   // 반응형 디바이스 체크 (768px = md breakpoint)
   const isMobile = useMediaQuery("(max-width: 768px)");
-  
+
   const [finances, setFinances] = useState<FinanceRecord[]>([]);
 
   // 재정 추가 모달 상태
@@ -164,7 +186,8 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
     amount: "",
     paidBy: "",
     description: "",
-    datetime: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+    datetime: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss"),
+    isActual: true,
   });
 
   // 재정 카테고리 관리 상태
@@ -197,7 +220,7 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
     null
   );
   const [editingVendorValue, setEditingVendorValue] = useState("");
-  
+
   // 순서 편집 모드 상태
   const [isOrderEditMode, setIsOrderEditMode] = useState(false);
 
@@ -205,7 +228,10 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
   const moveCategoryUp = async (index: number) => {
     if (index === 0) return;
     const newCategories = [...financeCategories];
-    [newCategories[index - 1], newCategories[index]] = [newCategories[index], newCategories[index - 1]];
+    [newCategories[index - 1], newCategories[index]] = [
+      newCategories[index],
+      newCategories[index - 1],
+    ];
     await updateFinanceSettings({ categories: newCategories });
     setFinanceCategories(newCategories);
   };
@@ -213,7 +239,10 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
   const moveCategoryDown = async (index: number) => {
     if (index === financeCategories.length - 1) return;
     const newCategories = [...financeCategories];
-    [newCategories[index], newCategories[index + 1]] = [newCategories[index + 1], newCategories[index]];
+    [newCategories[index], newCategories[index + 1]] = [
+      newCategories[index + 1],
+      newCategories[index],
+    ];
     await updateFinanceSettings({ categories: newCategories });
     setFinanceCategories(newCategories);
   };
@@ -222,7 +251,10 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
   const moveVendorUp = async (index: number) => {
     if (index === 0) return;
     const newVendors = [...financeVendors];
-    [newVendors[index - 1], newVendors[index]] = [newVendors[index], newVendors[index - 1]];
+    [newVendors[index - 1], newVendors[index]] = [
+      newVendors[index],
+      newVendors[index - 1],
+    ];
     await updateFinanceSettings({ vendors: newVendors });
     setFinanceVendors(newVendors);
   };
@@ -230,7 +262,10 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
   const moveVendorDown = async (index: number) => {
     if (index === financeVendors.length - 1) return;
     const newVendors = [...financeVendors];
-    [newVendors[index], newVendors[index + 1]] = [newVendors[index + 1], newVendors[index]];
+    [newVendors[index], newVendors[index + 1]] = [
+      newVendors[index + 1],
+      newVendors[index],
+    ];
     await updateFinanceSettings({ vendors: newVendors });
     setFinanceVendors(newVendors);
   };
@@ -296,7 +331,14 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
 
   // 페이지네이션 상태
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(() => {
+    // 로컬 스토리지에서 저장된 값 불러오기
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("finance-items-per-page");
+      return saved ? parseInt(saved) : 10;
+    }
+    return 10;
+  });
 
   // 선택된 재정 행 상태
   const [selectedFinanceId, setSelectedFinanceId] = useState<string | null>(
@@ -321,15 +363,15 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
 
   // 정렬 상태
   const [sortField, setSortField] = useState<string | null>(null);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   // 정렬 함수
   const handleSort = (field: string) => {
     if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
       setSortField(field);
-      setSortDirection('asc');
+      setSortDirection("asc");
     }
   };
 
@@ -338,7 +380,7 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
     if (sortField !== field) {
       return <ArrowUpDown className="h-3 w-3 text-gray-400" />;
     }
-    return sortDirection === 'asc' ? (
+    return sortDirection === "asc" ? (
       <ArrowUp className="h-3 w-3 text-blue-600" />
     ) : (
       <ArrowDown className="h-3 w-3 text-blue-600" />
@@ -350,7 +392,7 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
     const handleResize = () => {
       const isMobile = window.innerWidth < 640; // sm breakpoint
       if (isMobile) {
-        setVisibleColumns(prev => ({
+        setVisibleColumns((prev) => ({
           ...prev,
           category: false,
           vendor: false,
@@ -363,16 +405,16 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
     handleResize();
 
     // 리사이즈 이벤트 리스너 추가
-    window.addEventListener('resize', handleResize);
-    
+    window.addEventListener("resize", handleResize);
+
     // 클린업
-    return () => window.removeEventListener('resize', handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   // 데이터 새로고침 함수
   const refreshData = async () => {
     if (!programId) return;
-    
+
     try {
       const supabase = createClient();
       const { data, error } = await supabase
@@ -386,7 +428,7 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
       } else {
         // 재정 데이터 programs 테이블의 finances 필드에서 로드
         setFinances(Array.isArray(data.finances) ? data.finances : []);
-        
+
         // finance_settings에서 카테고리와 거래처 로드
         const financeSettings = data.finance_settings || {};
         if (Array.isArray(financeSettings.categories)) {
@@ -441,7 +483,7 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
   }, [programId]);
 
   // 재정 필터링
-  const filteredFinances = finances.filter((finance) => {
+  const filteredFinances: ExtendedFinanceRecord[] = finances.filter((finance) => {
     // 날짜 필터
     if (financeFilters.dateRange !== "all") {
       if (!finance.datetime && !finance.date) return true;
@@ -514,22 +556,36 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
     }
 
     // 타입 필터 (다중 선택)
-    if (financeFilters.types.length > 0 && !financeFilters.types.includes(finance.type)) {
+    if (
+      financeFilters.types.length > 0 &&
+      !financeFilters.types.includes(finance.type)
+    ) {
       return false;
     }
 
     // 카테고리 필터 (다중 선택)
-    if (financeFilters.categories.length > 0 && !financeFilters.categories.includes(finance.category)) {
+    if (
+      financeFilters.categories.length > 0 &&
+      !financeFilters.categories.includes(finance.category)
+    ) {
       return false;
     }
 
     // 거래처 필터 (다중 선택)
-    if (financeFilters.vendors.length > 0 && finance.vendor && !financeFilters.vendors.includes(finance.vendor)) {
+    if (
+      financeFilters.vendors.length > 0 &&
+      finance.vendor &&
+      !financeFilters.vendors.includes(finance.vendor)
+    ) {
       return false;
     }
 
     // 거래자 필터 (다중 선택)
-    if (financeFilters.paidBys.length > 0 && finance.paidBy && !financeFilters.paidBys.includes(finance.paidBy)) {
+    if (
+      financeFilters.paidBys.length > 0 &&
+      finance.paidBy &&
+      !financeFilters.paidBys.includes(finance.paidBy)
+    ) {
       return false;
     }
 
@@ -547,33 +603,33 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
       if (sortField) {
         let aValue: any;
         let bValue: any;
-        
+
         switch (sortField) {
-          case 'date':
+          case "date":
             aValue = new Date(a.datetime || a.date || 0).getTime();
             bValue = new Date(b.datetime || b.date || 0).getTime();
             break;
-          case 'type':
+          case "type":
             aValue = a.type;
             bValue = b.type;
             break;
-          case 'category':
-            aValue = a.category || '';
-            bValue = b.category || '';
+          case "category":
+            aValue = a.category || "";
+            bValue = b.category || "";
             break;
-          case 'vendor':
-            aValue = a.vendor || '';
-            bValue = b.vendor || '';
+          case "vendor":
+            aValue = a.vendor || "";
+            bValue = b.vendor || "";
             break;
-          case 'itemName':
-            aValue = a.itemName || '';
-            bValue = b.itemName || '';
+          case "itemName":
+            aValue = a.itemName || "";
+            bValue = b.itemName || "";
             break;
-          case 'paidBy':
-            aValue = a.paidBy || '';
-            bValue = b.paidBy || '';
+          case "paidBy":
+            aValue = a.paidBy || "";
+            bValue = b.paidBy || "";
             break;
-          case 'amount':
+          case "amount":
             aValue = a.amount || 0;
             bValue = b.amount || 0;
             break;
@@ -581,13 +637,13 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
             aValue = 0;
             bValue = 0;
         }
-        
-        if (typeof aValue === 'string' && typeof bValue === 'string') {
+
+        if (typeof aValue === "string" && typeof bValue === "string") {
           const result = aValue.localeCompare(bValue);
-          return sortDirection === 'asc' ? result : -result;
+          return sortDirection === "asc" ? result : -result;
         } else {
           const result = aValue - bValue;
-          return sortDirection === 'asc' ? result : -result;
+          return sortDirection === "asc" ? result : -result;
         }
       } else {
         // 기본 정렬: datetime으로 내림차순
@@ -613,14 +669,77 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
     .reduce((acc, f) => acc + f.amount, 0);
   const balance = totalIncome - totalExpense;
 
-  // 현금 거래 합계 계산
-  const cashIncome = filteredFinances
-    .filter((f) => f.type === "income" && f.vendor && f.vendor.includes("현금"))
+  // 실제/예상별 통계 계산
+  const actualIncome = filteredFinances
+    .filter((f) => f.type === "income" && (f.isActual === true || f.isActual === undefined))
     .reduce((acc, f) => acc + f.amount, 0);
-  const cashExpense = filteredFinances
-    .filter((f) => f.type === "expense" && f.vendor && f.vendor.includes("현금"))
+  const plannedIncome = filteredFinances
+    .filter((f) => f.type === "income" && f.isActual === false)
     .reduce((acc, f) => acc + f.amount, 0);
-  const cashBalance = cashIncome - cashExpense;
+  const actualExpense = filteredFinances
+    .filter((f) => f.type === "expense" && (f.isActual === true || f.isActual === undefined))
+    .reduce((acc, f) => acc + f.amount, 0);
+  const plannedExpense = filteredFinances
+    .filter((f) => f.type === "expense" && f.isActual === false)
+    .reduce((acc, f) => acc + f.amount, 0);
+
+  // 실제/예상별 잔액 계산
+  const actualBalance = actualIncome - actualExpense;
+  const plannedBalance = plannedIncome - plannedExpense;
+
+  // 실제/예상별 현금 거래 계산
+  const actualCashIncome = filteredFinances
+    .filter(
+      (f) =>
+        f.type === "income" &&
+        (f.isActual === true || f.isActual === undefined) &&
+        f.vendor &&
+        f.vendor.includes("현금")
+    )
+    .reduce((acc, f) => acc + f.amount, 0);
+  const plannedCashIncome = filteredFinances
+    .filter(
+      (f) =>
+        f.type === "income" &&
+        f.isActual === false &&
+        f.vendor &&
+        f.vendor.includes("현금")
+    )
+    .reduce((acc, f) => acc + f.amount, 0);
+  const actualCashExpense = filteredFinances
+    .filter(
+      (f) =>
+        f.type === "expense" &&
+        (f.isActual === true || f.isActual === undefined) &&
+        f.vendor &&
+        f.vendor.includes("현금")
+    )
+    .reduce((acc, f) => acc + f.amount, 0);
+  const plannedCashExpense = filteredFinances
+    .filter(
+      (f) =>
+        f.type === "expense" &&
+        f.isActual === false &&
+        f.vendor &&
+        f.vendor.includes("현금")
+    )
+    .reduce((acc, f) => acc + f.amount, 0);
+
+  // 총 현금 계산
+  const totalCashIncome = actualCashIncome + plannedCashIncome;
+  const totalCashExpense = actualCashExpense + plannedCashExpense;
+  const totalCashBalance = totalCashIncome - totalCashExpense;
+
+  // 실제/예상별 비현금 계산
+  const actualNonCashIncome = actualIncome - actualCashIncome;
+  const plannedNonCashIncome = plannedIncome - plannedCashIncome;
+  const actualNonCashExpense = actualExpense - actualCashExpense;
+  const plannedNonCashExpense = plannedExpense - plannedCashExpense;
+
+  // 총 비현금 계산
+  const totalNonCashIncome = actualNonCashIncome + plannedNonCashIncome;
+  const totalNonCashExpense = actualNonCashExpense + plannedNonCashExpense;
+  const totalNonCashBalance = totalNonCashIncome - totalNonCashExpense;
 
   // 재정 데이터 추가 함수
   const handleAddFinance = async () => {
@@ -661,6 +780,7 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
               paidBy: newFinance.paidBy,
               description: newFinance.description,
               datetime: newFinance.datetime,
+              isActual: newFinance.isActual,
               updated_at: new Date().toISOString(),
             };
           }
@@ -678,6 +798,7 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
           paidBy: newFinance.paidBy,
           description: newFinance.description,
           datetime: newFinance.datetime,
+          isActual: newFinance.isActual,
           created_at: new Date().toISOString(),
         };
         updatedFinances = [...currentFinances, newFinanceRecord];
@@ -705,15 +826,16 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
         amount: "",
         paidBy: "",
         description: "",
-        datetime: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+        datetime: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss"),
+        isActual: true,
       });
       setEditingFinance(null);
 
       setIsFinanceModalOpen(false);
-      
+
       // 데이터 새로고침
       await refreshData();
-      
+
       showAlert(
         isEdit ? "수정 완료" : "추가 완료",
         isEdit
@@ -936,7 +1058,10 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
       amount: finance.amount.toString(),
       paidBy: finance.paidBy || "",
       description: finance.description || "",
-      datetime: finance.datetime || format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+      datetime: finance.datetime 
+        ? (finance.datetime.length === 16 ? finance.datetime + ":00" : finance.datetime)
+        : format(new Date(), "yyyy-MM-dd'T'HH:mm:ss"),
+      isActual: finance.isActual !== undefined ? finance.isActual : true,
     });
     setIsFinanceModalOpen(true);
   };
@@ -1015,8 +1140,31 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
             <div className="text-2xl font-bold text-green-600">
               ${totalIncome.toLocaleString()} CAD
             </div>
-            <div className="text-xs text-gray-500 mt-1">
-              현금: ${cashIncome.toLocaleString()} / 비현금: ${(totalIncome - cashIncome).toLocaleString()} CAD
+            <div className="text-xs text-gray-500 mt-2 space-y-1">
+              <div className="flex justify-between">
+                <span className="text-green-700 font-medium">
+                  실제: ${actualIncome.toLocaleString()}
+                </span>
+                <span className="text-orange-600">
+                  예상: ${plannedIncome.toLocaleString()}
+                </span>
+              </div>
+              <div className="text-xs text-gray-400 space-y-0.5">
+                <div className="flex justify-between">
+                  <span>현금: ${totalCashIncome.toLocaleString()}</span>
+                  <span>비현금: ${totalNonCashIncome.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-[10px]">
+                  <span>
+                    실제 ${actualCashIncome.toLocaleString()} / 예상 $
+                    {plannedCashIncome.toLocaleString()}
+                  </span>
+                  <span>
+                    실제 ${actualNonCashIncome.toLocaleString()} / 예상 $
+                    {plannedNonCashIncome.toLocaleString()}
+                  </span>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -1026,8 +1174,31 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
             <div className="text-2xl font-bold text-red-600">
               ${totalExpense.toLocaleString()} CAD
             </div>
-            <div className="text-xs text-gray-500 mt-1">
-              현금: ${cashExpense.toLocaleString()} / 비현금: ${(totalExpense - cashExpense).toLocaleString()} CAD
+            <div className="text-xs text-gray-500 mt-2 space-y-1">
+              <div className="flex justify-between">
+                <span className="text-green-700 font-medium">
+                  실제: ${actualExpense.toLocaleString()}
+                </span>
+                <span className="text-orange-600">
+                  예상: ${plannedExpense.toLocaleString()}
+                </span>
+              </div>
+              <div className="text-xs text-gray-400 space-y-0.5">
+                <div className="flex justify-between">
+                  <span>현금: ${totalCashExpense.toLocaleString()}</span>
+                  <span>비현금: ${totalNonCashExpense.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-[10px]">
+                  <span>
+                    실제 ${actualCashExpense.toLocaleString()} / 예상 $
+                    {plannedCashExpense.toLocaleString()}
+                  </span>
+                  <span>
+                    실제 ${actualNonCashExpense.toLocaleString()} / 예상 $
+                    {plannedNonCashExpense.toLocaleString()}
+                  </span>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -1039,8 +1210,39 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
             >
               ${balance.toLocaleString()} CAD
             </div>
-            <div className="text-xs text-gray-500 mt-1">
-              현금: ${cashBalance.toLocaleString()} / 비현금: ${(balance - cashBalance).toLocaleString()} CAD
+            <div className="text-xs text-gray-500 mt-2 space-y-1">
+              <div className="flex justify-between">
+                <span className="text-green-700 font-medium">
+                  실제: ${actualBalance.toLocaleString()}
+                </span>
+                <span className="text-orange-600">
+                  예상: ${plannedBalance.toLocaleString()}
+                </span>
+              </div>
+              <div className="text-xs text-gray-400 space-y-0.5">
+                <div className="flex justify-between">
+                  <span>현금: ${totalCashBalance.toLocaleString()}</span>
+                  <span>비현금: ${totalNonCashBalance.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-[10px]">
+                  <span>
+                    실제 $
+                    {(actualCashIncome - actualCashExpense).toLocaleString()} /
+                    예상 $
+                    {(plannedCashIncome - plannedCashExpense).toLocaleString()}
+                  </span>
+                  <span>
+                    실제 $
+                    {(
+                      actualNonCashIncome - actualNonCashExpense
+                    ).toLocaleString()}{" "}
+                    / 예상 $
+                    {(
+                      plannedNonCashIncome - plannedNonCashExpense
+                    ).toLocaleString()}
+                  </span>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -1074,7 +1276,8 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
                     amount: "",
                     paidBy: "",
                     description: "",
-                    datetime: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+                    datetime: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss"),
+                    isActual: true,
                   });
                   setIsFinanceModalOpen(true);
                 }}
@@ -1104,87 +1307,100 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
                 </Badge>
               )}
             </Button>
-            
+
             {/* 활성 필터 표시 */}
             {financeFilters.types.length > 0 && (
               <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 rounded-md text-xs">
                 <span className="text-blue-800">타입:</span>
                 <span className="text-blue-600">
-                  {financeFilters.types.map(type => type === 'income' ? '수입' : '지출').join(', ')}
+                  {financeFilters.types
+                    .map((type) => (type === "income" ? "수입" : "지출"))
+                    .join(", ")}
                 </span>
                 <button
-                  onClick={() => setFinanceFilters(prev => ({ ...prev, types: [] }))}
+                  onClick={() =>
+                    setFinanceFilters((prev) => ({ ...prev, types: [] }))
+                  }
                   className="text-blue-500 hover:text-blue-700 ml-1"
                 >
                   ×
                 </button>
               </div>
             )}
-            
+
             {financeFilters.categories.length > 0 && (
               <div className="flex items-center gap-1 px-2 py-1 bg-green-100 rounded-md text-xs">
                 <span className="text-green-800">카테고리:</span>
                 <span className="text-green-600">
-                  {financeFilters.categories.length > 2 
-                    ? `${financeFilters.categories.slice(0, 2).join(', ')} 외 ${financeFilters.categories.length - 2}개`
-                    : financeFilters.categories.join(', ')
-                  }
+                  {financeFilters.categories.length > 2
+                    ? `${financeFilters.categories.slice(0, 2).join(", ")} 외 ${financeFilters.categories.length - 2}개`
+                    : financeFilters.categories.join(", ")}
                 </span>
                 <button
-                  onClick={() => setFinanceFilters(prev => ({ ...prev, categories: [] }))}
+                  onClick={() =>
+                    setFinanceFilters((prev) => ({ ...prev, categories: [] }))
+                  }
                   className="text-green-500 hover:text-green-700 ml-1"
                 >
                   ×
                 </button>
               </div>
             )}
-            
+
             {financeFilters.vendors.length > 0 && (
               <div className="flex items-center gap-1 px-2 py-1 bg-purple-100 rounded-md text-xs">
                 <span className="text-purple-800">거래처:</span>
                 <span className="text-purple-600">
-                  {financeFilters.vendors.length > 2 
-                    ? `${financeFilters.vendors.slice(0, 2).join(', ')} 외 ${financeFilters.vendors.length - 2}개`
-                    : financeFilters.vendors.join(', ')
-                  }
+                  {financeFilters.vendors.length > 2
+                    ? `${financeFilters.vendors.slice(0, 2).join(", ")} 외 ${financeFilters.vendors.length - 2}개`
+                    : financeFilters.vendors.join(", ")}
                 </span>
                 <button
-                  onClick={() => setFinanceFilters(prev => ({ ...prev, vendors: [] }))}
+                  onClick={() =>
+                    setFinanceFilters((prev) => ({ ...prev, vendors: [] }))
+                  }
                   className="text-purple-500 hover:text-purple-700 ml-1"
                 >
                   ×
                 </button>
               </div>
             )}
-            
+
             {financeFilters.paidBys.length > 0 && (
               <div className="flex items-center gap-1 px-2 py-1 bg-orange-100 rounded-md text-xs">
                 <span className="text-orange-800">거래자:</span>
                 <span className="text-orange-600">
-                  {financeFilters.paidBys.length > 2 
-                    ? `${financeFilters.paidBys.slice(0, 2).join(', ')} 외 ${financeFilters.paidBys.length - 2}개`
-                    : financeFilters.paidBys.join(', ')
-                  }
+                  {financeFilters.paidBys.length > 2
+                    ? `${financeFilters.paidBys.slice(0, 2).join(", ")} 외 ${financeFilters.paidBys.length - 2}개`
+                    : financeFilters.paidBys.join(", ")}
                 </span>
                 <button
-                  onClick={() => setFinanceFilters(prev => ({ ...prev, paidBys: [] }))}
+                  onClick={() =>
+                    setFinanceFilters((prev) => ({ ...prev, paidBys: [] }))
+                  }
                   className="text-orange-500 hover:text-orange-700 ml-1"
                 >
                   ×
                 </button>
               </div>
             )}
-            
+
             {financeFilters.dateRange !== "all" && (
               <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-md text-xs">
                 <span className="text-gray-800">날짜:</span>
                 <span className="text-gray-600">
-                  {financeFilters.dateRange === "today" ? "오늘" :
-                   financeFilters.dateRange === "week" ? "이번 주" :
-                   financeFilters.dateRange === "month" ? "이번 달" : "사용자 지정"}
+                  {financeFilters.dateRange === "today"
+                    ? "오늘"
+                    : financeFilters.dateRange === "week"
+                      ? "이번 주"
+                      : financeFilters.dateRange === "month"
+                        ? "이번 달"
+                        : "사용자 지정"}
                 </span>
                 <button
-                  onClick={() => setFinanceFilters(prev => ({ ...prev, dateRange: "all" }))}
+                  onClick={() =>
+                    setFinanceFilters((prev) => ({ ...prev, dateRange: "all" }))
+                  }
                   className="text-gray-500 hover:text-gray-700 ml-1"
                 >
                   ×
@@ -1192,19 +1408,23 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
               </div>
             )}
 
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={refreshData}
               className="flex items-center gap-2"
             >
               <RefreshCw className="h-4 w-4" />
               새로고침
             </Button>
-            
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
                   <Columns className="h-4 w-4" />
                   컬럼
                 </Button>
@@ -1217,7 +1437,10 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
                   <Checkbox
                     checked={visibleColumns.date}
                     onCheckedChange={(checked) =>
-                      setVisibleColumns(prev => ({ ...prev, date: !!checked }))
+                      setVisibleColumns((prev) => ({
+                        ...prev,
+                        date: !!checked,
+                      }))
                     }
                   />
                   <span>날짜</span>
@@ -1229,7 +1452,10 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
                   <Checkbox
                     checked={visibleColumns.type}
                     onCheckedChange={(checked) =>
-                      setVisibleColumns(prev => ({ ...prev, type: !!checked }))
+                      setVisibleColumns((prev) => ({
+                        ...prev,
+                        type: !!checked,
+                      }))
                     }
                   />
                   <span>구분</span>
@@ -1241,7 +1467,10 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
                   <Checkbox
                     checked={visibleColumns.category}
                     onCheckedChange={(checked) =>
-                      setVisibleColumns(prev => ({ ...prev, category: !!checked }))
+                      setVisibleColumns((prev) => ({
+                        ...prev,
+                        category: !!checked,
+                      }))
                     }
                   />
                   <span>카테고리</span>
@@ -1253,7 +1482,10 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
                   <Checkbox
                     checked={visibleColumns.vendor}
                     onCheckedChange={(checked) =>
-                      setVisibleColumns(prev => ({ ...prev, vendor: !!checked }))
+                      setVisibleColumns((prev) => ({
+                        ...prev,
+                        vendor: !!checked,
+                      }))
                     }
                   />
                   <span>거래처</span>
@@ -1265,7 +1497,10 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
                   <Checkbox
                     checked={visibleColumns.itemName}
                     onCheckedChange={(checked) =>
-                      setVisibleColumns(prev => ({ ...prev, itemName: !!checked }))
+                      setVisibleColumns((prev) => ({
+                        ...prev,
+                        itemName: !!checked,
+                      }))
                     }
                   />
                   <span>품명</span>
@@ -1277,7 +1512,10 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
                   <Checkbox
                     checked={visibleColumns.paidBy}
                     onCheckedChange={(checked) =>
-                      setVisibleColumns(prev => ({ ...prev, paidBy: !!checked }))
+                      setVisibleColumns((prev) => ({
+                        ...prev,
+                        paidBy: !!checked,
+                      }))
                     }
                   />
                   <span>거래자</span>
@@ -1289,7 +1527,10 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
                   <Checkbox
                     checked={visibleColumns.amount}
                     onCheckedChange={(checked) =>
-                      setVisibleColumns(prev => ({ ...prev, amount: !!checked }))
+                      setVisibleColumns((prev) => ({
+                        ...prev,
+                        amount: !!checked,
+                      }))
                     }
                   />
                   <span>금액</span>
@@ -1303,20 +1544,26 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
             <Select
               value={itemsPerPage.toString()}
               onValueChange={(value) => {
-                setItemsPerPage(parseInt(value));
+                const newValue = parseInt(value);
+                setItemsPerPage(newValue);
                 setCurrentPage(1);
+                // 로컬 스토리지에 저장
+                if (typeof window !== "undefined") {
+                  localStorage.setItem(
+                    "finance-items-per-page",
+                    newValue.toString()
+                  );
+                }
               }}
             >
-              <SelectTrigger className="w-[80px]">
+              <SelectTrigger className="w-[90px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-                <SelectItem value="30">30</SelectItem>
-                <SelectItem value="40">40</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
+                <SelectItem value="10">10개</SelectItem>
+                <SelectItem value="50">50개</SelectItem>
+                <SelectItem value="100">100개</SelectItem>
+                <SelectItem value="200">200개</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -1326,79 +1573,79 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
             <TableHeader>
               <TableRow>
                 {visibleColumns.date && (
-                  <TableHead 
+                  <TableHead
                     className="w-[100px] text-xs sm:text-sm cursor-pointer hover:bg-gray-50 select-none"
-                    onClick={() => handleSort('date')}
+                    onClick={() => handleSort("date")}
                   >
                     <div className="flex items-center gap-1">
                       날짜
-                      {getSortIcon('date')}
+                      {getSortIcon("date")}
                     </div>
                   </TableHead>
                 )}
                 {visibleColumns.type && (
-                  <TableHead 
+                  <TableHead
                     className="hidden sm:table-cell w-[80px] text-xs sm:text-sm cursor-pointer hover:bg-gray-50 select-none"
-                    onClick={() => handleSort('type')}
+                    onClick={() => handleSort("type")}
                   >
                     <div className="flex items-center gap-1">
                       구분
-                      {getSortIcon('type')}
+                      {getSortIcon("type")}
                     </div>
                   </TableHead>
                 )}
                 {visibleColumns.category && (
-                  <TableHead 
+                  <TableHead
                     className="hidden sm:table-cell w-[120px] text-xs sm:text-sm cursor-pointer hover:bg-gray-50 select-none"
-                    onClick={() => handleSort('category')}
+                    onClick={() => handleSort("category")}
                   >
                     <div className="flex items-center gap-1">
                       카테고리
-                      {getSortIcon('category')}
+                      {getSortIcon("category")}
                     </div>
                   </TableHead>
                 )}
                 {visibleColumns.vendor && (
-                  <TableHead 
+                  <TableHead
                     className="hidden sm:table-cell w-[120px] text-xs sm:text-sm cursor-pointer hover:bg-gray-50 select-none"
-                    onClick={() => handleSort('vendor')}
+                    onClick={() => handleSort("vendor")}
                   >
                     <div className="flex items-center gap-1">
                       거래처
-                      {getSortIcon('vendor')}
+                      {getSortIcon("vendor")}
                     </div>
                   </TableHead>
                 )}
                 {visibleColumns.itemName && (
-                  <TableHead 
+                  <TableHead
                     className="w-[180px] text-xs sm:text-sm cursor-pointer hover:bg-gray-50 select-none"
-                    onClick={() => handleSort('itemName')}
+                    onClick={() => handleSort("itemName")}
                   >
                     <div className="flex items-center gap-1">
                       품명
-                      {getSortIcon('itemName')}
+                      {getSortIcon("itemName")}
                     </div>
                   </TableHead>
                 )}
                 {visibleColumns.paidBy && (
-                  <TableHead 
+                  <TableHead
                     className="w-[100px] text-xs sm:text-sm cursor-pointer hover:bg-gray-50 select-none"
-                    onClick={() => handleSort('paidBy')}
+                    onClick={() => handleSort("paidBy")}
                   >
                     <div className="flex items-center gap-1">
                       거래자
-                      {getSortIcon('paidBy')}
+                      {getSortIcon("paidBy")}
                     </div>
                   </TableHead>
                 )}
                 {visibleColumns.amount && (
-                  <TableHead 
+                  <TableHead
                     className="text-right w-[120px] text-xs sm:text-sm cursor-pointer hover:bg-gray-50 select-none"
-                    onClick={() => handleSort('amount')}
+                    onClick={() => handleSort("amount")}
                   >
                     <div className="flex items-center justify-end gap-1">
                       금액
-                      {getSortIcon('amount')}
+                      {getSortIcon("amount")}
                     </div>
                   </TableHead>
                 )}
@@ -1489,7 +1736,9 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
               {filteredFinances.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={Object.values(visibleColumns).filter(Boolean).length}
+                    colSpan={
+                      Object.values(visibleColumns).filter(Boolean).length
+                    }
                     className="text-center py-8 text-gray-500"
                   >
                     등록된 거래 내역이 없습니다.
@@ -1519,7 +1768,7 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
 
               {(() => {
                 let startPage, endPage;
-                
+
                 if (totalPages <= 3) {
                   startPage = 1;
                   endPage = totalPages;
@@ -1533,23 +1782,26 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
                   startPage = currentPage - 1;
                   endPage = currentPage + 1;
                 }
-                
-                return Array.from({ length: endPage - startPage + 1 }, (_, i) => (
-                  <PaginationItem key={startPage + i}>
-                    <PaginationLink
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setCurrentPage(startPage + i);
-                      }}
-                      isActive={currentPage === startPage + i}
-                    >
-                      {startPage + i}
-                    </PaginationLink>
-                  </PaginationItem>
-                ));
+
+                return Array.from(
+                  { length: endPage - startPage + 1 },
+                  (_, i) => (
+                    <PaginationItem key={startPage + i}>
+                      <PaginationLink
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setCurrentPage(startPage + i);
+                        }}
+                        isActive={currentPage === startPage + i}
+                      >
+                        {startPage + i}
+                      </PaginationLink>
+                    </PaginationItem>
+                  )
+                );
               })()}
-              
+
               {totalPages > 3 && currentPage < totalPages - 1 && (
                 <PaginationItem>
                   <PaginationEllipsis />
@@ -1694,7 +1946,9 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
                   </div>
 
                   <div className="grid gap-2">
-                    <Label htmlFor="finance-paidBy-mobile">거래자(결제자)</Label>
+                    <Label htmlFor="finance-paidBy-mobile">
+                      거래자(결제자)
+                    </Label>
                     <Input
                       id="finance-paidBy-mobile"
                       value={newFinance.paidBy}
@@ -1728,10 +1982,13 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
 
                 {/* 다섯 번째 행: 날짜 및 시간 */}
                 <div className="grid gap-2">
-                  <Label htmlFor="finance-datetime-mobile">날짜 및 시간 *</Label>
+                  <Label htmlFor="finance-datetime-mobile">
+                    날짜 및 시간 *
+                  </Label>
                   <Input
                     id="finance-datetime-mobile"
                     type="datetime-local"
+                    step="1"
                     value={newFinance.datetime}
                     onChange={(e) =>
                       setNewFinance((prev) => ({
@@ -1740,6 +1997,30 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
                       }))
                     }
                   />
+                </div>
+
+                {/* 여섯 번째 행: 실제 지출/수입 여부 */}
+                <div className="grid gap-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="finance-isActual-mobile">
+                      실제 지출/수입
+                    </Label>
+                    <Switch
+                      id="finance-isActual-mobile"
+                      checked={newFinance.isActual}
+                      onCheckedChange={(checked) =>
+                        setNewFinance((prev) => ({
+                          ...prev,
+                          isActual: checked,
+                        }))
+                      }
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {newFinance.isActual
+                      ? "실제로 지출/수입이 발생한 거래입니다"
+                      : "예상 또는 계획된 거래입니다"}
+                  </p>
                 </div>
 
                 {/* 버튼 */}
@@ -1916,6 +2197,7 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
                 <Input
                   id="finance-datetime"
                   type="datetime-local"
+                  step="1"
                   value={newFinance.datetime}
                   onChange={(e) =>
                     setNewFinance((prev) => ({
@@ -1924,6 +2206,28 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
                     }))
                   }
                 />
+              </div>
+
+              {/* 여섯 번째 행: 실제 지출/수입 여부 */}
+              <div className="grid gap-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="finance-isActual">실제 지출/수입</Label>
+                  <Switch
+                    id="finance-isActual"
+                    checked={newFinance.isActual}
+                    onCheckedChange={(checked) =>
+                      setNewFinance((prev) => ({
+                        ...prev,
+                        isActual: checked,
+                      }))
+                    }
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {newFinance.isActual
+                    ? "실제로 지출/수입이 발생한 거래입니다"
+                    : "예상 또는 계획된 거래입니다"}
+                </p>
               </div>
             </div>
             <div className="flex justify-end gap-2">
@@ -1955,233 +2259,235 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
               <DrawerTitle>재정 설정</DrawerTitle>
             </DrawerHeader>
             <div className="px-4 pb-4 overflow-y-auto">
-          <Tabs defaultValue="categories" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="categories">카테고리</TabsTrigger>
-              <TabsTrigger value="vendors">거래처</TabsTrigger>
-            </TabsList>
+              <Tabs defaultValue="categories" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="categories">카테고리</TabsTrigger>
+                  <TabsTrigger value="vendors">거래처</TabsTrigger>
+                </TabsList>
 
-            <TabsContent value="categories" className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <Input
-                    value={newFinanceCategory}
-                    onChange={(e) => setNewFinanceCategory(e.target.value)}
-                    placeholder="카테고리명을 입력하세요"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        addFinanceCategory();
-                      }
-                    }}
-                  />
-                  <Button
-                    onClick={addFinanceCategory}
-                    disabled={!newFinanceCategory.trim()}
-                  >
-                    추가
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>기존 카테고리</Label>
-                <div className="max-h-60 overflow-y-auto space-y-1">
-                  {financeCategories.length === 0 ? (
-                    <p className="text-sm text-gray-500 py-2">
-                      등록된 카테고리가 없습니다.
-                    </p>
-                  ) : (
-                    financeCategories.map((category, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between p-2 bg-gray-50 rounded"
+                <TabsContent value="categories" className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <Input
+                        value={newFinanceCategory}
+                        onChange={(e) => setNewFinanceCategory(e.target.value)}
+                        placeholder="카테고리명을 입력하세요"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            addFinanceCategory();
+                          }
+                        }}
+                      />
+                      <Button
+                        onClick={addFinanceCategory}
+                        disabled={!newFinanceCategory.trim()}
                       >
-                        {editingCategoryIndex === index ? (
-                          <div className="flex gap-2 flex-1">
-                            <Input
-                              value={editingCategoryValue}
-                              onChange={(e) =>
-                                setEditingCategoryValue(e.target.value)
-                              }
-                              className="text-sm"
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  saveEditCategory();
-                                } else if (e.key === "Escape") {
-                                  setEditingCategoryIndex(null);
-                                  setEditingCategoryValue("");
-                                }
-                              }}
-                              autoFocus
-                            />
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={saveEditCategory}
-                              className="h-6 w-6 p-0 text-green-600 hover:text-green-800"
-                            >
-                              ✓
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setEditingCategoryIndex(null);
-                                setEditingCategoryValue("");
-                              }}
-                              className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700"
-                            >
-                              ×
-                            </Button>
+                        추가
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>기존 카테고리</Label>
+                    <div className="max-h-60 overflow-y-auto space-y-1">
+                      {financeCategories.length === 0 ? (
+                        <p className="text-sm text-gray-500 py-2">
+                          등록된 카테고리가 없습니다.
+                        </p>
+                      ) : (
+                        financeCategories.map((category, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between p-2 bg-gray-50 rounded"
+                          >
+                            {editingCategoryIndex === index ? (
+                              <div className="flex gap-2 flex-1">
+                                <Input
+                                  value={editingCategoryValue}
+                                  onChange={(e) =>
+                                    setEditingCategoryValue(e.target.value)
+                                  }
+                                  className="text-sm"
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      saveEditCategory();
+                                    } else if (e.key === "Escape") {
+                                      setEditingCategoryIndex(null);
+                                      setEditingCategoryValue("");
+                                    }
+                                  }}
+                                  autoFocus
+                                />
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={saveEditCategory}
+                                  className="h-6 w-6 p-0 text-green-600 hover:text-green-800"
+                                >
+                                  ✓
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setEditingCategoryIndex(null);
+                                    setEditingCategoryValue("");
+                                  }}
+                                  className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700"
+                                >
+                                  ×
+                                </Button>
+                              </div>
+                            ) : (
+                              <>
+                                <span className="text-sm">{category}</span>
+                                <div className="flex gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setEditingCategoryIndex(index);
+                                      setEditingCategoryValue(category);
+                                    }}
+                                    className="h-6 w-6 p-0 text-blue-500 hover:text-blue-700"
+                                  >
+                                    ✎
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() =>
+                                      removeFinanceCategory(category)
+                                    }
+                                    className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                                  >
+                                    ×
+                                  </Button>
+                                </div>
+                              </>
+                            )}
                           </div>
-                        ) : (
-                          <>
-                            <span className="text-sm">{category}</span>
-                            <div className="flex gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setEditingCategoryIndex(index);
-                                  setEditingCategoryValue(category);
-                                }}
-                                className="h-6 w-6 p-0 text-blue-500 hover:text-blue-700"
-                              >
-                                ✎
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removeFinanceCategory(category)}
-                                className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                              >
-                                ×
-                              </Button>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </TabsContent>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </TabsContent>
 
-            <TabsContent value="vendors" className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <Input
-                    value={newFinanceVendor}
-                    onChange={(e) => setNewFinanceVendor(e.target.value)}
-                    placeholder="거래처명을 입력하세요"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        addFinanceVendor();
-                      }
-                    }}
-                  />
-                  <Button
-                    onClick={addFinanceVendor}
-                    disabled={!newFinanceVendor.trim()}
-                  >
-                    추가
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>기존 거래처</Label>
-                <div className="max-h-60 overflow-y-auto space-y-1">
-                  {financeVendors.length === 0 ? (
-                    <p className="text-sm text-gray-500 py-2">
-                      등록된 거래처가 없습니다.
-                    </p>
-                  ) : (
-                    financeVendors.map((vendor, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between p-2 bg-gray-50 rounded"
+                <TabsContent value="vendors" className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <Input
+                        value={newFinanceVendor}
+                        onChange={(e) => setNewFinanceVendor(e.target.value)}
+                        placeholder="거래처명을 입력하세요"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            addFinanceVendor();
+                          }
+                        }}
+                      />
+                      <Button
+                        onClick={addFinanceVendor}
+                        disabled={!newFinanceVendor.trim()}
                       >
-                        {editingVendorIndex === index ? (
-                          <div className="flex gap-2 flex-1">
-                            <Input
-                              value={editingVendorValue}
-                              onChange={(e) =>
-                                setEditingVendorValue(e.target.value)
-                              }
-                              className="text-sm"
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  saveEditVendor();
-                                } else if (e.key === "Escape") {
-                                  setEditingVendorIndex(null);
-                                  setEditingVendorValue("");
-                                }
-                              }}
-                              autoFocus
-                            />
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={saveEditVendor}
-                              className="h-6 w-6 p-0 text-green-600 hover:text-green-800"
-                            >
-                              ✓
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setEditingVendorIndex(null);
-                                setEditingVendorValue("");
-                              }}
-                              className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700"
-                            >
-                              ×
-                            </Button>
-                          </div>
-                        ) : (
-                          <>
-                            <span className="text-sm">{vendor}</span>
-                            <div className="flex gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setEditingVendorIndex(index);
-                                  setEditingVendorValue(vendor);
-                                }}
-                                className="h-6 w-6 p-0 text-blue-500 hover:text-blue-700"
-                              >
-                                ✎
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removeFinanceVendor(vendor)}
-                                className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                              >
-                                ×
-                              </Button>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </TabsContent>
-          </Tabs>
+                        추가
+                      </Button>
+                    </div>
+                  </div>
 
-            <div className="flex justify-end mt-4">
-              <Button
-                variant="outline"
-                onClick={() => setIsFinanceCategorySettingsOpen(false)}
-              >
-                닫기
-              </Button>
-            </div>
+                  <div className="space-y-2">
+                    <Label>기존 거래처</Label>
+                    <div className="max-h-60 overflow-y-auto space-y-1">
+                      {financeVendors.length === 0 ? (
+                        <p className="text-sm text-gray-500 py-2">
+                          등록된 거래처가 없습니다.
+                        </p>
+                      ) : (
+                        financeVendors.map((vendor, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between p-2 bg-gray-50 rounded"
+                          >
+                            {editingVendorIndex === index ? (
+                              <div className="flex gap-2 flex-1">
+                                <Input
+                                  value={editingVendorValue}
+                                  onChange={(e) =>
+                                    setEditingVendorValue(e.target.value)
+                                  }
+                                  className="text-sm"
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      saveEditVendor();
+                                    } else if (e.key === "Escape") {
+                                      setEditingVendorIndex(null);
+                                      setEditingVendorValue("");
+                                    }
+                                  }}
+                                  autoFocus
+                                />
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={saveEditVendor}
+                                  className="h-6 w-6 p-0 text-green-600 hover:text-green-800"
+                                >
+                                  ✓
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setEditingVendorIndex(null);
+                                    setEditingVendorValue("");
+                                  }}
+                                  className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700"
+                                >
+                                  ×
+                                </Button>
+                              </div>
+                            ) : (
+                              <>
+                                <span className="text-sm">{vendor}</span>
+                                <div className="flex gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setEditingVendorIndex(index);
+                                      setEditingVendorValue(vendor);
+                                    }}
+                                    className="h-6 w-6 p-0 text-blue-500 hover:text-blue-700"
+                                  >
+                                    ✎
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeFinanceVendor(vendor)}
+                                    className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                                  >
+                                    ×
+                                  </Button>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
+
+              <div className="flex justify-end mt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsFinanceCategorySettingsOpen(false)}
+                >
+                  닫기
+                </Button>
+              </div>
             </div>
           </DrawerContent>
         </Drawer>
@@ -2292,7 +2598,9 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
                                       variant="ghost"
                                       size="sm"
                                       onClick={() => moveCategoryDown(index)}
-                                      disabled={index === financeCategories.length - 1}
+                                      disabled={
+                                        index === financeCategories.length - 1
+                                      }
                                       className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700 disabled:opacity-30"
                                     >
                                       <ArrowDown className="h-3 w-3" />
@@ -2313,7 +2621,9 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => removeFinanceCategory(category)}
+                                  onClick={() =>
+                                    removeFinanceCategory(category)
+                                  }
                                   className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
                                 >
                                   ×
@@ -2420,7 +2730,9 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
                                       variant="ghost"
                                       size="sm"
                                       onClick={() => moveVendorDown(index)}
-                                      disabled={index === financeVendors.length - 1}
+                                      disabled={
+                                        index === financeVendors.length - 1
+                                      }
                                       className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700 disabled:opacity-30"
                                     >
                                       <ArrowDown className="h-3 w-3" />
@@ -2491,88 +2803,101 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
                 선택한 거래 내역을 수정하거나 삭제할 수 있습니다.
               </p>
 
-          {selectedFinanceForAction && (
-            <div className="space-y-4">
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-500">날짜:</span>
-                    <span className="ml-2 font-medium">
-                      {(() => {
-                        try {
-                          if (selectedFinanceForAction.datetime) {
-                            return format(
-                              parseISO(selectedFinanceForAction.datetime),
-                              "yyyy년 MM월 dd일 HH:mm"
-                            );
-                          } else if (selectedFinanceForAction.date) {
-                            return format(
-                              parseISO(selectedFinanceForAction.date),
-                              "yyyy년 MM월 dd일"
-                            );
-                          } else {
-                            return "-";
-                          }
-                        } catch (error) {
-                          console.warn("날짜 포맷 오류:", error);
-                          return "-";
-                        }
-                      })()}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">구분:</span>
-                    <Badge
-                      className={`ml-2 ${selectedFinanceForAction.type === "income" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
-                    >
-                      {selectedFinanceForAction.type === "income"
-                        ? "수입"
-                        : "지출"}
-                    </Badge>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">카테고리:</span>
-                    <span className="ml-2 font-medium">
-                      {selectedFinanceForAction.category}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">거래처:</span>
-                    <span className="ml-2 font-medium">
-                      {selectedFinanceForAction.vendor || "-"}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">품명:</span>
-                    <span className="ml-2 font-medium">
-                      {selectedFinanceForAction.itemName || "-"}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">거래자:</span>
-                    <span className="ml-2 font-medium">
-                      {selectedFinanceForAction.paidBy || "-"}
-                    </span>
-                  </div>
-                  <div className="col-span-2">
-                    <span className="text-gray-500">내용:</span>
-                    <span className="ml-2 font-medium">
-                      {selectedFinanceForAction.description}
-                    </span>
-                  </div>
-                  <div className="col-span-2">
-                    <span className="text-gray-500">금액:</span>
-                    <span
-                      className={`ml-2 font-bold text-lg ${selectedFinanceForAction.type === "income" ? "text-green-600" : "text-red-600"}`}
-                    >
-                      {selectedFinanceForAction.type === "income" ? "+" : "-"}$
-                      {selectedFinanceForAction.amount.toLocaleString()} CAD
-                    </span>
+              {selectedFinanceForAction && (
+                <div className="space-y-4">
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-500">날짜:</span>
+                        <span className="ml-2 font-medium">
+                          {(() => {
+                            try {
+                              if (selectedFinanceForAction.datetime) {
+                                return format(
+                                  parseISO(selectedFinanceForAction.datetime),
+                                  "yyyy년 MM월 dd일 HH:mm"
+                                );
+                              } else if (selectedFinanceForAction.date) {
+                                return format(
+                                  parseISO(selectedFinanceForAction.date),
+                                  "yyyy년 MM월 dd일"
+                                );
+                              } else {
+                                return "-";
+                              }
+                            } catch (error) {
+                              console.warn("날짜 포맷 오류:", error);
+                              return "-";
+                            }
+                          })()}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">구분:</span>
+                        <Badge
+                          className={`ml-2 ${selectedFinanceForAction.type === "income" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
+                        >
+                          {selectedFinanceForAction.type === "income"
+                            ? "수입"
+                            : "지출"}
+                        </Badge>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">카테고리:</span>
+                        <span className="ml-2 font-medium">
+                          {selectedFinanceForAction.category}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">거래처:</span>
+                        <span className="ml-2 font-medium">
+                          {selectedFinanceForAction.vendor || "-"}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">품명:</span>
+                        <span className="ml-2 font-medium">
+                          {selectedFinanceForAction.itemName || "-"}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">거래자:</span>
+                        <span className="ml-2 font-medium">
+                          {selectedFinanceForAction.paidBy || "-"}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">상태:</span>
+                        <span
+                          className={`ml-2 font-medium ${(selectedFinanceForAction.isActual === true || selectedFinanceForAction.isActual === undefined) ? "text-green-600" : "text-orange-600"}`}
+                        >
+                          {(selectedFinanceForAction.isActual === true || selectedFinanceForAction.isActual === undefined)
+                            ? "실제 거래"
+                            : "예상 거래"}
+                        </span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-gray-500">내용:</span>
+                        <span className="ml-2 font-medium">
+                          {selectedFinanceForAction.description}
+                        </span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-gray-500">금액:</span>
+                        <span
+                          className={`ml-2 font-bold text-lg ${selectedFinanceForAction.type === "income" ? "text-green-600" : "text-red-600"}`}
+                        >
+                          {selectedFinanceForAction.type === "income"
+                            ? "+"
+                            : "-"}
+                          ${selectedFinanceForAction.amount.toLocaleString()}{" "}
+                          CAD
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          )}
+              )}
 
               <div className="flex justify-end gap-2 mt-6">
                 <Button
@@ -2680,13 +3005,25 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
                     <div>
                       <span className="text-gray-500">금액:</span>
                       <span className="ml-2 font-medium text-lg">
-                        ${selectedFinanceForAction.amount?.toLocaleString() || 0} CAD
+                        $
+                        {selectedFinanceForAction.amount?.toLocaleString() || 0}{" "}
+                        CAD
                       </span>
                     </div>
-                    <div className="col-span-2">
+                    <div>
                       <span className="text-gray-500">거래자:</span>
                       <span className="ml-2 font-medium">
                         {selectedFinanceForAction.paidBy || "-"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">상태:</span>
+                      <span
+                        className={`ml-2 font-medium ${(selectedFinanceForAction.isActual === true || selectedFinanceForAction.isActual === undefined) ? "text-green-600" : "text-orange-600"}`}
+                      >
+                        {(selectedFinanceForAction.isActual === true || selectedFinanceForAction.isActual === undefined)
+                          ? "실제 거래"
+                          : "예상 거래"}
                       </span>
                     </div>
                     {selectedFinanceForAction.description && (
@@ -2747,10 +3084,14 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
             </DrawerHeader>
             <div className="px-4 pb-4">
               <p className="text-sm text-muted-foreground mb-4">
-                정말로 이 거래 내역을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
+                정말로 이 거래 내역을 삭제하시겠습니까? 이 작업은 되돌릴 수
+                없습니다.
               </p>
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setFinanceDeleteConfirmOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setFinanceDeleteConfirmOpen(false)}
+                >
                   취소
                 </Button>
                 <Button
@@ -2800,389 +3141,475 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
               <DrawerTitle>재정 필터</DrawerTitle>
             </DrawerHeader>
             <div className="px-4 pb-4 overflow-y-auto space-y-4">
-            {/* 날짜 필터 */}
-            <div className="space-y-2">
-              <Label>날짜 범위</Label>
-              <Select
-                value={financeFilters.dateRange}
-                onValueChange={(value: any) =>
-                  setFinanceFilters((prev) => ({ ...prev, dateRange: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">전체</SelectItem>
-                  <SelectItem value="today">오늘</SelectItem>
-                  <SelectItem value="week">이번 주</SelectItem>
-                  <SelectItem value="month">이번 달</SelectItem>
-                  <SelectItem value="custom">사용자 지정</SelectItem>
-                </SelectContent>
-              </Select>
+              {/* 날짜 필터 */}
+              <div className="space-y-2">
+                <Label>날짜 범위</Label>
+                <Select
+                  value={financeFilters.dateRange}
+                  onValueChange={(value: any) =>
+                    setFinanceFilters((prev) => ({ ...prev, dateRange: value }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">전체</SelectItem>
+                    <SelectItem value="today">오늘</SelectItem>
+                    <SelectItem value="week">이번 주</SelectItem>
+                    <SelectItem value="month">이번 달</SelectItem>
+                    <SelectItem value="custom">사용자 지정</SelectItem>
+                  </SelectContent>
+                </Select>
 
-              {financeFilters.dateRange === "custom" && (
-                <div className="space-y-2">
-                  <div className="flex gap-2">
-                    <Button
-                      variant={
-                        financeFilters.customDateType === "single"
-                          ? "default"
-                          : "outline"
-                      }
-                      size="sm"
-                      onClick={() =>
-                        setFinanceFilters((prev) => ({
-                          ...prev,
-                          customDateType: "single",
-                          selectedDateRange: undefined,
-                        }))
-                      }
-                    >
-                      특정 날짜
-                    </Button>
-                    <Button
-                      variant={
-                        financeFilters.customDateType === "range"
-                          ? "default"
-                          : "outline"
-                      }
-                      size="sm"
-                      onClick={() =>
-                        setFinanceFilters((prev) => ({
-                          ...prev,
-                          customDateType: "range",
-                          selectedDate: undefined,
-                        }))
-                      }
-                    >
-                      날짜 범위
-                    </Button>
-                  </div>
+                {financeFilters.dateRange === "custom" && (
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <Button
+                        variant={
+                          financeFilters.customDateType === "single"
+                            ? "default"
+                            : "outline"
+                        }
+                        size="sm"
+                        onClick={() =>
+                          setFinanceFilters((prev) => ({
+                            ...prev,
+                            customDateType: "single",
+                            selectedDateRange: undefined,
+                          }))
+                        }
+                      >
+                        특정 날짜
+                      </Button>
+                      <Button
+                        variant={
+                          financeFilters.customDateType === "range"
+                            ? "default"
+                            : "outline"
+                        }
+                        size="sm"
+                        onClick={() =>
+                          setFinanceFilters((prev) => ({
+                            ...prev,
+                            customDateType: "range",
+                            selectedDate: undefined,
+                          }))
+                        }
+                      >
+                        날짜 범위
+                      </Button>
+                    </div>
 
-                  {financeFilters.customDateType === "single" && (
-                    <Popover
-                      open={isDatePickerOpen}
-                      onOpenChange={setIsDatePickerOpen}
-                    >
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="w-full justify-start text-left font-normal"
-                        >
-                          <CalendarDays className="mr-2 h-4 w-4" />
-                          {financeFilters.selectedDate
-                            ? format(
-                                financeFilters.selectedDate,
-                                "yyyy년 MM월 dd일",
-                                { locale: ko }
-                              )
-                            : "날짜를 선택하세요"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <CalendarComponent
-                          mode="single"
-                          selected={financeFilters.selectedDate}
-                          onSelect={(date) => {
-                            setFinanceFilters((prev) => ({
-                              ...prev,
-                              selectedDate: date,
-                            }));
-                            setIsDatePickerOpen(false);
-                          }}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  )}
+                    {financeFilters.customDateType === "single" && (
+                      <Popover
+                        open={isDatePickerOpen}
+                        onOpenChange={setIsDatePickerOpen}
+                      >
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <CalendarDays className="mr-2 h-4 w-4" />
+                            {financeFilters.selectedDate
+                              ? format(
+                                  financeFilters.selectedDate,
+                                  "yyyy년 MM월 dd일",
+                                  { locale: ko }
+                                )
+                              : "날짜를 선택하세요"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={financeFilters.selectedDate}
+                            onSelect={(date) => {
+                              setFinanceFilters((prev) => ({
+                                ...prev,
+                                selectedDate: date,
+                              }));
+                              setIsDatePickerOpen(false);
+                            }}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    )}
 
-                  {financeFilters.customDateType === "range" && (
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="w-full justify-start text-left font-normal"
-                        >
-                          <CalendarDays className="mr-2 h-4 w-4" />
-                          {financeFilters.selectedDateRange?.from ? (
-                            financeFilters.selectedDateRange.to ? (
-                              <>
-                                {format(
+                    {financeFilters.customDateType === "range" && (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <CalendarDays className="mr-2 h-4 w-4" />
+                            {financeFilters.selectedDateRange?.from ? (
+                              financeFilters.selectedDateRange.to ? (
+                                <>
+                                  {format(
+                                    financeFilters.selectedDateRange.from,
+                                    "MM/dd",
+                                    { locale: ko }
+                                  )}{" "}
+                                  -{" "}
+                                  {format(
+                                    financeFilters.selectedDateRange.to,
+                                    "MM/dd",
+                                    { locale: ko }
+                                  )}
+                                </>
+                              ) : (
+                                format(
                                   financeFilters.selectedDateRange.from,
                                   "MM/dd",
                                   { locale: ko }
-                                )}{" "}
-                                -{" "}
-                                {format(
-                                  financeFilters.selectedDateRange.to,
-                                  "MM/dd",
-                                  { locale: ko }
-                                )}
-                              </>
-                            ) : (
-                              format(
-                                financeFilters.selectedDateRange.from,
-                                "MM/dd",
-                                { locale: ko }
+                                )
                               )
-                            )
-                          ) : (
-                            "날짜 범위를 선택하세요"
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <CalendarComponent
-                          mode="range"
-                          defaultMonth={financeFilters.selectedDateRange?.from}
-                          selected={financeFilters.selectedDateRange}
-                          onSelect={(range) =>
+                            ) : (
+                              "날짜 범위를 선택하세요"
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="range"
+                            defaultMonth={
+                              financeFilters.selectedDateRange?.from
+                            }
+                            selected={financeFilters.selectedDateRange}
+                            onSelect={(range) =>
+                              setFinanceFilters((prev) => ({
+                                ...prev,
+                                selectedDateRange: range as
+                                  | {
+                                      from: Date | undefined;
+                                      to: Date | undefined;
+                                    }
+                                  | undefined,
+                              }))
+                            }
+                            numberOfMonths={2}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <Accordion type="multiple" className="w-full space-y-2">
+                {/* 거래 유형 필터 */}
+                <AccordionItem value="types" className="border rounded-lg px-3">
+                  <AccordionTrigger className="py-3 hover:no-underline">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="filter-types"
+                        checked={financeFilters.types.length > 0}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
                             setFinanceFilters((prev) => ({
                               ...prev,
-                              selectedDateRange: range as { from: Date | undefined; to: Date | undefined; } | undefined,
-                            }))
+                              types: ["income", "expense"],
+                            }));
+                          } else {
+                            setFinanceFilters((prev) => ({
+                              ...prev,
+                              types: [],
+                            }));
                           }
-                          numberOfMonths={2}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  )}
-                </div>
-              )}
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <Label
+                        htmlFor="filter-types"
+                        className="text-sm font-medium cursor-pointer"
+                      >
+                        거래 유형
+                      </Label>
+                      {financeFilters.types.length > 0 && (
+                        <span className="text-xs text-gray-500">
+                          ({financeFilters.types.length}개 선택)
+                        </span>
+                      )}
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-3">
+                    <div className="space-y-2 pl-6">
+                      {["income", "expense"].map((type) => (
+                        <div key={type} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`type-${type}`}
+                            checked={financeFilters.types.includes(type)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setFinanceFilters((prev) => ({
+                                  ...prev,
+                                  types: [...prev.types, type],
+                                }));
+                              } else {
+                                setFinanceFilters((prev) => ({
+                                  ...prev,
+                                  types: prev.types.filter((t) => t !== type),
+                                }));
+                              }
+                            }}
+                          />
+                          <Label htmlFor={`type-${type}`} className="text-sm">
+                            {type === "income" ? "수입" : "지출"}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* 카테고리 필터 */}
+                <AccordionItem
+                  value="categories"
+                  className="border rounded-lg px-3"
+                >
+                  <AccordionTrigger className="py-3 hover:no-underline">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="filter-categories"
+                        checked={financeFilters.categories.length > 0}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setFinanceFilters((prev) => ({
+                              ...prev,
+                              categories: financeCategories,
+                            }));
+                          } else {
+                            setFinanceFilters((prev) => ({
+                              ...prev,
+                              categories: [],
+                            }));
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <Label
+                        htmlFor="filter-categories"
+                        className="text-sm font-medium cursor-pointer"
+                      >
+                        카테고리
+                      </Label>
+                      {financeFilters.categories.length > 0 && (
+                        <span className="text-xs text-gray-500">
+                          ({financeFilters.categories.length}개 선택)
+                        </span>
+                      )}
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-3">
+                    <div className="max-h-32 overflow-y-auto space-y-2 pl-6">
+                      {financeCategories.map((category) => (
+                        <div
+                          key={category}
+                          className="flex items-center space-x-2"
+                        >
+                          <Checkbox
+                            id={`category-${category}`}
+                            checked={financeFilters.categories.includes(
+                              category
+                            )}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setFinanceFilters((prev) => ({
+                                  ...prev,
+                                  categories: [...prev.categories, category],
+                                }));
+                              } else {
+                                setFinanceFilters((prev) => ({
+                                  ...prev,
+                                  categories: prev.categories.filter(
+                                    (c) => c !== category
+                                  ),
+                                }));
+                              }
+                            }}
+                          />
+                          <Label
+                            htmlFor={`category-${category}`}
+                            className="text-sm"
+                          >
+                            {category}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* 거래처 필터 */}
+                <AccordionItem
+                  value="vendors"
+                  className="border rounded-lg px-3"
+                >
+                  <AccordionTrigger className="py-3 hover:no-underline">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="filter-vendors"
+                        checked={financeFilters.vendors.length > 0}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setFinanceFilters((prev) => ({
+                              ...prev,
+                              vendors: financeVendors,
+                            }));
+                          } else {
+                            setFinanceFilters((prev) => ({
+                              ...prev,
+                              vendors: [],
+                            }));
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <Label
+                        htmlFor="filter-vendors"
+                        className="text-sm font-medium cursor-pointer"
+                      >
+                        거래처
+                      </Label>
+                      {financeFilters.vendors.length > 0 && (
+                        <span className="text-xs text-gray-500">
+                          ({financeFilters.vendors.length}개 선택)
+                        </span>
+                      )}
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-3">
+                    <div className="max-h-32 overflow-y-auto space-y-2 pl-6">
+                      {financeVendors.map((vendor) => (
+                        <div
+                          key={vendor}
+                          className="flex items-center space-x-2"
+                        >
+                          <Checkbox
+                            id={`vendor-${vendor}`}
+                            checked={financeFilters.vendors.includes(vendor)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setFinanceFilters((prev) => ({
+                                  ...prev,
+                                  vendors: [...prev.vendors, vendor],
+                                }));
+                              } else {
+                                setFinanceFilters((prev) => ({
+                                  ...prev,
+                                  vendors: prev.vendors.filter(
+                                    (v) => v !== vendor
+                                  ),
+                                }));
+                              }
+                            }}
+                          />
+                          <Label
+                            htmlFor={`vendor-${vendor}`}
+                            className="text-sm"
+                          >
+                            {vendor}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* 거래자 필터 */}
+                <AccordionItem
+                  value="paidBys"
+                  className="border rounded-lg px-3"
+                >
+                  <AccordionTrigger className="py-3 hover:no-underline">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="filter-paidBys"
+                        checked={financeFilters.paidBys.length > 0}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            const allPaidBys = Array.from(
+                              new Set(
+                                finances
+                                  .filter((f) => f.paidBy && f.paidBy.trim())
+                                  .map((f) => f.paidBy!)
+                              )
+                            ).sort();
+                            setFinanceFilters((prev) => ({
+                              ...prev,
+                              paidBys: allPaidBys,
+                            }));
+                          } else {
+                            setFinanceFilters((prev) => ({
+                              ...prev,
+                              paidBys: [],
+                            }));
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <Label
+                        htmlFor="filter-paidBys"
+                        className="text-sm font-medium cursor-pointer"
+                      >
+                        거래자
+                      </Label>
+                      {financeFilters.paidBys.length > 0 && (
+                        <span className="text-xs text-gray-500">
+                          ({financeFilters.paidBys.length}개 선택)
+                        </span>
+                      )}
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-3">
+                    <div className="max-h-32 overflow-y-auto space-y-2 pl-6">
+                      {Array.from(
+                        new Set(
+                          finances
+                            .filter((f) => f.paidBy && f.paidBy.trim())
+                            .map((f) => f.paidBy!)
+                        )
+                      ).sort().map((paidBy) => (
+                        <div
+                          key={paidBy}
+                          className="flex items-center space-x-2"
+                        >
+                          <Checkbox
+                            id={`paidBy-${paidBy}`}
+                            checked={financeFilters.paidBys.includes(paidBy)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setFinanceFilters((prev) => ({
+                                  ...prev,
+                                  paidBys: [...prev.paidBys, paidBy],
+                                }));
+                              } else {
+                                setFinanceFilters((prev) => ({
+                                  ...prev,
+                                  paidBys: prev.paidBys.filter(
+                                    (p) => p !== paidBy
+                                  ),
+                                }));
+                              }
+                            }}
+                          />
+                          <Label
+                            htmlFor={`paidBy-${paidBy}`}
+                            className="text-sm"
+                          >
+                            {paidBy}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
             </div>
-
-            <Accordion type="multiple" className="w-full space-y-2">
-              {/* 거래 유형 필터 */}
-              <AccordionItem value="types" className="border rounded-lg px-3">
-                <AccordionTrigger className="py-3 hover:no-underline">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="filter-types"
-                      checked={financeFilters.types.length > 0}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setFinanceFilters(prev => ({ ...prev, types: ['income', 'expense'] }));
-                        } else {
-                          setFinanceFilters(prev => ({ ...prev, types: [] }));
-                        }
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <Label htmlFor="filter-types" className="text-sm font-medium cursor-pointer">
-                      거래 유형
-                    </Label>
-                    {financeFilters.types.length > 0 && (
-                      <span className="text-xs text-gray-500">({financeFilters.types.length}개 선택)</span>
-                    )}
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="pb-3">
-                  <div className="space-y-2 pl-6">
-                    {['income', 'expense'].map((type) => (
-                      <div key={type} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`type-${type}`}
-                          checked={financeFilters.types.includes(type)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setFinanceFilters(prev => ({
-                                ...prev,
-                                types: [...prev.types, type]
-                              }));
-                            } else {
-                              setFinanceFilters(prev => ({
-                                ...prev,
-                                types: prev.types.filter(t => t !== type)
-                              }));
-                            }
-                          }}
-                        />
-                        <Label htmlFor={`type-${type}`} className="text-sm">
-                          {type === 'income' ? '수입' : '지출'}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-
-              {/* 카테고리 필터 */}
-              <AccordionItem value="categories" className="border rounded-lg px-3">
-                <AccordionTrigger className="py-3 hover:no-underline">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="filter-categories"
-                      checked={financeFilters.categories.length > 0}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setFinanceFilters(prev => ({ ...prev, categories: financeCategories }));
-                        } else {
-                          setFinanceFilters(prev => ({ ...prev, categories: [] }));
-                        }
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <Label htmlFor="filter-categories" className="text-sm font-medium cursor-pointer">
-                      카테고리
-                    </Label>
-                    {financeFilters.categories.length > 0 && (
-                      <span className="text-xs text-gray-500">({financeFilters.categories.length}개 선택)</span>
-                    )}
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="pb-3">
-                  <div className="max-h-32 overflow-y-auto space-y-2 pl-6">
-                    {financeCategories.map((category) => (
-                      <div key={category} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`category-${category}`}
-                          checked={financeFilters.categories.includes(category)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setFinanceFilters(prev => ({
-                                ...prev,
-                                categories: [...prev.categories, category]
-                              }));
-                            } else {
-                              setFinanceFilters(prev => ({
-                                ...prev,
-                                categories: prev.categories.filter(c => c !== category)
-                              }));
-                            }
-                          }}
-                        />
-                        <Label htmlFor={`category-${category}`} className="text-sm">
-                          {category}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-
-              {/* 거래처 필터 */}
-              <AccordionItem value="vendors" className="border rounded-lg px-3">
-                <AccordionTrigger className="py-3 hover:no-underline">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="filter-vendors"
-                      checked={financeFilters.vendors.length > 0}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setFinanceFilters(prev => ({ ...prev, vendors: financeVendors }));
-                        } else {
-                          setFinanceFilters(prev => ({ ...prev, vendors: [] }));
-                        }
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <Label htmlFor="filter-vendors" className="text-sm font-medium cursor-pointer">
-                      거래처
-                    </Label>
-                    {financeFilters.vendors.length > 0 && (
-                      <span className="text-xs text-gray-500">({financeFilters.vendors.length}개 선택)</span>
-                    )}
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="pb-3">
-                  <div className="max-h-32 overflow-y-auto space-y-2 pl-6">
-                    {financeVendors.map((vendor) => (
-                      <div key={vendor} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`vendor-${vendor}`}
-                          checked={financeFilters.vendors.includes(vendor)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setFinanceFilters(prev => ({
-                                ...prev,
-                                vendors: [...prev.vendors, vendor]
-                              }));
-                            } else {
-                              setFinanceFilters(prev => ({
-                                ...prev,
-                                vendors: prev.vendors.filter(v => v !== vendor)
-                              }));
-                            }
-                          }}
-                        />
-                        <Label htmlFor={`vendor-${vendor}`} className="text-sm">
-                          {vendor}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-
-              {/* 거래자 필터 */}
-              <AccordionItem value="paidBys" className="border rounded-lg px-3">
-                <AccordionTrigger className="py-3 hover:no-underline">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="filter-paidBys"
-                      checked={financeFilters.paidBys.length > 0}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          const allPaidBys = Array.from(
-                            new Set(
-                              finances
-                                .filter((f) => f.paidBy && f.paidBy.trim())
-                                .map((f) => f.paidBy!)
-                            )
-                          );
-                          setFinanceFilters(prev => ({ ...prev, paidBys: allPaidBys }));
-                        } else {
-                          setFinanceFilters(prev => ({ ...prev, paidBys: [] }));
-                        }
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <Label htmlFor="filter-paidBys" className="text-sm font-medium cursor-pointer">
-                      거래자
-                    </Label>
-                    {financeFilters.paidBys.length > 0 && (
-                      <span className="text-xs text-gray-500">({financeFilters.paidBys.length}개 선택)</span>
-                    )}
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="pb-3">
-                  <div className="max-h-32 overflow-y-auto space-y-2 pl-6">
-                    {Array.from(
-                      new Set(
-                        finances
-                          .filter((f) => f.paidBy && f.paidBy.trim())
-                          .map((f) => f.paidBy!)
-                      )
-                    ).map((paidBy) => (
-                      <div key={paidBy} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`paidBy-${paidBy}`}
-                          checked={financeFilters.paidBys.includes(paidBy)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setFinanceFilters(prev => ({
-                                ...prev,
-                                paidBys: [...prev.paidBys, paidBy]
-                              }));
-                            } else {
-                              setFinanceFilters(prev => ({
-                                ...prev,
-                                paidBys: prev.paidBys.filter(p => p !== paidBy)
-                              }));
-                            }
-                          }}
-                        />
-                        <Label htmlFor={`paidBy-${paidBy}`} className="text-sm">
-                          {paidBy}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </div>
 
             <div className="flex justify-between">
               <Button
@@ -3356,12 +3783,19 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
                         <PopoverContent className="w-auto p-0" align="start">
                           <CalendarComponent
                             mode="range"
-                            defaultMonth={financeFilters.selectedDateRange?.from}
+                            defaultMonth={
+                              financeFilters.selectedDateRange?.from
+                            }
                             selected={financeFilters.selectedDateRange}
                             onSelect={(range) =>
                               setFinanceFilters((prev) => ({
                                 ...prev,
-                                selectedDateRange: range as { from: Date | undefined; to: Date | undefined; } | undefined,
+                                selectedDateRange: range as
+                                  | {
+                                      from: Date | undefined;
+                                      to: Date | undefined;
+                                    }
+                                  | undefined,
                               }))
                             }
                             numberOfMonths={2}
@@ -3383,44 +3817,58 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
                         checked={financeFilters.types.length > 0}
                         onCheckedChange={(checked) => {
                           if (checked) {
-                            setFinanceFilters(prev => ({ ...prev, types: ['income', 'expense'] }));
+                            setFinanceFilters((prev) => ({
+                              ...prev,
+                              types: ["income", "expense"],
+                            }));
                           } else {
-                            setFinanceFilters(prev => ({ ...prev, types: [] }));
+                            setFinanceFilters((prev) => ({
+                              ...prev,
+                              types: [],
+                            }));
                           }
                         }}
                         onClick={(e) => e.stopPropagation()}
                       />
-                      <Label htmlFor="filter-types-desktop" className="text-sm font-medium cursor-pointer">
+                      <Label
+                        htmlFor="filter-types-desktop"
+                        className="text-sm font-medium cursor-pointer"
+                      >
                         거래 유형
                       </Label>
                       {financeFilters.types.length > 0 && (
-                        <span className="text-xs text-gray-500">({financeFilters.types.length}개 선택)</span>
+                        <span className="text-xs text-gray-500">
+                          ({financeFilters.types.length}개 선택)
+                        </span>
                       )}
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="pb-3">
                     <div className="space-y-2 pl-6">
-                      {['income', 'expense'].map((type) => (
+                      {["income", "expense"].map((type) => (
                         <div key={type} className="flex items-center space-x-2">
                           <Checkbox
                             id={`type-${type}-desktop`}
                             checked={financeFilters.types.includes(type)}
                             onCheckedChange={(checked) => {
                               if (checked) {
-                                setFinanceFilters(prev => ({
+                                setFinanceFilters((prev) => ({
                                   ...prev,
-                                  types: [...prev.types, type]
+                                  types: [...prev.types, type],
                                 }));
                               } else {
-                                setFinanceFilters(prev => ({
+                                setFinanceFilters((prev) => ({
                                   ...prev,
-                                  types: prev.types.filter(t => t !== type)
+                                  types: prev.types.filter((t) => t !== type),
                                 }));
                               }
                             }}
                           />
-                          <Label htmlFor={`type-${type}-desktop`} className="text-sm">
-                            {type === 'income' ? '수입' : '지출'}
+                          <Label
+                            htmlFor={`type-${type}-desktop`}
+                            className="text-sm"
+                          >
+                            {type === "income" ? "수입" : "지출"}
                           </Label>
                         </div>
                       ))}
@@ -3429,7 +3877,10 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
                 </AccordionItem>
 
                 {/* 카테고리 필터 */}
-                <AccordionItem value="categories" className="border rounded-lg px-3">
+                <AccordionItem
+                  value="categories"
+                  className="border rounded-lg px-3"
+                >
                   <AccordionTrigger className="py-3 hover:no-underline">
                     <div className="flex items-center space-x-2">
                       <Checkbox
@@ -3437,43 +3888,64 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
                         checked={financeFilters.categories.length > 0}
                         onCheckedChange={(checked) => {
                           if (checked) {
-                            setFinanceFilters(prev => ({ ...prev, categories: financeCategories }));
+                            setFinanceFilters((prev) => ({
+                              ...prev,
+                              categories: financeCategories,
+                            }));
                           } else {
-                            setFinanceFilters(prev => ({ ...prev, categories: [] }));
+                            setFinanceFilters((prev) => ({
+                              ...prev,
+                              categories: [],
+                            }));
                           }
                         }}
                         onClick={(e) => e.stopPropagation()}
                       />
-                      <Label htmlFor="filter-categories-desktop" className="text-sm font-medium cursor-pointer">
+                      <Label
+                        htmlFor="filter-categories-desktop"
+                        className="text-sm font-medium cursor-pointer"
+                      >
                         카테고리
                       </Label>
                       {financeFilters.categories.length > 0 && (
-                        <span className="text-xs text-gray-500">({financeFilters.categories.length}개 선택)</span>
+                        <span className="text-xs text-gray-500">
+                          ({financeFilters.categories.length}개 선택)
+                        </span>
                       )}
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="pb-3">
                     <div className="max-h-32 overflow-y-auto space-y-2 pl-6">
                       {financeCategories.map((category) => (
-                        <div key={category} className="flex items-center space-x-2">
+                        <div
+                          key={category}
+                          className="flex items-center space-x-2"
+                        >
                           <Checkbox
                             id={`category-${category}-desktop`}
-                            checked={financeFilters.categories.includes(category)}
+                            checked={financeFilters.categories.includes(
+                              category
+                            )}
                             onCheckedChange={(checked) => {
                               if (checked) {
-                                setFinanceFilters(prev => ({
+                                setFinanceFilters((prev) => ({
                                   ...prev,
-                                  categories: [...prev.categories, category]
+                                  categories: [...prev.categories, category],
                                 }));
                               } else {
-                                setFinanceFilters(prev => ({
+                                setFinanceFilters((prev) => ({
                                   ...prev,
-                                  categories: prev.categories.filter(c => c !== category)
+                                  categories: prev.categories.filter(
+                                    (c) => c !== category
+                                  ),
                                 }));
                               }
                             }}
                           />
-                          <Label htmlFor={`category-${category}-desktop`} className="text-sm">
+                          <Label
+                            htmlFor={`category-${category}-desktop`}
+                            className="text-sm"
+                          >
                             {category}
                           </Label>
                         </div>
@@ -3483,7 +3955,10 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
                 </AccordionItem>
 
                 {/* 거래처 필터 */}
-                <AccordionItem value="vendors" className="border rounded-lg px-3">
+                <AccordionItem
+                  value="vendors"
+                  className="border rounded-lg px-3"
+                >
                   <AccordionTrigger className="py-3 hover:no-underline">
                     <div className="flex items-center space-x-2">
                       <Checkbox
@@ -3491,43 +3966,62 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
                         checked={financeFilters.vendors.length > 0}
                         onCheckedChange={(checked) => {
                           if (checked) {
-                            setFinanceFilters(prev => ({ ...prev, vendors: financeVendors }));
+                            setFinanceFilters((prev) => ({
+                              ...prev,
+                              vendors: financeVendors,
+                            }));
                           } else {
-                            setFinanceFilters(prev => ({ ...prev, vendors: [] }));
+                            setFinanceFilters((prev) => ({
+                              ...prev,
+                              vendors: [],
+                            }));
                           }
                         }}
                         onClick={(e) => e.stopPropagation()}
                       />
-                      <Label htmlFor="filter-vendors-desktop" className="text-sm font-medium cursor-pointer">
+                      <Label
+                        htmlFor="filter-vendors-desktop"
+                        className="text-sm font-medium cursor-pointer"
+                      >
                         거래처
                       </Label>
                       {financeFilters.vendors.length > 0 && (
-                        <span className="text-xs text-gray-500">({financeFilters.vendors.length}개 선택)</span>
+                        <span className="text-xs text-gray-500">
+                          ({financeFilters.vendors.length}개 선택)
+                        </span>
                       )}
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="pb-3">
                     <div className="max-h-32 overflow-y-auto space-y-2 pl-6">
                       {financeVendors.map((vendor) => (
-                        <div key={vendor} className="flex items-center space-x-2">
+                        <div
+                          key={vendor}
+                          className="flex items-center space-x-2"
+                        >
                           <Checkbox
                             id={`vendor-${vendor}-desktop`}
                             checked={financeFilters.vendors.includes(vendor)}
                             onCheckedChange={(checked) => {
                               if (checked) {
-                                setFinanceFilters(prev => ({
+                                setFinanceFilters((prev) => ({
                                   ...prev,
-                                  vendors: [...prev.vendors, vendor]
+                                  vendors: [...prev.vendors, vendor],
                                 }));
                               } else {
-                                setFinanceFilters(prev => ({
+                                setFinanceFilters((prev) => ({
                                   ...prev,
-                                  vendors: prev.vendors.filter(v => v !== vendor)
+                                  vendors: prev.vendors.filter(
+                                    (v) => v !== vendor
+                                  ),
                                 }));
                               }
                             }}
                           />
-                          <Label htmlFor={`vendor-${vendor}-desktop`} className="text-sm">
+                          <Label
+                            htmlFor={`vendor-${vendor}-desktop`}
+                            className="text-sm"
+                          >
                             {vendor}
                           </Label>
                         </div>
@@ -3537,7 +4031,10 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
                 </AccordionItem>
 
                 {/* 거래자 필터 */}
-                <AccordionItem value="paidBys" className="border rounded-lg px-3">
+                <AccordionItem
+                  value="paidBys"
+                  className="border rounded-lg px-3"
+                >
                   <AccordionTrigger className="py-3 hover:no-underline">
                     <div className="flex items-center space-x-2">
                       <Checkbox
@@ -3551,19 +4048,30 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
                                   .filter((f) => f.paidBy && f.paidBy.trim())
                                   .map((f) => f.paidBy!)
                               )
-                            );
-                            setFinanceFilters(prev => ({ ...prev, paidBys: allPaidBys }));
+                            ).sort();
+                            setFinanceFilters((prev) => ({
+                              ...prev,
+                              paidBys: allPaidBys,
+                            }));
                           } else {
-                            setFinanceFilters(prev => ({ ...prev, paidBys: [] }));
+                            setFinanceFilters((prev) => ({
+                              ...prev,
+                              paidBys: [],
+                            }));
                           }
                         }}
                         onClick={(e) => e.stopPropagation()}
                       />
-                      <Label htmlFor="filter-paidBys-desktop" className="text-sm font-medium cursor-pointer">
+                      <Label
+                        htmlFor="filter-paidBys-desktop"
+                        className="text-sm font-medium cursor-pointer"
+                      >
                         거래자
                       </Label>
                       {financeFilters.paidBys.length > 0 && (
-                        <span className="text-xs text-gray-500">({financeFilters.paidBys.length}개 선택)</span>
+                        <span className="text-xs text-gray-500">
+                          ({financeFilters.paidBys.length}개 선택)
+                        </span>
                       )}
                     </div>
                   </AccordionTrigger>
@@ -3575,26 +4083,34 @@ export default function FinanceTab({ programId, hasEditPermission = false }: Fin
                             .filter((f) => f.paidBy && f.paidBy.trim())
                             .map((f) => f.paidBy!)
                         )
-                      ).map((paidBy) => (
-                        <div key={paidBy} className="flex items-center space-x-2">
+                      ).sort().map((paidBy) => (
+                        <div
+                          key={paidBy}
+                          className="flex items-center space-x-2"
+                        >
                           <Checkbox
                             id={`paidBy-${paidBy}-desktop`}
                             checked={financeFilters.paidBys.includes(paidBy)}
                             onCheckedChange={(checked) => {
                               if (checked) {
-                                setFinanceFilters(prev => ({
+                                setFinanceFilters((prev) => ({
                                   ...prev,
-                                  paidBys: [...prev.paidBys, paidBy]
+                                  paidBys: [...prev.paidBys, paidBy],
                                 }));
                               } else {
-                                setFinanceFilters(prev => ({
+                                setFinanceFilters((prev) => ({
                                   ...prev,
-                                  paidBys: prev.paidBys.filter(p => p !== paidBy)
+                                  paidBys: prev.paidBys.filter(
+                                    (p) => p !== paidBy
+                                  ),
                                 }));
                               }
                             }}
                           />
-                          <Label htmlFor={`paidBy-${paidBy}-desktop`} className="text-sm">
+                          <Label
+                            htmlFor={`paidBy-${paidBy}-desktop`}
+                            className="text-sm"
+                          >
                             {paidBy}
                           </Label>
                         </div>

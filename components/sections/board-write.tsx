@@ -790,7 +790,7 @@ export default function BoardWrite({
         // 데이터 설정
         setTitle(data.title || "");
         setContent(data.content || "");
-        setThumbnailImage(data.thumbnail || data.thumbnail_image || "");
+        setThumbnailImage(data.thumbnail_image || data.thumbnail || "");
         setAllowComments(data.allow_comments !== false);
         setDescription(data.description || ""); // 상세 설명 로드
         setIsHidden(data.status === "hidden"); // 숨김 상태 반영

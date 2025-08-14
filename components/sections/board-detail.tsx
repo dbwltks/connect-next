@@ -303,6 +303,13 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
     id: string;
     title: string;
   } | null>(null);
+  // 최근 게시글 목록 상태 관리
+  const [recentPosts, setRecentPosts] = useState<{
+    id: string;
+    title: string;
+    created_at: string;
+    views: number;
+  }[]>([]);
   // 첨부파일 관리
   const [attachments, setAttachments] = useState<IAttachment[]>([]);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -515,6 +522,27 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
     }
   }, [post?.id, post?.files]);
 
+  // 최근 게시글 가져오기 함수
+  async function fetchRecentPosts(pageId: string, excludePostId: string) {
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("board_posts")
+        .select("id, title, created_at, views")
+        .eq("page_id", pageId)
+        .neq("id", excludePostId)
+        .eq("status", "published")
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+      setRecentPosts(data || []);
+    } catch (err) {
+      console.error("최근 게시글 가져오기 오류:", err);
+      setRecentPosts([]);
+    }
+  }
+
   // 이전글, 다음글 가져오기 함수
   async function fetchPrevNextPosts(postId: string, pageId?: string) {
     try {
@@ -602,6 +630,11 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
       if (viewIncrementedRef.current !== postData.post.id) {
         viewIncrementedRef.current = postData.post.id;
         incrementViewCount(postData.post.id);
+      }
+
+      // 최근 게시글 목록 가져오기
+      if (postData.post.page_id) {
+        fetchRecentPosts(postData.post.page_id, postData.post.id);
       }
     }
   }, [postData]);
@@ -1861,6 +1894,107 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
               allowComments={post.allow_comments !== false}
             />
           </div>
+        </div>
+
+        {/* 하단 네비게이션 및 게시글 목록 */}
+        <div className="border-t border-gray-200">
+          {/* 하단 이전글, 다음글, 목록 버튼 (데스크탑) */}
+          <div className="hidden lg:flex justify-between items-center p-4 border-b border-gray-100">
+            {/* 수정, 삭제 버튼 - 작성자인 경우에만 표시 */}
+            <div className="flex gap-2">
+              {isAdmin && (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      router.push(
+                        `${pathname.replace(/\/$/, "")}/${post.id}/edit`
+                      )
+                    }
+                  >
+                    수정
+                  </Button>
+                  <Button variant="destructive" onClick={handleDelete}>
+                    삭제
+                  </Button>
+                </>
+              )}
+            </div>
+            <div className="flex gap-1 space-x-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="p-3 text-gray-500 bg-gray-200 hover:text-gray-700 disabled:opacity-50"
+                disabled={!prevPost}
+                onClick={() => {
+                  if (prevPost && post?.page_id) {
+                    const currentUrl = new URL(window.location.href);
+                    currentUrl.searchParams.set("post", prevPost.id);
+                    router.push(currentUrl.pathname + currentUrl.search);
+                  }
+                }}
+              >
+                이전글
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="p-3 text-gray-500 bg-gray-200 hover:text-gray-700 disabled:opacity-50"
+                disabled={!nextPost}
+                onClick={() => {
+                  if (nextPost && post?.page_id) {
+                    const currentUrl = new URL(window.location.href);
+                    currentUrl.searchParams.set("post", nextPost.id);
+                    router.push(currentUrl.pathname + currentUrl.search);
+                  }
+                }}
+              >
+                다음글
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="p-3 text-gray-500 bg-gray-200 hover:text-gray-700"
+                onClick={handleGoList}
+              >
+                목록
+              </Button>
+            </div>
+          </div>
+
+          {/* 최근 게시글 목록 */}
+          {recentPosts.length > 0 && (
+            <div className="p-4 bg-gray-50">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">이 게시판의 다른 글</h3>
+              <div className="space-y-2">
+                {recentPosts.map((recentPost) => (
+                  <div
+                    key={recentPost.id}
+                    className="flex items-center justify-between p-3 bg-white rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                    onClick={() => {
+                      if (post?.page_id) {
+                        const currentUrl = new URL(window.location.href);
+                        currentUrl.searchParams.set("post", recentPost.id);
+                        router.push(currentUrl.pathname + currentUrl.search);
+                      }
+                    }}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-medium text-gray-900 truncate">
+                        {recentPost.title}
+                      </h4>
+                      <div className="flex items-center text-xs text-gray-500 mt-1">
+                        <span>{formatDate(recentPost.created_at)}</span>
+                        <span className="mx-1">·</span>
+                        <span>조회 {recentPost.views || 0}</span>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-gray-400 ml-2" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 모바일 이전/다음 플로팅 버튼 */}

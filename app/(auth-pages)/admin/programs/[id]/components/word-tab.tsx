@@ -1340,6 +1340,10 @@ export default function WordTab({
             onClick={() => {
               setSelectedDocument(document);
               setSelectedFolderId(null); // 문서 선택 시 폴더 선택 해제
+              // 모바일에서 문서 선택 시 사이드바 자동 닫기
+              if (isMobile) {
+                setSidebarCollapsed(true);
+              }
             }}
             onDoubleClick={(e) => {
               e.stopPropagation();
@@ -1715,7 +1719,7 @@ export default function WordTab({
 
             {/* 에디터 영역 */}
             <div className="flex-1 bg-white overflow-y-auto">
-              <div className="max-w-4xl mx-auto min-h-full">
+              <div className="w-full min-h-full">
                 <Editor
                   key={selectedDocument?.id}
                   content={selectedDocument?.content || ""}
