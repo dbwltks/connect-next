@@ -493,7 +493,7 @@ export default function ProgramsWidget({
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-12">
-          <div className="text-muted-foreground">로딩 중...</div>
+          <div className="text-muted-foreground dark:text-gray-400">로딩 중...</div>
         </CardContent>
       </Card>
     );
@@ -504,10 +504,10 @@ export default function ProgramsWidget({
       <Card>
         <CardContent className="flex items-center justify-center py-12">
           <div className="text-center">
-            <div className="text-muted-foreground mb-2">
+            <div className="text-muted-foreground dark:text-gray-400 mb-2">
               프로그램이 선택되지 않았습니다
             </div>
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-gray-500 dark:text-gray-400">
               위젯 설정에서 프로그램을 선택해주세요
             </div>
           </div>
@@ -522,10 +522,10 @@ export default function ProgramsWidget({
       <div className="flex flex-col p-4 sm:p-0 ">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="space-y-1">
-            <h2 className="text-xl font-bold text-slate-900">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
               {widget?.title || "프로그램 대시보드"}
             </h2>
-            <p className="text-slate-600 text-sm">
+            <p className="text-slate-600 dark:text-gray-400 text-sm">
               {widget?.settings?.subtitle ||
                 "프로그램별 주요 정보를 한눈에 확인하세요"}
             </p>
@@ -533,10 +533,10 @@ export default function ProgramsWidget({
 
           {programs.length > 0 && !widget?.settings?.selected_program && (
             <Select value={selectedProgram} onValueChange={setSelectedProgram}>
-              <SelectTrigger className="w-full sm:w-[220px] h-11 bg-white border-gray-200/60 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all">
+              <SelectTrigger className="w-full sm:w-[220px] h-11 bg-white dark:bg-gray-800 border-gray-200/60 dark:border-gray-700 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all dark:text-white">
                 <SelectValue placeholder="📋 프로그램 선택" />
               </SelectTrigger>
-              <SelectContent className="rounded-xl border-gray-200 shadow-lg">
+              <SelectContent className="rounded-xl border-gray-200 dark:border-gray-700 shadow-lg bg-white dark:bg-gray-800">
                 {programs.map((program) => (
                   <SelectItem
                     key={program.id}
@@ -553,9 +553,9 @@ export default function ProgramsWidget({
       </div>
 
       {/* 탭 컨텐츠 */}
-      <div className="bg-white sm:rounded-2xl sm:border sm:border-gray-200/60 sm:shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 sm:rounded-2xl sm:border sm:border-gray-200/60 dark:border-gray-700 sm:shadow-sm overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <div className="bg-gray-50/50 px-4 py-3 border-b border-gray-200/60">
+          <div className="bg-gray-50/50 dark:bg-gray-900/50 px-4 py-3 border-b border-gray-200/60 dark:border-gray-700">
             <div className="flex overflow-x-auto scrollbar-hide gap-2">
               {tabConfig.availableTabs.map((tab) => (
                 <button
@@ -564,7 +564,7 @@ export default function ProgramsWidget({
                   className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm whitespace-nowrap transition-all duration-200 ${
                     activeTab === tab.key
                       ? "bg-blue-500 text-white shadow-sm"
-                      : "bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-gray-200/60"
+                      : "bg-white dark:bg-gray-800 text-slate-600 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-gray-700 border border-gray-200/60 dark:border-gray-700"
                   }`}
                   title={tab.label}
                 >
@@ -681,7 +681,7 @@ export default function ProgramsWidget({
                 />
               ))}
               {allPrograms.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="text-center py-8 text-muted-foreground dark:text-gray-400">
                   <CheckCircle
                     size={48}
                     className="mx-auto mb-4 text-gray-300"

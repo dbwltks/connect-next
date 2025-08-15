@@ -119,16 +119,16 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
     return (
       <div
         ref={moreMenuRef}
-        className={`absolute ${position} right-0 mb-2 w-60 bg-white rounded-lg shadow-lg border border-gray-200 z-50 ${additionalClasses}`}
+        className={`absolute ${position} right-0 mb-2 w-60 bg-white dark:bg-gray-700 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 z-50 ${additionalClasses}`}
       >
         <div className="py-1">
-          <div className="px-3 py-2 text-xs font-semibold text-gray-800 border-b">
+          <div className="px-3 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 border-b dark:border-gray-600">
             글꼴 크기 조절
           </div>
           <div className="flex items-center justify-between p-3">
             <button
               onClick={decreaseFontSize}
-              className="p-1 text-gray-700 hover:bg-gray-100 rounded-full"
+              className="p-1 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-full"
               disabled={fontSizeLevel <= -2}
             >
               <svg
@@ -149,14 +149,14 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
 
             <button
               onClick={resetFontSize}
-              className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded mx-1"
+              className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 rounded mx-1"
             >
               기본
             </button>
 
             <button
               onClick={increaseFontSize}
-              className="p-1 text-gray-700 hover:bg-gray-100 rounded-full"
+              className="p-1 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-full"
               disabled={fontSizeLevel >= 2}
             >
               <svg
@@ -177,7 +177,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
             </button>
           </div>
 
-          <div className="px-3 py-2 text-xs font-semibold text-gray-800 border-b border-t">
+          <div className="px-3 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 border-b border-t dark:border-gray-600">
             글꼴 굵기 조절
           </div>
           <div className="flex items-center justify-between p-3">
@@ -762,26 +762,26 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
 
   if (loading) {
     return (
-      <Card className="my-8">
+      <Card className="my-8 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
         <CardHeader>
-          <Skeleton className="h-8 w-3/4 mb-2" />
+          <Skeleton className="h-8 w-3/4 mb-2 bg-gray-200 dark:bg-gray-600" />
           <div className="flex justify-between">
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-4 w-24 bg-gray-200 dark:bg-gray-600" />
+            <Skeleton className="h-4 w-32 bg-gray-200 dark:bg-gray-600" />
           </div>
         </CardHeader>
         <CardContent>
-          <Skeleton className="h-40 w-full mb-4" />
-          <Skeleton className="h-8 w-32" />
+          <Skeleton className="h-40 w-full mb-4 bg-gray-200 dark:bg-gray-600" />
+          <Skeleton className="h-8 w-32 bg-gray-200 dark:bg-gray-600" />
         </CardContent>
       </Card>
     );
   }
   if (error) {
     return (
-      <Card className="my-8 border-red-200 bg-red-50">
+      <Card className="my-8 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20">
         <CardContent className="pt-6">
-          <div className="text-red-500 text-center p-4 flex flex-col items-center gap-2">
+          <div className="text-red-500 dark:text-red-400 text-center p-4 flex flex-col items-center gap-2">
             <span className="text-lg font-medium">오류가 발생했습니다</span>
             <p>{error}</p>
             <Button
@@ -801,9 +801,9 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
   // 숨김글 접근 제한 처리
   if (post.status === "hidden" && !isAdmin) {
     return (
-      <Card className="my-8 border-yellow-200 bg-yellow-50">
+      <Card className="my-8 border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20">
         <CardContent className="pt-6">
-          <div className="text-yellow-700 text-center p-4 flex flex-col items-center gap-2">
+          <div className="text-yellow-700 dark:text-yellow-400 text-center p-4 flex flex-col items-center gap-2">
             <span className="text-lg font-medium">
               숨김 처리된 게시글입니다
             </span>
@@ -1589,15 +1589,17 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
         <ToastViewport />
       </ToastProvider>
 
-      <div className="curs py-4 lg:py-0 mx-0 lg:mx-auto w-full overflow-hidden bg-white relative lg:pb-0 border border-slate-100 lg:rounded-xl lg:mt-2">
+      <div className="curs py-4 lg:py-0 mx-0 lg:mx-auto w-full overflow-hidden bg-white dark:bg-gray-800 relative lg:pb-0 border border-slate-100 dark:border-gray-700 lg:rounded-xl lg:mt-2">
         {/* 수정, 삭제 버튼과 이전글, 다음글, 목록 버튼 한 줄에 배치 - 모바일에서는 숨김 */}
-        <div className="hidden lg:flex justify-between items-center p-4 border-b border-gray-100 space-x-2">
+        <div className="hidden lg:flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700 space-x-2">
           {/* 수정, 삭제 버튼 - 작성자인 경우에만 표시 */}
           <div className="flex gap-2">
             {isAdmin && (
               <>
                 <Button
-                  variant="outline"
+                  variant="ghost"
+                  size="sm"
+                  className="p-3 text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
                   onClick={() =>
                     router.push(
                       `${pathname.replace(/\/$/, "")}/${post.id}/edit`
@@ -1606,7 +1608,12 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                 >
                   수정
                 </Button>
-                <Button variant="destructive" onClick={handleDelete}>
+                <Button 
+                  variant="ghost"
+                  size="sm"
+                  className="p-3 text-red-600 dark:text-red-400 bg-gray-200 dark:bg-gray-700 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20" 
+                  onClick={handleDelete}
+                >
                   삭제
                 </Button>
               </>
@@ -1618,7 +1625,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
             <Button
               variant="ghost"
               size="sm"
-              className="p-3 text-gray-500 bg-gray-200 hover:text-gray-700 disabled:opacity-50"
+              className="p-3 text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
               disabled={!prevPost}
               onClick={() => {
                 if (prevPost && post?.page_id) {
@@ -1633,7 +1640,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
             <Button
               variant="ghost"
               size="sm"
-              className="p-3 text-gray-500 bg-gray-200 hover:text-gray-700 disabled:opacity-50"
+              className="p-3 text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
               disabled={!nextPost}
               onClick={() => {
                 if (nextPost && post?.page_id) {
@@ -1648,7 +1655,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
             <Button
               variant="ghost"
               size="sm"
-              className="p-3 text-gray-500 bg-gray-200 hover:text-gray-700"
+              className="p-3 text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
               onClick={handleGoList}
             >
               목록
@@ -1661,14 +1668,14 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
             {menuInfo ? (
               <Link
                 href={menuInfo.url.split("?")[0]}
-                className="text-sm text-blue-500 hover:text-blue-700 transition-colors font-medium flex items-center"
+                className="text-sm text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors font-medium flex items-center"
               >
                 {menuInfo.title} <ChevronRight className="h-3 w-3 ml-0.5" />
               </Link>
             ) : (
               <Link
                 href={getListInfo().path}
-                className="text-sm text-blue-600 hover:text-blue-700 transition-colors font-medium flex items-center"
+                className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors font-medium flex items-center"
               >
                 {getListInfo().name} <ChevronRight className="h-3 w-3 ml-0.5" />
               </Link>
@@ -1676,13 +1683,13 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
           </div>
 
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg sm:text-xl font-bold break-words">
+            <CardTitle className="text-lg sm:text-xl font-bold break-words text-gray-900 dark:text-white">
               {post.title}
             </CardTitle>
           </div>
 
           {/* 유저/메타데이터 + 액션 버튼 한 줄 */}
-          <div className="flex items-start my-6 border-b border-gray-200 pb-6 justify-between">
+          <div className="flex items-start my-6 border-b border-gray-200 dark:border-gray-600 pb-6 justify-between">
             <div className="flex items-center">
               <Avatar className="h-8 w-8 mr-2">
                 <AvatarImage
@@ -1699,10 +1706,10 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col">
-                <span className="text-sm font-medium">
+                <span className="text-sm font-medium text-gray-900 dark:text-white">
                   {authorInfo?.username || "익명"}
                 </span>
-                <div className="flex text-xs text-gray-500">
+                <div className="flex text-xs text-gray-500 dark:text-gray-400">
                   <span>{formatDate(post.created_at)}</span>
                   <span className="mx-2">·</span>
                   <span>조회 {post.views || post.view_count || 0}</span>
@@ -1787,7 +1794,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
               <div className="relative">
                 <button
                   type="button"
-                  className="flex items-center text-gray-600 p-2 rounded-md text-sm hover:bg-gray-100"
+                  className="flex items-center text-gray-600 dark:text-gray-400 p-2 rounded-md text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
                   onClick={() => setShowAttachments((prev) => !prev)}
                 >
                   <File className="w-4 h-4 mr-1" />
@@ -1796,7 +1803,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                 {showAttachments && (
                   <div
                     ref={dropdownRef}
-                    className="absolute right-0 mt-2 w-full sm:w-[400px] bg-white border rounded-lg shadow-lg z-50 max-h-[60vh] overflow-y-auto min-w-[280px]"
+                    className="absolute right-0 mt-2 w-full sm:w-[400px] bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-lg shadow-lg z-50 max-h-[60vh] overflow-y-auto min-w-[280px]"
                     style={{
                       maxWidth: "calc(100vw - 2rem)",
                     }}
@@ -1805,9 +1812,9 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                       {attachments.map((attachment, index: any) => (
                         <div
                           key={index}
-                          className="flex items-center justify-between px-3 py-2 hover:bg-gray-50"
+                          className="flex items-center justify-between px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-600"
                         >
-                          <span className="text-sm truncate flex-1 pr-4">
+                          <span className="text-sm truncate flex-1 pr-4 text-gray-900 dark:text-white">
                             {attachment.name}
                           </span>
                           <Button
@@ -1837,19 +1844,19 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
           </div>
 
           {/* 좋아요 및 댓글 카운트 UI */}
-          <div className="flex items-center gap-4 mt-6 pt-6 border-t border-gray-100">
+          <div className="flex items-center gap-4 mt-6 pt-6 border-t border-gray-100 dark:border-gray-600">
             <button
               onClick={toggleLike}
               disabled={likeLoading}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-colors ${liked ? "bg-red-50 text-red-600" : "hover:bg-gray-100 text-gray-600"}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-colors ${liked ? "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400" : "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"}`}
             >
               <Heart
-                className={`h-4 w-4 ${liked ? "fill-red-600 text-red-600" : "text-gray-500"}`}
+                className={`h-4 w-4 ${liked ? "fill-red-600 text-red-600 dark:fill-red-400 dark:text-red-400" : "text-gray-500 dark:text-gray-400"}`}
               />
               <span className="text-sm font-medium">{likeCount}</span>
             </button>
 
-            <div className="flex items-center gap-1.5 text-gray-500">
+            <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
               <MessageSquare className="h-4 w-4" />
               <span className="text-sm">{commentCount}</span>
             </div>
@@ -1861,7 +1868,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
               try {
                 const tags: ITag[] = JSON.parse(post.tags);
                 return tags && tags.length > 0 ? (
-                  <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-100">
+                  <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-600">
                     {tags.map((tag, index: any) => (
                       <Badge
                         key={index}
@@ -1887,7 +1894,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
           {/* 버튼들은 CardContent로 이동했습니다 */}
         </CardFooter>
 
-        <div className="px-4 sm:px-6 pt-3 sm:pt-4 pb-4 sm:pb-6 border-t border-gray-100">
+        <div className="px-4 sm:px-6 pt-3 sm:pt-4 pb-4 sm:pb-6 border-t border-gray-100 dark:border-gray-600">
           <div id="comments-section">
             <BoardComments
               postId={post.id}
@@ -1897,15 +1904,17 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
         </div>
 
         {/* 하단 네비게이션 및 게시글 목록 */}
-        <div className="border-t border-gray-200">
+        <div className="border-t border-gray-200 dark:border-gray-600">
           {/* 하단 이전글, 다음글, 목록 버튼 (데스크탑) */}
-          <div className="hidden lg:flex justify-between items-center p-4 border-b border-gray-100">
+          <div className="hidden lg:flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700">
             {/* 수정, 삭제 버튼 - 작성자인 경우에만 표시 */}
             <div className="flex gap-2">
               {isAdmin && (
                 <>
                   <Button
-                    variant="outline"
+                    variant="ghost"
+                    size="sm"
+                    className="p-3 text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
                     onClick={() =>
                       router.push(
                         `${pathname.replace(/\/$/, "")}/${post.id}/edit`
@@ -1914,7 +1923,12 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                   >
                     수정
                   </Button>
-                  <Button variant="destructive" onClick={handleDelete}>
+                  <Button 
+                    variant="ghost"
+                    size="sm"
+                    className="p-3 text-red-600 dark:text-red-400 bg-gray-200 dark:bg-gray-700 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20" 
+                    onClick={handleDelete}
+                  >
                     삭제
                   </Button>
                 </>
@@ -1924,7 +1938,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="p-3 text-gray-500 bg-gray-200 hover:text-gray-700 disabled:opacity-50"
+                className="p-3 text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
                 disabled={!prevPost}
                 onClick={() => {
                   if (prevPost && post?.page_id) {
@@ -1939,7 +1953,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="p-3 text-gray-500 bg-gray-200 hover:text-gray-700 disabled:opacity-50"
+                className="p-3 text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
                 disabled={!nextPost}
                 onClick={() => {
                   if (nextPost && post?.page_id) {
@@ -1954,7 +1968,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="p-3 text-gray-500 bg-gray-200 hover:text-gray-700"
+                className="p-3 text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
                 onClick={handleGoList}
               >
                 목록
@@ -1964,13 +1978,13 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
 
           {/* 최근 게시글 목록 */}
           {recentPosts.length > 0 && (
-            <div className="p-4 bg-gray-50">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">이 게시판의 다른 글</h3>
+            <div className="p-4 bg-gray-50 dark:bg-gray-700">
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">이 게시판의 다른 글</h3>
               <div className="space-y-2">
                 {recentPosts.map((recentPost) => (
                   <div
                     key={recentPost.id}
-                    className="flex items-center justify-between p-3 bg-white rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                    className="flex items-center justify-between p-3 bg-white dark:bg-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-500 cursor-pointer transition-colors"
                     onClick={() => {
                       if (post?.page_id) {
                         const currentUrl = new URL(window.location.href);
@@ -1980,16 +1994,16 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                     }}
                   >
                     <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-medium text-gray-900 truncate">
+                      <h4 className="text-sm font-medium text-gray-900 dark:text-white truncate">
                         {recentPost.title}
                       </h4>
-                      <div className="flex items-center text-xs text-gray-500 mt-1">
+                      <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-1">
                         <span>{formatDate(recentPost.created_at)}</span>
                         <span className="mx-1">·</span>
                         <span>조회 {recentPost.views || 0}</span>
                       </div>
                     </div>
-                    <ChevronRight className="h-4 w-4 text-gray-400 ml-2" />
+                    <ChevronRight className="h-4 w-4 text-gray-400 dark:text-gray-500 ml-2" />
                   </div>
                 ))}
               </div>
@@ -2015,9 +2029,9 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                   router.push(currentUrl.pathname + currentUrl.search);
                 }
               }}
-              className="bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg pointer-events-auto hover:bg-white transition-colors"
+              className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-full p-3 shadow-lg pointer-events-auto hover:bg-white dark:hover:bg-gray-800 transition-colors"
             >
-              <ChevronLeft className="h-5 w-5 text-gray-700" />
+              <ChevronLeft className="h-5 w-5 text-gray-700 dark:text-gray-300" />
             </button>
           )}
 
@@ -2033,21 +2047,21 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                   router.push(currentUrl.pathname + currentUrl.search);
                 }
               }}
-              className="bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg pointer-events-auto hover:bg-white transition-colors"
+              className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-full p-3 shadow-lg pointer-events-auto hover:bg-white dark:hover:bg-gray-800 transition-colors"
             >
-              <ChevronRight className="h-5 w-5 text-gray-700" />
+              <ChevronRight className="h-5 w-5 text-gray-700 dark:text-gray-300" />
             </button>
           )}
         </div>
 
         {/* 모바일 하단 고정 네비게이션 */}
-        <div className="fixed bottom-0 left-0 right-0 lg:hidden z-50 bg-white border-t border-gray-200">
+        <div className="fixed bottom-0 left-0 right-0 lg:hidden z-50 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
           {/* 통합된 하단 메뉴바 */}
           <div className="flex items-center justify-between px-8 py-3">
             {/* 목록으로 버튼 */}
             <button
               onClick={handleGoList}
-              className="flex flex-col items-center text-gray-700 hover:text-gray-900"
+              className="flex flex-col items-center text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -2074,7 +2088,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
             {/* 글꼴 설정 버튼 */}
             <Drawer open={showMobileFontMenu} onOpenChange={setShowMobileFontMenu}>
               <DrawerTrigger asChild>
-                <button className="flex flex-col items-center text-gray-700 hover:text-gray-900">
+                <button className="flex flex-col items-center text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="20"
@@ -2245,10 +2259,10 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
             <button
               onClick={toggleLike}
               disabled={likeLoading}
-              className="flex flex-col items-center text-gray-700 hover:text-gray-900"
+              className="flex flex-col items-center text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
             >
               <Heart
-                className={`h-5 w-5 ${liked ? "fill-red-600 text-red-600" : "text-gray-600"}`}
+                className={`h-5 w-5 ${liked ? "fill-red-600 text-red-600 dark:fill-red-400 dark:text-red-400" : "text-gray-600 dark:text-gray-400"}`}
               />
               <span className="text-xs mt-0.5">{likeCount}</span>
             </button>
@@ -2266,7 +2280,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                   window.scrollTo({ top: y, behavior: "smooth" });
                 }
               }}
-              className="flex flex-col items-center text-gray-700 hover:text-gray-900"
+              className="flex flex-col items-center text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
             >
               <MessageSquare className="h-5 w-5" />
               <span className="text-xs mt-0.5">{commentCount}</span>
@@ -2276,7 +2290,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
             {isAdmin && (
               <Drawer open={showMobileMenu} onOpenChange={setShowMobileMenu}>
                 <DrawerTrigger asChild>
-                  <button className="flex flex-col items-center text-gray-700 hover:text-gray-900">
+                  <button className="flex flex-col items-center text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="20"

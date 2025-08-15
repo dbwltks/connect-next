@@ -43,12 +43,12 @@ export function StripWidget({ widget, useContainer }: StripWidgetProps) {
   if (!stripValue) {
     return (
       <div
-        className="h-16 flex items-center justify-center rounded-md border bg-gray-50 text-gray-400 my-4"
+        className="h-16 flex items-center justify-center rounded-md border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-500 my-4"
         style={finalStyle}
       >
         <div className="text-center">
           <div className="text-sm font-medium">스트립(띠 배너) 미리보기</div>
-          <div className="text-xs text-gray-500 mt-1">
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
             {useFullWidth && !useContainer
               ? "화면 전체 너비를 사용합니다"
               : "컨테이너 너비를 사용합니다"}
@@ -93,7 +93,7 @@ export function StripWidget({ widget, useContainer }: StripWidgetProps) {
   if (stripType === "html") {
     return (
       <div
-        className="h-16 flex items-center justify-center bg-white my-4"
+        className="h-16 flex items-center justify-center bg-white dark:bg-gray-800 my-4"
         style={finalStyle}
         dangerouslySetInnerHTML={{ __html: stripValue }}
       />

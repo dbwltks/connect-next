@@ -299,8 +299,8 @@ export default function BoardComments({
     fetchPostAuthor();
   }, [postId]);
 
-  if (loading) return <div className="text-gray-400 py-4">댓글 로딩 중...</div>;
-  if (error) return <div className="text-red-500 py-4">{error}</div>;
+  if (loading) return <div className="text-gray-400 dark:text-gray-500 py-4">댓글 로딩 중...</div>;
+  if (error) return <div className="text-red-500 dark:text-red-400 py-4">{error}</div>;
 
   // 댓글 등록 핸들러
   async function handleSubmit(e: React.FormEvent) {
@@ -401,16 +401,16 @@ export default function BoardComments({
     return (
       <ul
         className={
-          depth === 0 ? "space-y-4" : "mt-2 space-y-4 border-t border-gray-200"
+          depth === 0 ? "space-y-4" : "mt-2 space-y-4 border-t border-gray-200 dark:border-gray-600"
         }
       >
         {tree.map((c: BoardComment & { replies: BoardComment[] }, index: any) => (
           <li
             key={c.id}
-            className={`pt-4 ${index !== 0 ? "border-t border-gray-200" : ""} ${depth > 0 ? "ml-12" : ""}`}
+            className={`pt-4 ${index !== 0 ? "border-t border-gray-200 dark:border-gray-600" : ""} ${depth > 0 ? "ml-12" : ""}`}
           >
             <div className="flex items-start gap-3">
-              <div className="bg-gray-100 text-gray-600 rounded-full w-9 h-9 flex items-center justify-center flex-shrink-0">
+              <div className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-full w-9 h-9 flex items-center justify-center flex-shrink-0">
                 <UserAvatar
                   userId={c.user_id}
                   username={replyToMap[c.user_id]?.username}
@@ -420,22 +420,22 @@ export default function BoardComments({
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="font-medium text-sm">
+                  <span className="font-medium text-sm text-gray-900 dark:text-white">
                     {replyToMap[c.user_id]?.username}
                   </span>
                   {postAuthor?.user_id && c.user_id === postAuthor.user_id && (
-                    <span className="bg-blue-100 text-blue-600 text-[10px] px-1.5 py-0.5 rounded-full">
+                    <span className="bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 text-[10px] px-1.5 py-0.5 rounded-full">
                       작성자
                     </span>
                   )}
-                  <span className="text-[10px] text-gray-500">
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400">
                     {formatDistanceToNow(new Date(c.created_at), {
                       addSuffix: true,
                       locale: ko,
                     })}
                   </span>
                 </div>
-                <div className="text-gray-800 text-[15px] mb-2">
+                <div className="text-gray-800 dark:text-gray-200 text-[15px] mb-2">
                   {editingCommentId === c.id ? (
                     <form
                       className="mt-3"
@@ -476,7 +476,7 @@ export default function BoardComments({
                         }
                       }}
                     >
-                      <div className="border-2 border-gray-200 rounded-lg overflow-hidden">
+                      <div className="border-2 border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
                         <div className="flex items-center justify-between p-4">
                           <div className="flex items-center gap-2">
                             <UserAvatar
@@ -485,17 +485,17 @@ export default function BoardComments({
                               size={6}
                               avatarMap={avatarMap}
                             />
-                            <span className="font-medium text-sm">
+                            <span className="font-medium text-sm text-gray-900 dark:text-white">
                               {profile?.username}
                             </span>
                           </div>
-                          <span className="text-xs text-gray-400">
+                          <span className="text-xs text-gray-400 dark:text-gray-500">
                             {editInput.length}/1000
                           </span>
                         </div>
                         <input
                           type="text"
-                          className="w-full px-4 focus:outline-none text-sm text-gray-800 placeholder-gray-400"
+                          className="w-full px-4 focus:outline-none text-sm text-gray-800 dark:text-gray-200 dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500"
                           placeholder="댓글을 수정하세요"
                           value={editInput}
                           onChange={(e) => {
@@ -513,14 +513,14 @@ export default function BoardComments({
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
-                              className="text-gray-500 hover:text-gray-700 p-1 rounded"
+                              className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 p-1 rounded"
                               tabIndex={-1}
                             >
                               <Image className="h-4 w-4" />
                             </button>
                             <button
                               type="button"
-                              className="text-gray-500 hover:text-gray-700 p-1 rounded"
+                              className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 p-1 rounded"
                               tabIndex={-1}
                             >
                               <Smile className="h-4 w-4" />
@@ -529,7 +529,7 @@ export default function BoardComments({
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
-                              className="px-3 py-2 text-gray-500 hover:bg-gray-100 rounded-md text-xs"
+                              className="px-3 py-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md text-xs"
                               onClick={() => {
                                 setEditingCommentId(null);
                                 setEditInput("");
@@ -540,7 +540,7 @@ export default function BoardComments({
                             </button>
                             <button
                               type="submit"
-                              className={`px-3 py-2 rounded-md text-xs transition-colors duration-200 ${editInput.trim() ? "bg-blue-600 text-white hover:bg-blue-700" : " cursor-not-allowed"}`}
+                              className={`px-3 py-2 rounded-md text-xs transition-colors duration-200 ${editInput.trim() ? "bg-blue-600 dark:bg-blue-700 text-white hover:bg-blue-700 dark:hover:bg-blue-800" : " cursor-not-allowed"}`}
                               disabled={!editInput.trim() || editLoading}
                             >
                               {editLoading ? "등록중" : "등록"}
@@ -556,7 +556,7 @@ export default function BoardComments({
                         c.reply_to &&
                         typeof c.reply_to === "string" &&
                         replyToMap[c.reply_to] && (
-                          <span className="text-blue-600 font-medium mr-1">
+                          <span className="text-blue-600 dark:text-blue-400 font-medium mr-1">
                             @{replyToMap[c.reply_to].username}
                           </span>
                         )}
@@ -568,7 +568,7 @@ export default function BoardComments({
                   {/* 로그인 유저만 답글 버튼 노출 */}
                   {user && profile?.username && (
                     <button
-                      className="text-gray-500 hover:text-blue-600 text-xs flex items-center gap-1"
+                      className="text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 text-xs flex items-center gap-1"
                       onClick={() => {
                         if (activeReplyId === c.id) {
                           setActiveReplyId(null);
@@ -584,9 +584,9 @@ export default function BoardComments({
                   )}
                 </div>
               </div>
-              <div className="text-gray-400 relative" ref={menuRef}>
+              <div className="text-gray-400 dark:text-gray-500 relative" ref={menuRef}>
                 <button
-                  className="p-1 hover:text-gray-600 rounded-full"
+                  className="p-1 hover:text-gray-600 dark:hover:text-gray-400 rounded-full"
                   onClick={() =>
                     setActiveMenuId(activeMenuId === c.id ? null : c.id)
                   }
@@ -594,11 +594,11 @@ export default function BoardComments({
                   <MoreHorizontal className="h-4 w-4" />
                 </button>
                 {activeMenuId === c.id && user && (
-                  <div className="absolute right-0 top-full mt-1 bg-white shadow-md rounded-md py-1 z-10 w-24">
+                  <div className="absolute right-0 top-full mt-1 bg-white dark:bg-gray-700 shadow-md rounded-md py-1 z-10 w-24 border dark:border-gray-600">
                     {/* 본인 댓글이면 수정/삭제, 관리자면 삭제만 */}
                     {user?.id === c.user_id && (
                       <button
-                        className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                        className="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center gap-2"
                         onClick={() => {
                           setEditingCommentId(c.id);
                           setEditInput(c.content);
@@ -611,7 +611,7 @@ export default function BoardComments({
                     )}
                     {(user?.id === c.user_id || profile?.role === "admin") && (
                       <button
-                        className="w-full text-left px-3 py-2 text-xs text-red-600 hover:bg-gray-100 flex items-center gap-2"
+                        className="w-full text-left px-3 py-2 text-xs text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center gap-2"
                         onClick={async () => {
                           if (window.confirm("댓글을 삭제하시겠습니까?")) {
                             await serviceDeleteComment(c.id);
@@ -643,7 +643,7 @@ export default function BoardComments({
                   handleReplySubmit(c);
                 }}
               >
-                <div className="border-2 border-gray-200 rounded-lg overflow-hidden">
+                <div className="border-2 border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
                   <div className="flex items-center justify-between p-4">
                     <div className="flex items-center gap-2">
                       {/* 작성자(로그인 유저) 아바타/이름 */}
@@ -653,7 +653,7 @@ export default function BoardComments({
                         size={6}
                         avatarMap={avatarMap}
                       />
-                      <span className="font-medium text-sm">
+                      <span className="font-medium text-sm text-gray-900 dark:text-white">
                         {profile?.username}
                       </span>
                       {/* 답글 대상 username은 placeholder에서만 사용 */}
@@ -661,18 +661,18 @@ export default function BoardComments({
                         c.reply_to &&
                         typeof c.reply_to === "string" &&
                         replyToMap[c.reply_to] && (
-                          <span className="font-medium text-xs text-blue-600 ml-2">
+                          <span className="font-medium text-xs text-blue-600 dark:text-blue-400 ml-2">
                             @{replyToMap[c.reply_to]?.username}님께 답글
                           </span>
                         )}
                     </div>
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-gray-400 dark:text-gray-500">
                       {(replyInputs[c.id] || "").length}/1000
                     </span>
                   </div>
                   <input
                     type="text"
-                    className="w-full px-4 focus:outline-none text-sm text-gray-800 placeholder-gray-400"
+                    className="w-full px-4 focus:outline-none text-sm text-gray-800 dark:text-gray-200 dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500"
                     placeholder={
                       c.parent_id &&
                       c.reply_to &&
@@ -697,13 +697,13 @@ export default function BoardComments({
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        className="text-gray-500 hover:text-gray-700 p-1 rounded"
+                        className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 p-1 rounded"
                       >
                         <Image className="h-4 w-4" />
                       </button>
                       <button
                         type="button"
-                        className="text-gray-500 hover:text-gray-700 p-1 rounded"
+                        className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 p-1 rounded"
                       >
                         <Smile className="h-4 w-4" />
                       </button>
@@ -711,14 +711,14 @@ export default function BoardComments({
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        className="px-3 py-2 text-gray-500 hover:bg-gray-100 rounded-md text-xs"
+                        className="px-3 py-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md text-xs"
                         onClick={() => setActiveReplyId(null)}
                       >
                         취소
                       </button>
                       <button
                         type="submit"
-                        className={`px-3 py-2 rounded-md text-xs transition-colors duration-200 ${replyInputs[c.id]?.trim() ? "bg-blue-600 text-white hover:bg-blue-700" : " cursor-not-allowed"}`}
+                        className={`px-3 py-2 rounded-md text-xs transition-colors duration-200 ${replyInputs[c.id]?.trim() ? "bg-blue-600 dark:bg-blue-700 text-white hover:bg-blue-700 dark:hover:bg-blue-800" : " cursor-not-allowed"}`}
                         disabled={!replyInputs[c.id]?.trim()}
                       >
                         등록
@@ -753,8 +753,8 @@ export default function BoardComments({
   if (!allowComments) {
     return (
       <div className="">
-        <div className="p-4 bg-gray-100 rounded border border-gray-300 text-center">
-          <p className="text-gray-600">
+        <div className="p-4 bg-gray-100 dark:bg-gray-700 rounded border border-gray-300 dark:border-gray-600 text-center">
+          <p className="text-gray-600 dark:text-gray-300">
             작성자가 댓글을 허용하지 않은 게시글입니다.
           </p>
         </div>
@@ -764,9 +764,9 @@ export default function BoardComments({
 
   return (
     <div className="">
-      <h3 className="font-bold text-md mb-2">댓글</h3>
+      <h3 className="font-bold text-md mb-2 text-gray-900 dark:text-white">댓글</h3>
       {comments.length === 0 ? (
-        <div className="text-gray-500 text-sm">아직 댓글이 없습니다.</div>
+        <div className="text-gray-500 dark:text-gray-400 text-sm">아직 댓글이 없습니다.</div>
       ) : (
         renderCommentTree(
           commentTree as Array<BoardComment & { replies: BoardComment[] }>,
@@ -777,7 +777,7 @@ export default function BoardComments({
       {/* 댓글 입력 폼 - 로그인 유저만 */}
       {user && profile?.username ? (
         <form onSubmit={handleSubmit} className="pt-6">
-          <div className="border-2 border-gray-200 rounded-lg overflow-hidden">
+          <div className="border-2 border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-2">
                 <UserAvatar
@@ -786,16 +786,16 @@ export default function BoardComments({
                   size={8}
                   avatarMap={avatarMap}
                 />
-                <span className="font-medium text-sm">{profile?.username}</span>
+                <span className="font-medium text-sm text-gray-900 dark:text-white">{profile?.username}</span>
                 {postAuthor?.user_id && user?.id === postAuthor.user_id}
               </div>
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-gray-400 dark:text-gray-500">
                 {comment.length}/1000
               </span>
             </div>
             <input
               type="text"
-              className="w-full p-4 focus:outline-none text-sm text-gray-800 placeholder-gray-400"
+              className="w-full p-4 focus:outline-none text-sm text-gray-800 dark:text-gray-200 dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500"
               placeholder="댓글을 남겨보세요"
               value={comment}
               onChange={(e) => {
@@ -811,13 +811,13 @@ export default function BoardComments({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  className="text-gray-500 hover:text-gray-700 p-1 rounded"
+                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 p-1 rounded"
                 >
                   <Image className="h-4 w-4" />
                 </button>
                 <button
                   type="button"
-                  className="text-gray-500 hover:text-gray-700 p-1 rounded"
+                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 p-1 rounded"
                 >
                   <Smile className="h-4 w-4" />
                 </button>
@@ -825,7 +825,7 @@ export default function BoardComments({
               <div>
                 <button
                   type="submit"
-                  className={`px-3 py-2 text-sm rounded-md transition-colors duration-200 ${comment.trim() ? "bg-blue-600 text-white hover:bg-blue-700" : " cursor-not-allowed"}`}
+                  className={`px-3 py-2 text-sm rounded-md transition-colors duration-200 ${comment.trim() ? "bg-blue-600 dark:bg-blue-700 text-white hover:bg-blue-700 dark:hover:bg-blue-800" : " cursor-not-allowed"}`}
                   disabled={submitting || !comment.trim()}
                 >
                   <span className="text-sm">
@@ -836,11 +836,11 @@ export default function BoardComments({
             </div>
           </div>
           {submitError && (
-            <div className="text-red-500 text-sm mt-2">{submitError}</div>
+            <div className="text-red-500 dark:text-red-400 text-sm mt-2">{submitError}</div>
           )}
         </form>
       ) : (
-        <div className="text-gray-400 text-xs mt-4">
+        <div className="text-gray-400 dark:text-gray-500 text-xs mt-4">
           로그인 후 댓글 작성 가능
         </div>
       )}

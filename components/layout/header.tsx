@@ -268,7 +268,7 @@ export default function Header({ initialMenus = [] }: { initialMenus?: any[] }) 
     <header
       className={`${
         isMobile ? "fixed" : "sticky"
-      } top-0 z-[10] w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-all duration-300 ${
+      } top-0 z-[10] w-full border-b border-gray-200 dark:border-gray-800 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-all duration-300 ${
         shouldShowHeader
           ? "opacity-100 translate-y-0"
           : "opacity-0 -translate-y-full pointer-events-none"
@@ -595,7 +595,7 @@ function HeaderClient({
               ))}
             </ul>
 
-            <div className="mt-12 border-t pt-8 space-y-6 pb-8">
+            <div className="mt-12 border-t border-gray-200 dark:border-gray-700 pt-8 space-y-6 pb-8">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground text-sm">테마</span>
                 <div className="relative z-[150]">

@@ -48,9 +48,9 @@ export function MediaWidget({ widget, page }: MediaWidgetProps) {
   // 페이지 ID가 없는 경우
   if (!pageId) {
     return (
-      <div className="h-full bg-white rounded-xl border border-gray-100 p-4">
+      <div className="h-full bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4">
         <div className="h-full flex items-center justify-center">
-          <div className="text-center text-gray-500">
+          <div className="text-center text-gray-500 dark:text-gray-400">
             <div className="text-lg mb-2">⚙️</div>
             <div>페이지 ID가 설정되지 않았습니다</div>
             <div className="text-sm mt-1">
@@ -65,7 +65,7 @@ export function MediaWidget({ widget, page }: MediaWidgetProps) {
   // 로딩 상태
   if (isLoading) {
     return (
-      <div className="h-full bg-white rounded-xl border border-gray-100 p-4">
+      <div className="h-full bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4">
         <div className="text-center mb-6">
           <Skeleton className="h-4 w-48 mx-auto mb-2" />
           <Skeleton className="h-8 w-64 mx-auto mb-2" />
@@ -75,7 +75,7 @@ export function MediaWidget({ widget, page }: MediaWidgetProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
           {/* Featured Video Skeleton */}
           <div className="lg:col-span-2">
-            <div className="border border-gray-100 rounded-lg overflow-hidden">
+            <div className="border border-gray-100 dark:border-gray-700 rounded-lg overflow-hidden">
               <Skeleton className="aspect-video w-full" />
               <div className="p-3">
                 <Skeleton className="h-5 w-full mb-2" />
@@ -93,7 +93,7 @@ export function MediaWidget({ widget, page }: MediaWidgetProps) {
             {[...Array(Math.max(maxItems - 1, 0))].map((_, index: any) => (
               <div
                 key={index}
-                className="border border-gray-100 rounded-lg overflow-hidden"
+                className="border border-gray-100 dark:border-gray-700 rounded-lg overflow-hidden"
               >
                 <div className="flex">
                   <Skeleton className="w-20 sm:w-28 h-20 flex-shrink-0" />
@@ -115,12 +115,12 @@ export function MediaWidget({ widget, page }: MediaWidgetProps) {
   // 에러 상태
   if (error) {
     return (
-      <div className="h-full bg-white rounded-xl border border-red-200 p-4">
+      <div className="h-full bg-white dark:bg-gray-800 rounded-xl border border-red-200 dark:border-red-700 p-4">
         <div className="h-full flex items-center justify-center">
-          <div className="text-center text-red-600">
+          <div className="text-center text-red-600 dark:text-red-400">
             <div className="text-lg mb-2">❌</div>
             <div className="font-medium mb-1">데이터를 불러올 수 없습니다</div>
-            <div className="text-sm text-red-500">{error.message}</div>
+            <div className="text-sm text-red-500 dark:text-red-400">{error.message}</div>
           </div>
         </div>
       </div>
@@ -138,18 +138,18 @@ export function MediaWidget({ widget, page }: MediaWidgetProps) {
   // 데이터가 없는 경우
   if (!data || data.posts.length === 0) {
     return (
-      <div className="h-full bg-white rounded-xl border border-gray-100 p-4">
+      <div className="h-full bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4">
         <div className="text-center mb-6">
           {widget.display_options?.media_description && (
-            <div className="mb-2 text-gray-700 text-base">
+            <div className="mb-2 text-gray-700 dark:text-gray-300 text-base">
               {widget.display_options.media_description}
             </div>
           )}
-          <h3 className="sm:text-2xl text-xl font-bold text-gray-900 mb-2">
+          <h3 className="sm:text-2xl text-xl font-bold text-gray-900 dark:text-white mb-2">
             {widget.display_options?.media_title ||
               "지금 미디어, 다양한 미디어 콘텐츠를 만나보세요"}
           </h3>
-          <p className="text-gray-600 text-sm sm:text-base">
+          <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">
             {widget.display_options?.media_subtitle ||
               "최신 영상, 오디오 콘텐츠를 한 곳에서 확인하세요"}
           </p>
@@ -157,26 +157,26 @@ export function MediaWidget({ widget, page }: MediaWidgetProps) {
 
         <div className="text-center py-12">
           <div className="text-gray-400 text-lg mb-2">📹</div>
-          <div className="text-gray-500">등록된 미디어가 없습니다</div>
+          <div className="text-gray-500 dark:text-gray-400">등록된 미디어가 없습니다</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full bg-white rounded-xl border border-gray-100 p-4">
+    <div className="h-full bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4">
       <div>
         <div className="text-center mb-6">
           {widget.display_options?.media_description && (
-            <div className="mb-2 text-gray-700 text-base">
+            <div className="mb-2 text-gray-700 dark:text-gray-300 text-base">
               {widget.display_options.media_description}
             </div>
           )}
-          <h3 className="sm:text-2xl text-xl font-bold text-gray-900 mb-2">
+          <h3 className="sm:text-2xl text-xl font-bold text-gray-900 dark:text-white mb-2">
             {widget.display_options?.media_title ||
               "지금 미디어, 다양한 미디어 콘텐츠를 만나보세요"}
           </h3>
-          <p className="text-gray-600 text-sm sm:text-base">
+          <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">
             {widget.display_options?.media_subtitle ||
               "최신 영상, 오디오 콘텐츠를 한 곳에서 확인하세요"}
           </p>
@@ -185,7 +185,7 @@ export function MediaWidget({ widget, page }: MediaWidgetProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4">
           {/* Featured Video */}
           <div className="lg:col-span-3 col-span-2">
-            <div className="border border-gray-100 hover:shadow-lg transition-all duration-500 transform hover:-translate-y-1 rounded-lg overflow-hidden">
+            <div className="border border-gray-100 dark:border-gray-700 hover:shadow-lg transition-all duration-500 transform hover:-translate-y-1 rounded-lg overflow-hidden">
               <Link href={getPostUrl(data.posts[0])}>
                 <div className="relative aspect-video bg-gradient-to-br from-gray-900 to-gray-700 group cursor-pointer">
                   {data.posts[0].thumbnail_image ? (
@@ -221,22 +221,22 @@ export function MediaWidget({ widget, page }: MediaWidgetProps) {
                     NEW
                   </div>
                 </div>
-                <div className="p-3 bg-white">
+                <div className="p-3 bg-white dark:bg-gray-800">
                   <div className="w-full overflow-hidden">
-                    <h4 className="text-xl font-medium truncate block w-full">
+                    <h4 className="text-xl font-medium truncate block w-full text-gray-900 dark:text-white">
                       {data.posts[0].title}
                     </h4>
                   </div>
-                  <div className="h-5 flex items-center space-x-3 truncate text-sm text-gray-600">
+                  <div className="h-5 flex items-center space-x-3 truncate text-sm text-gray-600 dark:text-gray-400">
                     {data.posts[0].description && (
                       <span> {data.posts[0].description}</span>
                     )}
                   </div>
                   <div className="pt-1 flex items-center justify-end space-x-3">
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
                       {new Date(data.posts[0].created_at).toLocaleDateString()}
                     </span>
-                    <div className="flex items-center space-x-3 text-xs text-gray-500">
+                    <div className="flex items-center space-x-3 text-xs text-gray-500 dark:text-gray-400">
                       <div className="flex items-center space-x-1">
                         <span className="">👀</span>
                         <span>
@@ -259,7 +259,7 @@ export function MediaWidget({ widget, page }: MediaWidgetProps) {
             {data.posts.slice(1).map((post: any) => (
               <div
                 key={post.id}
-                className="overflow-hidden bg-white border border-gray-100 hover:shadow-md transition-all duration-500 transform hover:-translate-y-1 rounded-lg w-full"
+                className="overflow-hidden bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all duration-500 transform hover:-translate-y-1 rounded-lg w-full"
               >
                 <Link
                   href={getPostUrl(post)}
@@ -297,18 +297,18 @@ export function MediaWidget({ widget, page }: MediaWidgetProps) {
                   </div>
                   <div className="p-1.5 sm:p-2 flex-1 w-full overflow-hidden">
                     <div className="w-full overflow-hidden">
-                      <div className="text-base truncate block w-full">
+                      <div className="text-base truncate block w-full text-gray-900 dark:text-white">
                         {post.title}
                       </div>
                     </div>
-                    <div className="h-5 flex items-center space-x-3 truncate text-xs text-gray-600">
+                    <div className="h-5 flex items-center space-x-3 truncate text-xs text-gray-600 dark:text-gray-400">
                       {post.description && <span>{post.description}</span>}
                     </div>
                     <div className="pt-1 flex items-center justify-between">
-                      <span className="text-[10px] text-gray-500">
+                      <span className="text-[10px] text-gray-500 dark:text-gray-400">
                         {new Date(post.created_at).toLocaleDateString()}
                       </span>
-                      <div className="flex items-center space-x-2 text-[10px] text-gray-500">
+                      <div className="flex items-center space-x-2 text-[10px] text-gray-500 dark:text-gray-400">
                         <div className="flex items-center space-x-1">
                           <span className="">👀</span>
                           <span>{post.views || 0}</span>
@@ -327,7 +327,7 @@ export function MediaWidget({ widget, page }: MediaWidgetProps) {
             {data.posts.length > 1 && (
               <Link
                 href={page?.slug || page?.url || "/"}
-                className="w-full bg-white py-2 px-4 border border-gray-200 rounded-md hover:shadow-lg transition-all duration-500 transform hover:-translate-y-1 text-sm flex items-center justify-center group"
+                className="w-full bg-white dark:bg-gray-800 py-2 px-4 border border-gray-200 dark:border-gray-700 rounded-md hover:shadow-lg transition-all duration-500 transform hover:-translate-y-1 text-sm flex items-center justify-center group text-gray-900 dark:text-white"
               >
                 {widget.display_options?.media_more_text ||
                   "더 많은 미디어 보기"}

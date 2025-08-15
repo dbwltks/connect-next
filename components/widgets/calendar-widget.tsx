@@ -514,9 +514,9 @@ export default function CalendarWidget({
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="p-4">
-          <div className="text-center">로딩 중...</div>
+      <Card className="dark:bg-gray-800 dark:border-gray-700">
+        <CardContent className="p-4 dark:bg-gray-800">
+          <div className="text-center text-gray-900 dark:text-white">로딩 중...</div>
         </CardContent>
       </Card>
     );
@@ -524,8 +524,8 @@ export default function CalendarWidget({
 
   if (error) {
     return (
-      <Card>
-        <CardContent className="p-4">
+      <Card className="bg-white dark:bg-gray-800 border dark:border-gray-700">
+        <CardContent className="p-4 dark:bg-gray-800">
           <div className="text-center text-red-600">
             일정을 불러오는 중 오류가 발생했습니다.
           </div>
@@ -535,10 +535,10 @@ export default function CalendarWidget({
   }
 
   return (
-    <Card className="w-full">
+    <Card className="w-full bg-white dark:bg-gray-800 border dark:border-gray-700">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 pb-4">
+          <CardTitle className="flex items-center gap-2 pb-4 text-gray-900 dark:text-white">
             <Calendar className="w-5 h-5" />
             {settings.calendar_title || settings.title || "일정관리"}
           </CardTitle>
@@ -789,7 +789,7 @@ export default function CalendarWidget({
                   {selectedEvent.description && (
                     <div>
                       <Label className="text-sm font-medium">설명</Label>
-                      <p className="text-sm text-gray-600 mt-1">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                         {selectedEvent.description}
                       </p>
                     </div>
@@ -798,7 +798,7 @@ export default function CalendarWidget({
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label className="text-sm font-medium">시작일</Label>
-                      <p className="text-sm text-gray-600 mt-1">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                         {new Date(selectedEvent.start_date).toLocaleDateString(
                           "ko-KR"
                         )}
@@ -807,7 +807,7 @@ export default function CalendarWidget({
                     {selectedEvent.end_date && (
                       <div>
                         <Label className="text-sm font-medium">종료일</Label>
-                        <p className="text-sm text-gray-600 mt-1">
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                           {new Date(selectedEvent.end_date).toLocaleDateString(
                             "ko-KR"
                           )}
@@ -824,7 +824,7 @@ export default function CalendarWidget({
                             <Label className="text-sm font-medium">
                               시작 시간
                             </Label>
-                            <p className="text-sm text-gray-600 mt-1">
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                               {formatTime(selectedEvent.start_time)}
                             </p>
                           </div>
@@ -834,7 +834,7 @@ export default function CalendarWidget({
                             <Label className="text-sm font-medium">
                               종료 시간
                             </Label>
-                            <p className="text-sm text-gray-600 mt-1">
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                               {formatTime(selectedEvent.end_time)}
                             </p>
                           </div>
@@ -845,7 +845,7 @@ export default function CalendarWidget({
                   {selectedEvent.location && (
                     <div>
                       <Label className="text-sm font-medium">장소</Label>
-                      <p className="text-sm text-gray-600 mt-1 flex items-center">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 flex items-center">
                         <MapPin className="w-4 h-4 mr-1" />
                         {selectedEvent.location}
                       </p>
@@ -870,7 +870,7 @@ export default function CalendarWidget({
                     {selectedEvent.department && (
                       <div>
                         <Label className="text-sm font-medium">부서</Label>
-                        <p className="text-sm text-gray-600 mt-1 flex items-center">
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 flex items-center">
                           <Users className="w-4 h-4 mr-1" />
                           {selectedEvent.department}
                         </p>
@@ -949,7 +949,7 @@ export default function CalendarWidget({
             <div className="flex items-center gap-2 ml-auto">
               {(categoryFilter !== "all" || departmentFilter !== "all") && (
                 <div className="flex items-center gap-1">
-                  <span className="text-xs text-gray-600">
+                  <span className="text-xs text-gray-600 dark:text-gray-400">
                     필터: {getFilteredEvents().length}개 일정
                   </span>
                   <Button
@@ -980,7 +980,7 @@ export default function CalendarWidget({
               >
                 <ChevronLeft className="w-4 h-4" />
               </Button>
-              <div className="font-medium text-lg min-w-[200px] text-center">
+              <div className="font-medium text-lg min-w-[200px] text-center text-gray-900 dark:text-white">
                 {getDateRangeText()}
               </div>
               <Button
@@ -1074,13 +1074,13 @@ export default function CalendarWidget({
             return (
               <div
                 key={index}
-                className={`p-1 border rounded min-h-[120px] ${
-                  isCurrentMonth ? "bg-white" : "bg-gray-50"
+                className={`p-1 border border-gray-200 dark:border-gray-700 rounded min-h-[120px] ${
+                  isCurrentMonth ? "bg-white dark:bg-gray-800" : "bg-gray-50 dark:bg-gray-700"
                 } ${isToday ? "ring-2 ring-blue-500" : ""}`}
               >
                 <div
                   className={`text-sm mb-1 ${
-                    isCurrentMonth ? "text-gray-900" : "text-gray-400"
+                    isCurrentMonth ? "text-gray-900 dark:text-white" : "text-gray-400 dark:text-gray-500"
                   } ${isToday ? "font-bold" : ""}`}
                 >
                   {day.getDate()}
@@ -1154,13 +1154,13 @@ export default function CalendarWidget({
             return (
               <div
                 key={index}
-                className={`p-3 border rounded min-h-[200px] ${
-                  isToday ? "ring-2 ring-blue-500 bg-blue-50" : "bg-white"
+                className={`p-3 border border-gray-200 dark:border-gray-700 rounded min-h-[200px] ${
+                  isToday ? "ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/30" : "bg-white dark:bg-gray-800"
                 }`}
               >
                 <div
                   className={`text-center mb-2 ${
-                    isToday ? "font-bold text-blue-600" : "text-gray-700"
+                    isToday ? "font-bold text-blue-600 dark:text-blue-400" : "text-gray-700 dark:text-gray-300"
                   }`}
                 >
                   <div className="text-xs">
@@ -1260,16 +1260,16 @@ export default function CalendarWidget({
             return (
               <div
                 key={index}
-                className="p-3 border rounded bg-white cursor-pointer hover:bg-gray-50 min-h-[150px]"
+                className="p-3 border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 min-h-[150px]"
                 onClick={() => {
                   setCurrentDate(month);
                   setView("month");
                 }}
               >
-                <div className="text-center font-medium mb-2">
+                <div className="text-center font-medium mb-2 text-gray-900 dark:text-white">
                   {month.getMonth() + 1}월
                 </div>
-                <div className="text-xs text-gray-600 text-center">
+                <div className="text-xs text-gray-600 dark:text-gray-400 text-center">
                   {monthEvents.length}개 일정
                 </div>
                 {monthEvents.length > 0 && (
@@ -1289,7 +1289,7 @@ export default function CalendarWidget({
                       </div>
                     ))}
                     {monthEvents.length > 10 && (
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
                         +{monthEvents.length - 10}개 더
                       </div>
                     )}

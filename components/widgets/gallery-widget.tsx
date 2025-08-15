@@ -20,9 +20,9 @@ export function GalleryWidget({
   const showDate = widget.display_options?.show_date ?? true;
 
   return (
-    <Card className="h-full">
+    <Card className="h-full bg-white dark:bg-gray-800 border dark:border-gray-700">
       <CardHeader>
-        <CardTitle>{widget.title || page?.title || "갤러리"}</CardTitle>
+        <CardTitle className="text-gray-900 dark:text-white">{widget.title || page?.title || "갤러리"}</CardTitle>
       </CardHeader>
       <CardContent>
         {posts.length > 0 ? (
@@ -35,7 +35,7 @@ export function GalleryWidget({
             {posts.map((post: any) => (
               <div
                 key={post.id}
-                className="group relative overflow-hidden rounded-lg aspect-square bg-gray-100"
+                className="group relative overflow-hidden rounded-lg aspect-square bg-gray-100 dark:bg-gray-700"
               >
                 {post.thumbnail ? (
                   <img
@@ -45,7 +45,7 @@ export function GalleryWidget({
                     loading="lazy"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400">
+                  <div className="w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-500">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="24"
@@ -79,11 +79,11 @@ export function GalleryWidget({
             ))}
           </div>
         ) : (
-          <div className="py-4 text-center text-gray-500">등록된 게시물이 없습니다.</div>
+          <div className="py-4 text-center text-gray-500 dark:text-gray-400">등록된 게시물이 없습니다.</div>
         )}
 
         <div className="mt-4 text-center">
-          <Link href={page?.slug || "/"} className="text-xs text-blue-600 hover:underline">
+          <Link href={page?.slug || "/"} className="text-xs text-blue-600 dark:text-blue-400 hover:underline">
             더보기
           </Link>
         </div>

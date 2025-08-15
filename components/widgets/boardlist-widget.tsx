@@ -170,7 +170,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
               (_, index) => (
                 <div
                   key={index}
-                  className="border border-gray-100 rounded-lg overflow-hidden"
+                  className="border border-gray-100 dark:border-gray-700 rounded-lg overflow-hidden"
                 >
                   <Skeleton className="aspect-video w-full" />
                   <div className="p-3 space-y-2">
@@ -200,7 +200,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
             {Array.from({ length: skeletonCount }).map((_, index: any) => (
               <div
                 key={index}
-                className="p-4 border border-gray-200 rounded-lg"
+                className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
               >
                 <Skeleton className="h-4 w-3/4 mb-2" />
                 <div className="flex items-center space-x-4">
@@ -240,17 +240,17 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
     if (error) {
       return (
         <div className="py-8 text-center">
-          <div className="text-red-500 text-sm font-medium mb-1">
+          <div className="text-red-500 dark:text-red-400 text-sm font-medium mb-1">
             데이터 로드 오류
           </div>
-          <div className="text-gray-500 text-xs">{error.message}</div>
+          <div className="text-gray-500 dark:text-gray-400 text-xs">{error.message}</div>
         </div>
       );
     }
 
     if (!posts || posts.length === 0) {
       return (
-        <div className="py-8 text-center text-gray-500 text-sm">
+        <div className="py-8 text-center text-gray-500 dark:text-gray-400 text-sm">
           등록된 게시물이 없습니다.
         </div>
       );
@@ -273,12 +273,12 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
               >
                 <div className="flex items-center justify-between">
                   <Link href={getPostUrl(post)} className="flex-1 min-w-0">
-                    <div className="text-xs text-gray-700 truncate">
+                    <div className="text-xs text-gray-700 dark:text-gray-300 truncate">
                       {post.title}
                     </div>
                   </Link>
                   {showDate && (
-                    <div className="block text-xs text-gray-400 flex items-center space-x-1 ml-1 flex-shrink-0">
+                    <div className="block text-xs text-gray-400 dark:text-gray-500 flex items-center space-x-1 ml-1 flex-shrink-0">
                       <span className="truncate max-w-[80px]">
                         {formatRelativeTime(post.created_at)}
                       </span>
@@ -297,7 +297,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
               <Link
                 key={post.id}
                 href={getPostUrl(post)}
-                className="cursor-pointer overflow-hidden border-gray-100 widget-scale border rounded-lg hover:shadow-md block"
+                className="cursor-pointer overflow-hidden border border-gray-100 dark:border-gray-700 widget-scale rounded-lg hover:shadow-md dark:hover:shadow-lg block"
               >
                 {showThumbnail && post.thumbnail_image ? (
                   <div className="aspect-video w-full overflow-hidden">
@@ -309,14 +309,14 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
                     />
                   </div>
                 ) : (
-                  <div className="aspect-video w-full bg-gray-100 flex items-center justify-center">
-                    <MessageSquare className="text-gray-300" size={32} />
+                  <div className="aspect-video w-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                    <MessageSquare className="text-gray-300 dark:text-gray-500" size={32} />
                   </div>
                 )}
                 <div className="p-3">
-                  <h4 className="font-medium truncate">{post.title}</h4>
+                  <h4 className="font-medium truncate text-gray-900 dark:text-white">{post.title}</h4>
                   {showDate && (
-                    <div className="flex items-center space-x-1 text-xs text-gray-500 mt-2">
+                    <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400 mt-2">
                       <span className="truncate">
                         {formatRelativeTime(post.created_at)}
                       </span>
@@ -334,7 +334,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
             {posts.map((post: any) => (
               <div
                 key={post.id}
-                className="rounded overflow-hidden border-gray-50 border widget-scale"
+                className="rounded overflow-hidden border border-gray-50 dark:border-gray-700 widget-scale"
               >
                 <Link href={getPostUrl(post)}>
                   {showThumbnail && post.thumbnail_image ? (
@@ -345,8 +345,8 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
                       loading="lazy"
                     />
                   ) : (
-                    <div className="w-full h-32 sm:h-40 bg-gray-100 flex items-center justify-center">
-                      <span className="text-gray-300 text-xs">No Image</span>
+                    <div className="w-full h-32 sm:h-40 bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                      <span className="text-gray-300 dark:text-gray-500 text-xs">No Image</span>
                     </div>
                   )}
                 </Link>
@@ -371,22 +371,22 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
               return (
                 <div
                   key={post.id}
-                  className="cursor-pointer flex items-center widget-scale justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
+                  className="cursor-pointer flex items-center widget-scale justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   <div className="flex-1 min-w-0 mr-2">
                     <div className="flex items-center space-x-3 overflow-hidden">
                       <Link href={getPostUrl(post)} className="block ">
-                        <h4 className="font-medium truncate flex-1">
+                        <h4 className="font-medium truncate flex-1 text-gray-900 dark:text-white">
                           {post.title}
                         </h4>
                       </Link>
                       {isNew && (
-                        <Badge className="bg-red-100 text-red-800 text-xs animate-pulse flex-shrink-0">
+                        <Badge className="bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-400 text-xs animate-pulse flex-shrink-0">
                           NEW
                         </Badge>
                       )}
                     </div>
-                    <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500 overflow-hidden">
+                    <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500 dark:text-gray-400 overflow-hidden">
                       <span className="truncate max-w-[80px]">
                         {post.author}
                       </span>
@@ -399,7 +399,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
                       </div>
                     </div>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                  <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
                 </div>
               );
             })}
@@ -425,25 +425,25 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
                     />
                   </div>
                 ) : showThumbnail ? (
-                  <div className="w-20 h-20 flex-shrink-0 rounded bg-gray-100 flex items-center justify-center">
-                    <MessageSquare className="text-gray-300" size={24} />
+                  <div className="w-20 h-20 flex-shrink-0 rounded bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                    <MessageSquare className="text-gray-300 dark:text-gray-500" size={24} />
                   </div>
                 ) : null}
                 <div className="flex-1 min-w-0">
                   <Link href={getPostUrl(post)} className="block">
-                    <h4 className="text-sm font-medium truncate">
+                    <h4 className="text-sm font-medium truncate text-gray-900 dark:text-white">
                       {post.title}
                     </h4>
                   </Link>
                   {showExcerpt && (
-                    <p className="text-sm text-gray-600 truncate">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
                       {post.content
                         ?.replace(/<[^>]*>/g, "")
                         .substring(0, 120) || ""}
                     </p>
                   )}
                   {showDate && (
-                    <div className="text-xs text-gray-500 mt-1 mb-2 flex items-center space-x-1">
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-2 flex items-center space-x-1">
                       <span className="truncate">
                         {formatRelativeTime(post.created_at)}
                       </span>
@@ -460,13 +460,13 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
   // 페이지 ID가 없으면 설정 필요 메시지 표시
   if (!pageId) {
     return (
-      <div className="h-full bg-white rounded-xl border border-gray-100 p-4">
+      <div className="h-full bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4">
         <div className="pb-2">
-          <div className="text-base font-semibold">
+          <div className="text-base font-semibold text-gray-900 dark:text-white">
             {widget.title || "게시판"}
           </div>
         </div>
-        <div className="py-8 text-center text-gray-500 text-sm">
+        <div className="py-8 text-center text-gray-500 dark:text-gray-400 text-sm">
           게시판 페이지를 설정해주세요.
         </div>
       </div>
@@ -474,14 +474,14 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
   }
 
   return (
-    <div className="h-full bg-white rounded-xl border border-slate-100 overflow-hidden p-4">
+    <div className="h-full bg-white dark:bg-gray-800 rounded-xl border border-slate-100 dark:border-gray-700 overflow-hidden p-4">
       <div className="pb-2">
         {getWidgetMenuUrl() ? (
-          <Link href={getWidgetMenuUrl()!} className="text-base font-semibold hover:text-blue-600 transition-colors cursor-pointer">
+          <Link href={getWidgetMenuUrl()!} className="text-base font-semibold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer">
             {widget.title || page?.title || "게시판"}
           </Link>
         ) : (
-          <div className="text-base font-semibold">
+          <div className="text-base font-semibold text-gray-900 dark:text-white">
             {widget.title || page?.title || "게시판"}
           </div>
         )}

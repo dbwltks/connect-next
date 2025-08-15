@@ -52,7 +52,7 @@ export default function MenuListWidget({ widget }: MenuListWidgetProps) {
   // 로딩 상태
   if (isLoading) {
     return (
-      <aside className="p-4 bg-white rounded-lg backdrop-blur-sm border border-gray-50">
+      <aside className="p-4 bg-white dark:bg-gray-800 rounded-lg backdrop-blur-sm border border-gray-50 dark:border-gray-700">
         <Skeleton className="h-6 w-32 mb-3" />
         <div className="space-y-1">
           {[...Array(4)].map((_, i: any) => (
@@ -65,15 +65,15 @@ export default function MenuListWidget({ widget }: MenuListWidgetProps) {
   // 에러 상태
   if (error) {
     return (
-      <aside className="p-4 bg-white rounded-lg backdrop-blur-sm border border-red-200">
-        <h3 className="text-lg font-semibold mb-3 text-gray-800">
+      <aside className="p-4 bg-white dark:bg-gray-800 rounded-lg backdrop-blur-sm border border-red-200 dark:border-red-700">
+        <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-white">
           {widget.title || "메뉴 목록"}
         </h3>
         <div className="text-center">
-          <div className="text-red-600">
+          <div className="text-red-600 dark:text-red-400">
             <div className="text-lg mb-1">❌</div>
             <div className="font-medium mb-1">메뉴를 불러올 수 없습니다</div>
-            <div className="text-sm text-red-500">{error.message}</div>
+            <div className="text-sm text-red-500 dark:text-red-400">{error.message}</div>
           </div>
         </div>
       </aside>
@@ -85,17 +85,17 @@ export default function MenuListWidget({ widget }: MenuListWidgetProps) {
   // 표시할 자식 메뉴가 없으면 위젯을 렌더링하지 않음
   if (childMenus.length === 0) {
     return (
-      <aside className="p-4 bg-white rounded-lg backdrop-blur-sm border border-gray-50">
+      <aside className="p-4 bg-white dark:bg-gray-800 rounded-lg backdrop-blur-sm border border-gray-50 dark:border-gray-700">
         {parentMenu ? (
-          <h3 className="text-lg font-semibold mb-3 text-gray-800 px-3">
+          <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-white px-3">
             {parentMenu.title}
           </h3>
         ) : (
-          <h3 className="text-lg font-semibold mb-3 text-gray-800 px-3">
+          <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-white px-3">
             {widget.title || "메뉴 목록"}
           </h3>
         )}
-        <div className="px-3 py-2 text-sm text-gray-500">
+        <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
           {parentMenu
             ? "표시할 하위 메뉴가 없습니다."
             : "표시할 메뉴를 찾을 수 없습니다. 위젯 설정을 확인하세요."}
@@ -105,9 +105,9 @@ export default function MenuListWidget({ widget }: MenuListWidgetProps) {
   }
 
   return (
-    <aside className="p-4 bg-white rounded-lg backdrop-blur-sm border border-gray-50">
+    <aside className="p-4 bg-white dark:bg-gray-800 rounded-lg backdrop-blur-sm border border-gray-50 dark:border-gray-700">
       {parentMenu && (
-        <div className="text-lg font-semibold mb-3 text-gray-800">
+        <div className="text-lg font-semibold mb-3 text-gray-800 dark:text-white">
           {parentMenu.title}
         </div>
       )}
@@ -123,8 +123,8 @@ export default function MenuListWidget({ widget }: MenuListWidgetProps) {
                   href={menu.url}
                   className={`block px-3 py-2 text-sm rounded-md transition-colors ${
                     isActive
-                      ? "bg-primary/10 text-primary font-semibold"
-                      : "text-gray-600 hover:bg-gray-200/70"
+                      ? "bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary font-semibold"
+                      : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/70 dark:hover:bg-gray-700/70"
                   }`}
                 >
                   {menu.title}

@@ -41,12 +41,12 @@ export default function LocationWidget({
       //     widget?.display_options?.background_color || "transparent",
       // }}
     >
-      <div className="mx-auto bg-white rounded-xl border border-gray-100 p-6">
+      <div className="mx-auto bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-6">
         <div className="mb-4">
-          <h2 className="text-2xl md:text-3xl font-bold mb-2">
+          <h2 className="text-2xl md:text-3xl font-bold mb-2 text-gray-900 dark:text-white">
             {widget.display_options?.location_title || "위치 정보"}
           </h2>
-          <p className="text-gray-600 text-sm">
+          <p className="text-gray-600 dark:text-gray-400 text-sm">
             {widget.display_options?.location_subtitle ||
               "저희 위치와 연락처 정보입니다"}
           </p>
@@ -55,7 +55,7 @@ export default function LocationWidget({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Map Section - 왼쪽에 지도 표시 */}
           <div className="lg:col-span-2">
-            <div className="overflow-hidden border border-gray-200 hover:shadow-lg transition-all duration-500 rounded-md w-full h-full">
+            <div className="overflow-hidden border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-500 rounded-md w-full h-full">
               {widget.display_options?.embed_map_url ? (
                 <div className="w-full h-full min-h-[300px] relative">
                   {/* 사용자가 제공한 iframe 코드를 직접 사용 */}
@@ -76,9 +76,9 @@ export default function LocationWidget({
                   />
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-full min-h-[300px] bg-gray-100 text-gray-500">
+                <div className="flex items-center justify-center h-full min-h-[300px] bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
                   <div className="text-center p-6">
-                    <MapPin size={36} className="mx-auto mb-2 text-gray-400" />
+                    <MapPin size={36} className="mx-auto mb-2 text-gray-400 dark:text-gray-500" />
                     <p>지도가 설정되지 않았습니다</p>
                   </div>
                 </div>
@@ -88,21 +88,21 @@ export default function LocationWidget({
 
           {/* 정보 섹션 - 오른쪽에 주소, 전화번호, 이메일 정보 */}
           <div className="lg:col-span-1">
-            <div className="overflow-hidden border border-gray-200 hover:shadow-lg transition-all duration-500 rounded-md w-full h-full">
-              <div className="p-6 bg-white h-full flex flex-col justify-between">
+            <div className="overflow-hidden border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-500 rounded-md w-full h-full">
+              <div className="p-6 bg-white dark:bg-gray-800 h-full flex flex-col justify-between">
                 <div>
-                  <h3 className="text-xl font-bold mb-4">연락처 정보</h3>
+                  <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">연락처 정보</h3>
 
                   {/* 주소 정보 */}
                   <div className="mb-6">
                     <div className="flex items-start space-x-3">
                       <MapPin
-                        className="text-gray-500 mt-1 flex-shrink-0"
+                        className="text-gray-500 dark:text-gray-400 mt-1 flex-shrink-0"
                         size={18}
                       />
                       <div>
-                        <h4 className="font-medium text-gray-900 mb-1">주소</h4>
-                        <p className="text-gray-600 whitespace-pre-line">
+                        <h4 className="font-medium text-gray-900 dark:text-white mb-1">주소</h4>
+                        <p className="text-gray-600 dark:text-gray-400 whitespace-pre-line">
                           {widget.display_options?.address ||
                             "주소 정보가 없습니다"}
                         </p>
@@ -111,7 +111,7 @@ export default function LocationWidget({
                             href={widget.display_options.map_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-800 text-sm mt-2 inline-block"
+                            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm mt-2 inline-block"
                           >
                             지도에서 보기 →
                           </a>
@@ -124,22 +124,22 @@ export default function LocationWidget({
                   <div className="mb-6">
                     <div className="flex items-start space-x-3">
                       <Phone
-                        className="text-gray-500 mt-1 flex-shrink-0"
+                        className="text-gray-500 dark:text-gray-400 mt-1 flex-shrink-0"
                         size={18}
                       />
                       <div>
-                        <h4 className="font-medium text-gray-900 mb-1">
+                        <h4 className="font-medium text-gray-900 dark:text-white mb-1">
                           전화번호
                         </h4>
                         {widget.display_options?.phone ? (
                           <a
                             href={`tel:${widget.display_options.phone}`}
-                            className="text-gray-600 hover:text-blue-600"
+                            className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
                           >
                             {widget.display_options.phone}
                           </a>
                         ) : (
-                          <p className="text-gray-600">
+                          <p className="text-gray-600 dark:text-gray-400">
                             전화번호 정보가 없습니다
                           </p>
                         )}
@@ -151,22 +151,22 @@ export default function LocationWidget({
                   <div className="mb-6">
                     <div className="flex items-start space-x-3">
                       <Mail
-                        className="text-gray-500 mt-1 flex-shrink-0"
+                        className="text-gray-500 dark:text-gray-400 mt-1 flex-shrink-0"
                         size={18}
                       />
                       <div>
-                        <h4 className="font-medium text-gray-900 mb-1">
+                        <h4 className="font-medium text-gray-900 dark:text-white mb-1">
                           이메일
                         </h4>
                         {widget.display_options?.email ? (
                           <a
                             href={`mailto:${widget.display_options.email}`}
-                            className="text-gray-600 hover:text-blue-600"
+                            className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
                           >
                             {widget.display_options.email}
                           </a>
                         ) : (
-                          <p className="text-gray-600">
+                          <p className="text-gray-600 dark:text-gray-400">
                             이메일 정보가 없습니다
                           </p>
                         )}
@@ -177,10 +177,10 @@ export default function LocationWidget({
 
                 {/* 추가 링크나 CTA 버튼 */}
                 {page?.slug && (
-                  <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                     <Link
                       href={`${page.slug}/contact`}
-                      className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 w-full"
+                      className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 w-full"
                     >
                       문의하기
                     </Link>

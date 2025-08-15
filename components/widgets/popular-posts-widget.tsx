@@ -26,7 +26,10 @@ async function fetchPopularPosts(
   itemCount: number,
   sortBy: string
 ): Promise<{ posts: Post[]; menuUrlMap: Record<string, string> }> {
-  const result = await api.popular.getPosts(itemCount, sortBy as 'views' | 'likes' | 'comments');
+  const result = await api.popular.getPosts(
+    itemCount,
+    sortBy as "views" | "likes" | "comments"
+  );
   // API 응답이 { posts: [...], menuUrlMap: {...} } 구조
   const posts = result.posts || result || [];
   const menuUrlMap = result.menuUrlMap || {};
@@ -45,7 +48,7 @@ export default function PopularPostsWidget({
 
   // SWR을 사용한 데이터 페칭
   const { data, error, isLoading } = useSWR(
-    ['popularPosts', itemCount, sortBy],
+    ["popularPosts", itemCount, sortBy],
     () => fetchPopularPosts(itemCount, sortBy),
     {
       // 전역 설정 사용
@@ -64,8 +67,8 @@ export default function PopularPostsWidget({
   // 로딩 상태
   if (isLoading) {
     return (
-      <div className="bg-white shadow rounded-lg overflow-hidden border-gray-100 border">
-        <div className="px-4 py-3 border-b">
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden border border-gray-100 dark:border-gray-700">
+        <div className="px-4 py-3 border-b dark:border-gray-700">
           <Skeleton className="h-5 w-24" />
         </div>
         <div className="px-4 py-2 space-y-3">
@@ -84,17 +87,19 @@ export default function PopularPostsWidget({
   // 에러 상태
   if (error) {
     return (
-      <div className="bg-white shadow rounded-lg overflow-hidden border-red-200 border">
-        <div className="px-4 py-3 border-b">
-          <h3 className="text-base text-gray-800 font-semibold">
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden border border-red-200 dark:border-red-700">
+        <div className="px-4 py-3 border-b dark:border-gray-700">
+          <h3 className="text-base text-gray-800 dark:text-white font-semibold">
             {widget.title || "인기 게시글"}
           </h3>
         </div>
         <div className="p-4 text-center">
-          <div className="text-red-600">
+          <div className="text-red-600 dark:text-red-400">
             <div className="text-lg mb-1">❌</div>
             <div className="font-medium mb-1">데이터를 불러올 수 없습니다</div>
-            <div className="text-sm text-red-500">{error.message}</div>
+            <div className="text-sm text-red-500 dark:text-red-400">
+              {error.message}
+            </div>
           </div>
         </div>
       </div>
@@ -102,9 +107,9 @@ export default function PopularPostsWidget({
   }
 
   return (
-    <div className="bg-white rounded-lg overflow-hidden border border-slate-100">
-      <div className="px-4 py-3 border-b">
-        <h3 className="text-base text-gray-800 font-semibold">
+    <div className="bg-white dark:bg-gray-800 rounded-lg overflow-hidden border border-slate-100 dark:border-gray-700">
+      <div className="px-4 py-3 border-b dark:border-gray-700">
+        <h3 className="text-base text-gray-800 dark:text-white font-semibold">
           {widget.title || "인기 게시글"}
         </h3>
       </div>
@@ -112,7 +117,7 @@ export default function PopularPostsWidget({
         <ul className="px-4 py-3 space-y-3">
           {posts.map((post, index: any) => {
             const rank = index + 1;
-            let rankStyle = "text-gray-400 font-semibold";
+            let rankStyle = "text-gray-400 dark:text-gray-500 font-semibold";
             if (rank === 1)
               rankStyle =
                 "font-bold px-1 py-0.5 rounded-sm bg-amber-50 text-amber-500 dark:bg-amber-500/20 dark:text-amber-300";
@@ -135,26 +140,30 @@ export default function PopularPostsWidget({
                 </span>
                 <Link
                   href={getPostUrl(post)}
-                  className="flex-1 truncate text-xs text-gray-700"
+                  className="flex-1 truncate text-xs text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
                 >
                   {post.title}
                 </Link>
                 {sortBy === "likes" ? (
                   <div className="flex items-center ml-2 text-xs">
                     <Heart className="w-3 h-3 mr-1 text-red-400 fill-current" />
-                    <span className="text-red-400">{post.like_count || 0}</span>
+                    <span className="text-red-400 dark:text-red-400">
+                      {post.like_count || 0}
+                    </span>
                   </div>
                 ) : sortBy === "comments" ? (
                   <div className="flex items-center ml-2 text-xs">
                     <span className="mr-1">💬</span>
-                    <span className="text-blue-400">
+                    <span className="text-blue-400 dark:text-blue-400">
                       {post.comment_count || 0}
                     </span>
                   </div>
                 ) : (
                   <div className="flex items-center ml-2 text-xs">
                     <span className="mr-1">👀</span>
-                    <span className="text-blue-400">{post.views || 0}</span>
+                    <span className="text-blue-400 dark:text-blue-400">
+                      {post.views || 0}
+                    </span>
                   </div>
                 )}
               </li>
@@ -162,7 +171,7 @@ export default function PopularPostsWidget({
           })}
         </ul>
       ) : (
-        <div className="p-4 text-center text-gray-500">
+        <div className="p-4 text-center text-gray-500 dark:text-gray-400">
           <div className="text-lg mb-2">📝</div>
           <div>게시글이 없습니다</div>
         </div>

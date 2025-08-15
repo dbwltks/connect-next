@@ -10,7 +10,7 @@ interface BannerWidgetProps {
 
 export function BannerWidget({ widget, page }: BannerWidgetProps) {
   return (
-    <Card className="h-full overflow-hidden">
+    <Card className="h-full overflow-hidden dark:bg-gray-800 dark:border-gray-700">
       <CardContent className="p-0">
         <div className="relative aspect-[21/9] bg-gradient-to-r from-blue-600 to-blue-400">
           {widget.display_options?.banner_image ? (

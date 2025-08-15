@@ -901,19 +901,19 @@ export default function BoardSection({
       {/* 타이틀/설명 헤더를 최상단에 분리 */}
       <div className="my-4">
         <div className="flex items-center gap-3 px-2 lg:px-0">
-          <h2 className="text-xl sm:text-2xl font-bold">{title}</h2>
-          <div className="text-xs text-blue-500 bg-white px-2 py-1 rounded-xl">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{title}</h2>
+          <div className="text-xs text-blue-500 dark:text-blue-400 bg-white dark:bg-gray-700 px-2 py-1 rounded-xl">
             {totalCount}
           </div>
         </div>
         {description && (
-          <p className="text-gray-500 mt-1 px-2 sm:px-0">{description}</p>
+          <p className="text-gray-500 dark:text-gray-400 mt-1 px-2 sm:px-0">{description}</p>
         )}
       </div>
       {/* 필터/버튼 + 게시글 목록을 하나의 카드로 감싸기 */}
-      <div className="sm:rounded-lg border-gray-100 shadow-sm bg-white">
+      <div className="sm:rounded-lg border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
         {/* 필터/버튼 영역 */}
-        <div className="flex justify-between items-center border-b border-gray-100 px-4 py-3">
+        <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 px-4 py-3">
           {/* 정렬 드롭다운 - 리스트형과 카드형에서만 표시 */}
           {layout !== "table" ? (
             <DropdownMenu>
@@ -943,7 +943,7 @@ export default function BoardSection({
           )}
           <div className="flex flex-wrap gap-2 items-center">
             <select
-              className="px-3 py-2 border-gray-100 border rounded-lg text-sm min-w-[75px] bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="px-3 py-2 border-gray-100 dark:border-gray-600 border rounded-lg text-sm min-w-[75px] bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400"
               value={itemCount}
               onChange={(e) => setItemCount(Number(e.target.value))}
             >
@@ -957,7 +957,7 @@ export default function BoardSection({
             <div className="flex gap-1 ml-2">
               <button
                 type="button"
-                className={`p-2 rounded border ${layout === "list" ? "bg-blue-100 border-blue-400 text-blue-700" : "bg-white border-gray-100 text-gray-400"}`}
+                className={`p-2 rounded border ${layout === "list" ? "bg-blue-100 dark:bg-blue-900 border-blue-400 dark:border-blue-600 text-blue-700 dark:text-blue-300" : "bg-white dark:bg-gray-700 border-gray-100 dark:border-gray-600 text-gray-400 dark:text-gray-500"}`}
                 onClick={() => setLayout("list")}
                 title="목록형 보기"
               >
@@ -965,7 +965,7 @@ export default function BoardSection({
               </button>
               <button
                 type="button"
-                className={`p-2 rounded border ${layout === "table" ? "bg-blue-100 border-blue-400 text-blue-700" : "bg-white border-gray-100 text-gray-400"} ${isMobile ? "hidden" : ""}`}
+                className={`p-2 rounded border ${layout === "table" ? "bg-blue-100 dark:bg-blue-900 border-blue-400 dark:border-blue-600 text-blue-700 dark:text-blue-300" : "bg-white dark:bg-gray-700 border-gray-100 dark:border-gray-600 text-gray-400 dark:text-gray-500"} ${isMobile ? "hidden" : ""}`}
                 onClick={() => setLayout("table")}
                 title="테이블형 보기"
               >
@@ -973,7 +973,7 @@ export default function BoardSection({
               </button>
               <button
                 type="button"
-                className={`p-2 rounded border ${layout === "card" ? "bg-blue-100 border-blue-400 text-blue-700" : "bg-white border-gray-100 text-gray-400"}`}
+                className={`p-2 rounded border ${layout === "card" ? "bg-blue-100 dark:bg-blue-900 border-blue-400 dark:border-blue-600 text-blue-700 dark:text-blue-300" : "bg-white dark:bg-gray-700 border-gray-100 dark:border-gray-600 text-gray-400 dark:text-gray-500"}`}
                 onClick={() => setLayout("card")}
                 title="카드형 보기"
               >
@@ -992,7 +992,7 @@ export default function BoardSection({
                     <Settings2 className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-[200px]">
+                <DropdownMenuContent align="end" className="w-[200px] dark:bg-gray-700 dark:border-gray-600">
                   <DropdownMenuLabel>표시할 항목</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   {Object.entries(columnLabels).map(([key, label]: any) => {
@@ -1000,7 +1000,7 @@ export default function BoardSection({
                     return (
                       <DropdownMenuItem
                         key={key}
-                        className={`flex items-center justify-between gap-2 ${isNumber ? "opacity-50" : ""}`}
+                        className={`flex items-center justify-between gap-2 ${isNumber ? "opacity-50" : ""} dark:text-gray-300`}
                         onSelect={(e) => {
                           e.preventDefault();
                           if (!isNumber) {
@@ -1013,12 +1013,12 @@ export default function BoardSection({
                           variant="outline"
                           className={
                             isNumber
-                              ? "bg-blue-50"
+                              ? "bg-blue-50 dark:bg-blue-900"
                               : visibleColumns[
                                     key as keyof typeof visibleColumns
                                   ]
-                                ? "bg-blue-50"
-                                : "bg-gray-50"
+                                ? "bg-blue-50 dark:bg-blue-900"
+                                : "bg-gray-50 dark:bg-gray-700"
                           }
                         >
                           {isNumber
@@ -1046,7 +1046,7 @@ export default function BoardSection({
                     writeUrl.searchParams.set("categoryId", categoryId);
                   router.push(writeUrl.pathname + writeUrl.search);
                 }}
-                className="ml-2 border-gray-100"
+                className="ml-2 border-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
               >
                 글쓰기
               </Button>
@@ -1057,12 +1057,12 @@ export default function BoardSection({
         <div className="p-0">
           {layout === "list" ? (
             // 목록형 - 모바일에 최적화된 레이아웃
-            <div className="bg-white dark:bg-gray-900">
+            <div className="bg-white dark:bg-gray-800">
               {/* 공지사항 */}
               {sortedNotices.map((post: any) => (
                 <div
                   key={post.id}
-                  className="flex cursor-pointer items-start border-l-4 border-yellow-400 bg-yellow-50 dark:bg-yellow-900/30 p-3 rounded-md shadow-sm min-h-[88px]"
+                  className="flex cursor-pointer items-start border-l-4 border-yellow-400 dark:border-yellow-500 bg-yellow-50 dark:bg-yellow-900/30 p-3 rounded-md shadow-sm min-h-[88px]"
                   onClick={() => handlePostClick(post.id)}
                 >
                   <div className="flex-1 min-w-0 pr-3">
@@ -1075,7 +1075,7 @@ export default function BoardSection({
                         공지
                       </Badge>
                       <div
-                        className="text-md font-medium line-clamp-2"
+                        className="text-md font-medium line-clamp-2 text-gray-900 dark:text-white"
                         style={{ wordBreak: "break-word" }}
                       >
                         {post.title}
@@ -1120,7 +1120,7 @@ export default function BoardSection({
                 sortedNormals.map((post: any) => (
                   <div
                     key={post.id}
-                    className="flex cursor-pointer px-2 py-3 overflow-hidden border-t items-start border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 min-h-[80px]"
+                    className="flex cursor-pointer px-2 py-3 overflow-hidden border-t items-start border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[80px]"
                     onClick={() => handlePostClick(post.id)}
                   >
                     <div className="flex-1 min-w-0 pr-3">
@@ -1136,7 +1136,7 @@ export default function BoardSection({
                         )}
                         <div className="flex-1 items-center gap-1">
                           <div
-                            className="text-md line-clamp-2"
+                            className="text-md line-clamp-2 text-gray-900 dark:text-white"
                             style={{ wordBreak: "break-word" }}
                           >
                             {post.title}
@@ -1172,11 +1172,11 @@ export default function BoardSection({
                         />
                       </div>
                     )}
-                    <div className="ml-2 flex flex-col h-16 w-11 text-md text-center items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-xl px-2 py-0.5">
+                    <div className="ml-2 flex flex-col h-16 w-11 text-md text-center items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-xl px-2 py-0.5">
                       {/* 숫자를 별도의 div로 감싸기 */}
-                      <div className="text-md">{post.comment_count ?? 0}</div>
+                      <div className="text-md text-gray-900 dark:text-white">{post.comment_count ?? 0}</div>
                       {/* "댓글"을 별도의 div로 감싸기 (원래 있었음) */}
-                      <div className="text-xs text-gray-500">댓글</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">댓글</div>
                     </div>
                   </div>
                 ))
@@ -1185,7 +1185,7 @@ export default function BoardSection({
           ) : layout === "table" ? (
             // 테이블형
             <div
-              className={`overflow-x-auto rounded-lg dark:border-gray-800 bg-white dark:bg-gray-900 text-sm`}
+              className={`overflow-x-auto rounded-lg dark:border-gray-700 bg-white dark:bg-gray-800 text-sm`}
             >
               <Table
                 ref={tableRef}
@@ -1279,7 +1279,7 @@ export default function BoardSection({
                     return (
                       <TableRow
                         key={post.id}
-                        className="bg-yellow-50 dark:bg-yellow-900/30 border-b border-gray-100 dark:border-gray-800"
+                        className="bg-yellow-50 dark:bg-yellow-900/30 border-b border-gray-100 dark:border-gray-700"
                       >
                         {visibleKeys.map((key: any) => (
                           <TableCell
@@ -1331,7 +1331,7 @@ export default function BoardSection({
                                 <div className="flex-1 min-w-0 overflow-hidden">
                                   <Button
                                     variant="link"
-                                    className="text-xs sm:text-sm text-black font-medium hover:no-underline transition-colors p-0 h-auto text-left w-full justify-start"
+                                    className="text-xs sm:text-sm text-black dark:text-white font-medium hover:no-underline transition-colors p-0 h-auto text-left w-full justify-start"
                                     onClick={() => handlePostClick(post.id)}
                                     title={post.title}
                                   >
@@ -1359,7 +1359,7 @@ export default function BoardSection({
                         colSpan={
                           Object.values(visibleColumns).filter(Boolean).length
                         }
-                        className="text-center text-gray-400 dark:text-gray-500 py-12 bg-gray-50 dark:bg-gray-800 px-1 sm:px-2"
+                        className="text-center text-gray-400 dark:text-gray-500 py-12 bg-gray-50 dark:bg-gray-700 px-1 sm:px-2"
                       >
                         게시글이 없습니다.
                       </TableCell>
@@ -1372,7 +1372,7 @@ export default function BoardSection({
                     return (
                       <TableRow
                         key={post.id}
-                        className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+                        className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
                       >
                         {visibleKeys.map((key: any) => (
                           <TableCell
@@ -1427,7 +1427,7 @@ export default function BoardSection({
                                 <div className="flex-1 min-w-0 overflow-hidden">
                                   <Button
                                     variant="link"
-                                    className="text-xs sm:text-sm text-black font-medium hover:no-underline transition-colors p-0 h-auto text-left w-full justify-start"
+                                    className="text-xs sm:text-sm text-black dark:text-white font-medium hover:no-underline transition-colors p-0 h-auto text-left w-full justify-start"
                                     onClick={() => handlePostClick(post.id)}
                                     title={post.title}
                                   >
@@ -1454,20 +1454,20 @@ export default function BoardSection({
             </div>
           ) : (
             // 카드형 레이아웃 (shadcn Card 컴포넌트 적용)
-            <div className="p-4 bg-background bg-gray-50 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
+            <div className="p-4 bg-background bg-gray-50 dark:bg-gray-800 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
               {[...sortedNotices, ...sortedNormals].length === 0 ? (
-                <div className="col-span-full text-center text-gray-400 py-12 bg-gray-50 rounded">
+                <div className="col-span-full text-center text-gray-400 dark:text-gray-500 py-12 bg-gray-50 dark:bg-gray-700 rounded">
                   게시글이 없습니다.
                 </div>
               ) : (
                 [...sortedNotices, ...sortedNormals].map((post: any) => (
                   <Card
                     key={post.id}
-                    className="w-full h-80 min-h-[320px] flex flex-col overflow-hidden cursor-pointer rounded-xl border border-slate-200/5 transition-transform duration-400 group hover:scale-[1.01] v-card-scale hover:-translate-y-1"
+                    className="w-full h-80 min-h-[320px] flex flex-col overflow-hidden cursor-pointer rounded-xl border border-slate-200/5 dark:border-gray-600 bg-white dark:bg-gray-800 transition-transform duration-400 group hover:scale-[1.01] v-card-scale hover:-translate-y-1"
                     onClick={() => handlePostClick(post.id)}
                   >
                     {/* 썸네일 이미지 (상단, 고정 높이) */}
-                    <div className="w-full h-44 bg-muted border-b flex items-center justify-center overflow-hidden">
+                    <div className="w-full h-44 bg-muted dark:bg-gray-700 border-b dark:border-gray-600 flex items-center justify-center overflow-hidden">
                       {post.thumbnail_image ? (
                         <img
                           src={post.thumbnail_image}
@@ -1477,7 +1477,7 @@ export default function BoardSection({
                         />
                       ) : null}
                     </div>
-                    <CardHeader className="p-4 pb-2 flex flex-col gap-1 bg-transparent">
+                    <CardHeader className="p-4 pb-2 flex flex-col gap-1 bg-transparent dark:bg-gray-800">
                       <div className="flex items-center gap-1">
                         {post.is_notice && (
                           <Badge className="bg-yellow-400 dark:bg-yellow-600 text-black dark:text-white font-bold px-1.5 py-0.5 text-xs rounded">
@@ -1490,7 +1490,7 @@ export default function BoardSection({
                           </Badge>
                         )}
                       </div>
-                      <div className="flex items-center gap-1 font-bold text-base line-clamp-2">
+                      <div className="flex items-center gap-1 font-bold text-base line-clamp-2 text-gray-900 dark:text-white">
                         {/* N 새글 뱃지 제목 앞에 */}
                         {isNew(post) && (
                           <Badge
@@ -1506,18 +1506,18 @@ export default function BoardSection({
                         )}
                         <span className="truncate">{post.title}</span>
                       </div>
-                      <div className="text-xs text-gray-500 line-clamp-2">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
                         {getSummary(post.content, 60)}
                       </div>
                     </CardHeader>
-                    <CardContent className="px-4 pt-0 pb-2 flex-1 flex flex-col justify-end bg-transparent">
-                      <div className="flex items-center justify-between text-xs text-gray-400">
+                    <CardContent className="px-4 pt-0 pb-2 flex-1 flex flex-col justify-end bg-transparent dark:bg-gray-800">
+                      <div className="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
                         <span>
                           {authorInfoMap[post.user_id]?.username || "익명"}
                         </span>
                         <span>{formatTime(post)}</span>
                       </div>
-                      <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                      <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mt-1">
                         <span>조회 {post.view_count ?? 0}</span>
                         <span className="flex items-center gap-1">
                           <MessageSquare className="w-3 h-3" />
@@ -1532,7 +1532,7 @@ export default function BoardSection({
           )}
         </div>
         {/* 페이지네이션 */}
-        <div className="flex justify-center py-6 border-t border-gray-100 dark:border-gray-800">
+        <div className="flex justify-center py-6 border-t border-gray-100 dark:border-gray-700">
           <Pagination>
             <PaginationContent className="flex flex-wrap justify-center">
               <PaginationItem>
@@ -1605,7 +1605,7 @@ export default function BoardSection({
             <select
               value={searchType}
               onChange={(e) => setSearchType(e.target.value)}
-              className="px-3 py-2 w-[80px] border border-gray-100 rounded-md text-sm bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="px-3 py-2 w-[80px] border border-gray-100 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400"
             >
               <option value="title">제목</option>
               <option value="content">내용</option>
@@ -1616,9 +1616,9 @@ export default function BoardSection({
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="검색어를 입력하세요"
-              className="flex-1 px-3 py-2 border border-gray-100 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 min-w-0"
+              className="flex-1 px-3 py-2 border border-gray-100 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 min-w-0"
             />
-            <Button type="submit" className="px-4 whitespace-nowrap">
+            <Button type="submit" className="px-4 whitespace-nowrap dark:bg-blue-600 dark:hover:bg-blue-700 dark:text-white">
               검색
             </Button>
           </form>

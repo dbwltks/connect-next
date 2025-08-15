@@ -254,8 +254,8 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
 
   if (isLoading) {
     return (
-      <div className="w-full h-64 bg-gray-100 animate-pulse rounded-lg flex items-center justify-center">
-        <div className="text-gray-400">캐러셀 로딩 중...</div>
+      <div className="w-full h-64 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg flex items-center justify-center">
+        <div className="text-gray-400 dark:text-gray-500">캐러셀 로딩 중...</div>
       </div>
     );
   }
@@ -263,8 +263,8 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
   if (error) {
     console.error("캐러셀 에러:", error);
     return (
-      <div className="w-full h-64 bg-gray-50 rounded-lg flex items-center justify-center">
-        <div className="text-gray-500">
+      <div className="w-full h-64 bg-gray-50 dark:bg-gray-800 rounded-lg flex items-center justify-center">
+        <div className="text-gray-500 dark:text-gray-400">
           캐러셀 데이터를 불러올 수 없습니다: {error.message}
         </div>
       </div>
@@ -273,8 +273,8 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
 
   if (carouselItems.length === 0) {
     return (
-      <div className="w-full h-64 bg-gray-50 rounded-lg flex items-center justify-center">
-        <div className="text-gray-500 text-center">
+      <div className="w-full h-64 bg-gray-50 dark:bg-gray-800 rounded-lg flex items-center justify-center">
+        <div className="text-gray-500 dark:text-gray-400 text-center">
           {widget.settings?.data_source === "page" 
             ? "썸네일이 있는 게시물이 없습니다." 
             : `${isMobile ? "모바일" : "데스크톱"} 캐러셀 이미지가 없습니다.`}
@@ -309,10 +309,10 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
     const imageHeightStyle = { height: `${imageHeightPx}px` };
 
     return (
-      <div className="relative w-full bg-white rounded-0 sm:rounded-lg overflow-hidden shadow-sm">
+      <div className="relative w-full bg-white dark:bg-gray-800 rounded-0 sm:rounded-lg overflow-hidden shadow-sm">
         {showTitle && widget.title && (
-          <div className="p-4 border-b">
-            <h3 className="text-lg font-semibold">{widget.title}</h3>
+          <div className="p-4 border-b dark:border-gray-700">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{widget.title}</h3>
           </div>
         )}
 
@@ -523,12 +523,12 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
     return (
       <div
         className={`relative w-full rounded-lg overflow-hidden ${
-          transparentBackground ? "bg-transparent" : "bg-white shadow-sm"
+          transparentBackground ? "bg-transparent" : "bg-white dark:bg-gray-800 shadow-sm"
         }`}
       >
         {showTitle && widget.title && (
-          <div className={`p-4 ${transparentBackground ? "" : "border-b"}`}>
-            <h3 className="text-lg font-semibold">{widget.title}</h3>
+          <div className={`p-4 ${transparentBackground ? "" : "border-b dark:border-gray-700"}`}>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{widget.title}</h3>
           </div>
         )}
 
@@ -544,7 +544,7 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
                   className={`w-80 flex-shrink-0 rounded-lg overflow-hidden transition-shadow ${
                     transparentBackground
                       ? "bg-transparent"
-                      : "bg-white shadow-md"
+                      : "bg-white dark:bg-gray-800 shadow-md"
                   } ${
                     item.link_url && item.link_url !== "#"
                       ? "cursor-pointer hover:shadow-lg hover:scale-105"
@@ -633,8 +633,8 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
                 key={index}
                 className={`rounded-full transition-all duration-300 ${
                   index === currentIndex
-                    ? "w-2.5 h-2.5 bg-blue-600"
-                    : "w-2 h-2 bg-gray-300"
+                    ? "w-2.5 h-2.5 bg-blue-600 dark:bg-blue-500"
+                    : "w-2 h-2 bg-gray-300 dark:bg-gray-600"
                 }`}
                 onClick={() => goToSlide(index)}
               />

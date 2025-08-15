@@ -14,7 +14,7 @@ export function BoardWidget({ widget }: BoardWidgetProps) {
 
   if (!pageId) {
     return (
-      <div className="p-4 bg-red-50 text-red-700">
+      <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400">
         <h3 className="font-bold">게시판 섹션 오류</h3>
         <p>
           이 위젯을 표시하려면 '콘텐츠 페이지 선택'에서 게시판 타입의 페이지를

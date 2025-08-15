@@ -147,9 +147,9 @@ export default function SimpleCalendarWidget({
   }
 
   return (
-    <div className="w-full bg-white rounded-lg overflow-hidden border border-slate-100">
+    <div className="w-full bg-white dark:bg-gray-800 rounded-lg overflow-hidden border border-slate-100 dark:border-gray-700">
       <div className="px-4 py-3">
-        <h3 className="text-base text-gray-800 font-semibold pb-2">
+        <h3 className="text-base text-gray-800 dark:text-white font-semibold pb-2">
           {widget.title || "일정"}
         </h3>
 
@@ -184,7 +184,7 @@ export default function SimpleCalendarWidget({
             displayEvents.map((event: any) => (
               <div
                 key={event.id}
-                className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer"
+                className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors cursor-pointer"
                 onClick={() => {
                   setSelectedEvent(event);
                   setIsDialogOpen(true);
@@ -306,7 +306,7 @@ export default function SimpleCalendarWidget({
               )}
 
               {/* 카테고리 */}
-              <div className="pt-2 border-t">
+              <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between text-xs text-gray-500">
                   <span>카테고리: {selectedEvent.category}</span>
                 </div>

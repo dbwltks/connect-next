@@ -63,8 +63,8 @@ export default function RecentCommentsWidget({
   // 로딩 상태
   if (isLoading) {
     return (
-      <div className="bg-white shadow rounded-lg overflow-hidden border-gray-100 border">
-        <div className="px-4 py-3 border-b">
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden border border-gray-100 dark:border-gray-700">
+        <div className="px-4 py-3 border-b dark:border-gray-700">
           <Skeleton className="h-5 w-20" />
         </div>
         <div className="px-4 py-2 space-y-3">
@@ -82,17 +82,17 @@ export default function RecentCommentsWidget({
   // 에러 상태
   if (error) {
     return (
-      <div className="bg-white shadow rounded-lg overflow-hidden border-red-200 border">
-        <div className="px-4 py-3 border-b">
-          <h3 className="text-base font-semibold">
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden border border-red-200 dark:border-red-700">
+        <div className="px-4 py-3 border-b dark:border-gray-700">
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white">
             {widget.title || "최신 댓글"}
           </h3>
         </div>
         <div className="p-4 text-center">
-          <div className="text-red-600">
+          <div className="text-red-600 dark:text-red-400">
             <div className="text-lg mb-1">❌</div>
             <div className="font-medium mb-1">데이터를 불러올 수 없습니다</div>
-            <div className="text-sm text-red-500">{error.message}</div>
+            <div className="text-sm text-red-500 dark:text-red-400">{error.message}</div>
           </div>
         </div>
       </div>
@@ -100,9 +100,9 @@ export default function RecentCommentsWidget({
   }
 
   return (
-    <div className="bg-white rounded-xl overflow-hidden">
-      <div className="px-4 py-3 border-b">
-        <h3 className="text-base font-semibold">
+    <div className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+      <div className="px-4 py-3 border-b dark:border-gray-700">
+        <h3 className="text-base font-semibold text-gray-900 dark:text-white">
           {widget.title || "최신 댓글"}
         </h3>
       </div>
@@ -110,9 +110,9 @@ export default function RecentCommentsWidget({
         <ul className="px-4 py-2 space-y-2 widget-scale">
           {comments.map((comment: any) => (
             <li key={comment.id} className="text-sm">
-              <Link href={getCommentUrl(comment)} className="">
-                <p className="truncate">{comment.content}</p>
-                <span className="block truncate text-xs text-gray-500">
+              <Link href={getCommentUrl(comment)} className="hover:text-blue-600 dark:hover:text-blue-400">
+                <p className="truncate text-gray-900 dark:text-white">{comment.content}</p>
+                <span className="block truncate text-xs text-gray-500 dark:text-gray-400">
                   -{" "}
                   {Array.isArray(comment.board_posts)
                     ? comment.board_posts[0]?.title
@@ -123,7 +123,7 @@ export default function RecentCommentsWidget({
           ))}
         </ul>
       ) : (
-        <div className="p-4 text-center text-gray-500">
+        <div className="p-4 text-center text-gray-500 dark:text-gray-400">
           <div className="text-lg mb-2">💬</div>
           <div>댓글이 없습니다</div>
         </div>

@@ -382,7 +382,7 @@ export function OrganizationChartWidget({
     return (
       <div key={person.id} className="flex flex-col items-center">
         <Card
-          className={`${cardWidth} bg-white ${shadowClass} border-0 ${animationClass} relative overflow-hidden`}
+          className={`${cardWidth} bg-white dark:bg-gray-800 ${shadowClass} border-0 ${animationClass} relative overflow-hidden`}
         >
           {/* 상단 그라데이션 헤더 */}
           <div
@@ -424,10 +424,10 @@ export function OrganizationChartWidget({
 
           <CardContent className="pt-12 pb-4 px-4">
             <div className="text-center mb-3">
-              <h4 className={`font-bold ${textSize} text-gray-900 mb-1`}>
+              <h4 className={`font-bold ${textSize} text-gray-900 dark:text-white mb-1`}>
                 {person.name}
               </h4>
-              <p className="text-sm font-medium text-gray-600 mb-2">
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2">
                 {person.position}
               </p>
               {showDepartments && person.department && (
@@ -441,15 +441,15 @@ export function OrganizationChartWidget({
             </div>
 
             {showContact && (person.email || person.phone) && (
-              <div className="space-y-2 mt-4 pt-3 border-t border-gray-100">
+              <div className="space-y-2 mt-4 pt-3 border-t border-gray-100 dark:border-gray-700">
                 {person.email && (
-                  <div className="flex items-center gap-2 text-xs text-gray-600">
+                  <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
                     <Mail className="h-3 w-3 text-blue-500 flex-shrink-0" />
                     <span className="truncate">{person.email}</span>
                   </div>
                 )}
                 {person.phone && (
-                  <div className="flex items-center gap-2 text-xs text-gray-600">
+                  <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
                     <Phone className="h-3 w-3 text-green-500 flex-shrink-0" />
                     <span>{person.phone}</span>
                   </div>
@@ -582,7 +582,7 @@ export function OrganizationChartWidget({
         {Object.entries(groupedByLevel).map(([level, people]: any) => (
           <div key={level}>
             <div className="text-center mb-8">
-              <h3 className="text-2xl font-bold text-gray-800 mb-2 flex items-center justify-center gap-3">
+              <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-2 flex items-center justify-center gap-3">
                 <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
                   <Users className="h-4 w-4 text-white" />
                 </div>
@@ -646,10 +646,10 @@ export function OrganizationChartWidget({
                 {/* 상세 정보 */}
                 <div className="flex-1 lg:w-3/5 space-y-4">
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900 mb-1">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
                       {person.position}
                     </h3>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-3">
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
                       {person.name}
                     </h2>
                     {person.department && (
@@ -662,13 +662,13 @@ export function OrganizationChartWidget({
                   {/* 연락처 정보 */}
                   <div className="space-y-2">
                     {person.email && (
-                      <div className="flex items-center gap-3 text-gray-600">
+                      <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
                         <Mail className="w-5 h-5" />
                         <span>{person.email}</span>
                       </div>
                     )}
                     {person.phone && (
-                      <div className="flex items-center gap-3 text-gray-600">
+                      <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
                         <Phone className="w-5 h-5" />
                         <span>{person.phone}</span>
                       </div>
@@ -801,9 +801,9 @@ export function OrganizationChartWidget({
     return (
       <div className={`w-full ${backgroundClass} rounded-xl overflow-hidden`}>
         {widget.title && (
-          <div className="p-6 bg-white border-b border-gray-100">
+          <div className="p-6 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
             <div className="text-center">
-              <h3 className="text-2xl font-bold text-gray-800 mb-2 flex items-center justify-center gap-3">
+              <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-2 flex items-center justify-center gap-3">
                 <div
                   className={`w-10 h-10 bg-gradient-to-br ${themeColors.primary} rounded-full flex items-center justify-center`}
                 >
@@ -816,7 +816,7 @@ export function OrganizationChartWidget({
         )}
         <div className="p-8 text-center">
           <div className="animate-spin w-8 h-8 border-4 border-blue-200 border-t-blue-500 rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-500">조직도를 로딩 중입니다...</p>
+          <p className="text-gray-500 dark:text-gray-400">조직도를 로딩 중입니다...</p>
         </div>
       </div>
     );
@@ -827,9 +827,9 @@ export function OrganizationChartWidget({
     return (
       <div className={`w-full ${backgroundClass} rounded-xl overflow-hidden`}>
         {widget.title && (
-          <div className="p-6 bg-white border-b border-gray-100">
+          <div className="p-6 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
             <div className="text-center">
-              <h3 className="text-2xl font-bold text-gray-800 mb-2 flex items-center justify-center gap-3">
+              <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-2 flex items-center justify-center gap-3">
                 <div
                   className={`w-10 h-10 bg-gradient-to-br ${themeColors.primary} rounded-full flex items-center justify-center`}
                 >
@@ -844,10 +844,10 @@ export function OrganizationChartWidget({
           <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Users className="h-6 w-6 text-red-500" />
           </div>
-          <p className="text-red-600 mb-2">
+          <p className="text-red-600 dark:text-red-400 mb-2">
             조직도를 불러오는 중 오류가 발생했습니다
           </p>
-          <p className="text-sm text-gray-500">{error.message}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{error.message}</p>
         </div>
       </div>
     );
@@ -856,9 +856,9 @@ export function OrganizationChartWidget({
   return (
     <div className={`w-full ${backgroundClass} rounded-xl overflow-hidden`}>
       {widget.title && (
-        <div className="p-6 bg-white border-b border-gray-100">
+        <div className="p-6 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
           <div className="text-center">
-            <h3 className="text-2xl font-bold text-gray-800 mb-2 flex items-center justify-center gap-3">
+            <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-2 flex items-center justify-center gap-3">
               {/* <div
                 className={`w-10 h-10 bg-gradient-to-br ${themeColors.primary} rounded-full flex items-center justify-center`}
               >
@@ -870,7 +870,7 @@ export function OrganizationChartWidget({
               className={`w-32 h-1 bg-gradient-to-r ${themeColors.secondary} mx-auto rounded-full`}
             ></div>
             {widget.settings?.description && (
-              <p className="text-sm text-gray-600 mt-3 max-w-md mx-auto">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-3 max-w-md mx-auto">
                 {widget.settings.description}
               </p>
             )}
