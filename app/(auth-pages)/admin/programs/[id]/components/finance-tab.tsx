@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import * as XLSX from 'xlsx';
 
 // 확장된 Finance 타입 정의
 interface ExtendedFinanceRecord {
@@ -71,6 +72,7 @@ import {
   TrendingDown,
   Filter,
   Settings,
+  Download,
   CalendarDays,
   Columns,
   ChevronDown,
@@ -153,6 +155,9 @@ interface FinanceRecord {
   datetime?: string;
   program_id: string;
   team_id?: string;
+  isActual?: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface FinanceTabProps {
@@ -171,6 +176,7 @@ export default function FinanceTab({
 
   // 재정 추가 모달 상태
   const [isFinanceModalOpen, setIsFinanceModalOpen] = useState(false);
+  const [isSubmittingFinance, setIsSubmittingFinance] = useState(false);
 
   // 재정 삭제 확인 다이얼로그 상태
   const [financeDeleteConfirmOpen, setFinanceDeleteConfirmOpen] =
@@ -297,6 +303,7 @@ export default function FinanceTab({
     categories: [] as string[], // 다중 선택
     vendors: [] as string[], // 다중 선택
     paidBys: [] as string[], // 다중 선택
+    actualStatus: "all" as "all" | "actual" | "expected", // 실제/예상 구분
   });
 
   // 필터 모달 상태
@@ -326,6 +333,7 @@ export default function FinanceTab({
     if (financeFilters.categories.length > 0) count++;
     if (financeFilters.vendors.length > 0) count++;
     if (financeFilters.paidBys.length > 0) count++;
+    if (financeFilters.actualStatus !== "all") count++;
     return count;
   };
 
@@ -410,6 +418,63 @@ export default function FinanceTab({
     // 클린업
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  // 엑셀 내보내기 함수
+  const exportToExcel = () => {
+    if (filteredFinances.length === 0) {
+      showAlert("내보내기 오류", "내보낼 데이터가 없습니다.");
+      return;
+    }
+
+    // 엑셀용 데이터 변환
+    const excelData = filteredFinances.map((finance, index) => {
+      const amount = typeof finance.amount === 'number' ? finance.amount : parseFloat(finance.amount) || 0;
+      return {
+        '번호': index + 1,
+        '거래 유형': finance.type === 'income' ? '수입' : '지출',
+        '카테고리': finance.category || '',
+        '거래처': finance.vendor || '',
+        '항목명': finance.itemName || '',
+        '금액': finance.type === 'expense' ? -amount : amount,
+        '거래자': finance.paidBy || '',
+        '설명': finance.description || '',
+        '거래 일시': finance.datetime ? new Date(finance.datetime).toLocaleString('ko-KR') : '',
+        '실제/예상': finance.isActual === false ? '예상/계획' : '실제',
+        '등록일': finance.created_at ? new Date(finance.created_at).toLocaleString('ko-KR') : ''
+      };
+    });
+
+    // 요약 통계 추가 (지출은 마이너스로 표시)
+    const summaryData = [
+      { '항목': '총 수입', '실제': actualIncome, '예상': plannedIncome, '합계': totalIncome },
+      { '항목': '총 지출', '실제': -actualExpense, '예상': -plannedExpense, '합계': -totalExpense },
+      { '항목': '잔액', '실제': actualBalance, '예상': plannedBalance, '합계': balance },
+      { '항목': '현금 수입', '실제': actualCashIncome, '예상': plannedCashIncome, '합계': totalCashIncome },
+      { '항목': '현금 지출', '실제': -actualCashExpense, '예상': -plannedCashExpense, '합계': -totalCashExpense },
+      { '항목': '현금 잔액', '실제': actualCashIncome - actualCashExpense, '예상': plannedCashIncome - plannedCashExpense, '합계': totalCashBalance }
+    ];
+
+    // 워크북 생성
+    const wb = XLSX.utils.book_new();
+    
+    // 거래 내역 시트
+    const ws1 = XLSX.utils.json_to_sheet(excelData);
+    XLSX.utils.book_append_sheet(wb, ws1, "거래내역");
+    
+    // 요약 통계 시트
+    const ws2 = XLSX.utils.json_to_sheet(summaryData);
+    XLSX.utils.book_append_sheet(wb, ws2, "요약통계");
+
+    // 파일명 생성 (재정데이터_프로그램ID_날짜)
+    const today = new Date();
+    const dateStr = today.toISOString().split('T')[0].replace(/-/g, '');
+    const filename = `재정데이터_${programId}_${dateStr}.xlsx`;
+
+    // 파일 다운로드
+    XLSX.writeFile(wb, filename);
+    
+    showAlert("내보내기 완료", `${excelData.length}건의 데이터를 성공적으로 내보냈습니다.`);
+  };
 
   // 데이터 새로고침 함수
   const refreshData = async () => {
@@ -589,6 +654,16 @@ export default function FinanceTab({
       return false;
     }
 
+    // 실제/예상 필터
+    if (financeFilters.actualStatus !== "all") {
+      if (financeFilters.actualStatus === "actual" && !finance.isActual) {
+        return false;
+      }
+      if (financeFilters.actualStatus === "expected" && finance.isActual) {
+        return false;
+      }
+    }
+
     return true;
   });
 
@@ -660,70 +735,86 @@ export default function FinanceTab({
     setFinanceFilters((prev) => ({ ...prev, ...filterUpdate }));
   };
 
-  // 재정 통계 계산
-  const totalIncome = filteredFinances
+  // 재정 통계 계산 (디버깅용 로그 추가)
+  if (process.env.NODE_ENV === 'development' && filteredFinances.length > 0) {
+    console.log('🔍 Finance Debug Info:', {
+      totalRecords: filteredFinances.length,
+      sampleRecord: filteredFinances[0],
+      isActualValues: filteredFinances.map(f => ({ id: f.id, isActual: f.isActual, type: f.isActual?.constructor?.name })),
+      vendorValues: filteredFinances.map(f => ({ id: f.id, vendor: f.vendor })),
+      undefinedIsActualCount: filteredFinances.filter(f => f.isActual === undefined).length
+    });
+  }
+
+  // isActual이 undefined인 기존 데이터는 실제 거래로 간주 (하위 호환성)
+  const normalizedFinances = filteredFinances.map(f => ({
+    ...f,
+    isActual: f.isActual === undefined ? true : f.isActual
+  }));
+
+  const totalIncome = normalizedFinances
     .filter((f) => f.type === "income")
-    .reduce((acc, f) => acc + f.amount, 0);
-  const totalExpense = filteredFinances
+    .reduce((acc, f) => acc + (typeof f.amount === 'number' ? f.amount : parseFloat(f.amount) || 0), 0);
+  const totalExpense = normalizedFinances
     .filter((f) => f.type === "expense")
-    .reduce((acc, f) => acc + f.amount, 0);
+    .reduce((acc, f) => acc + (typeof f.amount === 'number' ? f.amount : parseFloat(f.amount) || 0), 0);
   const balance = totalIncome - totalExpense;
 
-  // 실제/예상별 통계 계산
-  const actualIncome = filteredFinances
-    .filter((f) => f.type === "income" && (f.isActual === true || f.isActual === undefined))
-    .reduce((acc, f) => acc + f.amount, 0);
-  const plannedIncome = filteredFinances
+  // 실제/예상별 통계 계산 (수정된 로직 - 타입 안전성 보장)
+  const actualIncome = normalizedFinances
+    .filter((f) => f.type === "income" && f.isActual === true)
+    .reduce((acc, f) => acc + (typeof f.amount === 'number' ? f.amount : parseFloat(f.amount) || 0), 0);
+  const plannedIncome = normalizedFinances
     .filter((f) => f.type === "income" && f.isActual === false)
-    .reduce((acc, f) => acc + f.amount, 0);
-  const actualExpense = filteredFinances
-    .filter((f) => f.type === "expense" && (f.isActual === true || f.isActual === undefined))
-    .reduce((acc, f) => acc + f.amount, 0);
-  const plannedExpense = filteredFinances
+    .reduce((acc, f) => acc + (typeof f.amount === 'number' ? f.amount : parseFloat(f.amount) || 0), 0);
+  const actualExpense = normalizedFinances
+    .filter((f) => f.type === "expense" && f.isActual === true)
+    .reduce((acc, f) => acc + (typeof f.amount === 'number' ? f.amount : parseFloat(f.amount) || 0), 0);
+  const plannedExpense = normalizedFinances
     .filter((f) => f.type === "expense" && f.isActual === false)
-    .reduce((acc, f) => acc + f.amount, 0);
+    .reduce((acc, f) => acc + (typeof f.amount === 'number' ? f.amount : parseFloat(f.amount) || 0), 0);
 
   // 실제/예상별 잔액 계산
   const actualBalance = actualIncome - actualExpense;
   const plannedBalance = plannedIncome - plannedExpense;
 
-  // 실제/예상별 현금 거래 계산
-  const actualCashIncome = filteredFinances
+  // 실제/예상별 현금 거래 계산 (수정된 로직)
+  const actualCashIncome = normalizedFinances
     .filter(
       (f) =>
         f.type === "income" &&
-        (f.isActual === true || f.isActual === undefined) &&
+        f.isActual === true &&
         f.vendor &&
-        f.vendor.includes("현금")
+        (f.vendor.includes("현금") || f.vendor.toLowerCase().includes("cash"))
     )
-    .reduce((acc, f) => acc + f.amount, 0);
-  const plannedCashIncome = filteredFinances
+    .reduce((acc, f) => acc + (typeof f.amount === 'number' ? f.amount : parseFloat(f.amount) || 0), 0);
+  const plannedCashIncome = normalizedFinances
     .filter(
       (f) =>
         f.type === "income" &&
         f.isActual === false &&
         f.vendor &&
-        f.vendor.includes("현금")
+        (f.vendor.includes("현금") || f.vendor.toLowerCase().includes("cash"))
     )
-    .reduce((acc, f) => acc + f.amount, 0);
-  const actualCashExpense = filteredFinances
+    .reduce((acc, f) => acc + (typeof f.amount === 'number' ? f.amount : parseFloat(f.amount) || 0), 0);
+  const actualCashExpense = normalizedFinances
     .filter(
       (f) =>
         f.type === "expense" &&
-        (f.isActual === true || f.isActual === undefined) &&
+        f.isActual === true &&
         f.vendor &&
-        f.vendor.includes("현금")
+        (f.vendor.includes("현금") || f.vendor.toLowerCase().includes("cash"))
     )
-    .reduce((acc, f) => acc + f.amount, 0);
-  const plannedCashExpense = filteredFinances
+    .reduce((acc, f) => acc + (typeof f.amount === 'number' ? f.amount : parseFloat(f.amount) || 0), 0);
+  const plannedCashExpense = normalizedFinances
     .filter(
       (f) =>
         f.type === "expense" &&
         f.isActual === false &&
         f.vendor &&
-        f.vendor.includes("현금")
+        (f.vendor.includes("현금") || f.vendor.toLowerCase().includes("cash"))
     )
-    .reduce((acc, f) => acc + f.amount, 0);
+    .reduce((acc, f) => acc + (typeof f.amount === 'number' ? f.amount : parseFloat(f.amount) || 0), 0);
 
   // 총 현금 계산
   const totalCashIncome = actualCashIncome + plannedCashIncome;
@@ -741,6 +832,47 @@ export default function FinanceTab({
   const totalNonCashExpense = actualNonCashExpense + plannedNonCashExpense;
   const totalNonCashBalance = totalNonCashIncome - totalNonCashExpense;
 
+  // 개발 환경에서 계산 결과 검증
+  if (process.env.NODE_ENV === 'development' && filteredFinances.length > 0) {
+    const dataIntegrityIssues = normalizedFinances.filter(f => 
+      typeof f.amount !== 'number' || isNaN(f.amount) || f.amount < 0
+    );
+    
+    console.log('💰 Finance Calculations:', {
+      totals: {
+        totalIncome,
+        totalExpense,
+        balance
+      },
+      actualVsPlanned: {
+        actualIncome,
+        plannedIncome,
+        actualExpense,
+        plannedExpense,
+        actualBalance,
+        plannedBalance
+      },
+      cashBreakdown: {
+        actualCashIncome,
+        plannedCashIncome,
+        actualCashExpense,
+        plannedCashExpense,
+        totalCashBalance
+      },
+      verification: {
+        totalIncomeCheck: actualIncome + plannedIncome,
+        totalExpenseCheck: actualExpense + plannedExpense,
+        balanceCheck: (actualIncome + plannedIncome) - (actualExpense + plannedExpense),
+        matchesTotalIncome: Math.abs(totalIncome - (actualIncome + plannedIncome)) < 0.01,
+        matchesTotalExpense: Math.abs(totalExpense - (actualExpense + plannedExpense)) < 0.01
+      },
+      dataIntegrity: {
+        invalidAmounts: dataIntegrityIssues.length,
+        issues: dataIntegrityIssues.map(f => ({ id: f.id, amount: f.amount, type: typeof f.amount }))
+      }
+    });
+  }
+
   // 재정 데이터 추가 함수
   const handleAddFinance = async () => {
     if (!programId || !newFinance.amount || !newFinance.category) {
@@ -748,6 +880,12 @@ export default function FinanceTab({
       return;
     }
 
+    // 중복 클릭 방지
+    if (isSubmittingFinance) {
+      return;
+    }
+
+    setIsSubmittingFinance(true);
     try {
       const supabase = createClient();
 
@@ -845,6 +983,8 @@ export default function FinanceTab({
     } catch (error) {
       console.error("재정 처리 실패:", error);
       showAlert("처리 실패", "재정 처리에 실패했습니다.");
+    } finally {
+      setIsSubmittingFinance(false);
     }
   };
 
@@ -1258,6 +1398,14 @@ export default function FinanceTab({
           </div>
           <div className="flex gap-2">
             <Button
+              onClick={exportToExcel}
+              size="sm"
+              variant="outline"
+              title="엑셀로 내보내기"
+            >
+              <Download className="h-4 w-4" />
+            </Button>
+            <Button
               onClick={() => setIsFinanceCategorySettingsOpen(true)}
               size="sm"
               variant="outline"
@@ -1385,6 +1533,23 @@ export default function FinanceTab({
               </div>
             )}
 
+            {financeFilters.actualStatus !== "all" && (
+              <div className="flex items-center gap-1 px-2 py-1 bg-red-100 rounded-md text-xs">
+                <span className="text-red-800">구분:</span>
+                <span className="text-red-600">
+                  {financeFilters.actualStatus === "actual" ? "실제 거래" : "예상/계획"}
+                </span>
+                <button
+                  onClick={() =>
+                    setFinanceFilters((prev) => ({ ...prev, actualStatus: "all" }))
+                  }
+                  className="text-red-500 hover:text-red-700 ml-1"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+
             {financeFilters.dateRange !== "all" && (
               <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-md text-xs">
                 <span className="text-gray-800">날짜:</span>
@@ -1408,6 +1573,16 @@ export default function FinanceTab({
               </div>
             )}
 
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportToExcel}
+              className="flex items-center gap-2"
+              title="엑셀로 내보내기"
+            >
+              <Download className="h-4 w-4" />
+              엑셀
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -2034,8 +2209,14 @@ export default function FinanceTab({
                   >
                     취소
                   </Button>
-                  <Button onClick={handleAddFinance}>
-                    {editingFinance ? "수정" : "추가"}
+                  <Button 
+                    onClick={handleAddFinance}
+                    disabled={isSubmittingFinance}
+                  >
+                    {isSubmittingFinance 
+                      ? "처리 중..." 
+                      : (editingFinance ? "수정" : "추가")
+                    }
                   </Button>
                 </div>
               </div>
@@ -2240,8 +2421,14 @@ export default function FinanceTab({
               >
                 취소
               </Button>
-              <Button onClick={handleAddFinance}>
-                {editingFinance ? "수정" : "추가"}
+              <Button 
+                onClick={handleAddFinance}
+                disabled={isSubmittingFinance}
+              >
+                {isSubmittingFinance 
+                  ? "처리 중..." 
+                  : (editingFinance ? "수정" : "추가")
+                }
               </Button>
             </div>
           </DialogContent>
@@ -3608,6 +3795,79 @@ export default function FinanceTab({
                     </div>
                   </AccordionContent>
                 </AccordionItem>
+                {/* 실제/예상 구분 필터 */}
+                <AccordionItem
+                  value="actualStatus"
+                  className="border rounded-lg px-3"
+                >
+                  <AccordionTrigger className="py-3 hover:no-underline">
+                    <div className="flex items-center space-x-2">
+                      <Label className="text-sm font-medium cursor-pointer">
+                        실제/예상 구분
+                      </Label>
+                      {financeFilters.actualStatus !== "all" && (
+                        <span className="text-xs text-gray-500">
+                          ({financeFilters.actualStatus === "actual" ? "실제 거래" : "예상/계획"})
+                        </span>
+                      )}
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-3">
+                    <div className="space-y-2 pl-6">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="actualStatus-all"
+                          checked={financeFilters.actualStatus === "all"}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setFinanceFilters((prev) => ({
+                                ...prev,
+                                actualStatus: "all",
+                              }));
+                            }
+                          }}
+                        />
+                        <Label htmlFor="actualStatus-all" className="text-sm">
+                          전체
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="actualStatus-actual"
+                          checked={financeFilters.actualStatus === "actual"}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setFinanceFilters((prev) => ({
+                                ...prev,
+                                actualStatus: "actual",
+                              }));
+                            }
+                          }}
+                        />
+                        <Label htmlFor="actualStatus-actual" className="text-sm">
+                          실제 거래
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="actualStatus-expected"
+                          checked={financeFilters.actualStatus === "expected"}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setFinanceFilters((prev) => ({
+                                ...prev,
+                                actualStatus: "expected",
+                              }));
+                            }
+                          }}
+                        />
+                        <Label htmlFor="actualStatus-expected" className="text-sm">
+                          예상/계획
+                        </Label>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
               </Accordion>
             </div>
 
@@ -3626,6 +3886,7 @@ export default function FinanceTab({
                     categories: [],
                     vendors: [],
                     paidBys: [],
+                    actualStatus: "all",
                   });
                   setCurrentPage(1);
                 }}
@@ -4118,6 +4379,79 @@ export default function FinanceTab({
                     </div>
                   </AccordionContent>
                 </AccordionItem>
+                {/* 실제/예상 구분 필터 */}
+                <AccordionItem
+                  value="actualStatus"
+                  className="border rounded-lg px-3"
+                >
+                  <AccordionTrigger className="py-3 hover:no-underline">
+                    <div className="flex items-center space-x-2">
+                      <Label className="text-sm font-medium cursor-pointer">
+                        실제/예상 구분
+                      </Label>
+                      {financeFilters.actualStatus !== "all" && (
+                        <span className="text-xs text-gray-500">
+                          ({financeFilters.actualStatus === "actual" ? "실제 거래" : "예상/계획"})
+                        </span>
+                      )}
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-3">
+                    <div className="space-y-2 pl-6">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="actualStatus-all-desktop"
+                          checked={financeFilters.actualStatus === "all"}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setFinanceFilters((prev) => ({
+                                ...prev,
+                                actualStatus: "all",
+                              }));
+                            }
+                          }}
+                        />
+                        <Label htmlFor="actualStatus-all-desktop" className="text-sm">
+                          전체
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="actualStatus-actual-desktop"
+                          checked={financeFilters.actualStatus === "actual"}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setFinanceFilters((prev) => ({
+                                ...prev,
+                                actualStatus: "actual",
+                              }));
+                            }
+                          }}
+                        />
+                        <Label htmlFor="actualStatus-actual-desktop" className="text-sm">
+                          실제 거래
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="actualStatus-expected-desktop"
+                          checked={financeFilters.actualStatus === "expected"}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setFinanceFilters((prev) => ({
+                                ...prev,
+                                actualStatus: "expected",
+                              }));
+                            }
+                          }}
+                        />
+                        <Label htmlFor="actualStatus-expected-desktop" className="text-sm">
+                          예상/계획
+                        </Label>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
               </Accordion>
             </div>
 
@@ -4136,6 +4470,7 @@ export default function FinanceTab({
                     categories: [],
                     vendors: [],
                     paidBys: [],
+                    actualStatus: "all",
                   });
                   setCurrentPage(1);
                 }}
