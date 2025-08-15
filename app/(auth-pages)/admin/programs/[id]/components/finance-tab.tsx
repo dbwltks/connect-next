@@ -729,6 +729,30 @@ export default function FinanceTab({
     })
     .slice(startIndex, endIndex);
 
+  // 누적 잔액 계산 (날짜순으로 정렬된 전체 데이터 기준)
+  const sortedAllFinances = [...filteredFinances].sort((a, b) => {
+    if (sortField === "datetime" || !sortField) {
+      const aDateTime = new Date(a.datetime || a.date || 0);
+      const bDateTime = new Date(b.datetime || b.date || 0);
+      return aDateTime.getTime() - bDateTime.getTime(); // 오래된 순으로 정렬
+    }
+    return 0;
+  });
+
+  // 누적 잔액 맵 생성
+  const runningBalanceMap = new Map<string, number>();
+  let runningBalance = 0;
+  
+  sortedAllFinances.forEach((finance) => {
+    const amount = typeof finance.amount === 'number' ? finance.amount : parseFloat(finance.amount) || 0;
+    if (finance.type === 'income') {
+      runningBalance += amount;
+    } else {
+      runningBalance -= amount;
+    }
+    runningBalanceMap.set(finance.id, runningBalance);
+  });
+
   // 필터 변경 시 페이지 리셋
   const resetPageAndSetFilter = (filterUpdate: any) => {
     setCurrentPage(1);
@@ -1815,7 +1839,7 @@ export default function FinanceTab({
                 )}
                 {visibleColumns.amount && (
                   <TableHead
-                    className="text-right w-[120px] text-xs sm:text-sm cursor-pointer hover:bg-gray-50 select-none"
+                    className="text-right w-[140px] text-xs sm:text-sm cursor-pointer hover:bg-gray-50 select-none"
                     onClick={() => handleSort("amount")}
                   >
                     <div className="flex items-center justify-end gap-1">
@@ -1893,16 +1917,21 @@ export default function FinanceTab({
                     )}
                     {visibleColumns.amount && (
                       <TableCell className="text-right py-3">
-                        <span
-                          className={`text-xs sm:text-sm font-medium ${
-                            finance.type === "income"
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }`}
-                        >
-                          {finance.type === "income" ? "+" : "-"}$
-                          {finance.amount.toLocaleString()} CAD
-                        </span>
+                        <div className="flex flex-col">
+                          <span
+                            className={`text-xs sm:text-sm font-medium ${
+                              finance.type === "income"
+                                ? "text-green-600"
+                                : "text-red-600"
+                            }`}
+                          >
+                            {finance.type === "income" ? "+" : "-"}$
+                            {finance.amount.toLocaleString()} CAD
+                          </span>
+                          <span className="text-xs font-bold mt-1 text-gray-500">
+                            ${(runningBalanceMap.get(finance.id) || 0).toLocaleString()}
+                          </span>
+                        </div>
                       </TableCell>
                     )}
                   </TableRow>
