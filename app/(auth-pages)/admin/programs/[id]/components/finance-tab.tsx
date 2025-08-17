@@ -229,6 +229,9 @@ export default function FinanceTab({
 
   // 순서 편집 모드 상태
   const [isOrderEditMode, setIsOrderEditMode] = useState(false);
+  
+  // 엑셀 다운로드 확인 상태
+  const [isExcelDownloadDialogOpen, setIsExcelDownloadDialogOpen] = useState(false);
 
   // 카테고리 순서 변경 함수
   const moveCategoryUp = async (index: number) => {
@@ -303,7 +306,7 @@ export default function FinanceTab({
     categories: [] as string[], // 다중 선택
     vendors: [] as string[], // 다중 선택
     paidBys: [] as string[], // 다중 선택
-    actualStatus: "all" as "all" | "actual" | "expected", // 실제/예상 구분
+    actualStatuses: [] as string[], // 다중 선택 - 실제/예상 구분
   });
 
   // 필터 모달 상태
@@ -333,7 +336,7 @@ export default function FinanceTab({
     if (financeFilters.categories.length > 0) count++;
     if (financeFilters.vendors.length > 0) count++;
     if (financeFilters.paidBys.length > 0) count++;
-    if (financeFilters.actualStatus !== "all") count++;
+    if (financeFilters.actualStatuses.length > 0) count++;
     return count;
   };
 
@@ -356,6 +359,9 @@ export default function FinanceTab({
     useState(false);
   const [selectedFinanceForAction, setSelectedFinanceForAction] =
     useState<any>(null);
+
+  // 선택된 거래 항목들 (체크박스용)
+  const [selectedFinanceIds, setSelectedFinanceIds] = useState<Set<string>>(new Set());
 
   // 컬럼 표시 상태
   const [visibleColumns, setVisibleColumns] = useState({
@@ -419,12 +425,19 @@ export default function FinanceTab({
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // 엑셀 내보내기 함수
-  const exportToExcel = () => {
+  // 엑셀 내보내기 확인 함수
+  const handleExcelDownloadClick = () => {
     if (filteredFinances.length === 0) {
       showAlert("내보내기 오류", "내보낼 데이터가 없습니다.");
       return;
     }
+    
+    // 다운로드 확인 다이얼로그 열기
+    setIsExcelDownloadDialogOpen(true);
+  };
+
+  // 실제 엑셀 내보내기 함수
+  const exportToExcel = () => {
 
     // 엑셀용 데이터 변환
     const excelData = filteredFinances.map((finance, index) => {
@@ -655,13 +668,14 @@ export default function FinanceTab({
     }
 
     // 실제/예상 필터
-    if (financeFilters.actualStatus !== "all") {
-      if (financeFilters.actualStatus === "actual" && !finance.isActual) {
+    if (financeFilters.actualStatuses.length > 0) {
+      const isActual = finance.isActual !== false; // undefined는 실제 거래로 간주
+      const shouldInclude = financeFilters.actualStatuses.some(status => {
+        if (status === "actual") return isActual;
+        if (status === "expected") return !isActual;
         return false;
-      }
-      if (financeFilters.actualStatus === "expected" && finance.isActual) {
-        return false;
-      }
+      });
+      if (!shouldInclude) return false;
     }
 
     return true;
@@ -759,16 +773,6 @@ export default function FinanceTab({
     setFinanceFilters((prev) => ({ ...prev, ...filterUpdate }));
   };
 
-  // 재정 통계 계산 (디버깅용 로그 추가)
-  if (process.env.NODE_ENV === 'development' && filteredFinances.length > 0) {
-    console.log('🔍 Finance Debug Info:', {
-      totalRecords: filteredFinances.length,
-      sampleRecord: filteredFinances[0],
-      isActualValues: filteredFinances.map(f => ({ id: f.id, isActual: f.isActual, type: f.isActual?.constructor?.name })),
-      vendorValues: filteredFinances.map(f => ({ id: f.id, vendor: f.vendor })),
-      undefinedIsActualCount: filteredFinances.filter(f => f.isActual === undefined).length
-    });
-  }
 
   // isActual이 undefined인 기존 데이터는 실제 거래로 간주 (하위 호환성)
   const normalizedFinances = filteredFinances.map(f => ({
@@ -856,46 +860,39 @@ export default function FinanceTab({
   const totalNonCashExpense = actualNonCashExpense + plannedNonCashExpense;
   const totalNonCashBalance = totalNonCashIncome - totalNonCashExpense;
 
-  // 개발 환경에서 계산 결과 검증
-  if (process.env.NODE_ENV === 'development' && filteredFinances.length > 0) {
-    const dataIntegrityIssues = normalizedFinances.filter(f => 
-      typeof f.amount !== 'number' || isNaN(f.amount) || f.amount < 0
-    );
-    
-    console.log('💰 Finance Calculations:', {
-      totals: {
-        totalIncome,
-        totalExpense,
-        balance
-      },
-      actualVsPlanned: {
-        actualIncome,
-        plannedIncome,
-        actualExpense,
-        plannedExpense,
-        actualBalance,
-        plannedBalance
-      },
-      cashBreakdown: {
-        actualCashIncome,
-        plannedCashIncome,
-        actualCashExpense,
-        plannedCashExpense,
-        totalCashBalance
-      },
-      verification: {
-        totalIncomeCheck: actualIncome + plannedIncome,
-        totalExpenseCheck: actualExpense + plannedExpense,
-        balanceCheck: (actualIncome + plannedIncome) - (actualExpense + plannedExpense),
-        matchesTotalIncome: Math.abs(totalIncome - (actualIncome + plannedIncome)) < 0.01,
-        matchesTotalExpense: Math.abs(totalExpense - (actualExpense + plannedExpense)) < 0.01
-      },
-      dataIntegrity: {
-        invalidAmounts: dataIntegrityIssues.length,
-        issues: dataIntegrityIssues.map(f => ({ id: f.id, amount: f.amount, type: typeof f.amount }))
-      }
-    });
-  }
+  // 선택된 항목들의 통계 계산
+  const selectedFinances = normalizedFinances.filter(f => selectedFinanceIds.has(f.id));
+  const selectedTotalIncome = selectedFinances
+    .filter((f) => f.type === "income")
+    .reduce((acc, f) => acc + (typeof f.amount === 'number' ? f.amount : parseFloat(f.amount) || 0), 0);
+  const selectedTotalExpense = selectedFinances
+    .filter((f) => f.type === "expense")
+    .reduce((acc, f) => acc + (typeof f.amount === 'number' ? f.amount : parseFloat(f.amount) || 0), 0);
+  const selectedBalance = selectedTotalIncome - selectedTotalExpense;
+
+  // 표시할 통계 (선택된 항목이 있으면 선택된 항목 통계, 없으면 전체 통계)
+  const displayStats = selectedFinanceIds.size > 0 ? {
+    totalIncome: selectedTotalIncome,
+    totalExpense: selectedTotalExpense,
+    balance: selectedBalance,
+    actualIncome: selectedFinances.filter(f => f.type === "income" && f.isActual === true).reduce((acc, f) => acc + (typeof f.amount === 'number' ? f.amount : parseFloat(f.amount) || 0), 0),
+    plannedIncome: selectedFinances.filter(f => f.type === "income" && f.isActual === false).reduce((acc, f) => acc + (typeof f.amount === 'number' ? f.amount : parseFloat(f.amount) || 0), 0),
+    actualExpense: selectedFinances.filter(f => f.type === "expense" && f.isActual === true).reduce((acc, f) => acc + (typeof f.amount === 'number' ? f.amount : parseFloat(f.amount) || 0), 0),
+    plannedExpense: selectedFinances.filter(f => f.type === "expense" && f.isActual === false).reduce((acc, f) => acc + (typeof f.amount === 'number' ? f.amount : parseFloat(f.amount) || 0), 0),
+    actualBalance: selectedFinances.filter(f => f.isActual === true).reduce((acc, f) => acc + (f.type === 'income' ? 1 : -1) * (typeof f.amount === 'number' ? f.amount : parseFloat(f.amount) || 0), 0),
+    plannedBalance: selectedFinances.filter(f => f.isActual === false).reduce((acc, f) => acc + (f.type === 'income' ? 1 : -1) * (typeof f.amount === 'number' ? f.amount : parseFloat(f.amount) || 0), 0)
+  } : {
+    totalIncome,
+    totalExpense,
+    balance,
+    actualIncome,
+    plannedIncome,
+    actualExpense,
+    plannedExpense,
+    actualBalance,
+    plannedBalance
+  };
+
 
   // 재정 데이터 추가 함수
   const handleAddFinance = async () => {
@@ -1302,15 +1299,15 @@ export default function FinanceTab({
           <CardContent className="p-4">
             <div className="text-sm text-gray-600">총 수입</div>
             <div className="text-2xl font-bold text-green-600">
-              ${totalIncome.toLocaleString()} CAD
+              ${displayStats.totalIncome.toLocaleString()} CAD
             </div>
             <div className="text-xs text-gray-500 mt-2 space-y-1">
               <div className="flex justify-between">
                 <span className="text-green-700 font-medium">
-                  실제: ${actualIncome.toLocaleString()}
+                  실제: ${displayStats.actualIncome.toLocaleString()}
                 </span>
                 <span className="text-orange-600">
-                  예상: ${plannedIncome.toLocaleString()}
+                  예상: ${displayStats.plannedIncome.toLocaleString()}
                 </span>
               </div>
               <div className="text-xs text-gray-400 space-y-0.5">
@@ -1336,15 +1333,15 @@ export default function FinanceTab({
           <CardContent className="p-4">
             <div className="text-sm text-gray-600">총 지출</div>
             <div className="text-2xl font-bold text-red-600">
-              ${totalExpense.toLocaleString()} CAD
+              ${displayStats.totalExpense.toLocaleString()} CAD
             </div>
             <div className="text-xs text-gray-500 mt-2 space-y-1">
               <div className="flex justify-between">
                 <span className="text-green-700 font-medium">
-                  실제: ${actualExpense.toLocaleString()}
+                  실제: ${displayStats.actualExpense.toLocaleString()}
                 </span>
                 <span className="text-orange-600">
-                  예상: ${plannedExpense.toLocaleString()}
+                  예상: ${displayStats.plannedExpense.toLocaleString()}
                 </span>
               </div>
               <div className="text-xs text-gray-400 space-y-0.5">
@@ -1372,15 +1369,15 @@ export default function FinanceTab({
             <div
               className={`text-2xl font-bold ${balance >= 0 ? "text-blue-600" : "text-red-600"}`}
             >
-              ${balance.toLocaleString()} CAD
+              ${displayStats.balance.toLocaleString()} CAD
             </div>
             <div className="text-xs text-gray-500 mt-2 space-y-1">
               <div className="flex justify-between">
                 <span className="text-green-700 font-medium">
-                  실제: ${actualBalance.toLocaleString()}
+                  실제: ${displayStats.actualBalance.toLocaleString()}
                 </span>
                 <span className="text-orange-600">
-                  예상: ${plannedBalance.toLocaleString()}
+                  예상: ${displayStats.plannedBalance.toLocaleString()}
                 </span>
               </div>
               <div className="text-xs text-gray-400 space-y-0.5">
@@ -1422,14 +1419,6 @@ export default function FinanceTab({
           </div>
           <div className="flex gap-2">
             <Button
-              onClick={exportToExcel}
-              size="sm"
-              variant="outline"
-              title="엑셀로 내보내기"
-            >
-              <Download className="h-4 w-4" />
-            </Button>
-            <Button
               onClick={() => setIsFinanceCategorySettingsOpen(true)}
               size="sm"
               variant="outline"
@@ -1468,11 +1457,10 @@ export default function FinanceTab({
             <Button
               variant="outline"
               onClick={() => setIsFinanceFilterModalOpen(true)}
-              className="flex items-center gap-2"
               size="sm"
+              title="필터"
             >
               <Filter className="h-4 w-4" />
-              필터
               {getActiveFiltersCount() > 0 && (
                 <Badge variant="secondary" className="text-xs ml-1">
                   {getActiveFiltersCount()}
@@ -1557,15 +1545,17 @@ export default function FinanceTab({
               </div>
             )}
 
-            {financeFilters.actualStatus !== "all" && (
+            {financeFilters.actualStatuses.length > 0 && (
               <div className="flex items-center gap-1 px-2 py-1 bg-red-100 rounded-md text-xs">
                 <span className="text-red-800">구분:</span>
                 <span className="text-red-600">
-                  {financeFilters.actualStatus === "actual" ? "실제 거래" : "예상/계획"}
+                  {financeFilters.actualStatuses
+                    .map((status) => (status === "actual" ? "실제" : "예상"))
+                    .join(", ")}
                 </span>
                 <button
                   onClick={() =>
-                    setFinanceFilters((prev) => ({ ...prev, actualStatus: "all" }))
+                    setFinanceFilters((prev) => ({ ...prev, actualStatuses: [] }))
                   }
                   className="text-red-500 hover:text-red-700 ml-1"
                 >
@@ -1597,35 +1587,14 @@ export default function FinanceTab({
               </div>
             )}
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={exportToExcel}
-              className="flex items-center gap-2"
-              title="엑셀로 내보내기"
-            >
-              <Download className="h-4 w-4" />
-              엑셀
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={refreshData}
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className="h-4 w-4" />
-              새로고침
-            </Button>
-
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex items-center gap-2"
+                  title="컬럼 표시 설정"
                 >
                   <Columns className="h-4 w-4" />
-                  컬럼
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-48">
@@ -1736,6 +1705,22 @@ export default function FinanceTab({
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExcelDownloadClick}
+              title="엑셀로 내보내기"
+            >
+              <Download className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={refreshData}
+              title="새로고침"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
           </div>
 
           {/* 항목 수 선택 */}
@@ -1771,6 +1756,33 @@ export default function FinanceTab({
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={paginatedFinances.length > 0 && paginatedFinances.every(f => selectedFinanceIds.has(f.id))}
+                    ref={(ref: HTMLButtonElement | null) => {
+                      if (ref) {
+                        const selectedCount = paginatedFinances.filter(f => selectedFinanceIds.has(f.id)).length;
+                        const totalCount = paginatedFinances.length;
+                        // HTMLButtonElement에는 indeterminate 속성이 없으므로 다른 방법 사용
+                        const inputElement = ref.querySelector('input[type="checkbox"]') as HTMLInputElement;
+                        if (inputElement) {
+                          inputElement.indeterminate = selectedCount > 0 && selectedCount < totalCount;
+                        }
+                      }
+                    }}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        // 현재 페이지의 모든 항목 선택
+                        const newSet = new Set(selectedFinanceIds);
+                        paginatedFinances.forEach(f => newSet.add(f.id));
+                        setSelectedFinanceIds(newSet);
+                      } else {
+                        // 모든 선택 해제 (전체 데이터에서)
+                        setSelectedFinanceIds(new Set());
+                      }
+                    }}
+                  />
+                </TableHead>
                 {visibleColumns.date && (
                   <TableHead
                     className="w-[100px] text-xs sm:text-sm cursor-pointer hover:bg-gray-50 select-none"
@@ -1858,6 +1870,21 @@ export default function FinanceTab({
                     className="cursor-pointer transition-colors hover:bg-gray-50"
                     onClick={() => handleFinanceRowClick(finance)}
                   >
+                    <TableCell className="w-12">
+                      <Checkbox
+                        checked={selectedFinanceIds.has(finance.id)}
+                        onCheckedChange={(checked) => {
+                          const newSet = new Set(selectedFinanceIds);
+                          if (checked) {
+                            newSet.add(finance.id);
+                          } else {
+                            newSet.delete(finance.id);
+                          }
+                          setSelectedFinanceIds(newSet);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </TableCell>
                     {visibleColumns.date && (
                       <TableCell className="text-xs sm:text-sm py-3">
                         {(() => {
@@ -1941,7 +1968,7 @@ export default function FinanceTab({
                 <TableRow>
                   <TableCell
                     colSpan={
-                      Object.values(visibleColumns).filter(Boolean).length
+                      Object.values(visibleColumns).filter(Boolean).length + 1
                     }
                     className="text-center py-8 text-gray-500"
                   >
@@ -3831,12 +3858,33 @@ export default function FinanceTab({
                 >
                   <AccordionTrigger className="py-3 hover:no-underline">
                     <div className="flex items-center space-x-2">
-                      <Label className="text-sm font-medium cursor-pointer">
+                      <Checkbox
+                        id="filter-actualStatus"
+                        checked={financeFilters.actualStatuses.length > 0}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setFinanceFilters((prev) => ({
+                              ...prev,
+                              actualStatuses: ["actual", "expected"],
+                            }));
+                          } else {
+                            setFinanceFilters((prev) => ({
+                              ...prev,
+                              actualStatuses: [],
+                            }));
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <Label
+                        htmlFor="filter-actualStatus"
+                        className="text-sm font-medium cursor-pointer"
+                      >
                         실제/예상 구분
                       </Label>
-                      {financeFilters.actualStatus !== "all" && (
+                      {financeFilters.actualStatuses.length > 0 && (
                         <span className="text-xs text-gray-500">
-                          ({financeFilters.actualStatus === "actual" ? "실제 거래" : "예상/계획"})
+                          ({financeFilters.actualStatuses.length}개 선택)
                         </span>
                       )}
                     </div>
@@ -3845,30 +3893,18 @@ export default function FinanceTab({
                     <div className="space-y-2 pl-6">
                       <div className="flex items-center space-x-2">
                         <Checkbox
-                          id="actualStatus-all"
-                          checked={financeFilters.actualStatus === "all"}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setFinanceFilters((prev) => ({
-                                ...prev,
-                                actualStatus: "all",
-                              }));
-                            }
-                          }}
-                        />
-                        <Label htmlFor="actualStatus-all" className="text-sm">
-                          전체
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
                           id="actualStatus-actual"
-                          checked={financeFilters.actualStatus === "actual"}
+                          checked={financeFilters.actualStatuses.includes("actual")}
                           onCheckedChange={(checked) => {
                             if (checked) {
                               setFinanceFilters((prev) => ({
                                 ...prev,
-                                actualStatus: "actual",
+                                actualStatuses: [...prev.actualStatuses, "actual"],
+                              }));
+                            } else {
+                              setFinanceFilters((prev) => ({
+                                ...prev,
+                                actualStatuses: prev.actualStatuses.filter(s => s !== "actual"),
                               }));
                             }
                           }}
@@ -3880,12 +3916,17 @@ export default function FinanceTab({
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           id="actualStatus-expected"
-                          checked={financeFilters.actualStatus === "expected"}
+                          checked={financeFilters.actualStatuses.includes("expected")}
                           onCheckedChange={(checked) => {
                             if (checked) {
                               setFinanceFilters((prev) => ({
                                 ...prev,
-                                actualStatus: "expected",
+                                actualStatuses: [...prev.actualStatuses, "expected"],
+                              }));
+                            } else {
+                              setFinanceFilters((prev) => ({
+                                ...prev,
+                                actualStatuses: prev.actualStatuses.filter(s => s !== "expected"),
                               }));
                             }
                           }}
@@ -3915,7 +3956,7 @@ export default function FinanceTab({
                     categories: [],
                     vendors: [],
                     paidBys: [],
-                    actualStatus: "all",
+                    actualStatuses: [],
                   });
                   setCurrentPage(1);
                 }}
@@ -4415,12 +4456,33 @@ export default function FinanceTab({
                 >
                   <AccordionTrigger className="py-3 hover:no-underline">
                     <div className="flex items-center space-x-2">
-                      <Label className="text-sm font-medium cursor-pointer">
+                      <Checkbox
+                        id="filter-actualStatus-desktop"
+                        checked={financeFilters.actualStatuses.length > 0}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setFinanceFilters((prev) => ({
+                              ...prev,
+                              actualStatuses: ["actual", "expected"],
+                            }));
+                          } else {
+                            setFinanceFilters((prev) => ({
+                              ...prev,
+                              actualStatuses: [],
+                            }));
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <Label
+                        htmlFor="filter-actualStatus-desktop"
+                        className="text-sm font-medium cursor-pointer"
+                      >
                         실제/예상 구분
                       </Label>
-                      {financeFilters.actualStatus !== "all" && (
+                      {financeFilters.actualStatuses.length > 0 && (
                         <span className="text-xs text-gray-500">
-                          ({financeFilters.actualStatus === "actual" ? "실제 거래" : "예상/계획"})
+                          ({financeFilters.actualStatuses.length}개 선택)
                         </span>
                       )}
                     </div>
@@ -4429,30 +4491,18 @@ export default function FinanceTab({
                     <div className="space-y-2 pl-6">
                       <div className="flex items-center space-x-2">
                         <Checkbox
-                          id="actualStatus-all-desktop"
-                          checked={financeFilters.actualStatus === "all"}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setFinanceFilters((prev) => ({
-                                ...prev,
-                                actualStatus: "all",
-                              }));
-                            }
-                          }}
-                        />
-                        <Label htmlFor="actualStatus-all-desktop" className="text-sm">
-                          전체
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
                           id="actualStatus-actual-desktop"
-                          checked={financeFilters.actualStatus === "actual"}
+                          checked={financeFilters.actualStatuses.includes("actual")}
                           onCheckedChange={(checked) => {
                             if (checked) {
                               setFinanceFilters((prev) => ({
                                 ...prev,
-                                actualStatus: "actual",
+                                actualStatuses: [...prev.actualStatuses, "actual"],
+                              }));
+                            } else {
+                              setFinanceFilters((prev) => ({
+                                ...prev,
+                                actualStatuses: prev.actualStatuses.filter(s => s !== "actual"),
                               }));
                             }
                           }}
@@ -4464,12 +4514,17 @@ export default function FinanceTab({
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           id="actualStatus-expected-desktop"
-                          checked={financeFilters.actualStatus === "expected"}
+                          checked={financeFilters.actualStatuses.includes("expected")}
                           onCheckedChange={(checked) => {
                             if (checked) {
                               setFinanceFilters((prev) => ({
                                 ...prev,
-                                actualStatus: "expected",
+                                actualStatuses: [...prev.actualStatuses, "expected"],
+                              }));
+                            } else {
+                              setFinanceFilters((prev) => ({
+                                ...prev,
+                                actualStatuses: prev.actualStatuses.filter(s => s !== "expected"),
                               }));
                             }
                           }}
@@ -4499,7 +4554,7 @@ export default function FinanceTab({
                     categories: [],
                     vendors: [],
                     paidBys: [],
-                    actualStatus: "all",
+                    actualStatuses: [],
                   });
                   setCurrentPage(1);
                 }}
@@ -4513,6 +4568,29 @@ export default function FinanceTab({
           </DialogContent>
         </Dialog>
       )}
+
+      {/* 엑셀 다운로드 확인 다이얼로그 */}
+      <AlertDialog open={isExcelDownloadDialogOpen} onOpenChange={setIsExcelDownloadDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>엑셀 다운로드</AlertDialogTitle>
+            <AlertDialogDescription>
+              {filteredFinances.length}건의 재정 데이터를 엑셀 파일로 다운로드하시겠습니까?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                setIsExcelDownloadDialogOpen(false);
+                exportToExcel();
+              }}
+            >
+              다운로드
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Alert 다이얼로그 */}
       <AlertDialog open={alertOpen} onOpenChange={setAlertOpen}>
