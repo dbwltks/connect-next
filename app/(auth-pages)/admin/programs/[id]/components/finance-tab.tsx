@@ -55,6 +55,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -232,6 +233,18 @@ export default function FinanceTab({
   
   // 엑셀 다운로드 확인 상태
   const [isExcelDownloadDialogOpen, setIsExcelDownloadDialogOpen] = useState(false);
+  const [excelDownloadType, setExcelDownloadType] = useState<'all' | 'selected'>('all');
+  
+  // 일괄 처리 확인 다이얼로그 상태
+  const [bulkActionDialog, setBulkActionDialog] = useState<{
+    isOpen: boolean;
+    type: 'delete' | 'actual' | 'expected';
+    count: number;
+  }>({
+    isOpen: false,
+    type: 'delete',
+    count: 0,
+  });
 
   // 카테고리 순서 변경 함수
   const moveCategoryUp = async (index: number) => {
@@ -432,15 +445,22 @@ export default function FinanceTab({
       return;
     }
     
+    // 선택된 항목이 있으면 기본값을 selected로, 없으면 all로 설정
+    setExcelDownloadType(selectedFinanceIds.size > 0 ? 'selected' : 'all');
+    
     // 다운로드 확인 다이얼로그 열기
     setIsExcelDownloadDialogOpen(true);
   };
 
   // 실제 엑셀 내보내기 함수
   const exportToExcel = () => {
+    // 다운로드할 데이터 결정
+    const dataToExport = excelDownloadType === 'selected' 
+      ? filteredFinances.filter(f => selectedFinanceIds.has(f.id))
+      : filteredFinances;
 
     // 엑셀용 데이터 변환
-    const excelData = filteredFinances.map((finance, index) => {
+    const excelData = dataToExport.map((finance, index) => {
       const amount = typeof finance.amount === 'number' ? finance.amount : parseFloat(finance.amount) || 0;
       return {
         '번호': index + 1,
@@ -457,14 +477,28 @@ export default function FinanceTab({
       };
     });
 
+    // 선택된 데이터의 요약 통계 계산
+    const exportActualIncome = dataToExport
+      .filter(f => f.type === 'income' && f.isActual !== false)
+      .reduce((sum, f) => sum + (typeof f.amount === 'number' ? f.amount : parseFloat(f.amount) || 0), 0);
+    
+    const exportPlannedIncome = dataToExport
+      .filter(f => f.type === 'income' && f.isActual === false)
+      .reduce((sum, f) => sum + (typeof f.amount === 'number' ? f.amount : parseFloat(f.amount) || 0), 0);
+    
+    const exportActualExpense = dataToExport
+      .filter(f => f.type === 'expense' && f.isActual !== false)
+      .reduce((sum, f) => sum + (typeof f.amount === 'number' ? f.amount : parseFloat(f.amount) || 0), 0);
+    
+    const exportPlannedExpense = dataToExport
+      .filter(f => f.type === 'expense' && f.isActual === false)
+      .reduce((sum, f) => sum + (typeof f.amount === 'number' ? f.amount : parseFloat(f.amount) || 0), 0);
+
     // 요약 통계 추가 (지출은 마이너스로 표시)
     const summaryData = [
-      { '항목': '총 수입', '실제': actualIncome, '예상': plannedIncome, '합계': totalIncome },
-      { '항목': '총 지출', '실제': -actualExpense, '예상': -plannedExpense, '합계': -totalExpense },
-      { '항목': '잔액', '실제': actualBalance, '예상': plannedBalance, '합계': balance },
-      { '항목': '현금 수입', '실제': actualCashIncome, '예상': plannedCashIncome, '합계': totalCashIncome },
-      { '항목': '현금 지출', '실제': -actualCashExpense, '예상': -plannedCashExpense, '합계': -totalCashExpense },
-      { '항목': '현금 잔액', '실제': actualCashIncome - actualCashExpense, '예상': plannedCashIncome - plannedCashExpense, '합계': totalCashBalance }
+      { '항목': '총 수입', '실제': exportActualIncome, '예상': exportPlannedIncome, '합계': exportActualIncome + exportPlannedIncome },
+      { '항목': '총 지출', '실제': -exportActualExpense, '예상': -exportPlannedExpense, '합계': -(exportActualExpense + exportPlannedExpense) },
+      { '항목': '잔액', '실제': exportActualIncome - exportActualExpense, '예상': exportPlannedIncome - exportPlannedExpense, '합계': (exportActualIncome + exportPlannedIncome) - (exportActualExpense + exportPlannedExpense) }
     ];
 
     // 워크북 생성
@@ -481,13 +515,118 @@ export default function FinanceTab({
     // 파일명 생성 (재정데이터_프로그램ID_날짜)
     const today = new Date();
     const dateStr = today.toISOString().split('T')[0].replace(/-/g, '');
-    const filename = `재정데이터_${programId}_${dateStr}.xlsx`;
+    const typeText = excelDownloadType === 'selected' ? '_선택항목' : '';
+    const filename = `재정데이터_${programId}${typeText}_${dateStr}.xlsx`;
 
     // 파일 다운로드
     XLSX.writeFile(wb, filename);
     
     showAlert("내보내기 완료", `${excelData.length}건의 데이터를 성공적으로 내보냈습니다.`);
   };
+
+  // 일괄 삭제 함수
+  const handleBulkDelete = async () => {
+    if (!programId || selectedFinanceIds.size === 0) return;
+
+    try {
+      const supabase = createClient();
+      
+      // 현재 finances 데이터 가져오기
+      const { data: currentData, error: fetchError } = await supabase
+        .from("programs")
+        .select("finances")
+        .eq("id", programId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const currentFinances = currentData?.finances || [];
+      
+      // 선택된 항목들 제외하고 필터링
+      const updatedFinances = currentFinances.filter(
+        (finance: any) => !selectedFinanceIds.has(finance.id)
+      );
+
+      // programs 테이블의 finances 필드 업데이트
+      const { error } = await supabase
+        .from("programs")
+        .update({ finances: updatedFinances })
+        .eq("id", programId);
+
+      if (error) throw error;
+
+      // 로컬 상태 업데이트
+      setFinances(updatedFinances);
+      setSelectedFinanceIds(new Set()); // 선택 해제
+
+      await refreshData();
+
+      const deletedCount = selectedFinanceIds.size;
+      showAlert(
+        "일괄 삭제 완료",
+        `${deletedCount}개 항목이 삭제되었습니다.`
+      );
+    } catch (error) {
+      console.error("일괄 삭제 실패:", error);
+      showAlert("삭제 실패", "항목 삭제에 실패했습니다.");
+    }
+  };
+
+  // 일괄 실제/예상 구분 변경 함수
+  const handleBulkUpdateActualStatus = async (isActual: boolean) => {
+    if (!programId || selectedFinanceIds.size === 0) return;
+
+    try {
+      const supabase = createClient();
+      
+      // 현재 finances 데이터 가져오기
+      const { data: currentData, error: fetchError } = await supabase
+        .from("programs")
+        .select("finances")
+        .eq("id", programId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const currentFinances = currentData?.finances || [];
+      
+      // 선택된 항목들의 isActual 값 변경
+      const updatedFinances = currentFinances.map((finance: any) => {
+        if (selectedFinanceIds.has(finance.id)) {
+          return {
+            ...finance,
+            isActual,
+            updated_at: new Date().toISOString(),
+          };
+        }
+        return finance;
+      });
+
+      // programs 테이블의 finances 필드 업데이트
+      const { error } = await supabase
+        .from("programs")
+        .update({ finances: updatedFinances })
+        .eq("id", programId);
+
+      if (error) throw error;
+
+      // 로컬 상태 업데이트
+      setFinances(updatedFinances);
+      setSelectedFinanceIds(new Set()); // 선택 해제
+
+      await refreshData();
+
+      const updatedCount = selectedFinanceIds.size;
+      showAlert(
+        "일괄 변경 완료",
+        `${updatedCount}개 항목이 ${isActual ? "실제 거래" : "예상/계획"}로 변경되었습니다.`
+      );
+    } catch (error) {
+      console.error("일괄 상태 변경 실패:", error);
+      showAlert("변경 실패", "항목 상태 변경에 실패했습니다.");
+    }
+  };
+
 
   // 데이터 새로고침 함수
   const refreshData = async () => {
@@ -742,6 +881,46 @@ export default function FinanceTab({
       }
     })
     .slice(startIndex, endIndex);
+
+  // 키보드 단축키 처리
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Ctrl+A 또는 Cmd+A: 현재 페이지 전체 선택
+      if ((event.ctrlKey || event.metaKey) && event.key === 'a') {
+        event.preventDefault();
+        const newSet = new Set(selectedFinanceIds);
+        paginatedFinances.forEach(f => newSet.add(f.id));
+        setSelectedFinanceIds(newSet);
+        return;
+      }
+      
+      // Delete 키: 선택된 항목 삭제 확인
+      if (event.key === 'Delete' && selectedFinanceIds.size > 0) {
+        event.preventDefault();
+        setBulkActionDialog({
+          isOpen: true,
+          type: 'delete',
+          count: selectedFinanceIds.size,
+        });
+        return;
+      }
+      
+      // Escape 키: 선택 해제
+      if (event.key === 'Escape' && selectedFinanceIds.size > 0) {
+        event.preventDefault();
+        setSelectedFinanceIds(new Set());
+        return;
+      }
+    };
+
+    // 이벤트 리스너 추가
+    document.addEventListener('keydown', handleKeyDown);
+    
+    // 클린업
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedFinanceIds, paginatedFinances]);
 
   // 누적 잔액 계산 (날짜순으로 정렬된 전체 데이터 기준)
   const sortedAllFinances = [...filteredFinances].sort((a, b) => {
@@ -1721,6 +1900,93 @@ export default function FinanceTab({
             >
               <RefreshCw className="h-4 w-4" />
             </Button>
+            
+            {/* 일괄 처리 드롭다운 (선택된 항목이 있을 때만 표시) */}
+            {selectedFinanceIds.size > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    title={`${selectedFinanceIds.size}개 항목 선택됨 - 클릭하여 일괄 처리`}
+                  >
+                    <span className="mr-1">{selectedFinanceIds.size}</span>
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <div className="px-2 py-1.5 text-sm text-gray-500 border-b">
+                    {selectedFinanceIds.size}개 항목 선택됨
+                  </div>
+                  
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setBulkActionDialog({
+                        isOpen: true,
+                        type: 'actual',
+                        count: selectedFinanceIds.size,
+                      });
+                    }}
+                  >
+                    ✓ 실제 거래로 변경
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setBulkActionDialog({
+                        isOpen: true,
+                        type: 'expected',
+                        count: selectedFinanceIds.size,
+                      });
+                    }}
+                  >
+                    📋 예상/계획으로 변경
+                  </DropdownMenuItem>
+                  
+                  <div className="border-t my-1"></div>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      const newSet = new Set(selectedFinanceIds);
+                      paginatedFinances.forEach(f => newSet.add(f.id));
+                      setSelectedFinanceIds(newSet);
+                    }}
+                  >
+                    📄 현재 페이지 전체 선택
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      const newSet = new Set<string>();
+                      filteredFinances.forEach(f => newSet.add(f.id));
+                      setSelectedFinanceIds(newSet);
+                    }}
+                  >
+                    🔍 필터 결과 전체 선택
+                  </DropdownMenuItem>
+                  
+                  <div className="border-t my-1"></div>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setBulkActionDialog({
+                        isOpen: true,
+                        type: 'delete',
+                        count: selectedFinanceIds.size,
+                      });
+                    }}
+                    className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400"
+                  >
+                    🗑️ 선택 항목 삭제
+                  </DropdownMenuItem>
+                  
+                  <div className="border-t my-1"></div>
+                  <DropdownMenuItem
+                    onClick={() => setSelectedFinanceIds(new Set())}
+                    className="text-gray-500 dark:text-gray-400"
+                  >
+                    ✕ 선택 해제
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
 
           {/* 항목 수 선택 */}
@@ -1752,6 +2018,8 @@ export default function FinanceTab({
             </Select>
           </div>
         </div>
+
+
         <div className="border rounded-lg overflow-x-auto">
           <Table>
             <TableHeader>
@@ -1981,7 +2249,18 @@ export default function FinanceTab({
         </div>
 
         {/* 페이지네이션 컨트롤 */}
-        <div className="flex items-center justify-center px-4 py-3 bg-white border-t">
+        <div className="flex items-center justify-between px-4 py-3 bg-white border-t">
+          <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+            <span>
+              전체 {filteredFinances.length}개 중 {startIndex + 1}-{Math.min(endIndex, filteredFinances.length)}개 표시
+            </span>
+            {selectedFinanceIds.size > 0 && (
+              <span className="text-blue-600 dark:text-blue-400 font-medium">
+                • {selectedFinanceIds.size}개 선택됨
+              </span>
+            )}
+          </div>
+          <div className="flex justify-center">
           <Pagination>
             <PaginationContent>
               <PaginationItem>
@@ -2055,6 +2334,7 @@ export default function FinanceTab({
               </PaginationItem>
             </PaginationContent>
           </Pagination>
+          </div>
         </div>
       </div>
 
@@ -4574,8 +4854,30 @@ export default function FinanceTab({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>엑셀 다운로드</AlertDialogTitle>
-            <AlertDialogDescription>
-              {filteredFinances.length}건의 재정 데이터를 엑셀 파일로 다운로드하시겠습니까?
+            <AlertDialogDescription asChild>
+              <div className="space-y-4">
+                <p>다운로드할 데이터 범위를 선택해주세요.</p>
+                <RadioGroup 
+                  value={excelDownloadType} 
+                  onValueChange={(value: 'all' | 'selected') => setExcelDownloadType(value)}
+                  className="space-y-3"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="all" id="all" />
+                    <Label htmlFor="all" className="text-sm cursor-pointer">
+                      전체 데이터 ({filteredFinances.length}건)
+                    </Label>
+                  </div>
+                  {selectedFinanceIds.size > 0 && (
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="selected" id="selected" />
+                      <Label htmlFor="selected" className="text-sm cursor-pointer">
+                        선택된 항목만 ({selectedFinanceIds.size}건)
+                      </Label>
+                    </div>
+                  )}
+                </RadioGroup>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -4587,6 +4889,51 @@ export default function FinanceTab({
               }}
             >
               다운로드
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 일괄 처리 확인 다이얼로그 */}
+      <AlertDialog 
+        open={bulkActionDialog.isOpen} 
+        onOpenChange={(open) => setBulkActionDialog(prev => ({ ...prev, isOpen: open }))}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {bulkActionDialog.type === 'delete' 
+                ? '일괄 삭제 확인'
+                : bulkActionDialog.type === 'actual'
+                ? '실제 거래로 변경'
+                : '예상/계획으로 변경'
+              }
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {bulkActionDialog.type === 'delete' 
+                ? `선택된 ${bulkActionDialog.count}개 항목을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`
+                : bulkActionDialog.type === 'actual'
+                ? `선택된 ${bulkActionDialog.count}개 항목을 실제 거래로 변경하시겠습니까?`
+                : `선택된 ${bulkActionDialog.count}개 항목을 예상/계획으로 변경하시겠습니까?`
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                setBulkActionDialog(prev => ({ ...prev, isOpen: false }));
+                if (bulkActionDialog.type === 'delete') {
+                  handleBulkDelete();
+                } else if (bulkActionDialog.type === 'actual') {
+                  handleBulkUpdateActualStatus(true);
+                } else {
+                  handleBulkUpdateActualStatus(false);
+                }
+              }}
+              className={bulkActionDialog.type === 'delete' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
+            >
+              {bulkActionDialog.type === 'delete' ? '삭제' : '변경'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
