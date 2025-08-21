@@ -348,8 +348,8 @@ export default function HomepageWidgets({
       <div className="lg:container mx-auto lg:px-6 py-0 lg:py-6">
         <div className="grid grid-cols-12 gap-6">
           {layoutStructure === "1-col" && (
-            <div className="col-span-12 flex justify-center">
-              <div className="w-full max-w-7xl">{mainContent}</div>
+            <div className="col-span-12">
+              <div className="w-full max-w-6xl mx-auto">{mainContent}</div>
             </div>
           )}
           {layoutStructure === "2-col-left" && (
@@ -357,12 +357,20 @@ export default function HomepageWidgets({
               <div className="hidden xl:block col-span-12 lg:col-span-3 w-full sticky top-24 self-start">
                 {leftSidebar}
               </div>
-              <div className="col-span-12 lg:col-span-9">{mainContent}</div>
+              <div className="col-span-12 lg:col-span-9">
+                <div className="w-full max-w-6xl xl:max-w-none mx-auto xl:mx-0">
+                  {mainContent}
+                </div>
+              </div>
             </>
           )}
           {layoutStructure === "2-col-right" && (
             <>
-              <div className="col-span-12 lg:col-span-9">{mainContent}</div>
+              <div className="col-span-12 lg:col-span-9">
+                <div className="w-full max-w-6xl lg:max-w-none mx-auto lg:mx-0">
+                  {mainContent}
+                </div>
+              </div>
               <div className="hidden lg:block col-span-12 lg:col-span-3 sticky top-24 self-start">
                 {rightSidebar}
               </div>
@@ -373,8 +381,8 @@ export default function HomepageWidgets({
               <div className="hidden xl:block col-span-2 sticky top-24 self-start">
                 {leftSidebar}
               </div>
-              <div className="col-span-12 xl:col-span-8 flex justify-center">
-                <div className="w-full xl:w-auto xl:max-w-none max-w-4xl">
+              <div className="col-span-12 xl:col-span-8">
+                <div className="w-full max-w-6xl xl:max-w-none mx-auto xl:mx-0">
                   {mainContent}
                 </div>
               </div>
