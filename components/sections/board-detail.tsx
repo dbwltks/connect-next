@@ -33,6 +33,7 @@ import {
   FileText,
   FileSpreadsheet,
   Presentation,
+  Type,
 } from "lucide-react";
 import BoardComments from "./board-comments";
 import BoardWrite from "./board-write";
@@ -304,12 +305,14 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
     title: string;
   } | null>(null);
   // 최근 게시글 목록 상태 관리
-  const [recentPosts, setRecentPosts] = useState<{
-    id: string;
-    title: string;
-    created_at: string;
-    views: number;
-  }[]>([]);
+  const [recentPosts, setRecentPosts] = useState<
+    {
+      id: string;
+      title: string;
+      created_at: string;
+      views: number;
+    }[]
+  >([]);
   // 첨부파일 관리
   const [attachments, setAttachments] = useState<IAttachment[]>([]);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -1599,7 +1602,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="p-3 text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
+                  className="p-3 text-xs text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
                   onClick={() =>
                     router.push(
                       `${pathname.replace(/\/$/, "")}/${post.id}/edit`
@@ -1608,10 +1611,10 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                 >
                   수정
                 </Button>
-                <Button 
+                <Button
                   variant="ghost"
                   size="sm"
-                  className="p-3 text-red-600 dark:text-red-400 bg-gray-200 dark:bg-gray-700 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20" 
+                  className="p-3 text-xs text-red-600 dark:text-red-400 bg-gray-200 dark:bg-gray-700 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20"
                   onClick={handleDelete}
                 >
                   삭제
@@ -1625,7 +1628,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
             <Button
               variant="ghost"
               size="sm"
-              className="p-3 text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
+              className="p-3 text-xs text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
               disabled={!prevPost}
               onClick={() => {
                 if (prevPost && post?.page_id) {
@@ -1640,7 +1643,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
             <Button
               variant="ghost"
               size="sm"
-              className="p-3 text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
+              className="p-3 text-xs text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
               disabled={!nextPost}
               onClick={() => {
                 if (nextPost && post?.page_id) {
@@ -1655,14 +1658,14 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
             <Button
               variant="ghost"
               size="sm"
-              className="p-3 text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
+              className="p-3 text-xs text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
               onClick={handleGoList}
             >
               목록
             </Button>
           </div>
         </div>
-        <CardHeader className="px-4 sm:px-8 py-2 space-y-2">
+        <CardHeader className="px-4 sm:px-8 py-4 space-y-3">
           {/* 카테고리 정보 표시 */}
           <div className="">
             {menuInfo ? (
@@ -1721,7 +1724,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
               {/* 댓글 버튼 */}
               <button
                 type="button"
-                className="flex items-center gap-1 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded text-xs"
+                className="flex items-center gap-1 px-2 py-2 text-gray-600 hover:bg-gray-100 rounded text-xs"
                 onClick={() => {
                   const commentSection =
                     document.getElementById("comments-section");
@@ -1736,12 +1739,12 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                 title="댓글로 이동"
               >
                 <MessageSquare className="w-4 h-4" />
-                <span>댓글 {commentCount}</span>
+                <span>{commentCount}</span>
               </button>
               {/* URL 복사 버튼 */}
               <button
                 type="button"
-                className="flex items-center gap-1 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded text-xs"
+                className="flex items-center gap-1 px-2 py-2 text-gray-600 hover:bg-gray-100 rounded text-xs"
                 onClick={async () => {
                   try {
                     await navigator.clipboard.writeText(window.location.href);
@@ -1761,20 +1764,20 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                 title="URL 복사"
               >
                 <Share2 className="w-4 h-4" />
-                <span>URL 복사</span>
+                <span></span>
               </button>
               {/* 더보기 버튼 */}
               <div className="relative">
                 <button
                   type="button"
                   className="flex items-center gap-1 px-2 py-1 text-gray-600 hover:bg-gray-100 rounded text-sm"
-                  title="더보기"
+                  title="글꼴 설정"
                   onClick={() => {
                     setShowMoreMenu(!showMoreMenu);
                     setMenuSource("more");
                   }}
                 >
-                  <span className="text-xl">…</span>
+                  <Type className="w-4 h-4" />
                 </button>
                 {showMoreMenu &&
                   menuSource === "more" &&
@@ -1914,7 +1917,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="p-3 text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
+                    className="p-3 text-xs text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
                     onClick={() =>
                       router.push(
                         `${pathname.replace(/\/$/, "")}/${post.id}/edit`
@@ -1923,10 +1926,10 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                   >
                     수정
                   </Button>
-                  <Button 
+                  <Button
                     variant="ghost"
                     size="sm"
-                    className="p-3 text-red-600 dark:text-red-400 bg-gray-200 dark:bg-gray-700 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20" 
+                    className="p-3 text-xs text-red-600 dark:text-red-400 bg-gray-200 dark:bg-gray-700 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20"
                     onClick={handleDelete}
                   >
                     삭제
@@ -1938,7 +1941,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="p-3 text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
+                className="p-3 text-xs text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
                 disabled={!prevPost}
                 onClick={() => {
                   if (prevPost && post?.page_id) {
@@ -1953,7 +1956,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="p-3 text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
+                className="p-3 text-xs text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
                 disabled={!nextPost}
                 onClick={() => {
                   if (nextPost && post?.page_id) {
@@ -1968,7 +1971,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="p-3 text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
+                className="p-3 text-xs text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
                 onClick={handleGoList}
               >
                 목록
@@ -1979,7 +1982,9 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
           {/* 최근 게시글 목록 */}
           {recentPosts.length > 0 && (
             <div className="p-4 bg-gray-50 dark:bg-gray-700">
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">이 게시판의 다른 글</h3>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                이 게시판의 다른 글
+              </h3>
               <div className="space-y-2">
                 {recentPosts.map((recentPost) => (
                   <div
@@ -2086,7 +2091,10 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
             </button>
 
             {/* 글꼴 설정 버튼 */}
-            <Drawer open={showMobileFontMenu} onOpenChange={setShowMobileFontMenu}>
+            <Drawer
+              open={showMobileFontMenu}
+              onOpenChange={setShowMobileFontMenu}
+            >
               <DrawerTrigger asChild>
                 <button className="flex flex-col items-center text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
                   <svg
@@ -2108,7 +2116,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                   <span className="text-xs mt-0.5">글자</span>
                 </button>
               </DrawerTrigger>
-              
+
               <DrawerContent className="lg:hidden">
                 <DrawerHeader>
                   <DrawerTitle>글자 설정</DrawerTitle>
@@ -2116,142 +2124,142 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
 
                 {/* 글꼴 설정 내용 */}
                 <div className="p-4 pb-6">
-                      {/* 글꼴 크기와 굵기를 한 줄에 배치 */}
-                      <div className="mb-4">
-                        <div className="grid grid-cols-2 gap-3">
-                          {/* 글꼴 크기 */}
-                          <div>
-                            <h4 className="text-sm font-medium text-gray-700 mb-2">
-                              글자 크기
-                            </h4>
-                            <div className="flex items-center justify-between bg-gray-50 rounded-lg p-2">
-                              <button
-                                onClick={(e) => decreaseFontSize(e)}
-                                className="w-7 h-7 bg-white rounded-full shadow-sm flex items-center justify-center hover:bg-gray-50"
-                                disabled={fontSizeLevel <= -2}
-                              >
-                                <span className="text-sm font-bold text-gray-600">
-                                  -
-                                </span>
-                              </button>
-                              <span className="text-sm font-medium">
-                                {fontSizeLevel === 0
-                                  ? "기본"
-                                  : fontSizeLevel > 0
-                                    ? `+${fontSizeLevel}`
-                                    : fontSizeLevel}
-                              </span>
-                              <button
-                                onClick={(e) => increaseFontSize(e)}
-                                className="w-7 h-7 bg-white rounded-full shadow-sm flex items-center justify-center hover:bg-gray-50"
-                                disabled={fontSizeLevel >= 2}
-                              >
-                                <span className="text-sm font-bold text-gray-600">
-                                  +
-                                </span>
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* 글꼴 굵기 */}
-                          <div>
-                            <h4 className="text-sm font-medium text-gray-700 mb-2">
-                              글자 굵기
-                            </h4>
-                            <div className="flex items-center justify-between bg-gray-50 rounded-lg p-2">
-                              <button
-                                onClick={(e) => decreaseFontBold(e)}
-                                className="w-7 h-7 bg-white rounded-full shadow-sm flex items-center justify-center hover:bg-gray-50"
-                                disabled={fontBoldLevel <= -1}
-                              >
-                                <span className="text-sm font-bold text-gray-600">
-                                  -
-                                </span>
-                              </button>
-                              <span className="text-sm font-medium">
-                                {fontBoldLevel === 0
-                                  ? "기본"
-                                  : fontBoldLevel > 0
-                                    ? `+${fontBoldLevel}`
-                                    : fontBoldLevel}
-                              </span>
-                              <button
-                                onClick={(e) => increaseFontBold(e)}
-                                className="w-7 h-7 bg-white rounded-full shadow-sm flex items-center justify-center hover:bg-gray-50"
-                                disabled={fontBoldLevel >= 3}
-                              >
-                                <span className="text-sm font-bold text-gray-600">
-                                  +
-                                </span>
-                              </button>
-                            </div>
-                          </div>
+                  {/* 글꼴 크기와 굵기를 한 줄에 배치 */}
+                  <div className="mb-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* 글꼴 크기 */}
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">
+                          글자 크기
+                        </h4>
+                        <div className="flex items-center justify-between bg-gray-50 rounded-lg p-2">
+                          <button
+                            onClick={(e) => decreaseFontSize(e)}
+                            className="w-7 h-7 bg-white rounded-full shadow-sm flex items-center justify-center hover:bg-gray-50"
+                            disabled={fontSizeLevel <= -2}
+                          >
+                            <span className="text-sm font-bold text-gray-600">
+                              -
+                            </span>
+                          </button>
+                          <span className="text-sm font-medium">
+                            {fontSizeLevel === 0
+                              ? "기본"
+                              : fontSizeLevel > 0
+                                ? `+${fontSizeLevel}`
+                                : fontSizeLevel}
+                          </span>
+                          <button
+                            onClick={(e) => increaseFontSize(e)}
+                            className="w-7 h-7 bg-white rounded-full shadow-sm flex items-center justify-center hover:bg-gray-50"
+                            disabled={fontSizeLevel >= 2}
+                          >
+                            <span className="text-sm font-bold text-gray-600">
+                              +
+                            </span>
+                          </button>
                         </div>
                       </div>
-                      {/* 초기화 버튼 */}
-                      <div className="flex gap-2 mb-4">
-                        <button
-                          onClick={resetFontSize}
-                          className="flex-1 py-2 px-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
-                        >
-                          크기 초기화
-                        </button>
-                        <button
-                          onClick={resetFontBold}
-                          className="flex-1 py-2 px-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
-                        >
-                          굵기 초기화
-                        </button>
-                      </div>
 
-                      {/* 글꼴 패밀리 */}
-                      <div className="mb-2">
+                      {/* 글꼴 굵기 */}
+                      <div>
                         <h4 className="text-sm font-medium text-gray-700 mb-2">
-                          글꼴 종류
+                          글자 굵기
                         </h4>
-                        <div className="grid grid-cols-3 gap-2">
-                          {[
-                            {
-                              value: "default",
-                              label: "기본",
-                              style: "",
-                            },
-                            {
-                              value: "notoSans",
-                              label: "노토산스",
-                              style: "font-noto-sans",
-                            },
-                            {
-                              value: "nanumGothic",
-                              label: "나눔고딕",
-                              style: "font-nanum-gothic",
-                            },
-                            {
-                              value: "nanumMyeongjo",
-                              label: "나눔명조",
-                              style: "font-nanum-myeongjo",
-                            },
-                            {
-                              value: "spoqa",
-                              label: "스포카",
-                              style: "font-spoqa",
-                            },
-                          ].map((font: any) => (
-                            <button
-                              key={font.value}
-                              onClick={(e) => changeFontFamily(font.value, e)}
-                              className={`p-2 rounded-lg border text-center transition-colors text-sm ${font.style} ${
-                                fontFamily === font.value
-                                  ? "bg-blue-50 border-blue-200 text-blue-700"
-                                  : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
-                              }`}
-                            >
-                              {font.label}
-                            </button>
-                          ))}
+                        <div className="flex items-center justify-between bg-gray-50 rounded-lg p-2">
+                          <button
+                            onClick={(e) => decreaseFontBold(e)}
+                            className="w-7 h-7 bg-white rounded-full shadow-sm flex items-center justify-center hover:bg-gray-50"
+                            disabled={fontBoldLevel <= -1}
+                          >
+                            <span className="text-sm font-bold text-gray-600">
+                              -
+                            </span>
+                          </button>
+                          <span className="text-sm font-medium">
+                            {fontBoldLevel === 0
+                              ? "기본"
+                              : fontBoldLevel > 0
+                                ? `+${fontBoldLevel}`
+                                : fontBoldLevel}
+                          </span>
+                          <button
+                            onClick={(e) => increaseFontBold(e)}
+                            className="w-7 h-7 bg-white rounded-full shadow-sm flex items-center justify-center hover:bg-gray-50"
+                            disabled={fontBoldLevel >= 3}
+                          >
+                            <span className="text-sm font-bold text-gray-600">
+                              +
+                            </span>
+                          </button>
                         </div>
                       </div>
                     </div>
+                  </div>
+                  {/* 초기화 버튼 */}
+                  <div className="flex gap-2 mb-4">
+                    <button
+                      onClick={resetFontSize}
+                      className="flex-1 py-2 px-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+                    >
+                      크기 초기화
+                    </button>
+                    <button
+                      onClick={resetFontBold}
+                      className="flex-1 py-2 px-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+                    >
+                      굵기 초기화
+                    </button>
+                  </div>
+
+                  {/* 글꼴 패밀리 */}
+                  <div className="mb-2">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">
+                      글꼴 종류
+                    </h4>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        {
+                          value: "default",
+                          label: "기본",
+                          style: "",
+                        },
+                        {
+                          value: "notoSans",
+                          label: "노토산스",
+                          style: "font-noto-sans",
+                        },
+                        {
+                          value: "nanumGothic",
+                          label: "나눔고딕",
+                          style: "font-nanum-gothic",
+                        },
+                        {
+                          value: "nanumMyeongjo",
+                          label: "나눔명조",
+                          style: "font-nanum-myeongjo",
+                        },
+                        {
+                          value: "spoqa",
+                          label: "스포카",
+                          style: "font-spoqa",
+                        },
+                      ].map((font: any) => (
+                        <button
+                          key={font.value}
+                          onClick={(e) => changeFontFamily(font.value, e)}
+                          className={`p-2 rounded-lg border text-center transition-colors text-sm ${font.style} ${
+                            fontFamily === font.value
+                              ? "bg-blue-50 border-blue-200 text-blue-700"
+                              : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
+                          }`}
+                        >
+                          {font.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </DrawerContent>
             </Drawer>
 
@@ -2310,7 +2318,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
                     <span className="text-xs mt-0.5">더보기</span>
                   </button>
                 </DrawerTrigger>
-                
+
                 <DrawerContent className="lg:hidden">
                   <DrawerHeader>
                     <DrawerTitle>게시물 관리</DrawerTitle>

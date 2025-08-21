@@ -373,7 +373,11 @@ export default function HomepageWidgets({
               <div className="hidden xl:block col-span-2 sticky top-24 self-start">
                 {leftSidebar}
               </div>
-              <div className="col-span-12 xl:col-span-8">{mainContent}</div>
+              <div className="col-span-12 xl:col-span-8 flex justify-center">
+                <div className="w-full xl:w-auto xl:max-w-none max-w-4xl">
+                  {mainContent}
+                </div>
+              </div>
               <div className="hidden xl:block col-span-2 sticky top-24 self-start">
                 {rightSidebar}
               </div>

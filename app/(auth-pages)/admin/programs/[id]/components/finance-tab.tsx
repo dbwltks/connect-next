@@ -3826,7 +3826,7 @@ export default function FinanceTab({
               <Accordion type="multiple" className="w-full space-y-2">
                 {/* 거래 유형 필터 */}
                 <AccordionItem value="types" className="border rounded-lg px-3">
-                  <AccordionTrigger className="py-3 hover:no-underline">
+                  <div className="flex items-center justify-between py-3">
                     <div className="flex items-center space-x-2">
                       <Checkbox
                         id="filter-types"
@@ -3844,7 +3844,6 @@ export default function FinanceTab({
                             }));
                           }
                         }}
-                        onClick={(e) => e.stopPropagation()}
                       />
                       <Label
                         htmlFor="filter-types"
@@ -3858,7 +3857,9 @@ export default function FinanceTab({
                         </span>
                       )}
                     </div>
-                  </AccordionTrigger>
+                    <AccordionTrigger className="p-0 hover:no-underline">
+                    </AccordionTrigger>
+                  </div>
                   <AccordionContent className="pb-3">
                     <div className="space-y-2 pl-6">
                       {["income", "expense"].map((type) => (
@@ -4421,7 +4422,7 @@ export default function FinanceTab({
               <Accordion type="multiple" className="w-full space-y-2">
                 {/* 거래 유형 필터 */}
                 <AccordionItem value="types" className="border rounded-lg px-3">
-                  <AccordionTrigger className="py-3 hover:no-underline">
+                  <div className="flex items-center justify-between py-3">
                     <div className="flex items-center space-x-2">
                       <Checkbox
                         id="filter-types-desktop"
@@ -4439,7 +4440,6 @@ export default function FinanceTab({
                             }));
                           }
                         }}
-                        onClick={(e) => e.stopPropagation()}
                       />
                       <Label
                         htmlFor="filter-types-desktop"
@@ -4453,7 +4453,9 @@ export default function FinanceTab({
                         </span>
                       )}
                     </div>
-                  </AccordionTrigger>
+                    <AccordionTrigger className="p-0 hover:no-underline">
+                    </AccordionTrigger>
+                  </div>
                   <AccordionContent className="pb-3">
                     <div className="space-y-2 pl-6">
                       {["income", "expense"].map((type) => (
