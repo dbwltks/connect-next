@@ -373,7 +373,7 @@ function HeaderClient({
             <NavigationMenuItem key={item.id}>
               {item.submenu && item.submenu.length > 0 ? (
                 <>
-                  <NavigationMenuTrigger className="text-sm font-medium xl:text-base">
+                  <NavigationMenuTrigger className="text-sm font-medium xl:text-base !bg-transparent">
                     {item.title}
                   </NavigationMenuTrigger>
                   <NavigationMenuContent>
@@ -399,7 +399,7 @@ function HeaderClient({
                 <NavigationMenuLink asChild>
                   <Link
                     href={item.url || "#"}
-                    className={navigationMenuTriggerStyle()}
+                    className={`${navigationMenuTriggerStyle()} !bg-transparent`}
                   >
                     {item.title}
                   </Link>
