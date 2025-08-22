@@ -12,6 +12,16 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  NavigationMenuIndicator,
+  navigationMenuTriggerStyle,
+} from "@/components/ui/navigation-menu";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import {
   Menu,
@@ -34,6 +44,7 @@ import { useTheme } from "next-themes";
 import { api } from "@/lib/api";
 import useSWR from "swr";
 import { headerMenuSWRConfig } from "@/config/swr-config";
+import { cn } from "@/lib/utils";
 
 interface User {
   id: string;
@@ -136,7 +147,11 @@ function useBodyScrollLock(isLocked: boolean) {
   }, [isLocked]);
 }
 
-export default function Header({ initialMenus = [] }: { initialMenus?: any[] }) {
+export default function Header({
+  initialMenus = [],
+}: {
+  initialMenus?: any[];
+}) {
   // auth-context에서 사용자 정보 가져오기
   const { user, loading } = useAuth();
   const { profile, loading: profileLoading } = useUserProfile(user);
@@ -157,17 +172,24 @@ export default function Header({ initialMenus = [] }: { initialMenus?: any[] }) 
 
   // 개발 환경에서 로딩 상태 로깅
   useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🔍 Header Loading States:', {
+    if (process.env.NODE_ENV === "development") {
+      console.log("🔍 Header Loading States:", {
         authLoading: isAuthLoading,
         profileLoading: isProfileLoading,
         menuLoading: menuLoading,
         hasInitialMenus: initialMenus.length > 0,
         hasMenuItems: menuItems?.length > 0,
-        menuError: menuError?.message
+        menuError: menuError?.message,
       });
     }
-  }, [isAuthLoading, isProfileLoading, menuLoading, initialMenus.length, menuItems?.length, menuError]);
+  }, [
+    isAuthLoading,
+    isProfileLoading,
+    menuLoading,
+    initialMenus.length,
+    menuItems?.length,
+    menuError,
+  ]);
 
   // 스크롤 동작을 위한 상태 관리
   const [isVisible, setIsVisible] = useState(true);
@@ -311,49 +333,82 @@ function HeaderClient({
   // 모바일 메뉴 열릴 때 body 스크롤 잠금
   useBodyScrollLock(isMenuOpen);
 
-  // 트리 구조 메뉴 렌더링 함수
-  function renderMenu(items: any[]) {
+  // 메뉴 아이템 설명 자동 생성 함수
+  function generateMenuDescription(title: string): string {
+    const descriptions: { [key: string]: string } = {
+      // 교회소개
+      교회소개: "커넥트 교회를 소개합니다",
+      인사말: "담임목사님의 인사말",
+      "섬기는 사람들": "교역자와 사역진 소개",
+      "예배 및 위치안내": "예배 시간과 교회 위치 안내",
+      
+      // 하나님과 커넥트
+      "예배와 말씀": "주일예배와 말씀 영상",
+      "목회 컬럼 / 말씀 묵상": "목회자의 컬럼과 말씀 묵상",
+      "BIBLE CONNECT IN": "성경 말씀과 연결되는 시간",
+      "찬양과 간증": "찬양과 성도들의 간증",
+      
+      // 성도와 커넥트
+      교회소식: "교회의 최신 소식과 공지",
+      "온라인 주보": "주일 온라인 주보",
+      "사진과 커넥트": "교회 활동 사진 갤러리",
+      "미디어와 커넥트": "교회 미디어 콘텐츠",
+      일정표: "교회 주요 일정 안내",
+      
+      // 세상과 커넥트
+      "국내 선교": "국내 선교 사역과 활동",
+      "국외 선교": "해외 선교 사역과 선교사",
+      "협력 단체": "함께하는 협력 단체들",
+    };
+
+    return descriptions[title] || "";
+  }
+
+  // NavigationMenu를 사용하여 호버 기능과 인디케이터 제공
+  function renderNavigationMenu(items: any[]) {
     return (
-      <ul className="flex gap-4 xl:gap-8 items-center">
-        {items.map((item: any, idx: number) => (
-          <li key={item.id} className="relative group" style={{ minWidth: 80 }}>
-            {item.url ? (
-              <Link
-                href={item.url}
-                className="px-2 py-1 text-sm font-medium xl:text-base text-gray-800 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-150 block"
-              >
-                {item.title}
-              </Link>
-            ) : (
-              <span className="px-2 py-1 text-base text-gray-800 dark:text-gray-100 block">
-                {item.title}
-              </span>
-            )}
-            {item.submenu && item.submenu.length > 0 && (
-              <ul className="absolute left-0 top-full pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                <div className="bg-white dark:bg-gray-900 shadow-lg rounded-lg py-2 min-w-[180px] border border-gray-100 dark:border-gray-800">
-                  {item.submenu.map((child: any, subIdx: number) => (
-                    <li key={child.id + subIdx}>
-                      {child.url ? (
-                        <Link
-                          href={child.url}
-                          className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-150"
-                        >
-                          {child.title}
-                        </Link>
-                      ) : (
-                        <span className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200">
-                          {child.title}
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                </div>
-              </ul>
-            )}
-          </li>
-        ))}
-      </ul>
+      <NavigationMenu viewport={false}>
+        <NavigationMenuList>
+          {items.map((item: any) => (
+            <NavigationMenuItem key={item.id}>
+              {item.submenu && item.submenu.length > 0 ? (
+                <>
+                  <NavigationMenuTrigger className="text-sm font-medium xl:text-base">
+                    {item.title}
+                  </NavigationMenuTrigger>
+                  <NavigationMenuContent>
+                    <div className="flex flex-col w-[300px] gap-1">
+                      {item.submenu.map((child: any) => (
+                        <NavigationMenuLink key={child.id} asChild>
+                          <Link
+                            href={child.url || "#"}
+                            className="block select-none rounded-md px-3 py-2 text-sm leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                          >
+                            <div className="font-medium">{child.title}</div>
+                            <p className="text-xs leading-snug text-muted-foreground mt-1">
+                              {child.description ||
+                                generateMenuDescription(child.title)}
+                            </p>
+                          </Link>
+                        </NavigationMenuLink>
+                      ))}
+                    </div>
+                  </NavigationMenuContent>
+                </>
+              ) : (
+                <NavigationMenuLink asChild>
+                  <Link
+                    href={item.url || "#"}
+                    className={navigationMenuTriggerStyle()}
+                  >
+                    {item.title}
+                  </Link>
+                </NavigationMenuLink>
+              )}
+            </NavigationMenuItem>
+          ))}
+        </NavigationMenuList>
+      </NavigationMenu>
     );
   }
 
@@ -488,7 +543,7 @@ function HeaderClient({
 
       {/* 데스크톱 메뉴 */}
       <nav className="hidden flex-1 items-center justify-center lg:flex overflow-visible">
-        {renderMenu(menuItems)}
+        {renderNavigationMenu(menuItems)}
       </nav>
 
       {/* 데스크톱 우측 메뉴 */}
@@ -744,9 +799,9 @@ function UserMenu({
           disabled={isLoggingOut}
         >
           <Avatar>
-            <AvatarImage 
-              src={user?.avatar_url} 
-              alt={user?.username || 'User'}
+            <AvatarImage
+              src={user?.avatar_url}
+              alt={user?.username || "User"}
             />
             <AvatarFallback className="bg-primary text-primary-foreground">
               {user?.username?.charAt(0).toUpperCase() || "U"}
