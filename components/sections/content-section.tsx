@@ -45,10 +45,13 @@ import { useAuth } from "@/contexts/auth-context";
 import { useUserProfile } from "@/hooks/use-user-profile";
 
 // TipTap 에디터 컴포넌트
-const TipTapEditor = dynamic(() => import("@/components/editor/tiptap-editor"), {
-  ssr: false,
-  loading: () => <p>에디터 로드중...</p>,
-});
+const TipTapEditor = dynamic(
+  () => import("@/components/editor/tiptap-editor"),
+  {
+    ssr: false,
+    loading: () => <p>에디터 로드중...</p>,
+  }
+);
 
 import DOMPurify from "dompurify";
 
@@ -79,22 +82,51 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content }) => {
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>콘텐츠</title>
-          <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
           <style>
+            html, body { 
+              height: auto; 
+              min-height: 100%; 
+              overflow-x: hidden; 
+              margin: 0; 
+              padding: 0; 
+            }
             body {
-              margin: 0;
-              padding: 0;
-              font-family: system-ui, sans-serif;
-              background-color: white;
+              font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              line-height: 1.6;
               color: #333;
+              width: 100%;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: flex-start;
             }
-            p {
-              margin-bottom: 1rem;
+            .content-container { 
+              width: 100%;
+              margin: 0 auto;
+              box-sizing: border-box;
             }
+            img { 
+              max-width: 100%; 
+              height: auto; 
+              display: block; 
+              margin: 0 auto; 
+            }
+            /* 기본 태그 스타일 */
+            h1, h2, h3, h4, h5, h6 { margin-top: 1.5em; margin-bottom: 0.5em; font-weight: 600; line-height: 1.25; }
+            h1 { font-size: 2em; } h2 { font-size: 1.5em; } h3 { font-size: 1.25em; }
+            p { margin: 1em 0; } a { color: #0070f3; text-decoration: none; } a:hover { text-decoration: underline; }
+            ul, ol { padding-left: 2em; } blockquote { margin-left: 0; padding-left: 1em; border-left: 4px solid #ddd; color: #666; }
+            pre { background: #f5f5f5; padding: 1em; overflow-x: auto; border-radius: 4px; }
+            code { background: #f5f5f5; padding: 0.2em 0.4em; border-radius: 3px; font-size: 0.9em; }
+            table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+            th, td { border: 1px solid #ddd; padding: 0.5em; text-align: left; }
+            th { background-color: #f5f5f5; }
           </style>
         </head>
-        <body class="">
-          ${sanitizedContent}
+        <body>
+          <div class="content-container">
+            ${sanitizedContent}
+          </div>
         </body>
         </html>
       `);
@@ -173,9 +205,6 @@ export default function ContentSection({
 }: ContentSectionProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [htmlContent, setHtmlContent] = useState(section.content || "");
-  const [richTextContent, setRichTextContent] = useState(section.content || "");
-  // const [editedTitle, setEditedTitle] = useState(section.title || ""); // 현재 UI에서 사용 안 함
-  // const [editedDescription, setEditedDescription] = useState(section.description || ""); // 현재 UI에서 사용 안 함
   const { user } = useAuth();
   const { profile } = useUserProfile(user);
   const [isClient, setIsClient] = useState(false);
@@ -186,14 +215,11 @@ export default function ContentSection({
   const [contentType, setContentType] = useState<"html" | "text" | "image">(
     section.content_type || "html"
   );
-  // 에디터 모드 완전 비활성화: 항상 HTML 모드만 사용
-  const editMode: "html" = "html";
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [popupPreviewTab, setPopupPreviewTab] = useState<"desktop" | "mobile">(
     "desktop"
   );
-  const [mobileWidth, setMobileWidth] = useState<string>("375"); // 모바일 미리보기 너비
-  const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
+  const [mobileWidth, setMobileWidth] = useState<string>("375");
 
   const contentIframeRef = useRef<HTMLIFrameElement>(null);
   const desktopIframeRef = useRef<HTMLIFrameElement>(null);
@@ -201,16 +227,18 @@ export default function ContentSection({
   const popupDesktopIframeRef = useRef<HTMLIFrameElement>(null);
   const popupMobileIframeRef = useRef<HTMLIFrameElement>(null);
 
-  const generatePreviewHtml = (currentContent: string) => {
+  const generatePreviewHtml = (currentContent: string, useFullWidth?: boolean, useContentType?: string) => {
+    const actualFullWidth = useFullWidth !== undefined ? useFullWidth : fullWidth;
+    const actualContentType = useContentType !== undefined ? useContentType : contentType;
     let contentHtmlOutput = "";
-    if (contentType === "html") {
+    if (actualContentType === "html") {
       contentHtmlOutput = currentContent;
-    } else if (contentType === "text") {
+    } else if (actualContentType === "text") {
       contentHtmlOutput = currentContent
         .split("\n\n")
         .map((p: any) => `<p>${p.replace(/\n/g, "<br>")}</p>`)
         .join("");
-    } else if (contentType === "image") {
+    } else if (actualContentType === "image") {
       contentHtmlOutput = `<img src="${currentContent}" alt="콘텐츠 이미지" style="max-width: 100%; height: auto;" />`;
     }
 
@@ -276,7 +304,7 @@ export default function ContentSection({
             font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             line-height: 1.6;
             color: #333;
-            ${fullWidth ? "width: 100%;" : "width: 100%; max-width: 1200px; margin-left: auto; margin-right: auto;"}
+            ${actualFullWidth ? "width: 100%;" : "width: 100%; max-width: 1200px; margin-left: auto; margin-right: auto;"}
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -363,14 +391,6 @@ export default function ContentSection({
     isPreviewOpen,
   ]);
 
-  // 일반 보기 모드 콘텐츠 초기화 및 업데이트
-  useEffect(() => {}, [
-    isEditing,
-    section.content,
-    section.content_type,
-    fullWidth,
-  ]);
-
   // 팝업 열릴 때와 팝업 탭 변경 시 업데이트
   useEffect(() => {
     if (isPreviewOpen) {
@@ -394,9 +414,36 @@ export default function ContentSection({
     }
   }, [isPreviewOpen, popupPreviewTab, htmlContent, contentType, fullWidth]);
 
-  // 클라이언트 상태 설정을 위한 간단한 useEffect
+  // 클라이언트 상태 설정 및 iframe 높이 자동 조절
   useEffect(() => {
     setIsClient(true);
+
+    // iframe에서 오는 resize 메시지 처리
+    const handleIframeResize = (event: MessageEvent) => {
+      if (event.data.type === "resize") {
+        const iframeName = event.data.source;
+        const height = event.data.height;
+
+        // 해당하는 iframe 찾아서 높이 조절
+        if (iframeName === "contentView" && contentIframeRef.current) {
+          contentIframeRef.current.style.height = `${height}px`;
+        } else if (iframeName === "desktopPreview" && desktopIframeRef.current) {
+          desktopIframeRef.current.style.height = `${height}px`;
+        } else if (iframeName === "mobilePreview" && mobileIframeRef.current) {
+          mobileIframeRef.current.style.height = `${height}px`;
+        } else if (iframeName === "popupDesktopPreview" && popupDesktopIframeRef.current) {
+          popupDesktopIframeRef.current.style.height = `${height}px`;
+        } else if (iframeName === "popupMobilePreview" && popupMobileIframeRef.current) {
+          popupMobileIframeRef.current.style.height = `${height}px`;
+        }
+      }
+    };
+
+    window.addEventListener("message", handleIframeResize);
+
+    return () => {
+      window.removeEventListener("message", handleIframeResize);
+    };
   }, []);
 
   const handleEditClick = () => {
@@ -444,10 +491,9 @@ export default function ContentSection({
 
   return (
     <div className="content-section-wrapper w-full">
-      {/* 섹션 간 간격 추가 */}
-      <div className="container mx-auto px-4 mb-4">
-        {/* 서버와 클라이언트 간 일관된 렌더링을 위해 항상 div는 유지하고 내용만 조건부 렌더링 */}
-        {isClient && isAdmin && !isEditing ? (
+      {/* 편집 버튼 영역 - 관리자이고 편집모드가 아닐 때만 표시 */}
+      {isClient && isAdmin && !isEditing && (
+        <div className="container mx-auto px-4 mb-2">
           <div className="flex justify-end">
             <Button
               variant="outline"
@@ -459,12 +505,10 @@ export default function ContentSection({
               편집
             </Button>
           </div>
-        ) : (
-          <div className="hidden"></div> /* 빈 div로 구조 유지 */
-        )}
-      </div>
+        </div>
+      )}
       <section
-        className={`${className} relative w-full ${!isEditing && fullWidth ? "" : "container mx-auto px-4"}`}
+        className={`${className} relative w-full ${!isEditing && fullWidth ? "" : "container mx-auto"}`}
       >
         {isEditing ? (
           <div className="space-y-4">
@@ -606,19 +650,12 @@ export default function ContentSection({
           </div>
         ) : (
           <div
-            className={`content-display w-full ${fullWidth ? "" : "container mx-auto px-4 max-w-screen-lg"}`}
-            style={{ minHeight: "auto" }}
+            className={`content-display w-full ${section.full_width ? "" : "container mx-auto px-4 max-w-screen-lg"}`}
           >
             <div
-              className="w-full bg-white content-container prose max-w-none"
-              style={{ overflow: "visible", minHeight: "auto" }}
-            >
-              {isClient && (
-                <>
-                  <ContentRenderer content={section.content || ""} />
-                </>
-              )}
-            </div>
+              className="w-full content-container"
+              dangerouslySetInnerHTML={{ __html: section.content || "<p>콘텐츠가 없습니다.</p>" }}
+            />
           </div>
         )}
       </section>

@@ -146,6 +146,12 @@ export const api = {
       apiCall(createUrl('/api/menu-items', parentId ? { parentId } : undefined)),
   },
 
+  // 페이지 관련
+  pages: {
+    getById: (id: string) => apiCall(`/api/pages/${id}`),
+    getAll: () => apiCall('/api/pages'),
+  },
+
   // 캘린더 관련
   calendar: {
     getEvents: () => apiCall('/api/calendar-events'),
@@ -230,10 +236,11 @@ export const fetchBoardSectionPosts = async (pageId: string, limit = 10) => {
 
 export const fetchBoardPostsForWidget = async (pageId: string, limit = 5) => {
   const result = await api.posts.getForWidget(pageId, limit);
-  // 위젯이 기대하는 { posts: [...], menuUrlMap: {...} } 구조로 반환
+  // 위젯이 기대하는 { posts: [...], menuUrlMap: {...}, pageTitleMap: {...} } 구조로 반환
   return { 
     posts: Array.isArray(result) ? result : result.posts || [],
-    menuUrlMap: {}
+    menuUrlMap: result.menuUrlMap || {},
+    pageTitleMap: result.pageTitleMap || {}
   };
 };
 

@@ -404,23 +404,23 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
     );
   }
 
-  // 풀스크린 모드 - 화면 전체에 기본 슬라이드형으로 표시
+  // 풀스크린 모드 - 위젯 영역을 가득 채우는 모드
   if (carouselType === CAROUSEL_TYPES.FULLSCREEN) {
-    // 제목 유무에 따른 높이 계산 (전체 화면에서 제목 영역 제외)
-    const imageHeight =
-      showTitle && widget.title ? "h-[calc(100vh-80px)]" : "h-screen";
+    const widgetHeight = widget.height || 600;
+    const imageHeightPx = showTitle && widget.title ? widgetHeight - 60 : widgetHeight;
+    const imageHeightStyle = { height: `${imageHeightPx}px` };
 
     return (
-      <div className="fixed inset-0 z-50 bg-black">
+      <div className="relative w-full bg-black overflow-hidden">
         {showTitle && widget.title && (
-          <div className="absolute top-0 left-0 right-0 z-10 bg-black/50 backdrop-blur-sm p-4">
-            <h3 className="text-lg font-semibold text-white text-center">
+          <div className="p-4 border-b border-gray-700">
+            <h3 className="text-lg font-semibold text-white">
               {widget.title}
             </h3>
           </div>
         )}
 
-        <div className={`relative overflow-hidden ${imageHeight}`}>
+        <div className="relative overflow-hidden" style={imageHeightStyle}>
           <div
             className="flex transition-transform duration-500 ease-in-out h-full"
             style={{ transform: `translateX(-${currentIndex * 100}%)` }}
@@ -437,7 +437,7 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
                       : (item.mobile_image_url || item.image_url)
                   }
                   alt={item.title || `슬라이드 ${index + 1}`}
-                  className={`w-full h-full object-contain ${
+                  className={`w-full h-full object-cover ${
                     item.link_url && item.link_url !== "#"
                       ? "cursor-pointer hover:opacity-90"
                       : "cursor-default"
@@ -504,15 +504,6 @@ export function CarouselWidget({ widget }: CarouselWidgetProps) {
             </div>
           )}
 
-          {/* 닫기 버튼 */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white z-10"
-            onClick={() => window.history.back()}
-          >
-            <X className="h-6 w-6" />
-          </Button>
         </div>
       </div>
     );

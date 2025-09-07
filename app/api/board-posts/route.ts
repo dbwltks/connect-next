@@ -85,12 +85,14 @@ export async function GET(request: NextRequest) {
 
     // 메뉴 URL 매핑 정보 조회
     let menuUrlMap: Record<string, string> = {};
+    let pageTitleMap: Record<string, string> = {};
     if (postsWithUsers && postsWithUsers.length > 0) {
       const pageIds = Array.from(
         new Set(postsWithUsers.map((post: any) => post.page_id).filter(Boolean))
       );
 
       if (pageIds.length > 0) {
+        // 메뉴 URL 정보
         const { data: menuItems } = await supabase
           .from('cms_menus')
           .select('page_id, url')
@@ -105,14 +107,29 @@ export async function GET(request: NextRequest) {
             return acc;
           }, {});
         }
+
+        // 페이지/게시판 제목 정보
+        const { data: pages } = await supabase
+          .from('cms_pages')
+          .select('id, title')
+          .in('id', pageIds);
+
+        if (pages) {
+          pageTitleMap = pages.reduce((acc: Record<string, string>, page: any) => {
+            if (page.id && page.title) {
+              acc[page.id] = page.title;
+            }
+            return acc;
+          }, {});
+        }
       }
     }
 
     if (type === 'media') {
-      return NextResponse.json({ posts: postsWithUsers, menuUrlMap });
+      return NextResponse.json({ posts: postsWithUsers, menuUrlMap, pageTitleMap });
     }
 
-    return NextResponse.json({ posts: postsWithUsers, menuUrlMap });
+    return NextResponse.json({ posts: postsWithUsers, menuUrlMap, pageTitleMap });
   } catch (error) {
     console.error('Board posts API error:', error);
     return NextResponse.json(

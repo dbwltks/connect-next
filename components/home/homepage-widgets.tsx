@@ -18,8 +18,9 @@ import { OrganizationChartWidget } from "@/components/widgets/organization-chart
 import CalendarWidget from "@/components/widgets/calendar-widget";
 import SimpleCalendarWidget from "@/components/widgets/simple-calendar-widget";
 import ProgramsWidget from "@/components/widgets/programs-widget";
+import { ContainerWidget } from "@/components/widgets/container-widget";
 import { IWidget } from "@/types/index";
-import React, { useState, useEffect } from "react";
+import React from "react";
 import useSWR from "swr";
 
 type LayoutStructure = "1-col" | "2-col-left" | "2-col-right" | "3-col";
@@ -28,6 +29,7 @@ interface HomepageWidgetsProps {
   widgets?: IWidget[];
   pageId?: string;
   page?: { slug?: string; url?: string };
+  menuId?: string | null;
 }
 
 import { api } from "@/lib/api";
@@ -61,6 +63,7 @@ async function fetchWidgets(
 export default function HomepageWidgets({
   widgets: initialWidgets,
   pageId,
+  menuId,
 }: HomepageWidgetsProps) {
   // SWR을 사용한 위젯 데이터 관리
   const {
@@ -72,14 +75,19 @@ export default function HomepageWidgets({
     // 전역 설정 사용
   });
 
-  const renderWidget = (widget: IWidget) => {
-    if (!widget.is_active) return null;
+  const renderWidgetContent = (widget: IWidget) => {
+    console.log("🔍 Rendering widget:", { type: widget.type, id: widget.id, is_active: widget.is_active });
+    
+    if (!widget.is_active) {
+      console.log("❌ Widget is inactive, not rendering");
+      return null;
+    }
 
     switch (widget.type) {
       case "media":
         return <MediaWidget widget={widget} />;
       case "banner":
-        return <BannerWidget widget={widget} />;
+        return <BannerWidget widget={widget} banners={[]} menuId={menuId} />;
       case "board":
         return <BoardlistWidget widget={widget} />;
       case "board-section":
@@ -118,6 +126,28 @@ export default function HomepageWidgets({
         return <SimpleCalendarWidget widget={widget} />;
       case "programs":
         return <ProgramsWidget programs={[]} widget={widget} />;
+      case "container":
+        // 컨테이너 안의 위젯들 찾기
+        const containerWidgets = widgets.filter(w => 
+          w.parent_id === widget.id && w.is_active
+        ).sort((a, b) => (a.order_in_parent || 0) - (b.order_in_parent || 0));
+        
+        return (
+          <ContainerWidget 
+            widget={widget}
+            containerSettings={widget.settings}
+            widgets={containerWidgets}
+          >
+            {containerWidgets.map((containerWidget) => (
+              <div
+                key={containerWidget.id}
+                className="relative h-full overflow-hidden"
+              >
+                {renderWidgetContent(containerWidget)}
+              </div>
+            ))}
+          </ContainerWidget>
+        );
       default:
         return (
           <Card className="h-full">
@@ -130,6 +160,33 @@ export default function HomepageWidgets({
           </Card>
         );
     }
+  };
+
+  const renderWidget = (widget: IWidget, layoutStructure?: LayoutStructure) => {
+    const widgetContent = renderWidgetContent(widget);
+    
+    // 1-col 레이아웃에서만 전체폭 배경 적용 (기본)
+    const canUseFullWidth = layoutStructure === "1-col";
+    
+    if (canUseFullWidth) {
+      return (
+        <div 
+          className="w-full"
+          style={{
+            backgroundColor: widget.settings?.background_color || 'transparent',
+            ...(widget.height ? { height: `${widget.height}px` } : {}),
+          }}
+        >
+          <div className="container mx-auto px-4 py-0 lg:py-6">
+            <div className="w-full max-w-6xl mx-auto">
+              {widgetContent}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return widgetContent;
   };
 
   const getLayoutStructure = (widgets: IWidget[]): LayoutStructure => {
@@ -147,17 +204,12 @@ export default function HomepageWidgets({
     const left: IWidget[] = [];
     const main: IWidget[] = [];
     const right: IWidget[] = [];
-    const strips: IWidget[] = []; // 전체 너비 스트립 위젯들
 
     (widgets || [])
       .filter((w) => w.is_active)
       .forEach((widget) => {
-        // 스트립 위젯 중에서 전체 너비를 사용하는 것만 별도 처리
-        if (
-          widget.type === "strip" &&
-          widget.settings?.use_full_width !== false
-        ) {
-          strips.push(widget);
+        // 컨테이너 안에 속한 위젯들은 제외 (parent_id가 있는 위젯들)
+        if (widget.parent_id) {
           return;
         }
 
@@ -168,19 +220,18 @@ export default function HomepageWidgets({
           case 2: // Right Sidebar
             right.push(widget);
             break;
-          default: // Main Content (1 or null) - 컨테이너 내 스트립 포함
+          default: // Main Content (1 or null)
             main.push(widget);
             break;
         }
       });
 
-    // 각 열 내부에서 위젯 순서 정렬
-    left.sort((a, b) => a.order - b.order);
-    main.sort((a, b) => a.order - b.order);
-    right.sort((a, b) => a.order - b.order);
-    strips.sort((a, b) => a.order - b.order); // 스트립도 순서대로 정렬
+    // 각 열 내부에서 위젯 순서 정렬 (order_in_parent 사용)
+    left.sort((a, b) => (a.order_in_parent || 0) - (b.order_in_parent || 0));
+    main.sort((a, b) => (a.order_in_parent || 0) - (b.order_in_parent || 0));
+    right.sort((a, b) => (a.order_in_parent || 0) - (b.order_in_parent || 0));
 
-    return { left, main, right, strips };
+    return { left, main, right };
   };
 
   const renderWidgetSkeleton = () => (
@@ -198,7 +249,7 @@ export default function HomepageWidgets({
     </Card>
   );
 
-  const renderColumn = (widgetsToRender: IWidget[]) => (
+  const renderColumn = (widgetsToRender: IWidget[], layoutStructure: LayoutStructure) => (
     <div className="space-y-6">
       {error ? (
         <div className="p-4 border border-red-200 bg-red-50 rounded-lg">
@@ -210,7 +261,7 @@ export default function HomepageWidgets({
       ) : isLoading && (!widgets || widgets.length === 0) ? (
         Array.from({ length: 2 }).map((_, index: any) => (
           <div key={index} className="flex flex-col">
-            <div className="relative h-64 w-full flex-1 overflow-hidden rounded-xl border border-slate-100">
+            <div className="relative h-64 w-full flex-1 overflow-hidden">
               {renderWidgetSkeleton()}
             </div>
           </div>
@@ -222,8 +273,8 @@ export default function HomepageWidgets({
             className="flex flex-col"
             style={widget.height ? { height: `${widget.height}px` } : {}}
           >
-            <div className="relative h-full w-full flex-1 overflow-hidden rounded-xl border border-slate-100">
-              {renderWidget(widget)}
+            <div className="relative h-full w-full flex-1 overflow-hidden">
+              {renderWidget(widget, layoutStructure)}
             </div>
           </div>
         ))
@@ -305,10 +356,10 @@ export default function HomepageWidgets({
   }
 
   const layoutStructure = getLayoutStructure(widgets);
-  const { left, main, right, strips } = groupWidgets();
+  const { left, main, right } = groupWidgets();
 
   const mainContent = (
-    <div className="grid grid-cols-12 gap-6">
+    <div className="grid grid-cols-12 gap-4 w-full">
       {isLoading && (!widgets || widgets.length === 0)
         ? Array.from({ length: 3 }).map((_, index: any) => (
             <div
@@ -326,72 +377,74 @@ export default function HomepageWidgets({
               className={`${getWidgetWidthClass(widget.width)} flex flex-col`}
               style={widget.height ? { height: `${widget.height}px` } : {}}
             >
-              <div className="relative h-full w-full flex-1 overflow-hidden">
-                {renderWidget(widget)}
+              <div className={`relative h-full overflow-hidden ${widget.type === 'container' ? '' : 'w-full flex-1'}`}>
+                {renderWidget(widget, layoutStructure)}
               </div>
             </div>
           ))}
     </div>
   );
 
-  const leftSidebar = renderColumn(left);
-  const rightSidebar = renderColumn(right);
+  const leftSidebar = renderColumn(left, layoutStructure);
+  const rightSidebar = renderColumn(right, layoutStructure);
 
   return (
     <>
-      {/* 스트립 위젯들을 컨테이너 밖에서 렌더링 */}
-      {strips.map((stripWidget: any) => (
-        <div key={stripWidget.id}>{renderWidget(stripWidget)}</div>
-      ))}
-
-      {/* 기존 메인 레이아웃 */}
-      <div className="lg:container mx-auto lg:px-6 py-0 lg:py-6">
-        <div className="grid grid-cols-12 gap-6">
-          {layoutStructure === "1-col" && (
-            <div className="col-span-12">
-              <div className="w-full max-w-6xl mx-auto">{mainContent}</div>
+      <div className="w-full">
+        {layoutStructure === "1-col" && (
+          <div className="space-y-6">
+            {main.map((widget: any) => (
+              <div key={widget.id}>
+                {renderWidget(widget, layoutStructure)}
+              </div>
+            ))}
+          </div>
+        )}
+        {(layoutStructure === "2-col-left" || layoutStructure === "2-col-right" || layoutStructure === "3-col") && (
+          <div className="container mx-auto px-4 py-0 lg:py-6">
+            <div className="grid grid-cols-12 gap-4 w-full">
+              {layoutStructure === "2-col-left" && (
+                <>
+                  <div className="hidden xl:block col-span-12 lg:col-span-3 w-full sticky top-24 self-start">
+                    {leftSidebar}
+                  </div>
+                  <div className="col-span-12 lg:col-span-9">
+                    <div className="w-full max-w-6xl xl:max-w-none mx-auto xl:mx-0">
+                      {mainContent}
+                    </div>
+                  </div>
+                </>
+              )}
+              {layoutStructure === "2-col-right" && (
+                <>
+                  <div className="col-span-12 lg:col-span-9">
+                    <div className="w-full max-w-6xl lg:max-w-none mx-auto lg:mx-0">
+                      {mainContent}
+                    </div>
+                  </div>
+                  <div className="hidden lg:block col-span-12 lg:col-span-3 sticky top-24 self-start">
+                    {rightSidebar}
+                  </div>
+                </>
+              )}
+              {layoutStructure === "3-col" && (
+                <>
+                  <div className="hidden xl:block col-span-2 sticky top-24 self-start">
+                    {leftSidebar}
+                  </div>
+                  <div className="col-span-12 xl:col-span-8">
+                    <div className="w-full max-w-6xl xl:max-w-none mx-auto xl:mx-0">
+                      {mainContent}
+                    </div>
+                  </div>
+                  <div className="hidden xl:block col-span-2 sticky top-24 self-start">
+                    {rightSidebar}
+                  </div>
+                </>
+              )}
             </div>
-          )}
-          {layoutStructure === "2-col-left" && (
-            <>
-              <div className="hidden xl:block col-span-12 lg:col-span-3 w-full sticky top-24 self-start">
-                {leftSidebar}
-              </div>
-              <div className="col-span-12 lg:col-span-9">
-                <div className="w-full max-w-6xl xl:max-w-none mx-auto xl:mx-0">
-                  {mainContent}
-                </div>
-              </div>
-            </>
-          )}
-          {layoutStructure === "2-col-right" && (
-            <>
-              <div className="col-span-12 lg:col-span-9">
-                <div className="w-full max-w-6xl lg:max-w-none mx-auto lg:mx-0">
-                  {mainContent}
-                </div>
-              </div>
-              <div className="hidden lg:block col-span-12 lg:col-span-3 sticky top-24 self-start">
-                {rightSidebar}
-              </div>
-            </>
-          )}
-          {layoutStructure === "3-col" && (
-            <>
-              <div className="hidden xl:block col-span-2 sticky top-24 self-start">
-                {leftSidebar}
-              </div>
-              <div className="col-span-12 xl:col-span-8">
-                <div className="w-full max-w-6xl xl:max-w-none mx-auto xl:mx-0">
-                  {mainContent}
-                </div>
-              </div>
-              <div className="hidden xl:block col-span-2 sticky top-24 self-start">
-                {rightSidebar}
-              </div>
-            </>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </>
   );

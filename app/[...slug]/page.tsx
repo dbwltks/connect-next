@@ -106,8 +106,8 @@ export default async function DynamicPage(props: { params: any }) {
           <>
             <MainBanner menuId={menu.id} />
             <main>
-              <div className="container mx-auto px-0 sm:px-4">
-                <h1 className="text-3xl font-bold mb-4"></h1>
+              <div className="mx-auto">
+                <h1 className="text-3xl font-bold"></h1>
               </div>
               <SectionRenderer
                 section={{
@@ -202,7 +202,10 @@ export default async function DynamicPage(props: { params: any }) {
             <MainBanner menuId={parentMenu.id} />
             <main className="flex-1 flex flex-col gap-12">
               <div className="">
-                <HomepageWidgets widgets={widgets} pageId={parentMenu.page.id} />
+                <HomepageWidgets
+                  widgets={widgets}
+                  pageId={parentMenu.page.id}
+                />
               </div>
             </main>
           </>

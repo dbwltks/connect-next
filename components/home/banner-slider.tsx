@@ -26,6 +26,8 @@ function extractYoutubeId(url: string): string | null {
 
 export default function BannerSlider({ banners }: BannerSliderProps) {
   const HEADER_HEIGHT = 64; // px, 헤더 높이와 맞춰야 함
+  
+  console.log("🎠 BannerSlider received banners:", banners);
 
   // Swiper 네비게이션 버튼을 위한 ref 생성
   const navigationPrevRef = useRef<HTMLButtonElement>(null);
@@ -73,30 +75,33 @@ export default function BannerSlider({ banners }: BannerSliderProps) {
     if (banner.imageUrl) {
       const isYoutube =
         isYoutubeUrl(banner.imageUrl) && extractYoutubeId(banner.imageUrl);
-      return (
-        <div
-          key={banner.id}
-          className={`relative`}
-          style={{
-            position: "relative",
-            width: "100vw",
-            minWidth: 0,
-            left: "50%",
-            transform: "translateX(-50%)",
-            height:
-              banner.image_height === "fullscreen"
+      
+      console.log("🖼️ Rendering banner:", { 
+        id: banner.id, 
+        imageUrl: banner.imageUrl, 
+        isYoutube, 
+        height: banner.image_height 
+      });
+      
+      // 유튜브 영상용 렌더링
+      if (isYoutube) {
+        return (
+          <div
+            key={banner.id}
+            className="relative"
+            style={{
+              position: "relative",
+              width: "100vw",
+              minWidth: 0,
+              left: "50%",
+              transform: "translateX(-50%)",
+              height: banner.image_height === "fullscreen"
                 ? getFullscreenHeight()
                 : banner.image_height || "400px",
-            overflow: "hidden",
-            background: isYoutube ? "#000" : undefined,
-            backgroundImage: !isYoutube ? `url(${banner.imageUrl})` : undefined,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            backgroundRepeat: "no-repeat",
-          }}
-        >
-          {/* 유튜브면 iframe을 background처럼 absolute로 깔기 */}
-          {isYoutube && (
+              overflow: "hidden",
+              background: "#000",
+            }}
+          >
             <iframe
               src={`https://www.youtube.com/embed/${extractYoutubeId(banner.imageUrl)}?autoplay=1&mute=1&controls=0&showinfo=0&rel=0&loop=1&playlist=${extractYoutubeId(banner.imageUrl)}&modestbranding=1&iv_load_policy=3&fs=0`}
               title="YouTube video player"
@@ -109,15 +114,75 @@ export default function BannerSlider({ banners }: BannerSliderProps) {
                 left: "50%",
                 transform: "translate(-50%, -50%)",
                 width: "100vw",
-                height: "56.25vw" /* 16:9 aspect ratio */,
-                minWidth: "177.77vh" /* 16:9 aspect ratio */,
+                height: "56.25vw",
+                minWidth: "177.77vh",
                 minHeight: "100vh",
                 pointerEvents: "none",
                 zIndex: 1,
               }}
             />
-          )}
-          {/* 오버레이 및 텍스트/HTML (이미지/유튜브 동일) */}
+            
+            {/* 오버레이 및 텍스트/HTML */}
+            <div
+              className="absolute inset-0 flex flex-col items-center justify-center text-white p-4"
+              style={{
+                zIndex: 2,
+                background: `rgba(0,0,0,${banner.overlay_opacity ? Number(banner.overlay_opacity) : 0.4})`,
+                pointerEvents: "none",
+              }}
+            >
+              {banner.use_html && banner.html_content ? (
+                <div dangerouslySetInnerHTML={{ __html: banner.html_content }} />
+              ) : (
+                <>
+                  {banner.title && (
+                    <h2 className="text-3xl md:text-4xl font-bold text-center mb-2">
+                      {banner.title}
+                    </h2>
+                  )}
+                  {banner.subtitle && (
+                    <p className="text-lg md:text-xl text-center mb-4">
+                      {banner.subtitle}
+                    </p>
+                  )}
+                  {banner.hasButton && banner.buttonText && banner.buttonUrl && (
+                    <a
+                      href={banner.buttonUrl}
+                      className="bg-white text-black px-6 py-2 rounded-md font-medium hover:bg-opacity-90 transition-colors"
+                      style={{ pointerEvents: "auto" }}
+                    >
+                      {banner.buttonText}
+                    </a>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        );
+      }
+      
+      // 이미지용 렌더링 (기존 방식 복원)
+      return (
+        <div
+          key={banner.id}
+          className="relative"
+          style={{
+            position: "relative",
+            width: "100vw",
+            minWidth: 0,
+            left: "50%",
+            transform: "translateX(-50%)",
+            height: banner.image_height === "fullscreen"
+              ? getFullscreenHeight()
+              : banner.image_height || "400px",
+            overflow: "hidden",
+            backgroundImage: `url(${banner.imageUrl})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+          }}
+        >
+          {/* 오버레이 및 텍스트/HTML */}
           <div
             className="absolute inset-0 flex flex-col items-center justify-center text-white p-4"
             style={{
@@ -144,6 +209,7 @@ export default function BannerSlider({ banners }: BannerSliderProps) {
                   <a
                     href={banner.buttonUrl}
                     className="bg-white text-black px-6 py-2 rounded-md font-medium hover:bg-opacity-90 transition-colors"
+                    style={{ pointerEvents: "auto" }}
                   >
                     {banner.buttonText}
                   </a>

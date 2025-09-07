@@ -4,7 +4,6 @@ import { useAuth } from "@/contexts/auth-context";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import MainBanner from "@/components/home/main-banner";
 import {
   Card,
   CardContent,

@@ -79,6 +79,9 @@ export interface IWidget {
   is_active: boolean;
   page_id?: string | null; // 위젯이 속한 페이지 ID
   created_at?: string; // 생성일
+  parent_id?: string | null; // 부모 위젯 ID (컨테이너)
+  level?: number; // 계층 레벨 (0: 루트, 1: 컨테이너 안)
+  order_in_parent?: number; // 부모 내에서의 순서
 }
 
 // 미디어 위젯 옵션 인터페이스
