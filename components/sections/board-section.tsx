@@ -900,14 +900,18 @@ export default function BoardSection({
     <div className={`board-section mb-8 ${className} ${containerClass}`}>
       {/* 타이틀/설명 헤더를 최상단에 분리 */}
       <div className="my-4">
-        <div className="flex items-center gap-3 px-2 lg:px-0">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{title}</h2>
+        <div className="flex items-center gap-3 px-4 lg:px-0">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+            {title}
+          </h2>
           <div className="text-xs text-blue-500 dark:text-blue-400 bg-white dark:bg-gray-700 px-2 py-1 rounded-xl">
             {totalCount}
           </div>
         </div>
         {description && (
-          <p className="text-gray-500 dark:text-gray-400 mt-1 px-2 sm:px-0">{description}</p>
+          <p className="text-gray-500 dark:text-gray-400 mt-1 px-2 sm:px-0">
+            {description}
+          </p>
         )}
       </div>
       {/* 필터/버튼 + 게시글 목록을 하나의 카드로 감싸기 */}
@@ -992,7 +996,10 @@ export default function BoardSection({
                     <Settings2 className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-[200px] dark:bg-gray-700 dark:border-gray-600">
+                <DropdownMenuContent
+                  align="end"
+                  className="w-[200px] dark:bg-gray-700 dark:border-gray-600"
+                >
                   <DropdownMenuLabel>표시할 항목</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   {Object.entries(columnLabels).map(([key, label]: any) => {
@@ -1062,7 +1069,7 @@ export default function BoardSection({
               {sortedNotices.map((post: any) => (
                 <div
                   key={post.id}
-                  className="flex cursor-pointer items-start border-l-4 border-yellow-400 dark:border-yellow-500 bg-yellow-50 dark:bg-yellow-900/30 p-3 rounded-md shadow-sm min-h-[88px]"
+                  className="flex cursor-pointer items-start border-l-4 border-yellow-400 dark:border-yellow-500 bg-yellow-50 dark:bg-yellow-900/30 px-4 py-3 rounded-md shadow-sm min-h-[88px]"
                   onClick={() => handlePostClick(post.id)}
                 >
                   <div className="flex-1 min-w-0 pr-3">
@@ -1120,7 +1127,7 @@ export default function BoardSection({
                 sortedNormals.map((post: any) => (
                   <div
                     key={post.id}
-                    className="flex cursor-pointer px-2 py-3 overflow-hidden border-t items-start border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[80px]"
+                    className="flex cursor-pointer px-4 py-3 overflow-hidden border-t items-start border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[80px]"
                     onClick={() => handlePostClick(post.id)}
                   >
                     <div className="flex-1 min-w-0 pr-3">
@@ -1174,9 +1181,13 @@ export default function BoardSection({
                     )}
                     <div className="ml-2 flex flex-col h-16 w-11 text-md text-center items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-xl px-2 py-0.5">
                       {/* 숫자를 별도의 div로 감싸기 */}
-                      <div className="text-md text-gray-900 dark:text-white">{post.comment_count ?? 0}</div>
+                      <div className="text-md text-gray-900 dark:text-white">
+                        {post.comment_count ?? 0}
+                      </div>
                       {/* "댓글"을 별도의 div로 감싸기 (원래 있었음) */}
-                      <div className="text-xs text-gray-500 dark:text-gray-400">댓글</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        댓글
+                      </div>
                     </div>
                   </div>
                 ))
@@ -1618,7 +1629,10 @@ export default function BoardSection({
               placeholder="검색어를 입력하세요"
               className="flex-1 px-3 py-2 border border-gray-100 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 min-w-0"
             />
-            <Button type="submit" className="px-4 whitespace-nowrap dark:bg-blue-600 dark:hover:bg-blue-700 dark:text-white">
+            <Button
+              type="submit"
+              className="px-4 whitespace-nowrap dark:bg-blue-600 dark:hover:bg-blue-700 dark:text-white"
+            >
               검색
             </Button>
           </form>

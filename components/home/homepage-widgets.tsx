@@ -76,8 +76,12 @@ export default function HomepageWidgets({
   });
 
   const renderWidgetContent = (widget: IWidget) => {
-    console.log("🔍 Rendering widget:", { type: widget.type, id: widget.id, is_active: widget.is_active });
-    
+    console.log("🔍 Rendering widget:", {
+      type: widget.type,
+      id: widget.id,
+      is_active: widget.is_active,
+    });
+
     if (!widget.is_active) {
       console.log("❌ Widget is inactive, not rendering");
       return null;
@@ -128,12 +132,12 @@ export default function HomepageWidgets({
         return <ProgramsWidget programs={[]} widget={widget} />;
       case "container":
         // 컨테이너 안의 위젯들 찾기
-        const containerWidgets = widgets.filter(w => 
-          w.parent_id === widget.id && w.is_active
-        ).sort((a, b) => (a.order_in_parent || 0) - (b.order_in_parent || 0));
-        
+        const containerWidgets = widgets
+          .filter((w) => w.parent_id === widget.id && w.is_active)
+          .sort((a, b) => (a.order_in_parent || 0) - (b.order_in_parent || 0));
+
         return (
-          <ContainerWidget 
+          <ContainerWidget
             widget={widget}
             containerSettings={widget.settings}
             widgets={containerWidgets}
@@ -164,23 +168,21 @@ export default function HomepageWidgets({
 
   const renderWidget = (widget: IWidget, layoutStructure?: LayoutStructure) => {
     const widgetContent = renderWidgetContent(widget);
-    
+
     // 1-col 레이아웃에서만 전체폭 배경 적용 (기본)
     const canUseFullWidth = layoutStructure === "1-col";
-    
+
     if (canUseFullWidth) {
       return (
-        <div 
+        <div
           className="w-full"
           style={{
-            backgroundColor: widget.settings?.background_color || 'transparent',
+            backgroundColor: widget.settings?.background_color || "transparent",
             ...(widget.height ? { height: `${widget.height}px` } : {}),
           }}
         >
           <div className="container mx-auto px-4 py-0 lg:py-6">
-            <div className="w-full max-w-6xl mx-auto">
-              {widgetContent}
-            </div>
+            <div className="w-full max-w-6xl mx-auto">{widgetContent}</div>
           </div>
         </div>
       );
@@ -249,7 +251,10 @@ export default function HomepageWidgets({
     </Card>
   );
 
-  const renderColumn = (widgetsToRender: IWidget[], layoutStructure: LayoutStructure) => (
+  const renderColumn = (
+    widgetsToRender: IWidget[],
+    layoutStructure: LayoutStructure
+  ) => (
     <div className="space-y-6">
       {error ? (
         <div className="p-4 border border-red-200 bg-red-50 rounded-lg">
@@ -377,7 +382,9 @@ export default function HomepageWidgets({
               className={`${getWidgetWidthClass(widget.width)} flex flex-col`}
               style={widget.height ? { height: `${widget.height}px` } : {}}
             >
-              <div className={`relative h-full overflow-hidden ${widget.type === 'container' ? '' : 'w-full flex-1'}`}>
+              <div
+                className={`relative h-full overflow-hidden ${widget.type === "container" ? "" : "w-full flex-1"}`}
+              >
                 {renderWidget(widget, layoutStructure)}
               </div>
             </div>
@@ -394,14 +401,14 @@ export default function HomepageWidgets({
         {layoutStructure === "1-col" && (
           <div className="space-y-6">
             {main.map((widget: any) => (
-              <div key={widget.id}>
-                {renderWidget(widget, layoutStructure)}
-              </div>
+              <div key={widget.id}>{renderWidget(widget, layoutStructure)}</div>
             ))}
           </div>
         )}
-        {(layoutStructure === "2-col-left" || layoutStructure === "2-col-right" || layoutStructure === "3-col") && (
-          <div className="container mx-auto px-4 py-0 lg:py-6">
+        {(layoutStructure === "2-col-left" ||
+          layoutStructure === "2-col-right" ||
+          layoutStructure === "3-col") && (
+          <div className="container mx-auto lg:px-4 py-0 px-0 lg:py-6">
             <div className="grid grid-cols-12 gap-4 w-full">
               {layoutStructure === "2-col-left" && (
                 <>

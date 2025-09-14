@@ -26,6 +26,21 @@ export function BoardSettings({ widget, onSave, pages = [], setEditingWidget }: 
   return (
     <div className="space-y-4">
       <h4 className="font-medium text-sm">게시판 (목록) 설정</h4>
+      
+      <div className="space-y-2">
+        <Label htmlFor="board-title">위젯 제목</Label>
+        <Input
+          id="board-title"
+          value={widget.title || ""}
+          placeholder="게시판"
+          onChange={(e) =>
+            updateWidget({
+              title: e.target.value,
+            })
+          }
+        />
+      </div>
+      
       <div className="space-y-2">
         <Label htmlFor="board-item-count">표시할 게시물 개수</Label>
         <Input

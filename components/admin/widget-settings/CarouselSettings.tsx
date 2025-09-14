@@ -169,6 +169,23 @@ export function CarouselSettings({ widget, onSave, pages = [], editingWidget, se
         {/* 기본 설정 탭 */}
         <TabsContent value="basic" className="space-y-4 pt-4">
           <div className="space-y-2">
+            <Label htmlFor="carousel-title">위젯 제목</Label>
+            <Input
+              id="carousel-title"
+              value={editingWidget.title || ""}
+              placeholder="캐러셀"
+              onChange={(e) =>
+                updateWidget({
+                  title: e.target.value,
+                })
+              }
+            />
+            <p className="text-xs text-gray-500">
+              '제목 표시' 옵션이 활성화되어 있을 때 표시되는 제목입니다.
+            </p>
+          </div>
+          
+          <div className="space-y-2">
             <Label htmlFor="carousel-type">캐러셀 타입</Label>
             <Select
               value={editingWidget.settings?.carousel_type || CAROUSEL_TYPES.BASIC}

@@ -11,13 +11,16 @@ import {
 } from "@/components/ui/select";
 import { WidgetSettingsComponentProps } from "./types";
 
-export function PageSettings({ widget, onSave }: WidgetSettingsComponentProps) {
+export function PageSettings({ widget, onSave, editingWidget, setEditingWidget }: WidgetSettingsComponentProps & { editingWidget?: any, setEditingWidget?: any }) {
+  const currentWidget = editingWidget || widget;
+  
   const updateWidget = (updates: any) => {
-    const updatedWidget = {
-      ...widget,
-      ...updates,
-    };
-    onSave(updatedWidget);
+    if (setEditingWidget) {
+      setEditingWidget({
+        ...currentWidget,
+        ...updates,
+      });
+    }
   };
 
   return (

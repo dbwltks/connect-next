@@ -1592,7 +1592,7 @@ export default function BoardDetail({ postId, onBack }: BoardDetailProps) {
         <ToastViewport />
       </ToastProvider>
 
-      <div className="curs py-4 lg:py-0 mx-0 lg:mx-auto w-full overflow-hidden bg-white dark:bg-gray-800 relative lg:pb-0 border border-slate-100 dark:border-gray-700 lg:rounded-xl lg:mt-2">
+      <div className="curs mx-0 lg:mx-auto w-full overflow-hidden bg-white dark:bg-gray-800 relative lg:pb-0 border border-slate-100 dark:border-gray-700 lg:rounded-xl">
         {/* 수정, 삭제 버튼과 이전글, 다음글, 목록 버튼 한 줄에 배치 - 모바일에서는 숨김 */}
         <div className="hidden lg:flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700 space-x-2">
           {/* 수정, 삭제 버튼 - 작성자인 경우에만 표시 */}

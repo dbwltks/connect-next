@@ -4,18 +4,36 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { WidgetSettingsComponentProps } from "./types";
 
-export function LoginSettings({ widget, onSave }: WidgetSettingsComponentProps) {
+export function LoginSettings({ widget, onSave, editingWidget, setEditingWidget }: WidgetSettingsComponentProps & { editingWidget?: any, setEditingWidget?: any }) {
+  const currentWidget = editingWidget || widget;
+  
   const updateWidget = (updates: any) => {
-    const updatedWidget = {
-      ...widget,
-      ...updates,
-    };
-    onSave(updatedWidget);
+    if (setEditingWidget) {
+      setEditingWidget({
+        ...currentWidget,
+        ...updates,
+      });
+    }
   };
 
   return (
     <div className="space-y-4">
       <h4 className="font-medium text-sm">로그인 위젯 설정</h4>
+      
+      <div className="space-y-2">
+        <Label htmlFor="login-title">위젯 제목</Label>
+        <Input
+          id="login-title"
+          value={currentWidget.title || ""}
+          placeholder="로그인"
+          onChange={(e) =>
+            updateWidget({
+              title: e.target.value,
+            })
+          }
+        />
+      </div>
+      
       <div className="space-y-2">
         <Label htmlFor="login-logged-out-title">
           로그아웃 상태 문구
@@ -23,13 +41,13 @@ export function LoginSettings({ widget, onSave }: WidgetSettingsComponentProps) 
         <Input
           id="login-logged-out-title"
           value={
-            widget.display_options?.logged_out_title ||
+            currentWidget.display_options?.logged_out_title ||
             "로그인이 필요합니다."
           }
           onChange={(e) =>
             updateWidget({
               display_options: {
-                ...widget.display_options,
+                ...currentWidget.display_options,
                 logged_out_title: e.target.value,
               },
             })
@@ -43,13 +61,13 @@ export function LoginSettings({ widget, onSave }: WidgetSettingsComponentProps) 
         <Input
           id="login-logged-in-title"
           value={
-            widget.display_options?.logged_in_title ||
+            currentWidget.display_options?.logged_in_title ||
             "님, 환영합니다!"
           }
           onChange={(e) =>
             updateWidget({
               display_options: {
-                ...widget.display_options,
+                ...currentWidget.display_options,
                 logged_in_title: e.target.value,
               },
             })

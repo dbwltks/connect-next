@@ -1,6 +1,7 @@
 "use client";
 
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -10,26 +11,44 @@ import {
 } from "@/components/ui/select";
 import { WidgetSettingsComponentProps } from "./types";
 
-export function PopularPostsSettings({ widget, onSave }: WidgetSettingsComponentProps) {
+export function PopularPostsSettings({ widget, onSave, editingWidget, setEditingWidget }: WidgetSettingsComponentProps & { editingWidget?: any, setEditingWidget?: any }) {
+  const currentWidget = editingWidget || widget;
+  
   const updateWidget = (updates: any) => {
-    const updatedWidget = {
-      ...widget,
-      ...updates,
-    };
-    onSave(updatedWidget);
+    if (setEditingWidget) {
+      setEditingWidget({
+        ...currentWidget,
+        ...updates,
+      });
+    }
   };
 
   return (
     <div className="space-y-4">
       <h4 className="font-medium text-sm">인기 게시글 설정</h4>
+      
+      <div className="space-y-2">
+        <Label htmlFor="pp-title">위젯 제목</Label>
+        <Input
+          id="pp-title"
+          value={currentWidget.title || ""}
+          placeholder="인기 게시글"
+          onChange={(e) =>
+            updateWidget({
+              title: e.target.value,
+            })
+          }
+        />
+      </div>
+      
       <div className="space-y-2">
         <Label htmlFor="pp-item-count">표시할 게시글 개수</Label>
         <Select
-          value={String(widget.display_options?.item_count || 5)}
+          value={String(currentWidget.display_options?.item_count || 5)}
           onValueChange={(value) =>
             updateWidget({
               display_options: {
-                ...widget.display_options,
+                ...currentWidget.display_options,
                 item_count: parseInt(value),
               },
             })
@@ -48,11 +67,11 @@ export function PopularPostsSettings({ widget, onSave }: WidgetSettingsComponent
       <div className="space-y-2">
         <Label htmlFor="pp-sort-by">정렬 기준</Label>
         <Select
-          value={widget.display_options?.sort_by || "views"}
+          value={currentWidget.display_options?.sort_by || "views"}
           onValueChange={(value: "views" | "likes" | "comments") =>
             updateWidget({
               display_options: {
-                ...widget.display_options,
+                ...currentWidget.display_options,
                 sort_by: value,
               },
             })

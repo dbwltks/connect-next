@@ -10,13 +10,16 @@ import {
 } from "@/components/ui/select";
 import { WidgetSettingsComponentProps } from "./types";
 
-export function BoardSectionSettings({ widget, onSave, pages = [] }: WidgetSettingsComponentProps) {
+export function BoardSectionSettings({ widget, onSave, pages = [], editingWidget, setEditingWidget }: WidgetSettingsComponentProps & { editingWidget?: any, setEditingWidget?: any }) {
+  const currentWidget = editingWidget || widget;
+  
   const updateWidget = (updates: any) => {
-    const updatedWidget = {
-      ...widget,
-      ...updates,
-    };
-    onSave(updatedWidget);
+    if (setEditingWidget) {
+      setEditingWidget({
+        ...currentWidget,
+        ...updates,
+      });
+    }
   };
 
   return (
@@ -25,11 +28,11 @@ export function BoardSectionSettings({ widget, onSave, pages = [] }: WidgetSetti
       <div className="space-y-2">
         <Label htmlFor="board-section-page">콘텐츠 페이지 선택</Label>
         <Select
-          value={widget.display_options?.page_id || ""}
+          value={currentWidget.display_options?.page_id || ""}
           onValueChange={(value) =>
             updateWidget({
               display_options: {
-                ...widget.display_options,
+                ...currentWidget.display_options,
                 page_id: value,
               },
             })

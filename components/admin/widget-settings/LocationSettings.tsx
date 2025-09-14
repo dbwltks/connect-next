@@ -12,13 +12,16 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WidgetSettingsComponentProps } from "./types";
 
-export function LocationSettings({ widget, onSave, pages = [] }: WidgetSettingsComponentProps) {
+export function LocationSettings({ widget, onSave, pages = [], editingWidget, setEditingWidget }: WidgetSettingsComponentProps & { editingWidget?: any, setEditingWidget?: any }) {
+  const currentWidget = editingWidget || widget;
+  
   const updateWidget = (updates: any) => {
-    const updatedWidget = {
-      ...widget,
-      ...updates,
-    };
-    onSave(updatedWidget);
+    if (setEditingWidget) {
+      setEditingWidget({
+        ...currentWidget,
+        ...updates,
+      });
+    }
   };
 
   return (

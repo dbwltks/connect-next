@@ -11,13 +11,16 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { WidgetSettingsComponentProps } from "./types";
 
-export function SimpleCalendarSettings({ widget, onSave, pages = [] }: WidgetSettingsComponentProps) {
+export function SimpleCalendarSettings({ widget, onSave, pages = [], editingWidget, setEditingWidget }: WidgetSettingsComponentProps & { editingWidget?: any, setEditingWidget?: any }) {
+  const currentWidget = editingWidget || widget;
+  
   const updateWidget = (updates: any) => {
-    const updatedWidget = {
-      ...widget,
-      ...updates,
-    };
-    onSave(updatedWidget);
+    if (setEditingWidget) {
+      setEditingWidget({
+        ...currentWidget,
+        ...updates,
+      });
+    }
   };
 
   return (
@@ -26,11 +29,11 @@ export function SimpleCalendarSettings({ widget, onSave, pages = [] }: WidgetSet
       <div className="space-y-2">
         <Label htmlFor="calendar-page">연결할 페이지 선택 (선택사항)</Label>
         <Select
-          value={widget.display_options?.page_id || ""}
+          value={currentWidget.display_options?.page_id || ""}
           onValueChange={(value) =>
             updateWidget({
               display_options: {
-                ...widget.display_options,
+                ...currentWidget.display_options,
                 page_id: value,
               },
             })

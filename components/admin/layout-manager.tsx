@@ -12,6 +12,8 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -239,18 +241,20 @@ function SortableItem({
     transform,
     transition,
     isDragging,
+    isOver,
   } = useSortable({ id: widget.id.toString() });
 
   const dragStyle = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.3 : 1,
     zIndex: isDragging ? 1000 : "auto",
   };
 
   const gridClass = getWidgetGridClass(widget.width, isMainArea);
 
   const [isNearEdge, setIsNearEdge] = useState(false);
+  const [dropPosition, setDropPosition] = useState<'above' | 'below' | null>(null);
   
   const handleMouseMove = (e: React.MouseEvent) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -262,10 +266,17 @@ function SortableItem({
     const nearTopEdge = mouseY < edgeDistance;
     
     setIsNearEdge(nearRightEdge && nearTopEdge);
+
+    // 드롭 위치 계산 (컨테이너일 때만)
+    if (isOver && widget.type === 'container') {
+      const middleY = rect.height / 2;
+      setDropPosition(mouseY < middleY ? 'above' : 'below');
+    }
   };
   
   const handleMouseLeave = () => {
     setIsNearEdge(false);
+    setDropPosition(null);
   };
 
   return (
@@ -274,6 +285,22 @@ function SortableItem({
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
     >
+      {/* 위/아래 드롭 인디케이터 (컨테이너용) */}
+      {isOver && widget.type === 'container' && dropPosition && (
+        <>
+          {/* 위쪽 드롭 인디케이터 */}
+          {dropPosition === 'above' && (
+            <div className="absolute -top-1 left-0 right-0 h-2 bg-blue-500 rounded-full pointer-events-none z-20 opacity-80" />
+          )}
+          {/* 아래쪽 드롭 인디케이터 */}
+          {dropPosition === 'below' && (
+            <div className="absolute -bottom-1 left-0 right-0 h-2 bg-blue-500 rounded-full pointer-events-none z-20 opacity-80" />
+          )}
+          {/* 전체 영역 하이라이트 */}
+          <div className="absolute inset-0 bg-blue-100 border-2 border-blue-400 border-dashed rounded-md opacity-30 pointer-events-none z-10" />
+        </>
+      )}
+      
       {/* 드래그 가능한 위젯 컨텐츠 */}
       <div
         ref={setNodeRef}
@@ -339,21 +366,20 @@ function DroppableArea({
     id: area.id,
   });
 
-  const style = {
-    backgroundColor: isOver ? "rgba(59, 130, 246, 0.1)" : undefined,
-    borderColor: isOver ? "rgb(59, 130, 246)" : undefined,
-  };
-
   return (
     <div
       ref={setNodeRef}
-      style={style}
-      className="min-h-[100px] rounded-md transition-colors border-2 border-dashed border-transparent"
+      className={`min-h-[100px] rounded-md transition-colors border-2 border-dashed ${
+        isOver 
+          ? "border-blue-400 bg-blue-50/30" 
+          : "border-transparent"
+      }`}
     >
       {children}
     </div>
   );
 }
+
 
 // 사용 가능한 위젯 타입
 const WIDGET_TYPES = [
@@ -460,6 +486,7 @@ export default function LayoutManager(): JSX.Element {
   );
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [banners, setBanners] = useState<Banner[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null); // 드래그 중인 위젯 ID
   const [pages, setPages] = useState<Page[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
 
@@ -661,9 +688,15 @@ export default function LayoutManager(): JSX.Element {
     })
   );
 
-  // 드래그 종료 처리
+  // 드래그 시작 처리
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id.toString());
+  };
+
+  // 드래그 종료 처리 - 새로운 로직
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
+    setActiveId(null);
 
     if (!over) return;
 
@@ -672,26 +705,150 @@ export default function LayoutManager(): JSX.Element {
 
     if (activeId === overId) return;
 
-    const activeWidget = allWidgets.find((w) => w.id.toString() === activeId);
-    if (!activeWidget) return;
+    const draggedWidget = allWidgets.find((w) => w.id.toString() === activeId);
+    if (!draggedWidget) return;
 
-    // 컨테이너 안 위젯끼리의 순서 변경 (같은 컨테이너 내)
-    if (activeWidget.parent_id) {
+    // 드래그앤드롭 로직 분기
+    if (draggedWidget.type === 'container') {
+      await handleContainerDrop(draggedWidget, overId);
+    } else {
+      await handleWidgetDrop(draggedWidget, overId);
+    }
+  };
+
+  // 컨테이너 드롭 처리 함수
+  const handleContainerDrop = async (draggedContainer: IWidget, overId: string) => {
+    const sourceArea = layoutAreas.find(area => 
+      area.widgets.some(w => w.id === draggedContainer.id)
+    );
+    
+    if (!sourceArea) return;
+
+    // 다른 컨테이너 위에 드롭하는 경우 (위아래 순서 변경)
+    const targetWidget = allWidgets.find(w => w.id.toString() === overId && w.type === 'container');
+    if (targetWidget && !targetWidget.parent_id) {
+      const targetWidgetArea = layoutAreas.find(area => 
+        area.widgets.some(w => w.id === targetWidget.id)
+      );
+      
+      if (targetWidgetArea && targetWidgetArea.id === sourceArea.id) {
+        const sourceIndex = sourceArea.widgets.findIndex(w => w.id === draggedContainer.id);
+        const targetIndex = sourceArea.widgets.findIndex(w => w.id === targetWidget.id);
+        
+        if (sourceIndex !== -1 && targetIndex !== -1 && sourceIndex !== targetIndex) {
+          const reorderedWidgets = arrayMove(sourceArea.widgets, sourceIndex, targetIndex);
+          const updatedWidgets = reorderedWidgets.map((widget, index) => ({
+            ...widget,
+            order: index,
+          }));
+          
+          setLayoutAreas(layoutAreas.map(area => 
+            area.id === sourceArea.id ? { ...area, widgets: updatedWidgets } : area
+          ));
+          
+          setAllWidgets(allWidgets.map(w => {
+            const updated = updatedWidgets.find(uw => uw.id === w.id);
+            return updated || w;
+          }));
+          
+          try {
+            setIsLoading(true);
+            await updateWidgetInDatabase(updatedWidgets);
+            toast({
+              title: "성공",
+              description: "컨테이너 순서가 변경되었습니다.",
+            });
+          } catch (error) {
+            console.error("컨테이너 순서 업데이트 중 오류:", error);
+            toast({
+              title: "오류",
+              description: "컨테이너 순서 업데이트 중 오류 발생",
+              variant: "destructive",
+            });
+          } finally {
+            setIsLoading(false);
+          }
+        }
+      }
+    }
+
+    // 영역으로 드롭하는 경우
+    const targetArea = layoutAreas.find(area => area.id === overId);
+    if (targetArea && targetArea.id !== sourceArea.id) {
+      const sourceIndex = sourceArea.widgets.findIndex(w => w.id === draggedContainer.id);
+      
+      if (sourceIndex !== -1) {
+        const movedContainer = { 
+          ...draggedContainer, 
+          column_position: AREA_ID_TO_COLUMN_POSITION[targetArea.id],
+          order: targetArea.widgets.length
+        };
+        
+        setLayoutAreas(layoutAreas.map(area => {
+          if (area.id === sourceArea.id) {
+            return { 
+              ...area, 
+              widgets: area.widgets.filter(w => w.id !== draggedContainer.id)
+                .map((widget, index) => ({ ...widget, order: index }))
+            };
+          } else if (area.id === targetArea.id) {
+            return { 
+              ...area, 
+              widgets: [...area.widgets, movedContainer]
+            };
+          }
+          return area;
+        }));
+        
+        setAllWidgets(allWidgets.map(w => 
+          w.id === draggedContainer.id ? movedContainer : w
+        ));
+        
+        try {
+          setIsLoading(true);
+          await supabase
+            .from("cms_layout")
+            .update({
+              column_position: movedContainer.column_position,
+              order: movedContainer.order,
+            })
+            .eq("id", draggedContainer.id);
+          
+          toast({
+            title: "성공",
+            description: "컨테이너가 다른 영역으로 이동되었습니다.",
+          });
+        } catch (error) {
+          console.error("컨테이너 영역 이동 중 오류:", error);
+          toast({
+            title: "오류",
+            description: "컨테이너 이동 중 오류 발생",
+            variant: "destructive",
+          });
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    }
+  };
+
+  // 위젯 드롭 처리 함수
+  const handleWidgetDrop = async (draggedWidget: IWidget, overId: string) => {
+    // 위젯이 컨테이너 안에 있는 경우
+    if (draggedWidget.parent_id) {
       const overWidget = allWidgets.find((w) => w.id.toString() === overId);
       
-      // 같은 컨테이너 내에서만 순서 변경 허용
-      if (overWidget && overWidget.parent_id === activeWidget.parent_id) {
+      // 같은 컨테이너 내에서 순서 변경
+      if (overWidget && overWidget.parent_id === draggedWidget.parent_id) {
         const containerWidgets = allWidgets.filter(w => 
-          w.parent_id === activeWidget.parent_id
+          w.parent_id === draggedWidget.parent_id
         ).sort((a, b) => (a.order_in_parent || 0) - (b.order_in_parent || 0));
         
-        const activeIndex = containerWidgets.findIndex(w => w.id === activeWidget.id);
+        const activeIndex = containerWidgets.findIndex(w => w.id === draggedWidget.id);
         const overIndex = containerWidgets.findIndex(w => w.id === overWidget.id);
         
         if (activeIndex !== -1 && overIndex !== -1) {
           const reorderedWidgets = arrayMove(containerWidgets, activeIndex, overIndex);
-          
-          // order_in_parent 업데이트
           const updatedWidgets = reorderedWidgets.map((widget, index) => ({
             ...widget,
             order_in_parent: index,
@@ -702,7 +859,6 @@ export default function LayoutManager(): JSX.Element {
             const updated = updatedWidgets.find(uw => uw.id === w.id);
             return updated || w;
           });
-          
           setAllWidgets(newAllWidgets);
           
           // DB 업데이트
@@ -714,7 +870,6 @@ export default function LayoutManager(): JSX.Element {
                 .update({ order_in_parent: widget.order_in_parent })
                 .eq("id", widget.id);
             }
-            
             toast({
               title: "성공",
               description: "컨테이너 내 위젯 순서가 업데이트되었습니다.",
@@ -733,22 +888,18 @@ export default function LayoutManager(): JSX.Element {
         return;
       }
       
-      // 컨테이너 안 위젯이 컨테이너 영역으로 드롭되는 경우 (다른 컨테이너로 이동)
+      // 다른 컨테이너로 이동
       if (overId.startsWith('container-')) {
         const newContainerId = overId.replace('container-', '');
-        
-        // 현재 컨테이너에서 제거하고 새 컨테이너로 이동
         const updatedWidget = {
-          ...activeWidget,
+          ...draggedWidget,
           parent_id: newContainerId,
           order_in_parent: allWidgets.filter(w => w.parent_id === newContainerId).length,
         };
         
-        const newAllWidgets = allWidgets.map(w => 
-          w.id === activeWidget.id ? updatedWidget : w
-        );
-        
-        setAllWidgets(newAllWidgets);
+        setAllWidgets(allWidgets.map(w => 
+          w.id === draggedWidget.id ? updatedWidget : w
+        ));
         
         // DB 업데이트
         try {
@@ -759,8 +910,8 @@ export default function LayoutManager(): JSX.Element {
               parent_id: newContainerId,
               order_in_parent: updatedWidget.order_in_parent 
             })
-            .eq("id", activeWidget.id);
-            
+            .eq("id", draggedWidget.id);
+          
           toast({
             title: "성공",
             description: "위젯이 다른 컨테이너로 이동되었습니다.",
@@ -778,14 +929,11 @@ export default function LayoutManager(): JSX.Element {
         return;
       }
 
-      // 컨테이너 안 위젯을 일반 영역으로 드래그 (컨테이너에서 밖으로 빼내기)
+      // 컨테이너에서 일반 영역으로 이동
       const targetArea = layoutAreas.find(area => area.id === overId);
-      
       if (targetArea) {
-        
-        // 위젯을 컨테이너에서 제거하고 일반 영역으로 이동
         const updatedWidget = {
-          ...activeWidget,
+          ...draggedWidget,
           parent_id: null,
           level: 0,
           order: targetArea.widgets.length,
@@ -795,7 +943,7 @@ export default function LayoutManager(): JSX.Element {
         
         // 상태 업데이트
         const newAllWidgets = allWidgets.map(w => 
-          w.id === activeWidget.id ? updatedWidget : w
+          w.id === draggedWidget.id ? updatedWidget : w
         );
         
         const newLayoutAreas = layoutAreas.map(area => {
@@ -823,8 +971,8 @@ export default function LayoutManager(): JSX.Element {
               order_in_parent: null,
               column_position: updatedWidget.column_position
             })
-            .eq("id", activeWidget.id);
-            
+            .eq("id", draggedWidget.id);
+          
           toast({
             title: "성공",
             description: "위젯이 컨테이너에서 영역으로 이동되었습니다.",
@@ -841,218 +989,83 @@ export default function LayoutManager(): JSX.Element {
         }
         return;
       }
-    }
-
-    const newLayoutAreas = [...layoutAreas];
-
-    // 드래그할 위젯과 대상 위치 찾기
-    let sourceArea, destArea;
-    let sourceIndex = -1,
-      destIndex = -1;
-
-    // active 위젯 찾기 (일반 영역에서만)
-    for (const area of newLayoutAreas) {
-      const idx = area.widgets.findIndex((w) => w.id.toString() === activeId);
-      if (idx !== -1) {
-        sourceArea = area;
-        sourceIndex = idx;
-        break;
-      }
-    }
-
-    if (!sourceArea) return;
-
-    // 컨테이너 밖 위젯이 컨테이너로 드롭되는 경우 처리
-    if (overId.startsWith('container-')) {
-      const containerId = overId.replace('container-', '');
-      
-      // 소스 영역에서 위젯 제거
-      if (sourceArea && sourceIndex !== -1) {
-        sourceArea.widgets.splice(sourceIndex, 1);
-        
-        // 제거된 후 순서 재정렬
-        sourceArea.widgets = sourceArea.widgets.map((widget, index) => ({
-          ...widget,
-          order: index,
-        }));
-      }
-      
-      // 위젯을 컨테이너로 이동
-      const updatedWidget = {
-        ...activeWidget,
-        parent_id: containerId,
-        level: 1,
-        order_in_parent: allWidgets.filter(w => w.parent_id === containerId).length,
-      };
-      
-      // allWidgets와 layoutAreas 상태 업데이트
-      const newAllWidgets = allWidgets.map(w => 
-        w.id === activeWidget.id ? updatedWidget : w
-      );
-      
-      setAllWidgets(newAllWidgets);
-      setLayoutAreas(newLayoutAreas);
-      
-      // DB 업데이트
-      try {
-        setIsLoading(true);
-        
-        // 위젯을 컨테이너로 이동
-        await supabase
-          .from("cms_layout")
-          .update({ 
-            parent_id: containerId,
-            level: 1,
-            order_in_parent: updatedWidget.order_in_parent 
-          })
-          .eq("id", activeWidget.id);
-          
-        // 소스 영역의 다른 위젯들 순서 업데이트
-        if (sourceArea && sourceArea.widgets.length > 0) {
-          await updateWidgetInDatabase(sourceArea.widgets);
-        }
-          
-        toast({
-          title: "성공",
-          description: "위젯이 컨테이너로 이동되었습니다.",
-        });
-      } catch (error) {
-        console.error("위젯 컨테이너 이동 중 오류:", error);
-        toast({
-          title: "오류",
-          description: "위젯 이동 중 오류 발생",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-      return;
-    }
-
-    // over 위치 찾기 (컨테이너 위젯들에 대해서만)
-    for (const area of newLayoutAreas) {
-      const idx = area.widgets.findIndex((w) => w.id.toString() === overId);
-      if (idx !== -1) {
-        destArea = area;
-        destIndex = idx;
-        break;
-      } else if (area.id === overId) {
-        // 영역 자체에 드롭한 경우
-        destArea = area;
-        destIndex = area.widgets.length; // 마지막에 추가
-        break;
-      }
-    }
-
-    if (!sourceArea || !destArea) {
-      console.log('❌ Missing areas for container move:', {
-        sourceArea: sourceArea?.name,
-        destArea: destArea?.name,
-        activeWidget: activeWidget.title
-      });
-      return;
-    }
-
-    // 같은 영역 내에서 컨테이너 순서 변경
-    if (sourceArea.id === destArea.id) {
-      const reorderedWidgets = arrayMove(
-        sourceArea.widgets,
-        sourceIndex,
-        destIndex
-      );
-      sourceArea.widgets = reorderedWidgets.map((widget, index) => ({
-        ...widget,
-        order: index,
-      }));
-
-      setLayoutAreas(newLayoutAreas);
-
-      // DB 업데이트
-      try {
-        setIsLoading(true);
-        await updateWidgetInDatabase(sourceArea.widgets);
-        toast({
-          title: "성공",
-          description: "컨테이너 순서가 업데이트되었습니다.",
-        });
-      } catch (error) {
-        console.error("컨테이너 순서 업데이트 중 오류:", error);
-        toast({
-          title: "오류",
-          description: "컨테이너 순서 업데이트 중 오류 발생",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
     } else {
-      // 다른 영역으로 컨테이너 이동
-      const movedWidget = sourceArea.widgets.splice(sourceIndex, 1)[0];
-      
-      // 컨테이너 정보 업데이트
-      const updatedWidget = {
-        ...movedWidget,
-        column_position: AREA_ID_TO_COLUMN_POSITION[destArea.id],
-        order: destIndex,
-      };
-      
-      // 대상 영역에 추가
-      destArea.widgets.splice(destIndex, 0, updatedWidget);
-      
-      // 소스 영역의 순서 재정렬
-      sourceArea.widgets = sourceArea.widgets.map((widget, index) => ({
-        ...widget,
-        order: index,
-      }));
-      
-      // 대상 영역의 순서 재정렬
-      destArea.widgets = destArea.widgets.map((widget, index) => ({
-        ...widget,
-        order: index,
-      }));
-      
-      setLayoutAreas(newLayoutAreas);
-      
-      // allWidgets 상태도 업데이트
-      const newAllWidgets = allWidgets.map(w => 
-        w.id === updatedWidget.id ? updatedWidget : w
-      );
-      setAllWidgets(newAllWidgets);
-      
-      // DB 업데이트
-      try {
-        setIsLoading(true);
+      // 일반 영역에 있는 위젯이 컨테이너로 이동
+      if (overId.startsWith('container-')) {
+        const containerId = overId.replace('container-', '');
         
-        // 이동된 위젯 업데이트
-        await supabase
-          .from("cms_layout")
-          .update({
-            column_position: updatedWidget.column_position,
-            order: updatedWidget.order,
-          })
-          .eq("id", updatedWidget.id);
+        // 소스 영역에서 위젯 제거
+        const sourceArea = layoutAreas.find(area => 
+          area.widgets.some(w => w.id === draggedWidget.id)
+        );
         
-        // 소스 영역 순서 업데이트
-        await updateWidgetInDatabase(sourceArea.widgets);
-        
-        // 대상 영역 순서 업데이트 (이동된 위젯 제외)
-        if (sourceArea.id !== destArea.id) {
-          await updateWidgetInDatabase(destArea.widgets);
+        if (sourceArea) {
+          const sourceIndex = sourceArea.widgets.findIndex(w => w.id === draggedWidget.id);
+          
+          if (sourceIndex !== -1) {
+            // 위젯을 컨테이너로 이동
+            const updatedWidget = {
+              ...draggedWidget,
+              parent_id: containerId,
+              level: 1,
+              order_in_parent: allWidgets.filter(w => w.parent_id === containerId).length,
+            };
+            
+            // 상태 업데이트
+            const newLayoutAreas = layoutAreas.map(area => {
+              if (area.id === sourceArea.id) {
+                return {
+                  ...area,
+                  widgets: area.widgets.filter(w => w.id !== draggedWidget.id)
+                    .map((widget, index) => ({ ...widget, order: index }))
+                };
+              }
+              return area;
+            });
+            
+            const newAllWidgets = allWidgets.map(w => 
+              w.id === draggedWidget.id ? updatedWidget : w
+            );
+            
+            setAllWidgets(newAllWidgets);
+            setLayoutAreas(newLayoutAreas);
+            
+            // DB 업데이트
+            try {
+              setIsLoading(true);
+              
+              await supabase
+                .from("cms_layout")
+                .update({ 
+                  parent_id: containerId,
+                  level: 1,
+                  order_in_parent: updatedWidget.order_in_parent 
+                })
+                .eq("id", draggedWidget.id);
+              
+              // 소스 영역의 다른 위젯들 순서 업데이트
+              const sourceWidgets = newLayoutAreas.find(a => a.id === sourceArea.id)?.widgets || [];
+              if (sourceWidgets.length > 0) {
+                await updateWidgetInDatabase(sourceWidgets);
+              }
+              
+              toast({
+                title: "성공",
+                description: "위젯이 컨테이너로 이동되었습니다.",
+              });
+            } catch (error) {
+              console.error("위젯 컨테이너 이동 중 오류:", error);
+              toast({
+                title: "오류",
+                description: "위젯 이동 중 오류 발생",
+                variant: "destructive",
+              });
+            } finally {
+              setIsLoading(false);
+            }
+          }
         }
-        
-        toast({
-          title: "성공",
-          description: "컨테이너가 다른 영역으로 이동되었습니다.",
-        });
-      } catch (error) {
-        console.error("컨테이너 영역 이동 중 오류:", error);
-        toast({
-          title: "오류",
-          description: "컨테이너 이동 중 오류 발생",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
+        return;
       }
     }
   };
@@ -1318,42 +1331,47 @@ export default function LayoutManager(): JSX.Element {
                 </Button>
               </div>
             ) : (
-              // 컨테이너에 위젯들이 있을 때  
-              <div 
-                className="grid grid-cols-12"
-                style={{ gap: `${(widget.settings?.spacing || 4) * 4}px` }}
-              >
-                {containerWidgets.map((containerWidget) => {
-                  const getColSpanClass = (width: number): string => {
-                    switch (width) {
-                      case 3: return "col-span-3";
-                      case 4: return "col-span-4";
-                      case 6: return "col-span-6";
-                      case 8: return "col-span-8";
-                      case 9: return "col-span-9";
-                      case 12: return "col-span-12";
-                      default: return "col-span-12";
-                    }
-                  };
-                  
-                  return (
-                    <div
-                      key={containerWidget.id}
-                      className={getColSpanClass(containerWidget.width || 12)}
-                    >
-                      <SortableItem
-                        widget={containerWidget}
-                        renderWidget={renderWidgetPreview}
-                        setEditingWidget={setEditingWidget}
-                        setDialogOpen={setDialogOpen}
-                        deleteWidget={deleteWidget}
-                        setAddingWidgetToArea={setAddingWidgetToArea}
-                        isMainArea={false}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
+              // 컨테이너에 위젯들이 있을 때
+              <SortableContext
+                items={containerWidgets.map((w) => w.id.toString())}
+                strategy={verticalListSortingStrategy}
+              >  
+                <div 
+                  className="grid grid-cols-12"
+                  style={{ gap: `${(widget.settings?.spacing || 4) * 4}px` }}
+                >
+                  {containerWidgets.map((containerWidget) => {
+                    const getColSpanClass = (width: number): string => {
+                      switch (width) {
+                        case 3: return "col-span-3";
+                        case 4: return "col-span-4";
+                        case 6: return "col-span-6";
+                        case 8: return "col-span-8";
+                        case 9: return "col-span-9";
+                        case 12: return "col-span-12";
+                        default: return "col-span-12";
+                      }
+                    };
+                    
+                    return (
+                      <div
+                        key={containerWidget.id}
+                        className={getColSpanClass(containerWidget.width || 12)}
+                      >
+                        <SortableItem
+                          widget={containerWidget}
+                          renderWidget={renderWidgetPreview}
+                          setEditingWidget={setEditingWidget}
+                          setDialogOpen={setDialogOpen}
+                          deleteWidget={deleteWidget}
+                          setAddingWidgetToArea={setAddingWidgetToArea}
+                          isMainArea={false}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </SortableContext>
             )}
           </div>
         </DroppableArea>
@@ -1505,7 +1523,23 @@ export default function LayoutManager(): JSX.Element {
         setEditingWidget={setEditingWidget}
         onSave={async (widget: IWidget) => { 
           await updateWidgetInDatabase([widget]); 
-          await fetchLayoutData(selectedPageId);
+          
+          // 전체 데이터를 다시 불러오는 대신 현재 상태만 업데이트
+          const newAllWidgets = allWidgets.map(w => 
+            w.id === widget.id ? widget : w
+          );
+          setAllWidgets(newAllWidgets);
+          
+          // layoutAreas도 업데이트 (루트 레벨 위젯인 경우에만)
+          if (!widget.parent_id) {
+            const newLayoutAreas = layoutAreas.map(area => ({
+              ...area,
+              widgets: area.widgets.map(w => 
+                w.id === widget.id ? widget : w
+              )
+            }));
+            setLayoutAreas(newLayoutAreas);
+          }
         }}
         menuItems={menuItems}
         pages={pages}
@@ -1569,12 +1603,9 @@ export default function LayoutManager(): JSX.Element {
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <SortableContext
-          items={allWidgets.map((w) => w.id.toString())}
-          strategy={verticalListSortingStrategy}
-        >
           <div
             className={`lg:container mx-auto lg:px-6 py-0 lg:py-6 ${getBackgroundClass(pageBackgroundColor)}`}
           >
@@ -1611,26 +1642,31 @@ export default function LayoutManager(): JSX.Element {
                             이 영역에 위젯을 추가하세요
                           </div>
                         ) : (
-                          <div
-                            className={`${
-                              area.id === "main"
-                                ? "grid grid-cols-12 gap-4"
-                                : "space-y-4"
-                            }`}
+                          <SortableContext
+                            items={area.widgets.map((w) => w.id.toString())}
+                            strategy={verticalListSortingStrategy}
                           >
-                            {area.widgets.map((widget) => (
-                              <SortableItem
-                                key={widget.id}
-                                widget={widget}
-                                renderWidget={renderWidgetPreview}
-                                setEditingWidget={setEditingWidget}
-                                setDialogOpen={setDialogOpen}
-                                deleteWidget={deleteWidget}
-                                setAddingWidgetToArea={setAddingWidgetToArea}
-                                isMainArea={area.id === "main"}
-                              />
-                            ))}
-                          </div>
+                            <div
+                              className={`${
+                                area.id === "main"
+                                  ? "grid grid-cols-12 gap-4"
+                                  : "space-y-4"
+                              }`}
+                            >
+                              {area.widgets.map((widget) => (
+                                <SortableItem
+                                  key={widget.id}
+                                  widget={widget}
+                                  renderWidget={renderWidgetPreview}
+                                  setEditingWidget={setEditingWidget}
+                                  setDialogOpen={setDialogOpen}
+                                  deleteWidget={deleteWidget}
+                                  setAddingWidgetToArea={setAddingWidgetToArea}
+                                  isMainArea={area.id === "main"}
+                                />
+                              ))}
+                            </div>
+                          </SortableContext>
                         )}
                       </DroppableArea>
                       <div className="mt-4 flex justify-center gap-2 relative">
@@ -1651,7 +1687,20 @@ export default function LayoutManager(): JSX.Element {
             })}
             </div>
           </div>
-        </SortableContext>
+        
+        <DragOverlay>
+          {activeId ? (
+            <div className="opacity-95 shadow-xl">
+              {(() => {
+                const draggedWidget = allWidgets.find(w => w.id.toString() === activeId);
+                if (draggedWidget) {
+                  return renderWidgetPreview(draggedWidget);
+                }
+                return null;
+              })()}
+            </div>
+          ) : null}
+        </DragOverlay>
       </DndContext>
     </div>
   );

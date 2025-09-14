@@ -62,25 +62,28 @@ async function fetchBoardWidgetPosts(
   pageId: string,
   limit: number = 10,
   retryCount = 0
-): Promise<{ posts: IBoardPost[]; menuUrlMap: Record<string, string>; pageTitleMap: Record<string, string> }> {
-  
+): Promise<{
+  posts: IBoardPost[];
+  menuUrlMap: Record<string, string>;
+  pageTitleMap: Record<string, string>;
+}> {
   try {
     const result = await api.posts.getForWidget(pageId, limit);
     // API 응답이 { posts: [...], menuUrlMap: {...}, pageTitleMap: {...} } 구조
-    return { 
+    return {
       posts: Array.isArray(result) ? result : result.posts || [],
       menuUrlMap: result.menuUrlMap || {},
-      pageTitleMap: result.pageTitleMap || {}
+      pageTitleMap: result.pageTitleMap || {},
     };
   } catch (error) {
     console.error(`❌ Board widget fetch error:`, error);
-    
+
     if (retryCount < 2) {
       // 200ms 딜레이 후 재시도
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 200));
       return fetchBoardWidgetPosts(pageId, limit, retryCount + 1);
     }
-    
+
     throw error;
   }
 }
@@ -88,7 +91,7 @@ async function fetchBoardWidgetPosts(
 export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
   // 페이지 ID와 표시할 게시물 수 계산
   const pageId = page?.id || widget.display_options?.page_id;
-  
+
   let limit = 10; // 기본값
 
   if (widget.display_options?.item_count) {
@@ -101,7 +104,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
 
   // SWR을 사용한 데이터 페칭
   const { data, error, isLoading } = useSWR(
-    pageId ? ['boardWidgetPosts', pageId, limit] : null,
+    pageId ? ["boardWidgetPosts", pageId, limit] : null,
     () => fetchBoardWidgetPosts(pageId!, limit),
     {
       // 전역 설정 사용
@@ -114,9 +117,10 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
 
   // 게시판 이름 가져오기
   const pageTitle = pageId ? pageTitleMap[pageId] : null;
-  
+
   // 제목에서 "(목록)" 제거
-  const cleanTitle = (title?: string) => title?.replace(/\s*\(목록\)\s*/, '').trim();
+  const cleanTitle = (title?: string) =>
+    title?.replace(/\s*\(목록\)\s*/, "").trim();
 
   // 위젯이 연결된 메뉴 페이지 URL 가져오기
   const getWidgetMenuUrl = () => {
@@ -252,7 +256,9 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
           <div className="text-red-500 dark:text-red-400 text-sm font-medium mb-1">
             데이터 로드 오류
           </div>
-          <div className="text-gray-500 dark:text-gray-400 text-xs">{error.message}</div>
+          <div className="text-gray-500 dark:text-gray-400 text-xs">
+            {error.message}
+          </div>
         </div>
       );
     }
@@ -319,11 +325,16 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
                   </div>
                 ) : (
                   <div className="aspect-video w-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                    <MessageSquare className="text-gray-300 dark:text-gray-500" size={32} />
+                    <MessageSquare
+                      className="text-gray-300 dark:text-gray-500"
+                      size={32}
+                    />
                   </div>
                 )}
                 <div className="p-3">
-                  <h4 className="font-medium truncate text-gray-900 dark:text-white">{post.title}</h4>
+                  <h4 className="font-medium truncate text-gray-900 dark:text-white">
+                    {post.title}
+                  </h4>
                   {showDate && (
                     <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400 mt-2">
                       <span className="truncate">
@@ -355,7 +366,9 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
                     />
                   ) : (
                     <div className="w-full h-32 sm:h-40 bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                      <span className="text-gray-300 dark:text-gray-500 text-xs">No Image</span>
+                      <span className="text-gray-300 dark:text-gray-500 text-xs">
+                        No Image
+                      </span>
                     </div>
                   )}
                 </Link>
@@ -435,7 +448,10 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
                   </div>
                 ) : showThumbnail ? (
                   <div className="w-20 h-20 flex-shrink-0 rounded bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                    <MessageSquare className="text-gray-300 dark:text-gray-500" size={24} />
+                    <MessageSquare
+                      className="text-gray-300 dark:text-gray-500"
+                      size={24}
+                    />
                   </div>
                 ) : null}
                 <div className="flex-1 min-w-0">
@@ -483,10 +499,13 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
   }
 
   return (
-    <div className="h-full bg-white dark:bg-gray-800 rounded-xl border border-slate-100 dark:border-gray-700 overflow-hidden p-4">
-      <div className="pb-2">
+    <div className="h-full bg-white dark:bg-gray-800 rounded-xl border border-slate-100 dark:border-gray-700 overflow-hidden">
+      <div className="border-b dark:border-gray-700 px-4 py-3">
         {getWidgetMenuUrl() ? (
-          <Link href={getWidgetMenuUrl()!} className="text-base font-semibold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer">
+          <Link
+            href={getWidgetMenuUrl()!}
+            className="text-base font-semibold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
+          >
             {cleanTitle(pageTitle || widget.title || page?.title) || "게시판"}
           </Link>
         ) : (
@@ -495,7 +514,7 @@ export function BoardlistWidget({ widget, page }: BoardWidgetProps) {
           </div>
         )}
       </div>
-      <div>{renderByTemplate()}</div>
+      <div className="px-4 py-3">{renderByTemplate()}</div>
     </div>
   );
 }

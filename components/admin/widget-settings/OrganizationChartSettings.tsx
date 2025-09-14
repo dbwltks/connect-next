@@ -18,22 +18,24 @@ import { createClient } from "@/utils/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { WidgetSettingsComponentProps } from "./types";
 
-export function OrganizationChartSettings({ widget, onSave }: WidgetSettingsComponentProps) {
+export function OrganizationChartSettings({ widget, onSave, editingWidget, setEditingWidget }: WidgetSettingsComponentProps & { editingWidget?: any, setEditingWidget?: any }) {
+  const currentWidget = editingWidget || widget;
   const [editingMember, setEditingMember] = useState<any | null>(null);
   const [memberImageUploading, setMemberImageUploading] = useState(false);
   const memberFileInputRef = useRef<HTMLInputElement>(null);
 
   const updateWidget = (updates: any) => {
-    const updatedWidget = {
-      ...widget,
-      ...updates,
-    };
-    onSave(updatedWidget);
+    if (setEditingWidget) {
+      setEditingWidget({
+        ...currentWidget,
+        ...updates,
+      });
+    }
   };
 
   // 조직원 관리 함수들
   const addOrUpdateMember = (memberData: any) => {
-    let currentMembers = widget.settings?.custom_data || [];
+    let currentMembers = currentWidget.settings?.custom_data || [];
 
     if (editingMember && editingMember.id) {
       // 기존 멤버 수정 (id가 있는 경우)

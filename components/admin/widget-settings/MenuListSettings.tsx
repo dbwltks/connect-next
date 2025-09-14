@@ -10,13 +10,16 @@ import {
 } from "@/components/ui/select";
 import { WidgetSettingsComponentProps } from "./types";
 
-export function MenuListSettings({ widget, onSave, menuItems = [] }: WidgetSettingsComponentProps) {
+export function MenuListSettings({ widget, onSave, menuItems = [], editingWidget, setEditingWidget }: WidgetSettingsComponentProps & { editingWidget?: any, setEditingWidget?: any }) {
+  const currentWidget = editingWidget || widget;
+  
   const updateWidget = (updates: any) => {
-    const updatedWidget = {
-      ...widget,
-      ...updates,
-    };
-    onSave(updatedWidget);
+    if (setEditingWidget) {
+      setEditingWidget({
+        ...currentWidget,
+        ...updates,
+      });
+    }
   };
 
   return (
@@ -25,11 +28,11 @@ export function MenuListSettings({ widget, onSave, menuItems = [] }: WidgetSetti
       <div className="space-y-2">
         <Label htmlFor="menu-list-parent">상위 메뉴 선택</Label>
         <Select
-          value={widget.settings?.parent_menu_id || ""}
+          value={currentWidget.settings?.parent_menu_id || ""}
           onValueChange={(value) =>
             updateWidget({
               settings: {
-                ...widget.settings,
+                ...currentWidget.settings,
                 parent_menu_id: value,
               },
             })
