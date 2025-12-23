@@ -32,6 +32,7 @@ export default function ClientLayout({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const isAdminPage = pathname?.startsWith('/admin');
+  const isHomePage = pathname === '/';
 
   // OAuth 성공 토스트 처리
   useEffect(() => {
@@ -40,7 +41,7 @@ export default function ClientLayout({
         title: "로그인 성공",
         description: "환영합니다!",
       });
-      
+
       // URL에서 oauth_success 파라미터 제거
       const url = new URL(window.location.href);
       url.searchParams.delete('oauth_success');
@@ -58,7 +59,8 @@ export default function ClientLayout({
           disableTransitionOnChange
         >
           <div className="min-h-screen flex flex-col">
-            {!isAdminPage && <Header initialMenus={headerMenus} />}
+            {/* 홈페이지가 아니고 관리자 페이지가 아닐 때만 기존 헤더 표시 */}
+            {!isAdminPage && !isHomePage && <Header initialMenus={headerMenus} />}
             <main className="flex-1">{children}</main>
             {!isAdminPage && <Footer menus={footerMenus} settings={footerSettings} />}
             <Toaster />

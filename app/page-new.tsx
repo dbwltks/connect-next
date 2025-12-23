@@ -1,24 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
 import NewHomepage from "@/components/home/new-homepage";
 
-// 메뉴 트리 구조 생성 함수
-function buildMenuTree(items: any[]) {
-  const rootItems = items.filter((item) => item.parent_id === null);
-  return rootItems.map((item: any) => ({
-    ...item,
-    submenu: findChildren(item.id, items),
-  }));
-}
-
-function findChildren(parentId: string, items: any[]): any[] {
-  const children = items.filter((item) => item.parent_id === parentId);
-  return children.map((child: any) => ({
-    ...child,
-    submenu: findChildren(child.id, items),
-  }));
-}
-
-export default async function HomePage() {
+export default async function NewMainPage() {
   const supabase = await createClient();
 
   // 홈페이지에 해당하는 메뉴 찾기
@@ -28,15 +11,6 @@ export default async function HomePage() {
     .eq("url", "/")
     .eq("is_active", true)
     .single();
-
-  // 메뉴 데이터 가져오기
-  const { data: menuItemsRaw } = await supabase
-    .from("cms_menus")
-    .select("*")
-    .eq("is_active", true)
-    .order("order_num", { ascending: true });
-
-  const menuItems = buildMenuTree(menuItemsRaw || []);
 
   // 배너 데이터 가져오기
   let bannerQuery = supabase
@@ -74,5 +48,5 @@ export default async function HomePage() {
 
   if (!widgets) widgets = [];
 
-  return <NewHomepage banners={banners} widgets={widgets} menuItems={menuItems} />;
+  return <NewHomepage banners={banners} widgets={widgets} />;
 }
