@@ -69,6 +69,8 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
   const [openMobileMenus, setOpenMobileMenus] = useState<string[]>([]);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [prevScrollPos, setPrevScrollPos] = useState(0);
+  const [visible, setVisible] = useState(true);
 
   useEffect(() => {
     setIsClient(true);
@@ -76,12 +78,21 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
+      const currentScrollPos = window.scrollY;
+
+      // Update scroll background effect
+      setIsScrolled(currentScrollPos > 50);
+
+      // Update navbar visibility based on scroll direction
+      // Show navbar when scrolling up or at top, hide when scrolling down
+      setVisible(prevScrollPos > currentScrollPos || currentScrollPos < 10);
+
+      setPrevScrollPos(currentScrollPos);
     };
+
     window.addEventListener("scroll", handleScroll);
-    return () =>
-      window.removeEventListener("scroll", handleScroll);
-  }, []);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [prevScrollPos]);
 
   const toggleMobileMenu = (menuId: string) => {
     setOpenMobileMenus((prev) =>
@@ -92,7 +103,9 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
   };
 
   return (
-    <nav className="fixed top-0 w-full z-50 transition-all duration-500 px-6 pt-6">
+    <nav className={`fixed top-0 w-full z-50 transition-all duration-500 px-6 pt-6 ${
+      visible ? "translate-y-0" : "-translate-y-full"
+    }`}>
       <div
         className={`max-w-[1400px] mx-auto transition-all duration-500 ${
           isScrolled

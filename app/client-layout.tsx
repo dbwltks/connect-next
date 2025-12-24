@@ -33,6 +33,7 @@ export default function ClientLayout({
   const searchParams = useSearchParams();
   const isAdminPage = pathname?.startsWith('/admin');
   const isHomePage = pathname === '/';
+  const isAuthPage = pathname?.startsWith('/login') || pathname?.startsWith('/register') || pathname?.startsWith('/forgot-password');
 
   // OAuth 성공 토스트 처리
   useEffect(() => {
@@ -59,10 +60,11 @@ export default function ClientLayout({
           disableTransitionOnChange
         >
           <div className="min-h-screen flex flex-col">
-            {/* 홈페이지가 아니고 관리자 페이지가 아닐 때만 기존 헤더 표시 */}
-            {!isAdminPage && !isHomePage && <Header initialMenus={headerMenus} />}
+            {/* 홈페이지, 관리자 페이지, 로그인/회원가입 페이지가 아닐 때만 헤더 표시 */}
+            {!isAdminPage && !isHomePage && !isAuthPage && <Header initialMenus={headerMenus} />}
             <main className="flex-1">{children}</main>
-            {!isAdminPage && <Footer menus={footerMenus} settings={footerSettings} />}
+            {/* 관리자 페이지와 로그인/회원가입 페이지가 아닐 때만 푸터 표시 */}
+            {!isAdminPage && !isAuthPage && <Footer menus={footerMenus} settings={footerSettings} />}
             <Toaster />
             <ScrollToTop />
             {/* <ServiceWorkerRegister /> */}

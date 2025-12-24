@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -341,22 +342,35 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="w-full py-8 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900/30 px-4 sm:px-6 relative ">
+    <div className="w-full min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900/30 px-4 sm:px-6 relative">
+      {/* 홈으로 돌아가기 버튼 - 폼 바깥 */}
+      <div className="w-full max-w-[450px] mb-4">
+        <Link
+          href="/"
+          className="inline-flex items-center text-sm text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          홈으로 돌아가기
+        </Link>
+      </div>
+
       <div className="mx-auto w-full max-w-[450px] bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 sm:p-8 md:p-10">
-        {/* <div className="mb-2">
-          <Link
-            href="/"
-            className="inline-flex items-center text-sm text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 mb-6"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            홈으로 돌아가기
+        {/* 로고 */}
+        <div className="flex justify-center mb-8">
+          <Link href="/" className="flex items-center">
+            <div className="relative h-16 w-32">
+              <Image
+                src="/connect_logo.png"
+                alt="커넥트 교회 로고"
+                fill
+                className="object-contain"
+                priority
+              />
+            </div>
           </Link>
-        </div> */}
+        </div>
 
         <div className="flex flex-col space-y-2 text-center mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-50">
-            회원가입
-          </h1>
           <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400">
             아래 정보를 입력하여 교회 커뮤니티에 가입하세요
           </p>
