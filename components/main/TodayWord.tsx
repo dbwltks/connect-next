@@ -73,7 +73,7 @@ export function TodayWord() {
               <div>
                 <span className="text-sm uppercase tracking-[0.3em] text-gray-400">Bible Connect IN</span>
                 <h2 className="text-[clamp(2rem,4vw,3rem)] leading-[1.1] mt-4 tracking-tight">
-                  성경과 커넥트
+                  말씀과 커넥트
                 </h2>
               </div>
               <Link href="/sermons/bcin">
