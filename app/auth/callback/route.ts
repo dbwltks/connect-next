@@ -10,12 +10,17 @@ export async function GET(request: NextRequest) {
   const type = searchParams.get("type") as EmailOtpType | null;
   const next = searchParams.get("next") ?? "/";
   const code = searchParams.get("code");
+  const redirect_to = searchParams.get("redirect_to");
+
+  // 개발 환경에서도 올바른 origin 사용
+  const origin = request.nextUrl.origin;
 
   if (code) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      return NextResponse.redirect(`${request.nextUrl.origin}${next}`);
+      const redirectPath = redirect_to || next;
+      return NextResponse.redirect(`${origin}${redirectPath}`);
     }
   }
 
@@ -26,10 +31,11 @@ export async function GET(request: NextRequest) {
       token_hash,
     });
     if (!error) {
-      return NextResponse.redirect(`${request.nextUrl.origin}${next}`);
+      const redirectPath = redirect_to || next;
+      return NextResponse.redirect(`${origin}${redirectPath}`);
     }
   }
 
   // return the user to an error page with instructions
-  return NextResponse.redirect(`${request.nextUrl.origin}/login`);
+  return NextResponse.redirect(`${origin}/login`);
 }

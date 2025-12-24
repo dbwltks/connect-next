@@ -1,6 +1,6 @@
 "use client";
 
-import { Menu, X, ChevronDown } from "lucide-react";
+import { Menu, X, ChevronDown, LogOut, User, Settings } from "lucide-react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -13,6 +13,18 @@ import {
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/auth-context";
+import { useUserProfile } from "@/hooks/use-user-profile";
 
 interface MenuItem {
   id: string;
@@ -50,9 +62,17 @@ function generateMenuDescription(title: string): string {
 }
 
 export function Navbar({ menuItems = [] }: NavbarProps) {
+  const { user, signOut } = useAuth();
+  const { profile } = useUserProfile(user);
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [openMobileMenus, setOpenMobileMenus] = useState<string[]>([]);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -147,17 +167,94 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
               </NavigationMenuList>
             </NavigationMenu>
 
-            <Link href="#contact">
-              <button
-                className={`px-8 py-3 rounded-full text-sm uppercase tracking-widest transition-all ${
-                  isScrolled
-                    ? "bg-black text-white hover:bg-gray-800"
-                    : "bg-gray-300 text-black hover:bg-gray-200"
-                }`}
-              >
-                Visit
-              </button>
-            </Link>
+            {!isClient ? (
+              <Button variant="ghost" size="icon" className="opacity-0">
+                <span className="sr-only">로그인</span>
+              </Button>
+            ) : profile ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="relative h-10 w-10 rounded-full p-0"
+                    disabled={isLoggingOut}
+                  >
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage
+                        src={profile?.avatar_url}
+                        alt={profile?.username || "User"}
+                      />
+                      <AvatarFallback className={`${
+                        isScrolled ? "bg-black text-white" : "bg-white text-black"
+                      }`}>
+                        {profile?.username?.charAt(0).toUpperCase() || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium">{profile.username}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {profile?.role === "admin" ? "관리자" : "일반 회원"}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/mypage" className="cursor-pointer">
+                      <User className="mr-2 h-4 w-4" />
+                      <span>마이페이지</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings" className="cursor-pointer">
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>설정</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  {profile?.role === "admin" && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin" className="cursor-pointer">
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>관리자 페이지</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={async () => {
+                      setIsLoggingOut(true);
+                      try {
+                        await signOut();
+                        window.location.href = "/";
+                      } finally {
+                        setIsLoggingOut(false);
+                      }
+                    }}
+                    disabled={isLoggingOut}
+                    className="cursor-pointer text-red-500 dark:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>{isLoggingOut ? "로그아웃 중..." : "로그아웃"}</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link href="/login">
+                <button
+                  className={`px-8 py-3 rounded-full text-sm uppercase tracking-widest transition-all ${
+                    isScrolled
+                      ? "bg-black text-white hover:bg-gray-800"
+                      : "bg-white text-black hover:bg-gray-200"
+                  }`}
+                >
+                  Login
+                </button>
+              </Link>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -223,14 +320,79 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
                 )}
               </div>
             ))}
-            <Link href="#contact">
-              <button
-                className="w-full bg-black text-white px-8 py-4 rounded-full text-sm uppercase tracking-widest hover:bg-gray-800 mt-4"
-                onClick={() => setIsOpen(false)}
-              >
-                Visit
-              </button>
-            </Link>
+
+            {/* User Menu in Mobile */}
+            <div className="mt-8 pt-4 border-t border-gray-200">
+              {profile ? (
+                <>
+                  <div className="flex items-center gap-3 mb-4">
+                    <Avatar>
+                      <AvatarImage
+                        src={profile?.avatar_url}
+                        alt={profile?.username || "User"}
+                      />
+                      <AvatarFallback className="bg-black text-white">
+                        {profile?.username?.charAt(0).toUpperCase() || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-sm font-medium text-black">{profile.username}</p>
+                      <p className="text-xs text-gray-600">
+                        {profile?.role === "admin" ? "관리자" : "일반 회원"}
+                      </p>
+                    </div>
+                  </div>
+                  <Link
+                    href="/mypage"
+                    className="block text-black text-base py-2 hover:opacity-60"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    마이페이지
+                  </Link>
+                  <Link
+                    href="/settings"
+                    className="block text-black text-base py-2 hover:opacity-60"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    설정
+                  </Link>
+                  {profile?.role === "admin" && (
+                    <Link
+                      href="/admin"
+                      className="block text-black text-base py-2 hover:opacity-60"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      관리자 페이지
+                    </Link>
+                  )}
+                  <button
+                    onClick={async () => {
+                      setIsLoggingOut(true);
+                      setIsOpen(false);
+                      try {
+                        await signOut();
+                        window.location.href = "/";
+                      } finally {
+                        setIsLoggingOut(false);
+                      }
+                    }}
+                    disabled={isLoggingOut}
+                    className="w-full text-left text-red-500 text-base py-2 hover:opacity-60 disabled:opacity-50"
+                  >
+                    {isLoggingOut ? "로그아웃 중..." : "로그아웃"}
+                  </button>
+                </>
+              ) : (
+                <Link href="/login">
+                  <button
+                    className="w-full bg-black text-white px-8 py-4 rounded-full text-sm uppercase tracking-widest hover:bg-gray-800"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Login
+                  </button>
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       )}

@@ -115,20 +115,23 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     try {
       const redirectTo = searchParams.get("redirect");
-      
-      const { data, error } = await createClient().auth.signInWithOAuth({ 
+
+      // 개발 환경에서는 localhost, 프로덕션에서는 실제 도메인 사용
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+
+      const { data, error } = await createClient().auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: redirectTo 
-            ? `${window.location.origin}/auth/callback?redirect_to=${redirectTo}`
-            : `${window.location.origin}/auth/callback`,
+          redirectTo: redirectTo
+            ? `${baseUrl}/auth/callback?redirect_to=${redirectTo}`
+            : `${baseUrl}/auth/callback`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
           }
         }
       });
-      
+
       if (error) {
         console.error("Google login error:", error);
         toast({
