@@ -79,10 +79,10 @@ export default function AvatarSelector({
       }
       
       // 이미지 파일만 필터링 (jpg, jpeg, png, webp)
-      const imageFiles = (data || []).filter((file: any) => 
+      const imageFiles = (data || []).filter((file: any) =>
         file.name && /\.(jpg|jpeg|png|webp)$/i.test(file.name)
-      );
-      
+      ) as unknown as StorageFile[];
+
       setAvatarFiles(imageFiles);
     } catch (error) {
       console.error("아바타 파일 로딩 실패:", error);
