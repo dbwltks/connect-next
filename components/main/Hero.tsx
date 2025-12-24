@@ -104,7 +104,7 @@ export function Hero({ banners }: HeroProps) {
               </>
             )}
           </h1>
-          <p className="text-xl text-white/80 mb-12 max-w-xl leading-relaxed font-light">
+          <p className="text-[0.75em] sm:text-xl text-white/80 mb-12 max-w-xl leading-relaxed font-light">
             {banner?.subtitle || "Love your God, Love your Neighbor"}
           </p>
           {banner?.hasButton && banner.buttonText && (
