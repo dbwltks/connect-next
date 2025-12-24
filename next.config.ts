@@ -13,8 +13,12 @@ const nextConfig: NextConfig = {
         hostname: "api.dicebear.com",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+        pathname: "/**",
+      },
     ],
-    domains: ["api.dicebear.com"],
     unoptimized: true,
   },
   // 페이지 이동 시 스크롤을 맨 위로
