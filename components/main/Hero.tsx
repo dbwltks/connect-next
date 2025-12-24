@@ -84,7 +84,7 @@ export function Hero({ banners }: HeroProps) {
                 Toronto<br />
                 <span className="flex items-baseline gap-2 flex-wrap">
                   <span>Connect</span>
-                  <span className="text-[0.32em] text-white/70 font-normal">with</span>
+                  <span className="text-[0.32em] sm:text-[0.32em] text-[0.25em] text-white/70 font-normal">with</span>
                   <TypeAnimation
                     sequence={[
                       "God",
@@ -96,7 +96,7 @@ export function Hero({ banners }: HeroProps) {
                     ]}
                     wrapper="span"
                     speed={50}
-                    className="text-[0.35em] text-white/70 font-normal"
+                    className="text-[0.35em] sm:text-[0.35em] text-[0.28em] text-white/70 font-normal"
                     repeat={Infinity}
                   />
                 </span>

@@ -38,7 +38,7 @@ export function MainPopup() {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="relative w-auto max-w-[80vw] max-h-[80vh] flex flex-col items-center gap-4">
+      <div className="relative w-auto max-w-[95vw] sm:max-w-[80vw] max-h-[80vh] flex flex-col items-center gap-3 sm:gap-4">
         {/* 팝업 이미지 */}
         <div className="relative bg-white shadow-2xl animate-in fade-in zoom-in duration-300 rounded-3xl overflow-hidden">
           {/* 닫기 버튼 */}
@@ -52,7 +52,7 @@ export function MainPopup() {
           <img
             src="/Images/2025연합예배.jpeg"
             alt="Main Announcement"
-            className="w-auto h-auto max-w-full max-h-[70vh] object-contain block"
+            className="w-auto h-auto max-w-full max-h-[75vh] sm:max-h-[70vh] object-contain block"
             onLoad={() => setImageLoaded(true)}
           />
         </div>
@@ -61,7 +61,7 @@ export function MainPopup() {
         {imageLoaded && (
           <button
             onClick={() => closePopup(true)}
-            className="self-start px-6 py-3 bg-white/90 backdrop-blur-md text-gray-700 text-sm font-medium hover:bg-white transition-colors rounded-full shadow-lg border border-gray-200"
+            className="self-start px-4 py-2 sm:px-6 sm:py-3 bg-white/90 backdrop-blur-md text-gray-700 text-xs sm:text-sm font-medium hover:bg-white transition-colors rounded-full shadow-lg border border-gray-200"
           >
             오늘 하루 보지 않기
           </button>
