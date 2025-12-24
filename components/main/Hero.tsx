@@ -96,7 +96,7 @@ export function Hero({ banners }: HeroProps) {
                     ]}
                     wrapper="span"
                     speed={50}
-                    className="text-[0.35em] sm:text-[0.35em] text-[0.28em] text-white/70 font-normal"
+                    className="sm:text-[0.35em] text-[0.25em] text-white/70 font-normal"
                     repeat={Infinity}
                   />
                 </span>
