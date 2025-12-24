@@ -53,7 +53,7 @@ export function ServiceTimes() {
                 <div className="flex justify-between items-start gap-8">
                   <div className="flex-1">
                     <h3 className="text-2xl mb-3">{service.name}</h3>
-                    <div className="flex gap-6 text-gray-500">
+                    <div className="flex gap-6 text-gray-500 text-sm sm:text-base">
                       <span>{service.day}</span>
                       <span>{service.location}</span>
                     </div>
