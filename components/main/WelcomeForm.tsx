@@ -32,7 +32,7 @@ export function WelcomeForm() {
 
       setIsSubmitted(true);
       setFormData({ name: "", email: "", phone: "", message: "" });
-      
+
       setTimeout(() => {
         setIsSubmitted(false);
       }, 5000);
@@ -50,10 +50,13 @@ export function WelcomeForm() {
         <div className="grid md:grid-cols-2 gap-12 md:gap-16">
           <div>
             <h3 className="text-[clamp(2rem,4vw,3.5rem)] leading-[1.1] mb-8 tracking-tight">
-              새로운 가족을<br />환영합니다
+              토론토 커넥트 교회에
+              <br />
+              오신것을 환영합니다
             </h3>
             <p className="text-xl text-white/60 mb-12 leading-relaxed">
-              교회에 궁금한 점이 있으신가요?<br />
+              교회에 궁금한 점이 있으신가요?
+              <br />
               말씀을 남겨주시면 정성껏 답변해 드리겠습니다.
             </p>
           </div>
@@ -64,8 +67,14 @@ export function WelcomeForm() {
                   <div className="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-6">
                     <div className="text-4xl text-white">✓</div>
                   </div>
-                  <h4 className="text-2xl mb-4 font-medium">소중한 메시지가 전달되었습니다.</h4>
-                  <p className="text-white/60">기입해주신 이메일로 확인 메일을 보내드렸습니다.<br />빠른 시일 내에 연락드리겠습니다.</p>
+                  <h4 className="text-2xl mb-4 font-medium">
+                    소중한 메시지가 전달되었습니다.
+                  </h4>
+                  <p className="text-white/60">
+                    기입해주신 이메일로 확인 메일을 보내드렸습니다.
+                    <br />
+                    빠른 시일 내에 연락드리겠습니다.
+                  </p>
                 </div>
               </div>
             ) : (
@@ -79,7 +88,9 @@ export function WelcomeForm() {
                       type="text"
                       required
                       value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                      }
                       className="w-full bg-white/5 border border-white/20 px-6 py-4 text-white placeholder-white/30 focus:border-white focus:outline-none transition-colors"
                       placeholder="이름"
                     />
@@ -92,7 +103,9 @@ export function WelcomeForm() {
                       type="tel"
                       required
                       value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, phone: e.target.value })
+                      }
                       className="w-full bg-white/5 border border-white/20 px-6 py-4 text-white placeholder-white/30 focus:border-white focus:outline-none transition-colors"
                       placeholder="000-0000-0000"
                     />
@@ -106,7 +119,9 @@ export function WelcomeForm() {
                     type="email"
                     required
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
                     className="w-full bg-white/5 border border-white/20 px-6 py-4 text-white placeholder-white/30 focus:border-white focus:outline-none transition-colors"
                     placeholder="example@email.com"
                   />
@@ -119,7 +134,9 @@ export function WelcomeForm() {
                     required
                     rows={4}
                     value={formData.message}
-                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, message: e.target.value })
+                    }
                     className="w-full bg-white/5 border border-white/20 px-6 py-4 text-white placeholder-white/30 focus:border-white focus:outline-none transition-colors resize-none"
                     placeholder="궁금하신 내용이나 남기고 싶은 말씀을 자유롭게 적어주세요."
                   />

@@ -249,3 +249,9 @@ select {
   background-position: 93% 50%;
   background-size: 1rem;
 }
+
+/* TypeAnimation 커서 위치 조정 */
+.type-animation-cursor::after {
+  vertical-align: baseline !important;
+  line-height: inherit !important;
+}

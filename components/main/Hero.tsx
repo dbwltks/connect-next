@@ -76,7 +76,7 @@ export function Hero({ banners }: HeroProps) {
         <div className="max-w-4xl">
           <div className="mb-8 flex items-center gap-4">
             <div className="h-[1px] w-16 bg-white"></div>
-            <span className="text-white/60 text-sm uppercase tracking-[0.3em]">Welcome</span>
+            <span className="text-white/60 text-sm uppercase tracking-[0.3em]">Welcome to your</span>
           </div>
           <h1 className="text-[clamp(3rem,8vw,7rem)] leading-[0.95] text-white mb-8 tracking-tight font-light">
             {banner?.title || (
@@ -96,7 +96,7 @@ export function Hero({ banners }: HeroProps) {
                     ]}
                     wrapper="span"
                     speed={50}
-                    className="sm:text-[0.35em] text-[0.25em] text-white/70 font-normal"
+                    className="sm:text-[0.35em] text-[0.25em] text-white/70 font-normal type-animation-cursor"
                     repeat={Infinity}
                   />
                 </span>

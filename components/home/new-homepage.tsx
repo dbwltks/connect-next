@@ -2,6 +2,8 @@
 
 import { Navbar } from "@/components/main/Navbar";
 import { Hero } from "@/components/main/Hero";
+import { LiveBanner } from "@/components/main/LiveBanner";
+import { ImageCarousel } from "@/components/main/ImageCarousel";
 import { ServiceTimes } from "@/components/main/ServiceTimes";
 import { LatestSermons } from "@/components/main/LatestSermons";
 import { Community } from "@/components/main/Community";
@@ -21,13 +23,24 @@ interface NewHomepageProps {
 
 export default function NewHomepage({ banners, widgets, menuItems }: NewHomepageProps) {
   const locationWidget = widgets?.find(w => w.type === 'location');
+  const carouselWidget = widgets?.find(w => w.type === 'carousel');
+
+  // 캐러셀 데이터 변환 - desktop_images 또는 mobile_images 사용
+  const carouselImages = carouselWidget?.settings?.desktop_images?.map((img: any) => ({
+    id: img.id || String(Math.random()),
+    imageUrl: img.image_url,
+    title: img.title,
+    description: img.description,
+  })) || [];
 
   return (
     <div className="min-h-screen bg-white">
       <Navbar menuItems={menuItems} />
       <MainPopup />
       <Hero banners={banners} />
+      {/* <ImageCarousel images={carouselImages} /> */}
       <ServiceTimes />
+      <LiveBanner />
       <TodayWord />
       <Events />
       <LatestSermons />

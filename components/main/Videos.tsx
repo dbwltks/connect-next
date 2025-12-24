@@ -49,9 +49,9 @@ export function Videos() {
     <section id="videos" className="py-24 bg-gray-50 text-black">
       <div className="max-w-[1400px] mx-auto px-6">
         <div className="mb-16">
-          <span className="text-sm uppercase tracking-[0.3em] text-gray-400">Media</span>
+          <span className="text-sm uppercase tracking-[0.3em] text-gray-400">Video</span>
           <h2 className="text-[clamp(2.5rem,5vw,4.5rem)] leading-[1.1] mt-6 mb-4 tracking-tight">
-            미디어 속 커넥트
+            영상 속 커넥트
           </h2>
         </div>
 

@@ -3,25 +3,25 @@ export function ServiceTimes() {
     {
       name: "주일 예배",
       time: "15:00",
-      location: "별관 체육관",
+      location: "@별관 체육관",
       day: "일요일",
     },
     {
       name: "목요 기도회",
       time: "19:15",
-      location: "별관 예배실",
+      location: "@별관 예배실",
       day: "목요일",
     },
     {
       name: "Bible Connect IN",
       time: "19:00",
-      location: "목사관",
+      location: "@목사관",
       day: "화요일",
     },
     {
       name: "Bible Connect IN",
       time: "17:00",
-      location: "Toronto Public Library",
+      location: "@Toronto Public Library",
       day: "목요일",
     },
   ];
@@ -32,15 +32,19 @@ export function ServiceTimes() {
         <div className="grid lg:grid-cols-2 gap-20 items-center">
           <div>
             <div className="mb-8">
-              <span className="text-sm uppercase tracking-[0.3em] text-gray-400">Service Times</span>
+              <span className="text-sm uppercase tracking-[0.3em] text-gray-400">
+                Service Times
+              </span>
             </div>
             <h2 className="text-[clamp(2.5rem,5vw,4.5rem)] leading-[1.1] mb-8 tracking-tight">
-              당신을<br />
-              환영합니다
+              예배와 말씀
+              <br />
+              시간 안내
             </h2>
             <p className="text-xl text-gray-500 leading-relaxed">
-              언제든 편하게 방문해주세요.<br />
-              여러분의 시간에 맞는 예배와 말씀 모임을 찾아보세요.
+              함께 예배하며 하나님을 만나는 시간,
+              <br />
+              말씀의 자리로 여러분을 초대합니다.
             </p>
           </div>
 
