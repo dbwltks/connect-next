@@ -345,7 +345,7 @@ export default function ContentSection({
   };
 
   const updateIframe = (
-    iframeRef: React.RefObject<HTMLIFrameElement>,
+    iframeRef: React.RefObject<HTMLIFrameElement | null>,
     contentToRender: string,
     iframeName: string
   ) => {

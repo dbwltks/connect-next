@@ -576,7 +576,7 @@ interface ImageManagerProps {
   mode: "desktop" | "mobile";
   images: any[];
   carouselUploading: boolean;
-  carouselFileInputRef: React.RefObject<HTMLInputElement>;
+  carouselFileInputRef: React.RefObject<HTMLInputElement | null>;
   onImageUpload: (file: File, mode: "desktop" | "mobile") => void;
   onMoveImage: (mode: "desktop" | "mobile", index: number, direction: "left" | "right") => void;
   onDeleteImage: (mode: "desktop" | "mobile", index: number) => void;

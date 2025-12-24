@@ -84,7 +84,7 @@ export default function TeamsTab({ programId }: TeamsTabProps) {
     selectedMember: any | null;
     selectedRole: string;
   }}>({});
-  const searchMembersRef = useRef<NodeJS.Timeout>();
+  const searchMembersRef = useRef<NodeJS.Timeout | null>(null);
   
   // 편집 상태
   const [selectedTeamEdit, setSelectedTeamEdit] = useState<Team | null>(null);

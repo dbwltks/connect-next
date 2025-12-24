@@ -64,7 +64,7 @@ interface Program {
 interface DashboardCard {
   id: string;
   title: string;
-  component: JSX.Element;
+  component: React.ReactNode;
 }
 
 // 기본 카드 순서

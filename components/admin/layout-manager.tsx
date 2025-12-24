@@ -408,7 +408,7 @@ const AREA_ID_TO_COLUMN_POSITION: { [key: string]: number } = {
   right: 2,
 };
 
-export default function LayoutManager(): JSX.Element {
+export default function LayoutManager(): React.ReactNode {
   // 유틸리티 함수 - Supabase 쿼리 헬퍼
   const supabase = createClient();
 
@@ -1381,7 +1381,7 @@ export default function LayoutManager(): JSX.Element {
 
   // 공통 위젯 래퍼 컴포넌트
   // 위젯 타입에 따른 미리보기 렌더링
-  const renderWidgetPreview = (widget: IWidget): React.ReactElement | null => {
+  const renderWidgetPreview = (widget: IWidget): React.ReactNode => {
     switch (widget.type) {
       case "container":
         return renderContainerWidget(widget, allWidgets);

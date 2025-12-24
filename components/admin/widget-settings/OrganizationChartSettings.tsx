@@ -325,7 +325,7 @@ interface MemberFormProps {
   onCancel: () => void;
   memberImageUploading: boolean;
   setMemberImageUploading: (loading: boolean) => void;
-  memberFileInputRef: React.RefObject<HTMLInputElement>;
+  memberFileInputRef: React.RefObject<HTMLInputElement | null>;
 }
 
 function MemberForm({

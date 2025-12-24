@@ -594,7 +594,7 @@ export const Editor: React.FC<EditorProps> = ({
   placeholder = "새 문서를 작성해보세요.",
   className = "",
 }) => {
-  const updateTimeoutRef = React.useRef<NodeJS.Timeout>();
+  const updateTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const isUpdatingFromProps = React.useRef(false);
   
   const debouncedUpdate = React.useCallback((content: string) => {
