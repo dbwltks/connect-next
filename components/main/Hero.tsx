@@ -43,29 +43,32 @@ export function Hero({ banners }: HeroProps) {
       {/* Background Video or Image */}
       <div className="absolute inset-0 z-0">
         {isYoutube && youtubeId ? (
-          <iframe
-            src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&controls=0&showinfo=0&rel=0&loop=1&playlist=${youtubeId}&modestbranding=1&iv_load_policy=3&fs=0`}
-            title="YouTube video player"
-            allow="autoplay; encrypted-media"
-            className="pointer-events-none"
-            style={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-              width: "100vw",
-              height: "56.25vw",
-              minWidth: "177.77vh",
-              minHeight: "100vh",
-              border: 0,
-            }}
-          />
+          <>
+            <iframe
+              src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&controls=0&showinfo=0&rel=0&loop=1&playlist=${youtubeId}&modestbranding=1&iv_load_policy=3&fs=0`}
+              title="YouTube video player"
+              allow="autoplay; encrypted-media"
+              className="pointer-events-none"
+              style={{
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                width: "100vw",
+                height: "56.25vw",
+                minWidth: "177.77vh",
+                minHeight: "100vh",
+                border: 0,
+              }}
+            />
+            <div className="absolute inset-0 bg-black/40" />
+          </>
         ) : (
           <Image
             src={banner?.imageUrl || defaultImage}
             alt={banner?.title || "Hero"}
             fill
-            className="object-cover opacity-40"
+            className="object-cover opacity-30"
             priority
           />
         )}
