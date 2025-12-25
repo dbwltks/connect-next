@@ -9,13 +9,22 @@ export function MainPopup() {
   const [imageLoaded, setImageLoaded] = useState(false);
 
   useEffect(() => {
+    // 캐나다(토론토) 시간으로 2024년 12월 28일 오후 5시
+    const endDate = new Date('2024-12-28T17:00:00-05:00'); // EST 시간대
+    const now = new Date();
+
+    // 만료 날짜가 지났으면 팝업을 표시하지 않음
+    if (now > endDate) {
+      return;
+    }
+
     // 팝업이 이미 닫혔는지 확인 (localStorage 사용)
     const isClosed = localStorage.getItem("main-popup-closed");
     const expiry = localStorage.getItem("main-popup-expiry");
 
-    const now = new Date().getTime();
+    const nowTime = now.getTime();
 
-    if (!isClosed || (expiry && now > parseInt(expiry))) {
+    if (!isClosed || (expiry && nowTime > parseInt(expiry))) {
       // 약간의 지연 후 팝업 표시
       const timer = setTimeout(() => {
         setIsOpen(true);
