@@ -87,6 +87,7 @@ export function Hero({ banners }: HeroProps) {
                 Toronto<br />
                 <span className="flex items-baseline gap-2 flex-wrap">
                   <span>Connect</span>
+                  {/* gravitas-one-regular  */}
                   {/* <span className="text-[0.32em] sm:text-[0.32em] text-[0.25em] text-white/70 font-normal">with</span> */}
                   {/* <TypeAnimation
                     sequence={[

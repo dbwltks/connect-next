@@ -1,5 +1,6 @@
 @import url("https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&family=Nanum+Myeongjo:wght@400;700;800&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Sekuya&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Gravitas+One&family=Sekuya&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -103,6 +104,12 @@
 
 .font-nanum-myeongjo {
   font-family: "Nanum Myeongjo", "나눔명조", serif;
+}
+
+.gravitas-one-regular {
+  font-family: "Gravitas One", serif;
+  font-weight: 400;
+  font-style: normal;
 }
 
 body {

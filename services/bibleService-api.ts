@@ -157,11 +157,19 @@ export function formatBibleVerses(
     // NIV 영어 성경의 경우 HTML 태그 정리
     let cleanText = verse.text;
     if (version === "niv") {
+      // 1. ▷ 이후의 주석 부분 전체 제거 (줄바꿈 포함, Or 대안 번역 포함됨)
+      cleanText = cleanText.replace(/▷[\s\S]*$/g, "");
+
+      // 2. <sup> 태그와 내용 제거
+      cleanText = cleanText.replace(/<sup[^>]*>.*?<\/sup>/gi, "");
+
+      // 3. <i> 태그와 내용 제거
+      cleanText = cleanText.replace(/<i[^>]*>.*?<\/i>/gi, "");
+
+      // 4. <br> 태그 제거
       cleanText = cleanText.replace(/<br\s*\/?>/gi, " ");
-      cleanText = cleanText.replace(/<sup>.*?<\/sup>/gi, " ");
-      cleanText = cleanText.replace(/▷\s*/gi, "");
-      cleanText = cleanText.replace(/<i>.*?<\/i>/gi, " ");
-      cleanText = cleanText.replace(/Or\s+/gi, "");
+
+      // 5. 여러 공백을 하나로 통합하고 앞뒤 공백 제거
       cleanText = cleanText.replace(/\s+/g, " ").trim();
     }
 
@@ -214,11 +222,19 @@ export function formatBibleVersesWithSub(
     // 본문
     let mainText = mainVerse.text;
     if (mainVersion === "niv") {
+      // 1. ▷ 이후의 주석 부분 전체 제거 (줄바꿈 포함, Or 대안 번역 포함됨)
+      mainText = mainText.replace(/▷[\s\S]*$/g, "");
+
+      // 2. <sup> 태그와 내용 제거
+      mainText = mainText.replace(/<sup[^>]*>.*?<\/sup>/gi, "");
+
+      // 3. <i> 태그와 내용 제거
+      mainText = mainText.replace(/<i[^>]*>.*?<\/i>/gi, "");
+
+      // 4. <br> 태그 제거
       mainText = mainText.replace(/<br\s*\/?>/gi, " ");
-      mainText = mainText.replace(/<sup>.*?<\/sup>/gi, " ");
-      mainText = mainText.replace(/▷\s*/gi, "");
-      mainText = mainText.replace(/<i>.*?<\/i>/gi, " ");
-      mainText = mainText.replace(/Or\s+/gi, "");
+
+      // 5. 여러 공백을 하나로 통합하고 앞뒤 공백 제거
       mainText = mainText.replace(/\s+/g, " ").trim();
     }
 
@@ -228,11 +244,19 @@ export function formatBibleVersesWithSub(
     if (subVerse) {
       let subText = subVerse.text;
       if (subVersion === "niv") {
+        // 1. ▷ 이후의 주석 부분 전체 제거 (줄바꿈 포함, Or 대안 번역 포함됨)
+        subText = subText.replace(/▷[\s\S]*$/g, "");
+
+        // 2. <sup> 태그와 내용 제거
+        subText = subText.replace(/<sup[^>]*>.*?<\/sup>/gi, "");
+
+        // 3. <i> 태그와 내용 제거
+        subText = subText.replace(/<i[^>]*>.*?<\/i>/gi, "");
+
+        // 4. <br> 태그 제거
         subText = subText.replace(/<br\s*\/?>/gi, " ");
-        subText = subText.replace(/<sup>.*?<\/sup>/gi, " ");
-        subText = subText.replace(/<i>.*?<\/i>/gi, " ");
-        subText = subText.replace(/▷\s*/gi, "");
-        subText = subText.replace(/Or\s+/gi, "");
+
+        // 5. 여러 공백을 하나로 통합하고 앞뒤 공백 제거
         subText = subText.replace(/\s+/g, " ").trim();
       }
       liContent += `<br><span style="color: #666666; font-size: 0.9em;">${subText}</span><br>`;
