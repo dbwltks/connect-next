@@ -81,14 +81,14 @@ export function Hero({ banners }: HeroProps) {
             <div className="h-[1px] w-16 bg-white"></div>
             <span className="text-white/60 text-sm uppercase tracking-[0.3em]">Welcome to your</span>
           </div>
-          <h1 className="text-[clamp(3rem,8vw,7rem)] leading-[0.95] text-white mb-8 tracking-tight font-light">
+          <h1 className="text-[clamp(3rem,8vw,7rem)] leading-[0.95] text-white mb-8 tracking-tight font-light sekuya-regular">
             {banner?.title || (
               <>
                 Toronto<br />
                 <span className="flex items-baseline gap-2 flex-wrap">
                   <span>Connect</span>
-                  <span className="text-[0.32em] sm:text-[0.32em] text-[0.25em] text-white/70 font-normal">with</span>
-                  <TypeAnimation
+                  {/* <span className="text-[0.32em] sm:text-[0.32em] text-[0.25em] text-white/70 font-normal">with</span> */}
+                  {/* <TypeAnimation
                     sequence={[
                       "God",
                       2000,
@@ -99,9 +99,9 @@ export function Hero({ banners }: HeroProps) {
                     ]}
                     wrapper="span"
                     speed={50}
-                    className="sm:text-[0.35em] text-[0.25em] text-white/70 font-normal type-animation-cursor"
+                    className="sm:text-[0.3em] text-[0.2em] text-white/70 font-normal type-animation-cursor font-sans"
                     repeat={Infinity}
-                  />
+                  /> */}
                 </span>
                 Church
               </>

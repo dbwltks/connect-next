@@ -1,4 +1,5 @@
 @import url("https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&family=Nanum+Myeongjo:wght@400;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Sekuya&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -254,4 +255,11 @@ select {
 .type-animation-cursor::after {
   vertical-align: baseline !important;
   line-height: inherit !important;
+}
+
+/* Sekuya 폰트 */
+.sekuya-regular {
+  font-family: "Sekuya", system-ui;
+  font-weight: 400;
+  font-style: normal;
 }

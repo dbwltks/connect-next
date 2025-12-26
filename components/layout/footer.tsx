@@ -487,12 +487,6 @@ export default function Footer({
           </p>
           <div className="mt-3 md:mt-0 flex items-center gap-3">
             <ThemeSwitcher />
-            <Link
-              href="/privacy"
-              className="text-xs text-gray-500 hover:text-blue-600 dark:text-gray-500 dark:hover:text-blue-400"
-            >
-              개인정보처리방침
-            </Link>
           </div>
         </div>
       </div>

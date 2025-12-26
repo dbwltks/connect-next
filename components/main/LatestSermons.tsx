@@ -62,7 +62,7 @@ export function LatestSermons() {
       <div className="max-w-[1400px] mx-auto px-6">
         <div className="mb-20">
           <span className="text-sm uppercase tracking-[0.3em] text-white/40">Latest Messages</span>
-          <h2 className="text-[clamp(2.5rem,5vw,4.5rem)] leading-[1.1] mt-6 mb-6 tracking-tight">
+          <h2 className="text-[clamp(2.5rem,5vw,4.5rem)] font-medium leading-[1.1] mt-6 mb-6 tracking-tight">
             최신 설교
           </h2>
           <p className="text-xl text-white/60">

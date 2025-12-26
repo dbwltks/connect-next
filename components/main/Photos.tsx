@@ -45,11 +45,11 @@ export function Photos() {
   };
 
   return (
-    <section id="photos" className="py-24 bg-white">
+    <section id="photos" className="py-24 bg-white dark:bg-gray-950">
       <div className="max-w-[1400px] mx-auto px-6">
         <div className="mb-16">
-          <span className="text-sm uppercase tracking-[0.3em] text-gray-400">Memory</span>
-          <h2 className="text-[clamp(2.5rem,5vw,4.5rem)] leading-[1.1] mt-6 mb-4 tracking-tight">
+          <span className="text-sm uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">Memory</span>
+          <h2 className="text-[clamp(2.5rem,5vw,4.5rem)] font-medium leading-[1.1] mt-6 mb-4 tracking-tight text-black dark:text-white">
             사진속 커넥트
           </h2>
         </div>
@@ -57,11 +57,11 @@ export function Photos() {
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="animate-pulse bg-gray-100 aspect-[4/3]"></div>
+              <div key={i} className="animate-pulse bg-gray-100 dark:bg-gray-800 aspect-[4/3]"></div>
             ))}
           </div>
         ) : posts.length === 0 ? (
-          <div className="text-center py-20 text-gray-400">
+          <div className="text-center py-20 text-gray-400 dark:text-gray-500">
             등록된 사진이 없습니다.
           </div>
         ) : (
@@ -70,7 +70,7 @@ export function Photos() {
               <Link
                 key={post.id}
                 href={getPostUrl(post)}
-                className="group cursor-pointer overflow-hidden bg-gray-100 aspect-[4/3] relative"
+                className="group cursor-pointer overflow-hidden bg-gray-100 dark:bg-gray-800 aspect-[4/3] relative"
               >
                 {post.thumbnail_image ? (
                   <ImageWithFallback
@@ -79,8 +79,8 @@ export function Photos() {
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[1.5s] ease-out"
                   />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
-                    <span className="text-gray-400 text-lg">{post.title}</span>
+                  <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
+                    <span className="text-gray-400 dark:text-gray-500 text-lg">{post.title}</span>
                   </div>
                 )}
                 {/* Overlay on hover */}
@@ -97,7 +97,7 @@ export function Photos() {
         {posts.length > 0 && (
           <div className="mt-16 text-center">
             <Link href={menuUrlMap[pageId] || '#'}>
-              <button className="px-12 py-5 border-2 border-black text-black text-sm uppercase tracking-widest hover:bg-black hover:text-white transition-all">
+              <button className="px-12 py-5 border-2 border-black dark:border-white text-black dark:text-white text-sm uppercase tracking-widest hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all">
                 View All Photos
               </button>
             </Link>

@@ -49,10 +49,10 @@ export function WelcomeForm() {
       <div className="max-w-[1400px] mx-auto px-6">
         <div className="grid md:grid-cols-2 gap-12 md:gap-16">
           <div>
-            <h3 className="text-[clamp(2rem,4vw,3.5rem)] leading-[1.1] mb-8 tracking-tight">
+            <h3 className="text-[clamp(2rem,4vw,3.5rem)] font-medium leading-[1.1] mb-8 tracking-tight">
               토론토 커넥트 교회에
               <br />
-              오신것을 환영합니다
+              오신 것을 환영합니다
             </h3>
             <p className="text-xl text-white/60 mb-12 leading-relaxed">
               교회에 궁금한 점이 있으신가요?

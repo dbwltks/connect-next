@@ -63,36 +63,36 @@ export function TodayWord() {
   };
 
   return (
-    <section id="today-word" className="min-h-screen bg-white flex items-center py-24 border-b border-gray-50">
+    <section id="today-word" className="min-h-screen bg-white dark:bg-gray-950 flex items-center py-24 border-b border-gray-50 dark:border-gray-900">
       <div className="max-w-[1400px] mx-auto px-6 w-full">
         <div className="grid lg:grid-cols-2 gap-16 lg:gap-24">
-          
+
           {/* 왼쪽: 성경과 커넥트 */}
           <div>
             <div className="flex justify-between items-end mb-12">
               <div>
-                <span className="text-sm uppercase tracking-[0.3em] text-gray-400">Bible Connect IN</span>
-                <h2 className="text-[clamp(2rem,4vw,3rem)] leading-[1.1] mt-4 tracking-tight">
+                <span className="text-sm uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">Bible Connect IN</span>
+                <h2 className="text-[clamp(2rem,4vw,3rem)] font-medium leading-[1.1] mt-4 tracking-tight text-black dark:text-white">
                   말씀과 커넥트
                 </h2>
               </div>
               <Link href="/sermons/bcin">
-                <button className="group inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] font-medium hover:opacity-60 transition-opacity mb-1">
+                <button className="group inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] font-medium hover:opacity-60 transition-opacity mb-1 text-black dark:text-white">
                   전체보기 <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-1" />
                 </button>
               </Link>
             </div>
 
-            <div className="divide-y divide-gray-100 border-t border-gray-100">
+            <div className="divide-y divide-gray-100 dark:divide-gray-800 border-t border-gray-100 dark:border-gray-800">
               {isBcinLoading ? (
                 [1, 2, 3, 4, 5].map((i) => (
                   <div key={i} className="py-6 animate-pulse">
-                    <div className="h-3 bg-gray-100 w-20 mb-3"></div>
-                    <div className="h-6 bg-gray-100 w-3/4"></div>
+                    <div className="h-3 bg-gray-100 dark:bg-gray-800 w-20 mb-3"></div>
+                    <div className="h-6 bg-gray-100 dark:bg-gray-800 w-3/4"></div>
                   </div>
                 ))
               ) : bcinPosts.length === 0 ? (
-                <div className="py-12 text-center text-gray-400">
+                <div className="py-12 text-center text-gray-400 dark:text-gray-500">
                   등록된 말씀이 없습니다.
                 </div>
               ) : (
@@ -100,12 +100,12 @@ export function TodayWord() {
                   <Link
                     key={post.id}
                     href={getPostUrl(post, bcinMenuUrlMap)}
-                    className="group flex flex-col justify-center py-6 hover:bg-gray-50/50 transition-all px-4 -mx-4 rounded-xl"
+                    className="group flex flex-col justify-center py-6 hover:bg-gray-50/50 dark:hover:bg-gray-900/50 transition-all px-4 -mx-4 rounded-xl"
                   >
-                    <div className="text-[11px] text-gray-400 tracking-wider mb-2">
+                    <div className="text-[11px] text-gray-400 dark:text-gray-500 tracking-wider mb-2">
                       {formatDate(post.published_at || post.created_at)}
                     </div>
-                    <h3 className="text-lg md:text-xl tracking-tight group-hover:text-black/70 transition-colors line-clamp-1">
+                    <h3 className="text-lg md:text-xl tracking-tight text-black dark:text-white group-hover:text-black/70 dark:group-hover:text-white/70 transition-colors line-clamp-1">
                       {post.title}
                     </h3>
                   </Link>
@@ -118,28 +118,28 @@ export function TodayWord() {
           <div>
             <div className="flex justify-between items-end mb-12">
               <div>
-                <span className="text-sm uppercase tracking-[0.3em] text-gray-400">Weekly Bulletin</span>
-                <h2 className="text-[clamp(2rem,4vw,3rem)] leading-[1.1] mt-4 tracking-tight">
+                <span className="text-sm uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">Weekly Bulletin</span>
+                <h2 className="text-[clamp(2rem,4vw,3rem)] font-medium leading-[1.1] mt-4 tracking-tight text-black dark:text-white">
                   온라인 주보
                 </h2>
               </div>
               <Link href="/connecting/weekly-bulletin">
-                <button className="group inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] font-medium hover:opacity-60 transition-opacity mb-1">
+                <button className="group inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] font-medium hover:opacity-60 transition-opacity mb-1 text-black dark:text-white">
                   전체보기 <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-1" />
                 </button>
               </Link>
             </div>
 
-            <div className="divide-y divide-gray-100 border-t border-gray-100">
+            <div className="divide-y divide-gray-100 dark:divide-gray-800 border-t border-gray-100 dark:border-gray-800">
               {isBulletinLoading ? (
                 [1, 2, 3, 4, 5].map((i) => (
                   <div key={i} className="py-6 animate-pulse">
-                    <div className="h-3 bg-gray-100 w-20 mb-3"></div>
-                    <div className="h-6 bg-gray-100 w-3/4"></div>
+                    <div className="h-3 bg-gray-100 dark:bg-gray-800 w-20 mb-3"></div>
+                    <div className="h-6 bg-gray-100 dark:bg-gray-800 w-3/4"></div>
                   </div>
                 ))
               ) : bulletinPosts.length === 0 ? (
-                <div className="py-12 text-center text-gray-400">
+                <div className="py-12 text-center text-gray-400 dark:text-gray-500">
                   등록된 주보가 없습니다.
                 </div>
               ) : (
@@ -147,12 +147,12 @@ export function TodayWord() {
                   <Link
                     key={post.id}
                     href={getPostUrl(post, bulletinMenuUrlMap)}
-                    className="group flex flex-col justify-center py-6 hover:bg-gray-50/50 transition-all px-4 -mx-4 rounded-xl"
+                    className="group flex flex-col justify-center py-6 hover:bg-gray-50/50 dark:hover:bg-gray-900/50 transition-all px-4 -mx-4 rounded-xl"
                   >
-                    <div className="text-[11px] text-gray-400 tracking-wider mb-2">
+                    <div className="text-[11px] text-gray-400 dark:text-gray-500 tracking-wider mb-2">
                       {formatDate(post.published_at || post.created_at)}
                     </div>
-                    <h3 className="text-lg md:text-xl tracking-tight group-hover:text-black/70 transition-colors line-clamp-1">
+                    <h3 className="text-lg md:text-xl tracking-tight text-black dark:text-white group-hover:text-black/70 dark:group-hover:text-white/70 transition-colors line-clamp-1">
                       {post.title}
                     </h3>
                   </Link>
