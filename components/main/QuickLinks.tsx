@@ -9,6 +9,23 @@ export function QuickLinks() {
   const [showDonationPopup, setShowDonationPopup] = useState(false);
   const [showPrayerPopup, setShowPrayerPopup] = useState(false);
 
+  // Smooth scroll 핸들러
+  const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    // # 으로 시작하는 anchor link인 경우 smooth scroll
+    if (href.startsWith("#")) {
+      e.preventDefault();
+      const targetId = href.substring(1);
+      const targetElement = document.getElementById(targetId);
+
+      if (targetElement) {
+        targetElement.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }
+    }
+  };
+
   const links = [
     {
       title: "주보",
@@ -94,7 +111,7 @@ export function QuickLinks() {
                     <div className="w-12 h-12 md:w-16 md:h-16 mb-4 flex items-center justify-center text-black dark:text-white group-hover:text-white dark:group-hover:text-black transition-colors">
                       <Icon className="w-full h-full" strokeWidth={1.5} />
                     </div>
-                    <span className="text-xs md:text-base font-medium text-black dark:text-white group-hover:text-white dark:group-hover:text-black transition-colors text-center">
+                    <span className="text-xs sm:text-base font-medium text-black dark:text-white group-hover:text-white dark:group-hover:text-black transition-colors text-center">
                       {link.title}
                     </span>
                   </button>
@@ -105,12 +122,13 @@ export function QuickLinks() {
                 <Link
                   key={index}
                   href={link.href!}
+                  onClick={(e) => handleLinkClick(e, link.href!)}
                   className="group flex flex-col items-center justify-center p-4 md:p-8 bg-gray-50 dark:bg-gray-800 hover:bg-black dark:hover:bg-white transition-all duration-300 rounded-lg"
                 >
                   <div className="w-12 h-12 md:w-16 md:h-16 mb-4 flex items-center justify-center text-black dark:text-white group-hover:text-white dark:group-hover:text-black transition-colors">
                     <Icon className="w-full h-full" strokeWidth={1.5} />
                   </div>
-                  <span className="text-xs md:text-base font-medium text-black dark:text-white group-hover:text-white dark:group-hover:text-black transition-colors text-center">
+                  <span className="text-xs sm:text-base font-medium text-black dark:text-white group-hover:text-white dark:group-hover:text-black transition-colors text-center">
                     {link.title}
                   </span>
                 </Link>
