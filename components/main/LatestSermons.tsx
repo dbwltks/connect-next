@@ -195,7 +195,7 @@ export function LatestSermons() {
         )}
 
         <div className="mt-20 text-center">
-          <button className="px-12 py-5 border-2 border-black dark:border-white text-black dark:text-white text-sm uppercase tracking-widest hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all">
+          <button className="px-12 py-5 border-2 rounded-2xl border-black dark:border-white text-black dark:text-white text-sm uppercase tracking-widest hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all">
             View All Sermons
           </button>
         </div>

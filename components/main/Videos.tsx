@@ -180,7 +180,7 @@ export function Videos() {
         {posts.length > 0 && (
           <div className="mt-16 text-center">
             <Link href={menuUrlMap[pageId] || '#'}>
-              <button className="px-12 py-5 border-2 border-black dark:border-white text-black dark:text-white text-sm uppercase tracking-widest hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all">
+              <button className="px-12 py-5 border-2 rounded-2xl border-black dark:border-white text-black dark:text-white text-sm uppercase tracking-widest hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all">
                 View All Videos
               </button>
             </Link>

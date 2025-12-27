@@ -144,7 +144,7 @@ export function WelcomeForm() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full px-12 py-5 bg-white text-black text-sm uppercase tracking-widest hover:bg-gray-200 transition-all disabled:bg-white/20 disabled:text-white/40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full px-12 py-5 rounded-2xl bg-white text-black text-sm uppercase tracking-widest hover:bg-gray-200 transition-all disabled:bg-white/20 disabled:text-white/40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isSubmitting ? (
                     <>
