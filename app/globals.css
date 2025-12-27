@@ -8,6 +8,23 @@
 
 /* TipTap Editor Styles */
 
+.animate-gradient-x {
+  background-size: 200% 200%;
+  animation: gradient-x 3s ease infinite;
+}
+
+@keyframes gradient-x {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
 @layer base {
   :root {
     --lg-bg-color: rgba(255, 255, 255, 0.25);
@@ -269,4 +286,24 @@ select {
   font-family: "Sekuya", system-ui;
   font-weight: 400;
   font-style: normal;
+}
+
+/* 화살표 좌우 움직임 애니메이션 */
+@keyframes slideRight {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(5px);
+  }
+}
+
+/* Shimmer 애니메이션 */
+@keyframes shimmer {
+  0% {
+    background-position: -100% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }

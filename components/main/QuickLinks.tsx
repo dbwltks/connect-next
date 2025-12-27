@@ -17,7 +17,7 @@ export function QuickLinks() {
       type: "link" as const,
     },
     {
-      title: "오늘의 말씀",
+      title: "BCIN",
       icon: Book,
       href: "/sermons/bcin", // BCIN 페이지
       type: "link" as const,
@@ -50,7 +50,7 @@ export function QuickLinks() {
 
   return (
     <>
-      <section className="py-24 bg-white dark:bg-gray-900">
+      <section id="quick-links" className="py-24 bg-white dark:bg-gray-900">
         <div className="max-w-[1400px] mx-auto px-6">
           {/* 헤더 */}
           <div className="text-center mb-16">

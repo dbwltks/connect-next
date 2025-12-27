@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { ArrowDown } from "lucide-react";
+import { ArrowDown, ChevronRight } from "lucide-react";
 import { TypeAnimation } from "react-type-animation";
 
 interface Banner {
@@ -37,6 +37,25 @@ export function Hero({ banners }: HeroProps) {
   // 유튜브 비디오인지 확인
   const isYoutube = banner?.imageUrl && isYoutubeUrl(banner.imageUrl);
   const youtubeId = isYoutube ? extractYoutubeId(banner.imageUrl) : null;
+
+  // Smooth scroll 핸들러
+  const handleButtonClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    const href = banner?.buttonUrl || "#";
+
+    // # 으로 시작하는 anchor link인 경우 smooth scroll
+    if (href.startsWith("#")) {
+      e.preventDefault();
+      const targetId = href.substring(1);
+      const targetElement = document.getElementById(targetId);
+
+      if (targetElement) {
+        targetElement.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }
+    }
+  };
 
   return (
     <section id="home" className="relative h-screen flex items-center overflow-hidden bg-black">
@@ -113,9 +132,10 @@ export function Hero({ banners }: HeroProps) {
           </p>
           {banner?.hasButton && banner.buttonText && (
             <div className="flex flex-wrap gap-4">
-              <a href={banner.buttonUrl || "#"}>
-                <button className="px-10 py-5 bg-white text-black text-sm uppercase tracking-widest hover:bg-gray-200 transition-all">
-                  {banner.buttonText}
+              <a href={banner.buttonUrl || "#"} onClick={handleButtonClick}>
+                <button className="group rounded-full border-2 border-white text-white backdrop-blur-sm bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,.1)_50%,transparent_75%,transparent_100%)] bg-[length:250%_250%,100%_100%] animate-[shimmer_3s_linear_infinite] px-10 py-5 bg-transparent text-xs sm:text-sm uppercase tracking-widest hover:bg-white/10 transition-all flex items-center gap-1">
+                  <span>{banner.buttonText}</span>
+                  <ChevronRight className="w-5 h-5 animate-[slideRight_1.5s_ease-in-out_infinite]" />
                 </button>
               </a>
             </div>
@@ -124,11 +144,11 @@ export function Hero({ banners }: HeroProps) {
       </div>
 
       {/* Scroll Indicator */}
-      <div className="absolute bottom-12 right-12 z-10">
+      {/* <div className="absolute bottom-12 right-12 z-10">
         <div className="flex flex-col items-center gap-2 text-white/60">
           <ArrowDown className="w-5 h-5 animate-bounce" />
         </div>
-      </div>
+      </div> */}
     </section>
   );
 }
