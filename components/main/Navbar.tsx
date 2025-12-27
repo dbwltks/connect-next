@@ -103,7 +103,7 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
   };
 
   return (
-    <nav className={`fixed top-0 w-full z-50 transition-all duration-500 px-6 pt-6 ${
+    <nav className={`fixed top-0 w-full z-50 transition-all duration-500 sm:p-6 p-4 ${
       visible ? "translate-y-0" : "-translate-y-full"
     }`}>
       <div
