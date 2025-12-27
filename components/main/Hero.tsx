@@ -100,7 +100,7 @@ export function Hero({ banners }: HeroProps) {
             <div className="h-[1px] w-16 bg-white"></div>
             <span className="text-white/60 text-sm uppercase tracking-[0.3em]">Welcome to your</span>
           </div> */}
-          <h1 className="text-[clamp(3rem,8vw,7rem)] leading-[1.1] text-white mb-8 tracking-tight font-light sekuya-regular">
+          <h1 className="text-[clamp(3rem,8vw,7rem)] leading-[1.1] text-white mb-4 tracking-tight font-light sekuya-regular">
             {banner?.title || (
               <>
                 Toronto<br />
@@ -127,7 +127,7 @@ export function Hero({ banners }: HeroProps) {
               </>
             )}
           </h1>
-          <p className="text-[0.75em] sm:text-xl text-white/80 mb-12 max-w-xl leading-relaxed font-light">
+          <p className="text-[0.75em] sm:text-xl text-white/80 mb-16 max-w-xl leading-relaxed font-light">
             {banner?.subtitle || "Love your God, Love your Neighbor"}
           </p>
           {banner?.hasButton && banner.buttonText && (
