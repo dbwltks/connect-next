@@ -81,7 +81,7 @@ export function Photos() {
                 <Link
                   key={post.id}
                   href={getPostUrl(post)}
-                  className="group cursor-pointer overflow-hidden bg-gray-100 dark:bg-gray-800 aspect-square relative"
+                  className="group cursor-pointer overflow-hidden rounded-2xl bg-gray-100 dark:bg-gray-800 aspect-square relative"
                 >
                   {post.thumbnail_image ? (
                     <ImageWithFallback
@@ -109,7 +109,7 @@ export function Photos() {
                 <Link
                   key={post.id}
                   href={getPostUrl(post)}
-                  className="group cursor-pointer overflow-hidden bg-gray-100 dark:bg-gray-800 aspect-square relative"
+                  className="group cursor-pointer overflow-hidden rounded-2xl bg-gray-100 dark:bg-gray-800 aspect-square relative"
                 >
                   {post.thumbnail_image ? (
                     <ImageWithFallback

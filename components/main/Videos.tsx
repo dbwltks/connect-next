@@ -99,7 +99,7 @@ export function Videos() {
                       href={getPostUrl(post)}
                       className="group cursor-pointer block"
                     >
-                      <div className="relative aspect-video overflow-hidden mb-6 bg-gray-200 dark:bg-gray-800">
+                      <div className="relative rounded-2xl aspect-video overflow-hidden mb-6 bg-gray-200 dark:bg-gray-800">
                         {post.thumbnail_image ? (
                           <ImageWithFallback
                             src={post.thumbnail_image}
@@ -142,7 +142,7 @@ export function Videos() {
                   href={getPostUrl(post)}
                   className="group cursor-pointer block"
                 >
-                  <div className="relative aspect-video overflow-hidden mb-6 bg-gray-200 dark:bg-gray-800">
+                  <div className="relative rounded-2xl aspect-video overflow-hidden mb-6 bg-gray-200 dark:bg-gray-800">
                     {post.thumbnail_image ? (
                       <ImageWithFallback
                         src={post.thumbnail_image}

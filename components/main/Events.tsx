@@ -122,7 +122,7 @@ export function Events() {
                       href={getPostUrl(post)}
                       className="group cursor-pointer flex flex-col"
                     >
-                      <div className="relative aspect-[3/4] overflow-hidden bg-gray-200 dark:bg-gray-800 mb-4 md:mb-6">
+                      <div className="relative rounded-2xl aspect-[3/4] overflow-hidden bg-gray-200 dark:bg-gray-800 mb-4 md:mb-6">
                         {post.thumbnail_image ? (
                           <ImageWithFallback
                             src={post.thumbnail_image}
@@ -158,7 +158,7 @@ export function Events() {
                   href={getPostUrl(post)}
                   className="group cursor-pointer flex flex-col"
                 >
-                  <div className="relative aspect-[3/4] overflow-hidden bg-gray-200 dark:bg-gray-800 mb-4 md:mb-6">
+                  <div className="relative rounded-2xl aspect-[3/4] overflow-hidden bg-gray-200 dark:bg-gray-800 mb-4 md:mb-6">
                     {post.thumbnail_image ? (
                       <ImageWithFallback
                         src={post.thumbnail_image}
