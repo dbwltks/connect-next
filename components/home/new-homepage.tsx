@@ -43,7 +43,7 @@ export default function NewHomepage({ banners, widgets, menuItems }: NewHomepage
       <LiveBanner />
       <QuickLinks />
       <LatestSermons />
-      <TodayWord />
+      {/* <TodayWord /> */}
       <Events />
       <Photos />
       <Videos />

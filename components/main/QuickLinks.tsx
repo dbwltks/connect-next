@@ -57,10 +57,10 @@ export function QuickLinks() {
             <span className="text-xs sm:text-sm uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">
               Quick Links
             </span>
-            <h2 className="text-[clamp(1.5rem,5vw,2.5rem)] font-medium leading-[1.1] mt-6 mb-4 tracking-tight text-black dark:text-white">
+            <h2 className="text-[clamp(2rem,5vw,2.5rem)] font-medium leading-[1.1] mt-6 mb-4 tracking-tight text-black dark:text-white">
               하나님 사랑, 이웃 사랑
             </h2>
-            <p className="text-sm sm:text-xl text-gray-600 dark:text-gray-400">
+            <p className="text-xs sm:text-xl text-gray-600 dark:text-gray-400">
               <span>Connect with </span>
               <TypeAnimation
                 sequence={[
@@ -94,7 +94,7 @@ export function QuickLinks() {
                     <div className="w-12 h-12 md:w-16 md:h-16 mb-4 flex items-center justify-center text-black dark:text-white group-hover:text-white dark:group-hover:text-black transition-colors">
                       <Icon className="w-full h-full" strokeWidth={1.5} />
                     </div>
-                    <span className="text-sm md:text-base font-medium text-black dark:text-white group-hover:text-white dark:group-hover:text-black transition-colors text-center">
+                    <span className="text-xs md:text-base font-medium text-black dark:text-white group-hover:text-white dark:group-hover:text-black transition-colors text-center">
                       {link.title}
                     </span>
                   </button>
@@ -110,7 +110,7 @@ export function QuickLinks() {
                   <div className="w-12 h-12 md:w-16 md:h-16 mb-4 flex items-center justify-center text-black dark:text-white group-hover:text-white dark:group-hover:text-black transition-colors">
                     <Icon className="w-full h-full" strokeWidth={1.5} />
                   </div>
-                  <span className="text-sm md:text-base font-medium text-black dark:text-white group-hover:text-white dark:group-hover:text-black transition-colors text-center">
+                  <span className="text-xs md:text-base font-medium text-black dark:text-white group-hover:text-white dark:group-hover:text-black transition-colors text-center">
                     {link.title}
                   </span>
                 </Link>
