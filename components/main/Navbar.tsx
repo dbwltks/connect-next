@@ -122,7 +122,9 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
                 alt="커넥트 교회 로고"
                 width={96}
                 height={48}
-                className="object-contain"
+                className={`object-contain transition-all ${
+                  isScrolled ? "" : "brightness-0 invert"
+                }`}
                 priority
                 style={{ width: "auto", height: "48px" }}
               />
@@ -134,7 +136,7 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
             <NavigationMenu viewport={false}>
               <NavigationMenuList>
                 {menuItems.map((item) => (
-                  <NavigationMenuItem key={item.id}>
+                  <NavigationMenuItem key={item.id} value={`menu-${item.id}`}>
                     {item.submenu && item.submenu.length > 0 ? (
                       <>
                         <NavigationMenuTrigger

@@ -9,8 +9,8 @@ export function MainPopup() {
   const [imageLoaded, setImageLoaded] = useState(false);
 
   useEffect(() => {
-    // 캐나다(토론토) 시간으로 2024년 12월 28일 오후 5시
-    const endDate = new Date('2024-12-28T17:00:00-05:00'); // EST 시간대
+    // 캐나다(토론토) 시간으로 2025년 12월 28일 오후 5시
+    const endDate = new Date('2025-12-28T17:00:00-05:00'); // EST 시간대
     const now = new Date();
 
     // 만료 날짜가 지났으면 팝업을 표시하지 않음

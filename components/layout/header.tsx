@@ -303,6 +303,7 @@ export default function Header({
           menuItems={menuItems || []}
           isAuthLoading={isAuthLoading}
           isProfileLoading={isProfileLoading}
+          isAtTop={isAtTop}
         />
       </div>
     </header>
@@ -315,12 +316,14 @@ function HeaderClient({
   menuItems,
   isAuthLoading,
   isProfileLoading,
+  isAtTop,
 }: {
   user: any;
   profile: any;
   menuItems: any[];
   isAuthLoading?: boolean;
   isProfileLoading?: boolean;
+  isAtTop?: boolean;
 }) {
   const { signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
