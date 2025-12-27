@@ -28,7 +28,7 @@ export function Photos() {
   // SWR을 사용한 데이터 페칭
   const { data, error, isLoading } = useSWR(
     ["photoPosts", pageId],
-    () => fetchPhotoPosts(pageId, 6),
+    () => fetchPhotoPosts(pageId, 3),
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
@@ -56,7 +56,7 @@ export function Photos() {
 
         {isLoading ? (
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 md:gap-6">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
+            {[1, 2, 3].map((i) => (
               <div key={i} className="animate-pulse bg-gray-100 dark:bg-gray-800 aspect-square"></div>
             ))}
           </div>

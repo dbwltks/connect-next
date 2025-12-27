@@ -14,6 +14,7 @@ import { Photos } from "@/components/main/Photos";
 import { TodayWord } from "@/components/main/TodayWord";
 import { Videos } from "@/components/main/Videos";
 import { Location } from "@/components/main/Location";
+import { QuickLinks } from "@/components/main/QuickLinks";
 
 interface NewHomepageProps {
   banners?: any[];
@@ -40,6 +41,7 @@ export default function NewHomepage({ banners, widgets, menuItems }: NewHomepage
       <Hero banners={banners} />
       {/* <ImageCarousel images={carouselImages} /> */}
       <LiveBanner />
+      <QuickLinks />
       <LatestSermons />
       <TodayWord />
       <Events />

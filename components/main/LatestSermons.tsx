@@ -63,14 +63,14 @@ export function LatestSermons() {
   const sermons = posts && posts.length > 0 ? posts : [];
 
   return (
-    <section id="sermons" className="bg-black text-white sm:py-32 py-16">
-      <div className="max-w-[1400px] mx-auto px-6">
+    <section id="sermons" className="bg-gray-50 dark:bg-gray-950 flex flex-col">
+      <div className="max-w-[1400px] mx-auto px-4 md:px-6 w-full flex flex-col py-16 md:py-24">
         <div className="mb-14 sm:mb-20">
-          <span className="text-sm uppercase tracking-[0.3em] text-white/40">Latest Messages</span>
-          <h2 className="text-[clamp(2.5rem,5vw,4.5rem)] font-medium leading-[1.1] mt-6 mb-6 tracking-tight">
+          <span className="text-sm uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">Latest Messages</span>
+          <h2 className="text-[clamp(2.5rem,5vw,4.5rem)] font-medium leading-[1.1] mt-6 mb-6 tracking-tight text-black dark:text-white">
             최신 설교
           </h2>
-          <p className="text-xl text-white/60">
+          <p className="text-xl text-gray-600 dark:text-gray-400">
             말씀으로 함께 성장합니다
           </p>
         </div>
@@ -80,24 +80,24 @@ export function LatestSermons() {
             {/* 모바일 로딩 */}
             <div className="md:hidden">
               <div className="animate-pulse">
-                <div className="aspect-video bg-white/5 mb-6"></div>
-                <div className="h-6 bg-white/5 mb-3 w-3/4"></div>
-                <div className="h-4 bg-white/5 w-1/2"></div>
+                <div className="aspect-video bg-gray-200 dark:bg-gray-800 mb-6"></div>
+                <div className="h-6 bg-gray-200 dark:bg-gray-800 mb-3 w-3/4"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-800 w-1/2"></div>
               </div>
             </div>
             {/* 데스크탑 로딩 */}
             <div className="hidden md:grid grid-cols-3 gap-8">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="animate-pulse">
-                  <div className="aspect-video bg-white/5 mb-6"></div>
-                  <div className="h-6 bg-white/5 mb-3 w-3/4"></div>
-                  <div className="h-4 bg-white/5 w-1/2"></div>
+                  <div className="aspect-video bg-gray-200 dark:bg-gray-800 mb-6"></div>
+                  <div className="h-6 bg-gray-200 dark:bg-gray-800 mb-3 w-3/4"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-800 w-1/2"></div>
                 </div>
               ))}
             </div>
           </>
         ) : sermons.length === 0 ? (
-          <div className="text-center text-white/40 py-20">
+          <div className="text-center text-gray-400 dark:text-gray-500 py-20">
             등록된 설교가 없습니다.
           </div>
         ) : (
@@ -110,7 +110,7 @@ export function LatestSermons() {
                 spaceBetween={16}
                 pagination={{
                   clickable: true,
-                  bulletActiveClass: 'swiper-pagination-bullet-active !bg-white',
+                  bulletActiveClass: 'swiper-pagination-bullet-active !bg-black dark:!bg-white',
                 }}
                 style={{
                   paddingBottom: '48px',
@@ -122,15 +122,15 @@ export function LatestSermons() {
                       href={getPostUrl(post)}
                       className="group cursor-pointer block"
                     >
-                      <div className="relative aspect-video overflow-hidden mb-6 bg-white/5">
+                      <div className="relative aspect-video overflow-hidden rounded-2xl mb-6 bg-gray-200 dark:bg-gray-800">
                         {post.thumbnail_image ? (
                           <ImageWithFallback
                             src={post.thumbnail_image}
                             alt={post.title}
-                            className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-all duration-700"
                           />
                         ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center">
+                          <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
                             <span className="text-white text-4xl font-bold opacity-30">
                               {post.title.charAt(0)}
                             </span>
@@ -139,12 +139,12 @@ export function LatestSermons() {
                       </div>
                       <div className="space-y-3">
                         <div className="flex justify-between items-start gap-4">
-                          <h3 className="text-xl md:text-2xl group-hover:text-white/70 transition-colors line-clamp-2">
+                          <h3 className="text-base font-medium md:text-2xl text-black dark:text-white group-hover:text-gray-600 dark:group-hover:text-gray-400 transition-colors line-clamp-2">
                             {post.title}
                           </h3>
-                          <ArrowRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-2" />
+                          <ArrowRight className="w-5 h-5 text-black dark:text-white opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-2" />
                         </div>
-                        <div className="flex gap-4 text-sm text-white/40 uppercase tracking-widest">
+                        <div className="flex gap-4 text-sm text-gray-400 dark:text-gray-500 uppercase tracking-widest">
                           <span>{formatDate(post.created_at)}</span>
                         </div>
                       </div>
@@ -162,15 +162,15 @@ export function LatestSermons() {
                   href={getPostUrl(post)}
                   className="group cursor-pointer block"
                 >
-                  <div className="relative aspect-video overflow-hidden mb-6 bg-white/5">
+                  <div className="relative aspect-video overflow-hidden mb-6 rounded-xl bg-gray-200 dark:bg-gray-800">
                     {post.thumbnail_image ? (
                       <ImageWithFallback
                         src={post.thumbnail_image}
                         alt={post.title}
-                        className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-all duration-700"
                       />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center">
+                      <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
                         <span className="text-white text-4xl font-bold opacity-30">
                           {post.title.charAt(0)}
                         </span>
@@ -179,12 +179,12 @@ export function LatestSermons() {
                   </div>
                   <div className="space-y-3">
                     <div className="flex justify-between items-start gap-4">
-                      <h3 className="text-xl md:text-2xl group-hover:text-white/70 transition-colors line-clamp-2">
+                      <h3 className="text-lg lg:text-xl font-medium text-black dark:text-white group-hover:text-gray-600 dark:group-hover:text-gray-400 transition-colors line-clamp-2">
                         {post.title}
                       </h3>
-                      <ArrowRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-2" />
+                      <ArrowRight className="w-5 h-5 text-black dark:text-white opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-2" />
                     </div>
-                    <div className="flex gap-4 text-sm text-white/40 uppercase tracking-widest">
+                    <div className="flex gap-4 text-sm text-gray-400 dark:text-gray-500 uppercase tracking-widest">
                       <span>{formatDate(post.created_at)}</span>
                     </div>
                   </div>
@@ -195,7 +195,7 @@ export function LatestSermons() {
         )}
 
         <div className="mt-20 text-center">
-          <button className="px-12 py-5 border-2 border-white text-white text-sm uppercase tracking-widest hover:bg-white hover:text-black transition-all">
+          <button className="px-12 py-5 border-2 border-black dark:border-white text-black dark:text-white text-sm uppercase tracking-widest hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all">
             View All Sermons
           </button>
         </div>
