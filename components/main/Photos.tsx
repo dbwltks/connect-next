@@ -50,7 +50,7 @@ export function Photos() {
         <div className="mb-16">
           <span className="text-sm uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">Memory</span>
           <h2 className="text-[clamp(2.5rem,5vw,4.5rem)] font-medium leading-[1.1] mt-6 mb-4 tracking-tight text-black dark:text-white">
-            사진속 커넥트
+            사진 속 커넥트
           </h2>
         </div>
 

@@ -55,7 +55,7 @@ export function ServiceTimes() {
             {services.map((service, index) => (
               <div
                 key={index}
-                className="group border-b border-gray-200 dark:border-gray-800 sm:py-8 py-4 hover:border-black dark:hover:border-white transition-all cursor-pointer"
+                className="group border-b border-gray-200 dark:border-gray-800 sm:py-8 py-6 hover:border-black dark:hover:border-white transition-all cursor-pointer"
               >
                 <div className="flex justify-between items-center gap-8">
                   <div className="flex-1">
