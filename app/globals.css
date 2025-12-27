@@ -1,6 +1,8 @@
 @import url("https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&family=Nanum+Myeongjo:wght@400;700;800&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Sekuya&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Gravitas+One&family=Sekuya&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Gravitas+One&family=Permanent+Marker&family=Sekuya&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=BBH+Bartle&family=Gravitas+One&family=Permanent+Marker&family=Sekuya&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -125,6 +127,18 @@
 
 .gravitas-one-regular {
   font-family: "Gravitas One", serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.permanent-marker-regular {
+  font-family: "Permanent Marker", cursive;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.bbh-bartle-regular {
+  font-family: "BBH Bartle", sans-serif;
   font-weight: 400;
   font-style: normal;
 }
@@ -290,7 +304,8 @@ select {
 
 /* 화살표 좌우 움직임 애니메이션 */
 @keyframes slideRight {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateX(0);
   }
   50% {

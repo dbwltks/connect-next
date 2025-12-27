@@ -100,13 +100,13 @@ export function Hero({ banners }: HeroProps) {
             <div className="h-[1px] w-16 bg-white"></div>
             <span className="text-white/60 text-sm uppercase tracking-[0.3em]">Welcome to your</span>
           </div> */}
-          <h1 className="text-[clamp(3rem,8vw,7rem)] leading-[1.1] text-white mb-4 tracking-tight font-light sekuya-regular">
+          <h1 className="text-[clamp(3rem,8vw,7rem)] leading-[1.1] text-white mb-4 font-light gravitas-one-regular">
             {banner?.title || (
               <>
                 Toronto<br />
                 <span className="flex items-baseline gap-2 flex-wrap">
                   <span>Connect</span>
-                  {/* gravitas-one-regular  sekuya-regular*/}
+                  {/* gravitas-one-regular permanent-marker-regular sekuya-regular bbh-bartle-regular tracking-tight*/}
                   {/* <span className="text-[0.32em] sm:text-[0.32em] text-[0.25em] text-white/70 font-normal">with</span> */}
                   {/* <TypeAnimation
                     sequence={[
