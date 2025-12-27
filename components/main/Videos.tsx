@@ -5,6 +5,11 @@ import { ImageWithFallback } from "./figma/ImageWithFallback";
 import useSWR from "swr";
 import { IBoardPost } from "@/types/index";
 import Link from "next/link";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Pagination, Navigation } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/pagination";
+import "swiper/css/navigation";
 
 // 게시물 데이터를 가져오는 fetcher 함수
 async function fetchVideoPosts(pageId: string, limit: number = 2) {
@@ -56,55 +61,120 @@ export function Videos() {
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {[1, 2].map((i) => (
-              <div key={i} className="animate-pulse bg-gray-200 dark:bg-gray-800 aspect-video"></div>
-            ))}
-          </div>
+          <>
+            {/* 모바일 로딩 */}
+            <div className="md:hidden">
+              <div className="animate-pulse bg-gray-200 dark:bg-gray-800 aspect-video"></div>
+            </div>
+            {/* 데스크탑 로딩 */}
+            <div className="hidden md:grid grid-cols-2 gap-8">
+              {[1, 2].map((i) => (
+                <div key={i} className="animate-pulse bg-gray-200 dark:bg-gray-800 aspect-video"></div>
+              ))}
+            </div>
+          </>
         ) : posts.length === 0 ? (
           <div className="text-center py-20 text-gray-400 dark:text-gray-500">
             등록된 영상이 없습니다.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {posts.map((post: IBoardPost) => (
-              <Link
-                key={post.id}
-                href={getPostUrl(post)}
-                className="group cursor-pointer block"
+          <>
+            {/* 모바일: Swiper 캐러셀 */}
+            <div className="md:hidden">
+              <Swiper
+                modules={[Pagination, Navigation]}
+                slidesPerView={1}
+                spaceBetween={16}
+                pagination={{
+                  clickable: true,
+                  bulletActiveClass: 'swiper-pagination-bullet-active !bg-black dark:!bg-white',
+                }}
+                style={{
+                  paddingBottom: '48px',
+                }}
               >
-                <div className="relative aspect-video overflow-hidden mb-6 bg-gray-200 dark:bg-gray-800">
-                  {post.thumbnail_image ? (
-                    <ImageWithFallback
-                      src={post.thumbnail_image}
-                      alt={post.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-all duration-700"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
-                      <span className="text-white text-4xl font-bold opacity-30">
-                        {post.title.charAt(0)}
-                      </span>
-                    </div>
-                  )}
-                  {/* Play Button Overlay */}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-20 h-20 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center group-hover:bg-black dark:group-hover:bg-white/90 transition-colors duration-500">
-                      <Play className="w-8 h-8 text-white fill-white dark:group-hover:text-black dark:group-hover:fill-black" />
+                {posts.map((post: IBoardPost) => (
+                  <SwiperSlide key={post.id}>
+                    <Link
+                      href={getPostUrl(post)}
+                      className="group cursor-pointer block"
+                    >
+                      <div className="relative aspect-video overflow-hidden mb-6 bg-gray-200 dark:bg-gray-800">
+                        {post.thumbnail_image ? (
+                          <ImageWithFallback
+                            src={post.thumbnail_image}
+                            alt={post.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-all duration-700"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
+                            <span className="text-white text-4xl font-bold opacity-30">
+                              {post.title.charAt(0)}
+                            </span>
+                          </div>
+                        )}
+                        {/* Play Button Overlay */}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-20 h-20 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center group-hover:bg-black dark:group-hover:bg-white/90 transition-colors duration-500">
+                            <Play className="w-8 h-8 text-white fill-white dark:group-hover:text-black dark:group-hover:fill-black" />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <h3 className="text-xl md:text-2xl text-black dark:text-white group-hover:text-gray-600 dark:group-hover:text-gray-400 transition-colors line-clamp-1">
+                          {post.title}
+                        </h3>
+                        <div className="flex gap-4 text-sm text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+                          <span>{new Date(post.created_at).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                    </Link>
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+            </div>
+
+            {/* 데스크탑: Grid 레이아웃 */}
+            <div className="hidden md:grid grid-cols-2 gap-8">
+              {posts.map((post: IBoardPost) => (
+                <Link
+                  key={post.id}
+                  href={getPostUrl(post)}
+                  className="group cursor-pointer block"
+                >
+                  <div className="relative aspect-video overflow-hidden mb-6 bg-gray-200 dark:bg-gray-800">
+                    {post.thumbnail_image ? (
+                      <ImageWithFallback
+                        src={post.thumbnail_image}
+                        alt={post.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-all duration-700"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
+                        <span className="text-white text-4xl font-bold opacity-30">
+                          {post.title.charAt(0)}
+                        </span>
+                      </div>
+                    )}
+                    {/* Play Button Overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-20 h-20 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center group-hover:bg-black dark:group-hover:bg-white/90 transition-colors duration-500">
+                        <Play className="w-8 h-8 text-white fill-white dark:group-hover:text-black dark:group-hover:fill-black" />
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-2xl text-black dark:text-white group-hover:text-gray-600 dark:group-hover:text-gray-400 transition-colors line-clamp-1">
-                    {post.title}
-                  </h3>
-                  <div className="flex gap-4 text-sm text-gray-400 dark:text-gray-500 uppercase tracking-widest">
-                    <span>{new Date(post.created_at).toLocaleDateString()}</span>
+                  <div className="space-y-2">
+                    <h3 className="text-xl md:text-2xl text-black dark:text-white group-hover:text-gray-600 dark:group-hover:text-gray-400 transition-colors line-clamp-1">
+                      {post.title}
+                    </h3>
+                    <div className="flex gap-4 text-sm text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+                      <span>{new Date(post.created_at).toLocaleDateString()}</span>
+                    </div>
                   </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+                </Link>
+              ))}
+            </div>
+          </>
         )}
 
         {posts.length > 0 && (

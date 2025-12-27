@@ -6,6 +6,11 @@ import useSWR from "swr";
 import { api } from "@/lib/api";
 import { IBoardPost } from "@/types/index";
 import Link from "next/link";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Pagination, Navigation } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/pagination";
+import "swiper/css/navigation";
 
 // 게시물 데이터를 가져오는 fetcher 함수
 async function fetchEventPosts(pageId: string, limit: number = 4) {
@@ -96,38 +101,89 @@ export function Events() {
             등록된 소식이 없습니다.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-            {events.map((post: IBoardPost, index: number) => (
-              <Link
-                key={post.id}
-                href={getPostUrl(post)}
-                className="group cursor-pointer flex flex-col"
+          <>
+            {/* 모바일: Swiper 캐러셀 */}
+            <div className="md:hidden">
+              <Swiper
+                modules={[Pagination, Navigation]}
+                slidesPerView={1}
+                spaceBetween={16}
+                pagination={{
+                  clickable: true,
+                  bulletActiveClass: 'swiper-pagination-bullet-active !bg-black dark:!bg-white',
+                }}
+                style={{
+                  paddingBottom: '48px',
+                }}
               >
-                <div className="relative aspect-[3/4] overflow-hidden bg-gray-200 dark:bg-gray-800 mb-4 md:mb-6">
-                  {post.thumbnail_image ? (
-                    <ImageWithFallback
-                      src={post.thumbnail_image}
-                      alt={post.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
-                      <span className="text-white text-4xl font-bold opacity-50">
-                        {post.title.charAt(0)}
-                      </span>
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
-                  <div className="absolute bottom-6 left-6 right-6 z-10">
-                    <h3 className="text-2xl text-white mb-2 line-clamp-2">{post.title}</h3>
-                    <div className="flex gap-4 text-sm text-white/80">
-                      <span>{formatDate(post.created_at)}</span>
+                {events.map((post: IBoardPost, index: number) => (
+                  <SwiperSlide key={post.id}>
+                    <Link
+                      href={getPostUrl(post)}
+                      className="group cursor-pointer flex flex-col"
+                    >
+                      <div className="relative aspect-[3/4] overflow-hidden bg-gray-200 dark:bg-gray-800 mb-4 md:mb-6">
+                        {post.thumbnail_image ? (
+                          <ImageWithFallback
+                            src={post.thumbnail_image}
+                            alt={post.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
+                            <span className="text-white text-4xl font-bold opacity-50">
+                              {post.title.charAt(0)}
+                            </span>
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                        <div className="absolute bottom-6 left-6 right-6 z-10">
+                          <h3 className="text-2xl text-white mb-2 line-clamp-2">{post.title}</h3>
+                          <div className="flex gap-4 text-sm text-white/80">
+                            <span>{formatDate(post.created_at)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+            </div>
+
+            {/* 데스크탑: Grid 레이아웃 */}
+            <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+              {events.map((post: IBoardPost, index: number) => (
+                <Link
+                  key={post.id}
+                  href={getPostUrl(post)}
+                  className="group cursor-pointer flex flex-col"
+                >
+                  <div className="relative aspect-[3/4] overflow-hidden bg-gray-200 dark:bg-gray-800 mb-4 md:mb-6">
+                    {post.thumbnail_image ? (
+                      <ImageWithFallback
+                        src={post.thumbnail_image}
+                        alt={post.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
+                        <span className="text-white text-4xl font-bold opacity-50">
+                          {post.title.charAt(0)}
+                        </span>
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                    <div className="absolute bottom-6 left-6 right-6 z-10">
+                      <h3 className="text-2xl text-white mb-2 line-clamp-2">{post.title}</h3>
+                      <div className="flex gap-4 text-sm text-white/80">
+                        <span>{formatDate(post.created_at)}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+                </Link>
+              ))}
+            </div>
+          </>
         )}
         {events.length > 0 && (
           <div className="mt-16 text-center">

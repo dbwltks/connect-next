@@ -39,14 +39,14 @@ export default function NewHomepage({ banners, widgets, menuItems }: NewHomepage
       <MainPopup />
       <Hero banners={banners} />
       {/* <ImageCarousel images={carouselImages} /> */}
-      <ServiceTimes />
       <LiveBanner />
+      <LatestSermons />
       <TodayWord />
       <Events />
-      <LatestSermons />
       <Photos />
       <Videos />
       {/* <Community /> */}
+      <ServiceTimes />
       <WelcomeForm />
       <Location data={locationWidget?.display_options} />
     </div>

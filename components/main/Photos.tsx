@@ -55,9 +55,9 @@ export function Photos() {
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 md:gap-6">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="animate-pulse bg-gray-100 dark:bg-gray-800 aspect-[4/3]"></div>
+              <div key={i} className="animate-pulse bg-gray-100 dark:bg-gray-800 aspect-square"></div>
             ))}
           </div>
         ) : posts.length === 0 ? (
@@ -65,12 +65,12 @@ export function Photos() {
             등록된 사진이 없습니다.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 md:gap-6">
             {posts.map((post: IBoardPost) => (
               <Link
                 key={post.id}
                 href={getPostUrl(post)}
-                className="group cursor-pointer overflow-hidden bg-gray-100 dark:bg-gray-800 aspect-[4/3] relative"
+                className="group cursor-pointer overflow-hidden bg-gray-100 dark:bg-gray-800 aspect-square relative"
               >
                 {post.thumbnail_image ? (
                   <ImageWithFallback
