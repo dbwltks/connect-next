@@ -292,8 +292,8 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
 
       {/* Mobile Menu */}
       {isOpen && (
-        <div className="lg:hidden mt-4 bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl mx-6 overflow-hidden">
-          <div className="px-8 py-8 space-y-4">
+        <div className="lg:hidden mt-4 bg-white/95 backdrop-blur-xl rounded-t-[3rem] rounded-b-[3rem] shadow-2xl overflow-hidden">
+          <div className="px-8 py-8 space-y-8">
             {menuItems.map((item) => (
               <div key={item.id}>
                 {item.submenu && item.submenu.length > 0 ? (
