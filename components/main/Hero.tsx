@@ -32,7 +32,8 @@ function extractYoutubeId(url: string): string | null {
 export function Hero({ banners }: HeroProps) {
   // 첫 번째 배너 사용, 없으면 기본 컨텐츠
   const banner = banners?.[0];
-  const defaultImage = "https://images.unsplash.com/photo-1647842392232-6db2a139b494?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtaW5pbWFsJTIwYXJjaGl0ZWN0dXJlJTIwaW50ZXJpb3J8ZW58MXx8fHwxNzYzMTg5MjE0fDA&ixlib=rb-4.1.0&q=80&w=1080";
+  const defaultImage =
+    "https://images.unsplash.com/photo-1647842392232-6db2a139b494?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtaW5pbWFsJTIwYXJjaGl0ZWN0dXJlJTIwaW50ZXJpb3J8ZW58MXx8fHwxNzYzMTg5MjE0fDA&ixlib=rb-4.1.0&q=80&w=1080";
 
   // 유튜브 비디오인지 확인
   const isYoutube = banner?.imageUrl && isYoutubeUrl(banner.imageUrl);
@@ -58,7 +59,10 @@ export function Hero({ banners }: HeroProps) {
   };
 
   return (
-    <section id="home" className="relative h-screen flex items-center overflow-hidden bg-black">
+    <section
+      id="home"
+      className="relative h-screen flex items-center overflow-hidden bg-black"
+    >
       {/* Background Video or Image */}
       <div className="absolute inset-0 z-0">
         {isYoutube && youtubeId ? (
@@ -94,19 +98,20 @@ export function Hero({ banners }: HeroProps) {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 max-w-[1400px] mx-auto px-6 w-full">
+      <div className="relative z-10 max-w-[1400px] mx-auto px-6 sm:px-12 w-full">
         <div className="max-w-4xl">
           {/* <div className="mb-8 flex items-center gap-4">
             <div className="h-[1px] w-16 bg-white"></div>
             <span className="text-white/60 text-sm uppercase tracking-[0.3em]">Welcome to your</span>
           </div> */}
-          <h1 className="text-[clamp(3rem,8vw,7rem)] leading-[1.1] text-white mb-4 font-light gravitas-one-regular">
+          <h1 className="text-[clamp(5rem,9vw,7rem)] leading-[1.1] font-medium text-white mb-4 font-serif">
             {banner?.title || (
               <>
-                Toronto<br />
+                Toronto
+                <br />
                 <span className="flex items-baseline gap-2 flex-wrap">
                   <span>Connect</span>
-                  {/* gravitas-one-regular permanent-marker-regular sekuya-regular bbh-bartle-regular tracking-tight*/}
+                  {/* dm-serif-text-regular-italic tracking-[8] leading-[1.1] font-light gravitas-one-regular bebas-neue-regular permanent-marker-regular sekuya-regular bbh-bartle-regular tracking-tight*/}
                   {/* <span className="text-[0.32em] sm:text-[0.32em] text-[0.25em] text-white/70 font-normal">with</span> */}
                   {/* <TypeAnimation
                     sequence={[

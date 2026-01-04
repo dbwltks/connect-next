@@ -3,6 +3,11 @@
 @import url("https://fonts.googleapis.com/css2?family=Gravitas+One&family=Sekuya&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Gravitas+One&family=Permanent+Marker&family=Sekuya&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=BBH+Bartle&family=Gravitas+One&family=Permanent+Marker&family=Sekuya&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nanum+Myeongjo:wght@400;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Serif+Text:ital@0;1&family=Nanum+Myeongjo:wght@400;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Bangers&family=Bebas+Neue&family=DM+Serif+Text:ital@0;1&family=Nanum+Myeongjo:wght@400;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Bangers&family=Bebas+Neue&family=DM+Serif+Text:ital@0;1&family=Nanum+Myeongjo:wght@400;700;800&family=Rubik+Dirt&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Bangers&family=Bebas+Neue&family=DM+Serif+Text:ital@0;1&family=Nanum+Myeongjo:wght@400;700;800&family=Ramaraja&family=Rozha+One&family=Rubik+Dirt&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -27,6 +32,16 @@
   }
 }
 
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.serif {
+  font-family: var(--font-playfair), serif;
+}
+
 @layer base {
   :root {
     --lg-bg-color: rgba(255, 255, 255, 0.25);
@@ -35,7 +50,6 @@
     --lg-hover-glow: rgba(255, 255, 255, 0.4);
     --lg-red: #fb4268;
     --lg-grey: #5b5b5b;
-
     --background: 0 0% 100%;
     --foreground: 0 0% 3.9%;
     --card: 0 0% 100%;
@@ -143,6 +157,36 @@
   font-style: normal;
 }
 
+.bebas-neue-regular {
+  font-family: "Bebas Neue", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.dm-serif-text-regular {
+  font-family: "DM Serif Text", serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.dm-serif-text-regular-italic {
+  font-family: "DM Serif Text", serif;
+  font-weight: 400;
+  font-style: italic;
+}
+
+.bangers-regular {
+  font-family: "Bangers", system-ui;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.rozha-one-regular {
+  font-family: "Rozha One", serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
 body {
   background-color: #f1f5f9b3 !important;
 }
@@ -157,6 +201,14 @@ body {
   .widget-scale:hover {
     transform: scale(1.02);
   }
+}
+
+@theme inline {
+  --color-stone-50: #fafaf9;
+  --color-stone-100: #f5f5f4;
+  --color-stone-900: #1c1917;
+  --font-sans: var(--font-montserrat);
+  --font-serif: var(--font-playfair);
 }
 
 /* ========== GLASS CONTAINER ========== */
@@ -276,6 +328,12 @@ body {
   display: block;
   margin-left: auto;
   margin-right: 0;
+}
+
+.rubik-dirt-regular {
+  font-family: "Rubik Dirt", system-ui;
+  font-weight: 400;
+  font-style: normal;
 }
 
 select {
