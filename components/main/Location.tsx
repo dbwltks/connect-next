@@ -52,10 +52,10 @@ export function Location({ data }: LocationProps) {
                 Address
               </div>
               <div>
-                <p className="text-2xl mb-2 text-black dark:text-white">
+                <p className="sm:text-2xl text-xl mb-2 text-black dark:text-white">
                   Connect Church
                 </p>
-                <p className="text-xl text-gray-500 dark:text-gray-400">
+                <p className="sm:text-xl text-base text-gray-500 dark:text-gray-400">
                   {address}
                 </p>
               </div>
@@ -66,10 +66,10 @@ export function Location({ data }: LocationProps) {
                 Contact
               </div>
               <div className="space-y-3">
-                <div className="text-xl text-black dark:text-white">
+                <div className="sm:text-xl text-base text-black dark:text-white">
                   {phone}
                 </div>
-                <div className="text-xl text-black dark:text-white">
+                <div className="sm:text-xl text-base text-black dark:text-white">
                   {email}
                 </div>
               </div>
@@ -79,7 +79,7 @@ export function Location({ data }: LocationProps) {
               <div className="text-xs uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500 mb-4">
                 Directions
               </div>
-              <div className="space-y-3 text-gray-600 dark:text-gray-400">
+              <div className="space-y-3 text-sm sm:text-base text-gray-600 dark:text-gray-400">
                 <p>
                   블로어-영(Bloor-Yonge) 전철역 또는 베이(Bay) 전철역에서 한
                   블럭 북쪽으로 오셔서 Davenport Rd를 만나 45번지를 찾으면
@@ -94,7 +94,7 @@ export function Location({ data }: LocationProps) {
               </div>
               <div className="space-y-3 text-gray-600 dark:text-gray-400">
                 <p>40 Scollard St, Toronto, ON M5R 3S1</p>
-                <p className="font-medium text-black dark:text-white">
+                <p className="text-sm sm:text-base font-medium text-black dark:text-white">
                   아파트 지하 주차장 입구 판넬의 녹색 버튼을 누르시면 됩니다.{" "}
                   <br></br>주차장 입구는 건물 뒤 Scollard Street에 있습니다.
                 </p>
