@@ -103,11 +103,13 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
   };
 
   return (
-    <nav className={`fixed top-0 w-full z-50 transition-all duration-500 sm:p-6 p-4 ${
-      visible ? "translate-y-0" : "-translate-y-full"
-    }`}>
+    <nav
+      className={`fixed top-0 w-full z-50 transition-all duration-500 sm:p-6 p-4 ${
+        visible ? "translate-y-0" : "-translate-y-full"
+      }`}
+    >
       <div
-        className={`max-w-[1400px] mx-auto transition-all duration-500 ${
+        className={`max-w-7xl mx-auto transition-all duration-500 ${
           isScrolled
             ? "bg-white/95 backdrop-blur-xl shadow-xl rounded-full px-8"
             : "bg-transparent px-4"
@@ -154,7 +156,9 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
                                   href={child.url || "#"}
                                   className="block select-none rounded-md px-3 py-2 text-sm leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                                 >
-                                  <div className="font-medium">{child.title}</div>
+                                  <div className="font-medium">
+                                    {child.title}
+                                  </div>
                                   <p className="text-xs leading-snug text-muted-foreground mt-1">
                                     {child.description ||
                                       generateMenuDescription(child.title)}
@@ -200,9 +204,13 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
                         src={profile?.avatar_url}
                         alt={profile?.username || "User"}
                       />
-                      <AvatarFallback className={`${
-                        isScrolled ? "bg-black text-white" : "bg-white text-black"
-                      }`}>
+                      <AvatarFallback
+                        className={`${
+                          isScrolled
+                            ? "bg-black text-white"
+                            : "bg-white text-black"
+                        }`}
+                      >
                         {profile?.username?.charAt(0).toUpperCase() || "U"}
                       </AvatarFallback>
                     </Avatar>
@@ -273,10 +281,7 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
           </div>
 
           {/* Mobile Menu Button */}
-          <button
-            className="lg:hidden p-2"
-            onClick={() => setIsOpen(!isOpen)}
-          >
+          <button className="lg:hidden p-2" onClick={() => setIsOpen(!isOpen)}>
             {isOpen ? (
               <X
                 className={`w-6 h-6 ${isScrolled ? "text-black" : "text-gray-300"}`}
@@ -351,7 +356,9 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="text-sm font-medium text-black">{profile.username}</p>
+                      <p className="text-sm font-medium text-black">
+                        {profile.username}
+                      </p>
                       <p className="text-xs text-gray-600">
                         {profile?.role === "admin" ? "관리자" : "일반 회원"}
                       </p>

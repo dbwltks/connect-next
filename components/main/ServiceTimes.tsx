@@ -31,7 +31,7 @@ export function ServiceTimes() {
       id="service-times"
       className="min-h-screen bg-white dark:bg-gray-950 flex items-center py-16 sm:py-32"
     >
-      <div className="max-w-[1400px] mx-auto px-6 w-full">
+      <div className="max-w-7xl mx-auto px-6 w-full">
         <div className="grid lg:grid-cols-2 gap-6 sm:gap-20 items-center">
           <div>
             <div className="sm:mb-8 mb-4">

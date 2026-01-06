@@ -46,7 +46,7 @@ export function Photos() {
 
   return (
     <section id="photos" className="py-24 bg-white dark:bg-gray-950">
-      <div className="max-w-[1400px] mx-auto px-6">
+      <div className="max-w-7xl mx-auto px-6">
         <div className="mb-16">
           <span className="text-sm uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">Memory</span>
           <h2 className="text-[clamp(2.5rem,5vw,4.5rem)] font-medium leading-[1.1] mt-6 mb-4 tracking-tight text-black dark:text-white">

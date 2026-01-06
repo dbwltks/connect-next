@@ -64,7 +64,7 @@ export function LatestSermons() {
 
   return (
     <section id="sermons" className="bg-gray-50 dark:bg-gray-950 flex flex-col">
-      <div className="max-w-[1400px] mx-auto px-4 md:px-6 w-full flex flex-col py-16 md:py-24">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 w-full flex flex-col py-16 md:py-24">
         <div className="mb-14 sm:mb-20">
           <span className="text-sm uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">Latest Messages</span>
           <h2 className="text-[clamp(2.5rem,5vw,4.5rem)] font-medium leading-[1.1] mt-6 mb-4 sm:mb-6 tracking-tight text-black dark:text-white">
