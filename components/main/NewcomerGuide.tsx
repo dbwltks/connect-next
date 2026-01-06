@@ -59,50 +59,59 @@ export function NewcomerGuide() {
           </p>
         </div>
 
-        {/* Steps - Single Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-2 md:p-8">
-          <div className="grid grid-cols-4 md:grid-cols-4 md:gap-8">
-            {steps.map((step, index) => {
-              const Icon = step.icon;
-              return (
-                <div
-                  key={index}
-                  className="relative flex flex-col items-center"
-                >
-                  {/* Step Number */}
-                  <div className="mb-2 md:mb-4">
-                    <span className="text-lg md:text-2xl font-bold text-black dark:text-white">
-                      {step.number}
-                    </span>
+        {/* Progress Bar Steps */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 md:p-12">
+          {/* Progress Bar Container */}
+          <div className="relative">
+            {/* Background Line */}
+            <div className="absolute top-5 md:top-6 left-0 right-0 h-0.5 bg-gray-200 dark:bg-gray-700"></div>
+
+            {/* Steps */}
+            <div className="grid grid-cols-4 md:grid-cols-4 gap-2 md:gap-4 relative">
+              {steps.map((step, index) => {
+                const Icon = step.icon;
+                const isLast = index === steps.length - 1;
+
+                return (
+                  <div key={index} className="flex flex-col items-center relative">
+                    {/* Progress Node */}
+                    <div className="relative z-10 mb-3 md:mb-6">
+                      <div className="w-10 h-10 md:w-14 md:h-14 rounded-full bg-black dark:bg-white flex items-center justify-center shadow-lg">
+                        <Icon className="w-5 h-5 md:w-7 md:h-7 text-white dark:text-black" strokeWidth={2} />
+                      </div>
+                      {/* Step Number Badge */}
+                      <div className="absolute -top-1 -right-1 w-5 h-5 md:w-7 md:h-7 rounded-full bg-gray-900 dark:bg-gray-100 flex items-center justify-center">
+                        <span className="text-[10px] md:text-sm font-bold text-white dark:text-black">
+                          {step.number}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Progress Line */}
+                    {!isLast && (
+                      <div className="absolute top-5 md:top-6 left-[50%] w-full h-0.5 bg-black dark:bg-white z-0"></div>
+                    )}
+
+                    {/* Content */}
+                    <div className="text-center">
+                      <h3 className="text-xs md:text-base lg:text-lg font-semibold text-black dark:text-white mb-2">
+                        {step.title}
+                      </h3>
+                      <p className="hidden md:block text-xs md:text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                        {step.description}
+                      </p>
+                    </div>
                   </div>
-
-                  {/* Icon */}
-                  <div className="mb-3">
-                    <Icon
-                      className="w-8 h-8 text-gray-700 dark:text-gray-300"
-                      strokeWidth={2}
-                    />
-                  </div>
-
-                  {/* Title */}
-                  <h3 className="text-xs md:text-sm font-semibold text-black dark:text-white text-center mb-2">
-                    {step.title}
-                  </h3>
-
-                  {/* Description - Desktop only */}
-                  <p className="hidden md:block text-gray-600 dark:text-gray-400 text-xs text-center leading-relaxed">
-                    {step.description}
-                  </p>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
 
         {/* CTA Button */}
         <div className="mt-16 text-center">
           <a href="#welcome" onClick={handleScrollToWelcome}>
-            <button className="px-12 py-5 border-2 rounded-2xl border-black dark:border-white text-black dark:text-white text-sm uppercase tracking-widest hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all">
+            <button className="px-12 font-medium py-5 border-2 rounded-2xl border-black dark:border-white text-black dark:text-white text-sm uppercase tracking-widest hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all">
               새가족 등록하기
             </button>
           </a>
