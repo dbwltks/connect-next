@@ -60,7 +60,7 @@ export function NewcomerGuide() {
         </div>
 
         {/* Progress Bar Steps */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 md:p-12">
+        <div className="py-6">
           {/* Progress Bar Container */}
           <div className="relative">
             {/* Background Line */}
@@ -73,11 +73,17 @@ export function NewcomerGuide() {
                 const isLast = index === steps.length - 1;
 
                 return (
-                  <div key={index} className="flex flex-col items-center relative">
+                  <div
+                    key={index}
+                    className="flex flex-col items-center relative"
+                  >
                     {/* Progress Node */}
                     <div className="relative z-10 mb-3 md:mb-6">
                       <div className="w-10 h-10 md:w-14 md:h-14 rounded-full bg-black dark:bg-white flex items-center justify-center shadow-lg">
-                        <Icon className="w-5 h-5 md:w-7 md:h-7 text-white dark:text-black" strokeWidth={2} />
+                        <Icon
+                          className="w-5 h-5 md:w-7 md:h-7 text-white dark:text-black"
+                          strokeWidth={2}
+                        />
                       </div>
                       {/* Step Number Badge */}
                       <div className="absolute -top-1 -right-1 w-5 h-5 md:w-7 md:h-7 rounded-full bg-gray-900 dark:bg-gray-100 flex items-center justify-center">
