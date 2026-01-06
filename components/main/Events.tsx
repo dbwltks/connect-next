@@ -113,8 +113,8 @@ export function Events() {
             <div className="md:hidden">
               <Swiper
                 modules={[Pagination, Navigation]}
-                slidesPerView={1}
-                spaceBetween={16}
+                slidesPerView={2}
+                spaceBetween={12}
                 pagination={{
                   clickable: true,
                   bulletActiveClass:
@@ -130,7 +130,7 @@ export function Events() {
                       href={getPostUrl(post)}
                       className="group cursor-pointer flex flex-col"
                     >
-                      <div className="relative rounded-2xl aspect-[3/4] overflow-hidden bg-gray-200 dark:bg-gray-800 mb-4 md:mb-6">
+                      <div className="relative rounded-2xl aspect-[3/4] overflow-hidden bg-gray-200 dark:bg-gray-800 mb-3">
                         {post.thumbnail_image ? (
                           <ImageWithFallback
                             src={post.thumbnail_image}
@@ -145,11 +145,11 @@ export function Events() {
                           </div>
                         )}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
-                        <div className="absolute bottom-6 left-6 right-6 z-10">
-                          <h3 className="font-medium text-base sm:text-xl md:text-2xl text-white mb-2 line-clamp-2">
+                        <div className="absolute bottom-4 left-4 right-4 z-10">
+                          <h3 className="font-medium text-sm text-white mb-1 line-clamp-2">
                             {post.title}
                           </h3>
-                          <div className="flex gap-4 text-xs sm:text-sm text-white/80">
+                          <div className="flex gap-2 text-xs text-white/80">
                             <span>{formatDate(post.created_at)}</span>
                           </div>
                         </div>
