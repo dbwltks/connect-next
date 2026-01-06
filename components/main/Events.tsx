@@ -63,10 +63,15 @@ export function Events() {
   // 로딩 상태
   if (isLoading) {
     return (
-      <section id="events" className="bg-gray-50 dark:bg-gray-950 flex flex-col">
+      <section
+        id="events"
+        className="bg-gray-50 dark:bg-gray-950 flex flex-col"
+      >
         <div className="max-w-7xl mx-auto px-4 md:px-6 w-full flex-1 flex flex-col py-16 md:py-32">
           <div className="mb-12 md:mb-16">
-            <span className="text-sm uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">Upcoming</span>
+            <span className="text-sm uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">
+              Upcoming
+            </span>
             <h2 className="text-[clamp(2.5rem,5vw,4.5rem)] leading-[1.1] mt-6 mb-4 tracking-tight text-black dark:text-white">
               다가오는 이벤트
             </h2>
@@ -90,7 +95,9 @@ export function Events() {
     <section id="events" className="bg-gray-50 dark:bg-gray-950 flex flex-col">
       <div className="max-w-7xl mx-auto px-4 md:px-6 w-full flex flex-col py-16 md:py-24">
         <div className="mb-12 md:mb-16">
-          <span className="text-sm uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">Upcoming</span>
+          <span className="text-sm uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">
+            Upcoming
+          </span>
           <h2 className="text-[clamp(2.5rem,5vw,4.5rem)] font-medium leading-[1.1] mt-6 mb-4 tracking-tight text-black dark:text-white">
             교회 소식
           </h2>
@@ -110,10 +117,11 @@ export function Events() {
                 spaceBetween={16}
                 pagination={{
                   clickable: true,
-                  bulletActiveClass: 'swiper-pagination-bullet-active !bg-black dark:!bg-white',
+                  bulletActiveClass:
+                    "swiper-pagination-bullet-active !bg-black dark:!bg-white",
                 }}
                 style={{
-                  paddingBottom: '48px',
+                  paddingBottom: "38px",
                 }}
               >
                 {events.map((post: IBoardPost, index: number) => (
@@ -138,8 +146,10 @@ export function Events() {
                         )}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
                         <div className="absolute bottom-6 left-6 right-6 z-10">
-                          <h3 className="text-2xl text-white mb-2 line-clamp-2">{post.title}</h3>
-                          <div className="flex gap-4 text-sm text-white/80">
+                          <h3 className="font-medium text-base sm:text-xl md:text-2xl text-white mb-2 line-clamp-2">
+                            {post.title}
+                          </h3>
+                          <div className="flex gap-4 text-xs sm:text-sm text-white/80">
                             <span>{formatDate(post.created_at)}</span>
                           </div>
                         </div>
@@ -174,7 +184,9 @@ export function Events() {
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
                     <div className="absolute bottom-6 left-6 right-6 z-10">
-                      <h3 className="text-2xl text-white mb-2 line-clamp-2">{post.title}</h3>
+                      <h3 className="text-2xl text-white mb-2 line-clamp-2">
+                        {post.title}
+                      </h3>
                       <div className="flex gap-4 text-sm text-white/80">
                         <span>{formatDate(post.created_at)}</span>
                       </div>
@@ -186,8 +198,8 @@ export function Events() {
           </>
         )}
         {events.length > 0 && (
-          <div className="mt-16 text-center">
-            <Link href={menuUrlMap[pageId] || '#'}>
+          <div className="sm:mt-16 mt-8 text-center">
+            <Link href={menuUrlMap[pageId] || "#"}>
               <button className="px-12 py-5 border-2 rounded-2xl border-black dark:border-white text-black dark:text-white text-sm uppercase tracking-widest hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all">
                 View All News
               </button>

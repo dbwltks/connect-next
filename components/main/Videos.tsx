@@ -51,10 +51,15 @@ export function Videos() {
   };
 
   return (
-    <section id="videos" className="py-24 bg-gray-50 dark:bg-gray-950 text-black dark:text-white">
+    <section
+      id="videos"
+      className="py-24 bg-gray-50 dark:bg-gray-950 text-black dark:text-white"
+    >
       <div className="max-w-7xl mx-auto px-6">
         <div className="mb-16">
-          <span className="text-sm uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">Video</span>
+          <span className="text-sm uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">
+            Video
+          </span>
           <h2 className="text-[clamp(2.5rem,5vw,4.5rem)] font-medium leading-[1.1] mt-6 mb-4 tracking-tight text-black dark:text-white">
             영상 속 커넥트
           </h2>
@@ -69,7 +74,10 @@ export function Videos() {
             {/* 데스크탑 로딩 */}
             <div className="hidden md:grid grid-cols-2 gap-8">
               {[1, 2].map((i) => (
-                <div key={i} className="animate-pulse bg-gray-200 dark:bg-gray-800 aspect-video"></div>
+                <div
+                  key={i}
+                  className="animate-pulse bg-gray-200 dark:bg-gray-800 aspect-video"
+                ></div>
               ))}
             </div>
           </>
@@ -87,10 +95,11 @@ export function Videos() {
                 spaceBetween={16}
                 pagination={{
                   clickable: true,
-                  bulletActiveClass: 'swiper-pagination-bullet-active !bg-black dark:!bg-white',
+                  bulletActiveClass:
+                    "swiper-pagination-bullet-active !bg-black dark:!bg-white",
                 }}
                 style={{
-                  paddingBottom: '48px',
+                  paddingBottom: "38px",
                 }}
               >
                 {posts.map((post: IBoardPost) => (
@@ -121,11 +130,13 @@ export function Videos() {
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <h3 className="text-xl md:text-2xl text-black dark:text-white group-hover:text-gray-600 dark:group-hover:text-gray-400 transition-colors line-clamp-1">
+                        <h3 className="font-medium text-sm sm:text-xl md:text-2xl text-black dark:text-white group-hover:text-gray-600 dark:group-hover:text-gray-400 transition-colors line-clamp-1">
                           {post.title}
                         </h3>
-                        <div className="flex gap-4 text-sm text-gray-400 dark:text-gray-500 uppercase tracking-widest">
-                          <span>{new Date(post.created_at).toLocaleDateString()}</span>
+                        <div className="flex gap-4 text-xs sm:text-sm text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+                          <span>
+                            {new Date(post.created_at).toLocaleDateString()}
+                          </span>
                         </div>
                       </div>
                     </Link>
@@ -168,7 +179,9 @@ export function Videos() {
                       {post.title}
                     </h3>
                     <div className="flex gap-4 text-sm text-gray-400 dark:text-gray-500 uppercase tracking-widest">
-                      <span>{new Date(post.created_at).toLocaleDateString()}</span>
+                      <span>
+                        {new Date(post.created_at).toLocaleDateString()}
+                      </span>
                     </div>
                   </div>
                 </Link>
@@ -178,8 +191,8 @@ export function Videos() {
         )}
 
         {posts.length > 0 && (
-          <div className="mt-16 text-center">
-            <Link href={menuUrlMap[pageId] || '#'}>
+          <div className="sm:mt-16 mt-8 text-center">
+            <Link href={menuUrlMap[pageId] || "#"}>
               <button className="px-12 py-5 border-2 rounded-2xl border-black dark:border-white text-black dark:text-white text-sm uppercase tracking-widest hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all">
                 View All Videos
               </button>

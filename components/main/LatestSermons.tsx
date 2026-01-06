@@ -66,7 +66,9 @@ export function LatestSermons() {
     <section id="sermons" className="bg-gray-50 dark:bg-gray-950 flex flex-col">
       <div className="max-w-7xl mx-auto px-4 md:px-6 w-full flex flex-col py-16 md:py-24">
         <div className="mb-14 sm:mb-20">
-          <span className="text-sm uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">Latest Messages</span>
+          <span className="text-sm uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">
+            Latest Messages
+          </span>
           <h2 className="text-[clamp(2.5rem,5vw,4.5rem)] font-medium leading-[1.1] mt-6 mb-4 sm:mb-6 tracking-tight text-black dark:text-white">
             최신 설교
           </h2>
@@ -75,7 +77,7 @@ export function LatestSermons() {
           </p>
         </div>
 
-{isLoading ? (
+        {isLoading ? (
           <>
             {/* 모바일 로딩 */}
             <div className="md:hidden">
@@ -110,10 +112,11 @@ export function LatestSermons() {
                 spaceBetween={16}
                 pagination={{
                   clickable: true,
-                  bulletActiveClass: 'swiper-pagination-bullet-active !bg-black dark:!bg-white',
+                  bulletActiveClass:
+                    "swiper-pagination-bullet-active !bg-black dark:!bg-white",
                 }}
                 style={{
-                  paddingBottom: '48px',
+                  paddingBottom: "38px",
                 }}
               >
                 {sermons.map((post: IBoardPost) => (
@@ -144,7 +147,7 @@ export function LatestSermons() {
                           </h3>
                           <ArrowRight className="w-5 h-5 text-black dark:text-white opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-2" />
                         </div>
-                        <div className="flex gap-4 text-sm text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+                        <div className="flex gap-4 text-xs sm:text-sm text-gray-400 dark:text-gray-500 uppercase tracking-widest">
                           <span>{formatDate(post.created_at)}</span>
                         </div>
                       </div>
@@ -194,7 +197,7 @@ export function LatestSermons() {
           </>
         )}
 
-        <div className="mt-20 text-center">
+        <div className="sm:mt-16 mt-8 text-center">
           <button className="px-12 py-5 border-2 rounded-2xl border-black dark:border-white text-black dark:text-white text-sm uppercase tracking-widest hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all">
             View All Sermons
           </button>

@@ -54,7 +54,7 @@ export function WelcomeForm() {
               <br />
               오신 것을 환영합니다
             </h3>
-            <p className="text-xl text-white/60 leading-relaxed">
+            <p className="text-sm sm:text-xl text-white/60 leading-relaxed">
               교회에 궁금한 점이 있으신가요?
               <br />
               말씀을 남겨주시면 정성껏 답변해 드리겠습니다.
