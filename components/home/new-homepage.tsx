@@ -15,6 +15,7 @@ import { TodayWord } from "@/components/main/TodayWord";
 import { Videos } from "@/components/main/Videos";
 import { Location } from "@/components/main/Location";
 import { QuickLinks } from "@/components/main/QuickLinks";
+import { NewcomerGuide } from "@/components/main/NewcomerGuide";
 
 interface NewHomepageProps {
   banners?: any[];
@@ -22,17 +23,22 @@ interface NewHomepageProps {
   menuItems?: any[];
 }
 
-export default function NewHomepage({ banners, widgets, menuItems }: NewHomepageProps) {
-  const locationWidget = widgets?.find(w => w.type === 'location');
-  const carouselWidget = widgets?.find(w => w.type === 'carousel');
+export default function NewHomepage({
+  banners,
+  widgets,
+  menuItems,
+}: NewHomepageProps) {
+  const locationWidget = widgets?.find((w) => w.type === "location");
+  const carouselWidget = widgets?.find((w) => w.type === "carousel");
 
   // 캐러셀 데이터 변환 - desktop_images 또는 mobile_images 사용
-  const carouselImages = carouselWidget?.settings?.desktop_images?.map((img: any) => ({
-    id: img.id || String(Math.random()),
-    imageUrl: img.image_url,
-    title: img.title,
-    description: img.description,
-  })) || [];
+  const carouselImages =
+    carouselWidget?.settings?.desktop_images?.map((img: any) => ({
+      id: img.id || String(Math.random()),
+      imageUrl: img.image_url,
+      title: img.title,
+      description: img.description,
+    })) || [];
 
   return (
     <div className="min-h-screen bg-white">
@@ -45,6 +51,7 @@ export default function NewHomepage({ banners, widgets, menuItems }: NewHomepage
       <LatestSermons />
       {/* <TodayWord /> */}
       <Events />
+      <NewcomerGuide />
       <Photos />
       <Videos />
       {/* <Community /> */}
