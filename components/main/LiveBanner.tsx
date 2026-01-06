@@ -24,10 +24,12 @@ function getNextService() {
   ];
 
   for (const service of services) {
-    if (currentDay < service.day ||
-        (currentDay === service.day &&
-         (currentHour < service.hour ||
-          (currentHour === service.hour && currentMinute < service.minute)))) {
+    if (
+      currentDay < service.day ||
+      (currentDay === service.day &&
+        (currentHour < service.hour ||
+          (currentHour === service.hour && currentMinute < service.minute)))
+    ) {
       return service;
     }
   }
@@ -44,7 +46,11 @@ export function LiveBanner({
   const [isLive, setIsLive] = useState(false);
   const [pulseAnimation, setPulseAnimation] = useState(true);
   const [actualLiveUrl, setActualLiveUrl] = useState(liveUrl);
-  const [nextService, setNextService] = useState<{ name: string; hour: number; minute: number } | null>(null);
+  const [nextService, setNextService] = useState<{
+    name: string;
+    hour: number;
+    minute: number;
+  } | null>(null);
 
   // 다음 예배 시간 계산
   useEffect(() => {
@@ -113,33 +119,43 @@ export function LiveBanner({
   }, [isLive]);
 
   return (
-    <div className="relative w-full py-4 sm:py-5 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 border-y border-gray-700/50">
-      <div className="max-w-[1400px] mx-auto px-6">
+    <div className="relative w-full py-4 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 border-y border-gray-700/50">
+      <div className="max-w-7xl mx-auto sm:px-6 px-4">
         <div className="flex items-center justify-center gap-3 sm:gap-4">
           {/* Live/Offline 아이콘 */}
           <div className="flex items-center gap-2">
             <div className="relative">
-              <Radio className={`w-5 h-5 sm:w-6 sm:h-6 transition-colors ${
-                isLive ? "text-red-500" : "text-gray-400"
-              }`} />
+              <Radio
+                className={`w-5 h-5 sm:w-6 sm:h-6 transition-colors ${
+                  isLive ? "text-red-500" : "text-gray-400"
+                }`}
+              />
               {isLive && pulseAnimation && (
                 <span className="absolute inset-0 rounded-full bg-red-500 opacity-75 animate-ping" />
               )}
             </div>
-            <span className={`text-xs sm:text-sm font-bold uppercase tracking-wider px-2.5 py-1 rounded-md transition-all ${
-              isLive
-                ? "bg-red-500 text-white shadow-lg shadow-red-500/30"
-                : "bg-gray-700/50 text-gray-400"
-            }`}>
+            <span
+              className={`text-xs sm:text-sm font-bold uppercase tracking-wider px-2.5 py-1 rounded-md transition-all ${
+                isLive
+                  ? "bg-red-500 text-white shadow-lg shadow-red-500/30"
+                  : "bg-gray-700/50 text-gray-400"
+              }`}
+            >
               {isLive ? "LIVE" : "OFFLINE"}
             </span>
           </div>
 
           {/* 메시지 */}
-          <p className={`text-xs sm:text-sm md:text-base font-semibold text-center flex-1 transition-colors ${
-            isLive ? "text-white" : "text-gray-400"
-          }`}>
-            {isLive ? message : nextService ? `다음 예배는 ${nextService.name} ${String(nextService.hour).padStart(2, '0')}:${String(nextService.minute).padStart(2, '0')}입니다` : "다음 온라인 예배를 기다려주세요"}
+          <p
+            className={`text-xs sm:text-sm md:text-base font-semibold text-center flex-1 transition-colors ${
+              isLive ? "text-white" : "text-gray-400"
+            }`}
+          >
+            {isLive
+              ? message
+              : nextService
+                ? `다음 예배는 ${nextService.name} ${String(nextService.hour).padStart(2, "0")}:${String(nextService.minute).padStart(2, "0")}입니다`
+                : "다음 온라인 예배를 기다려주세요"}
           </p>
 
           {/* 참여하기 버튼 - 라이브일 때만 */}
