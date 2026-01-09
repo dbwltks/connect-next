@@ -106,7 +106,7 @@ export function Hero({ banners }: HeroProps) {
               Welcome to your
             </span>
           </div>
-          <h1 className="text-[clamp(4rem,9vw,5rem)] leading-[1.1] text-white mb-4 rubik-dirt-regular">
+          <h1 className="text-[clamp(4rem,9vw,5rem)] leading-[1.2] tracking-[5] text-white mb-4 alfa-slab-one-regular">
             {banner?.title || (
               <>
                 Toronto

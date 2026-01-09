@@ -8,7 +8,7 @@
 @import url("https://fonts.googleapis.com/css2?family=Bangers&family=Bebas+Neue&family=DM+Serif+Text:ital@0;1&family=Nanum+Myeongjo:wght@400;700;800&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Bangers&family=Bebas+Neue&family=DM+Serif+Text:ital@0;1&family=Nanum+Myeongjo:wght@400;700;800&family=Rubik+Dirt&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Bangers&family=Bebas+Neue&family=DM+Serif+Text:ital@0;1&family=Nanum+Myeongjo:wght@400;700;800&family=Ramaraja&family=Rozha+One&family=Rubik+Dirt&display=swap");
-
+@import url("https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=BBH+Bartle&family=Gravitas+One&family=Markazi+Text:wght@400..700&family=Modak&family=Permanent+Marker&family=Sekuya&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -190,6 +190,25 @@ h6,
 .rubik-dirt-regular {
   font-family: "Rubik Dirt", system-ui;
   font-weight: 400;
+  font-style: normal;
+}
+
+.modak-regular {
+  font-family: "Modak", system-ui;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.alfa-slab-one-regular {
+  font-family: "Alfa Slab One", serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.markazi-text-regular {
+  font-family: "Markazi Text", serif;
+  font-optical-sizing: auto;
+  font-weight: 700;
   font-style: normal;
 }
 
