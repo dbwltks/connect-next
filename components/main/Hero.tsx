@@ -100,13 +100,13 @@ export function Hero({ banners }: HeroProps) {
       {/* Content */}
       <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-12 w-full">
         <div className="max-w-4xl">
-          {/* <div className="my-4 flex items-center gap-4">
+          <div className="my-4 flex items-center gap-4">
             <div className="h-[1px] w-16 bg-white"></div>
-            <span className="text-white/60 text-sm uppercase tracking-[0.3em]">
+            <span className="text-white/60 lg:text-sm text-xs uppercase tracking-[0.3em]">
               Welcome to your
             </span>
-          </div> */}
-          <h1 className="text-[clamp(4rem,7vw,6rem)] leading-[1.1] text-white mb-4 rubik-dirt-regular">
+          </div>
+          <h1 className="text-[clamp(4rem,9vw,5rem)] leading-[1.1] text-white mb-4 rubik-dirt-regular">
             {banner?.title || (
               <>
                 Toronto
