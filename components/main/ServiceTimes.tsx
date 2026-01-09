@@ -35,16 +35,16 @@ export function ServiceTimes() {
         <div className="grid lg:grid-cols-2 gap-6 sm:gap-20 items-center">
           <div>
             <div className="sm:mb-8 mb-4">
-              <span className="text-sm uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">
+              <span className="lg:text-sm text-xs uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">
                 Service Times
               </span>
             </div>
-            <h2 className="text-[clamp(2.5rem,5vw,4.5rem)] leading-[1.1] mb-8 tracking-tight font-medium text-black dark:text-white">
+            <h2 className="text-[clamp(2.5rem,5vw,3.5rem)] leading-[1.1] mb-6 tracking-tight font-medium text-black dark:text-white">
               예배와 말씀
               <br />
               시간 안내
             </h2>
-            <p className="text-base sm:text-xl text-gray-500 dark:text-gray-400 leading-relaxed">
+            <p className="text-sm lg:text-xl text-gray-500 dark:text-gray-400 leading-relaxed">
               함께 예배하며 하나님을 만나는 시간,
               <br />
               말씀의 자리로 여러분을 초대합니다.

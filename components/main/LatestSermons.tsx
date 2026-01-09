@@ -65,14 +65,14 @@ export function LatestSermons() {
   return (
     <section id="sermons" className="bg-gray-50 dark:bg-gray-950 flex flex-col">
       <div className="max-w-7xl mx-auto px-4 md:px-6 w-full flex flex-col py-16 md:py-24">
-        <div className="mb-14 sm:mb-20">
-          <span className="text-sm uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">
+        <div className="mb-12">
+          <span className="lg:text-sm text-xs uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">
             Latest Messages
           </span>
-          <h2 className="text-[clamp(2.5rem,5vw,4.5rem)] font-medium leading-[1.1] mt-6 mb-4 sm:mb-6 tracking-tight text-black dark:text-white">
+          <h2 className="text-[clamp(2.5rem,5vw,3rem)] font-medium leading-[1.1] my-4 tracking-tight text-black dark:text-white">
             최신 설교
           </h2>
-          <p className="sm:text-xl text-base text-gray-600 dark:text-gray-400">
+          <p className="lg:text-xl text-base text-gray-600 dark:text-gray-400">
             말씀으로 함께 성장합니다
           </p>
         </div>
@@ -142,7 +142,7 @@ export function LatestSermons() {
                       </div>
                       <div className="space-y-3">
                         <div className="flex justify-between items-start gap-4">
-                          <h3 className="text-base font-medium md:text-2xl text-black dark:text-white group-hover:text-gray-600 dark:group-hover:text-gray-400 transition-colors line-clamp-2">
+                          <h3 className="text-base font-bold md:text-2xl text-black dark:text-white group-hover:text-gray-600 dark:group-hover:text-gray-400 transition-colors line-clamp-2">
                             {post.title}
                           </h3>
                           <ArrowRight className="w-5 h-5 text-black dark:text-white opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-2" />
@@ -174,7 +174,7 @@ export function LatestSermons() {
                       />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
-                        <span className="text-white text-4xl font-bold opacity-30">
+                        <span className="text-white text-3xl font-bold opacity-30">
                           {post.title.charAt(0)}
                         </span>
                       </div>
@@ -182,12 +182,12 @@ export function LatestSermons() {
                   </div>
                   <div className="space-y-3">
                     <div className="flex justify-between items-start gap-4">
-                      <h3 className="text-lg lg:text-xl font-medium text-black dark:text-white group-hover:text-gray-600 dark:group-hover:text-gray-400 transition-colors line-clamp-2">
+                      <h3 className="lg:text-base text-sm font-bold text-black dark:text-white group-hover:text-gray-600 dark:group-hover:text-gray-400 transition-colors line-clamp-2">
                         {post.title}
                       </h3>
                       <ArrowRight className="w-5 h-5 text-black dark:text-white opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-2" />
                     </div>
-                    <div className="flex gap-4 text-sm text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+                    <div className="flex gap-4 lg:text-sm text-xs text-gray-400 dark:text-gray-500 uppercase tracking-widest">
                       <span>{formatDate(post.created_at)}</span>
                     </div>
                   </div>

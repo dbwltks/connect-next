@@ -20,13 +20,13 @@ export function Location({ data }: LocationProps) {
     <section id="location" className="bg-white dark:bg-gray-950 py-16">
       <div className="max-w-7xl mx-auto px-6">
         <div className="mb-12">
-          <span className="text-sm uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500 ">
+          <span className="lg:text-sm text-xs uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500 ">
             Location
           </span>
-          <h2 className="text-[clamp(2.5rem,5vw,4.5rem)] leading-[1.1] font-medium mt-6 mb-4 tracking-tight text-black dark:text-white">
+          <h2 className="text-[clamp(2.5rem,5vw,3.5rem)] leading-[1.1] font-medium my-4 tracking-tight text-black dark:text-white">
             {data?.location_title || "오시는 길"}
           </h2>
-          <p className="text-xl text-gray-500 dark:text-gray-400">
+          <p className="text-sm lg:text-xl text-gray-500 dark:text-gray-400">
             {data?.location_subtitle || "언제든 방문을 환영합니다"}
           </p>
         </div>

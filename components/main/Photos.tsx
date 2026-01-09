@@ -47,9 +47,11 @@ export function Photos() {
   return (
     <section id="photos" className="py-24 bg-white dark:bg-gray-950">
       <div className="max-w-7xl mx-auto px-6">
-        <div className="mb-16">
-          <span className="text-sm uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">Memory</span>
-          <h2 className="text-[clamp(2.5rem,5vw,4.5rem)] font-medium leading-[1.1] mt-6 mb-4 tracking-tight text-black dark:text-white">
+        <div className="mb-12">
+          <span className="lg:text-sm text-xs uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">
+            Memory
+          </span>
+          <h2 className="text-[clamp(2.5rem,5vw,3rem)] font-medium leading-[1.1] my-4 tracking-tight text-black dark:text-white">
             사진 속 커넥트
           </h2>
         </div>
@@ -59,13 +61,19 @@ export function Photos() {
             {/* 모바일 로딩 - 4개 */}
             <div className="grid grid-cols-2 gap-2 lg:hidden">
               {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="animate-pulse bg-gray-100 dark:bg-gray-800 aspect-square"></div>
+                <div
+                  key={i}
+                  className="animate-pulse bg-gray-100 dark:bg-gray-800 aspect-square"
+                ></div>
               ))}
             </div>
             {/* 데스크탑 로딩 - 3개 */}
             <div className="hidden lg:grid grid-cols-3 gap-6">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="animate-pulse bg-gray-100 dark:bg-gray-800 aspect-square"></div>
+                <div
+                  key={i}
+                  className="animate-pulse bg-gray-100 dark:bg-gray-800 aspect-square"
+                ></div>
               ))}
             </div>
           </>
@@ -91,14 +99,16 @@ export function Photos() {
                     />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
-                      <span className="text-gray-400 dark:text-gray-500 text-lg">{post.title}</span>
+                      <span className="text-gray-400 dark:text-gray-500 text-lg">
+                        {post.title}
+                      </span>
                     </div>
                   )}
                   {/* Overlay on hover */}
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-center justify-center">
-                     <p className="text-white text-lg font-medium px-6 text-center transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
-                       {post.title}
-                     </p>
+                    <p className="text-white text-lg font-medium px-6 text-center transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                      {post.title}
+                    </p>
                   </div>
                 </Link>
               ))}
@@ -119,14 +129,16 @@ export function Photos() {
                     />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
-                      <span className="text-gray-400 dark:text-gray-500 text-lg">{post.title}</span>
+                      <span className="text-gray-400 dark:text-gray-500 text-lg">
+                        {post.title}
+                      </span>
                     </div>
                   )}
                   {/* Overlay on hover */}
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-center justify-center">
-                     <p className="text-white text-lg font-medium px-6 text-center transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
-                       {post.title}
-                     </p>
+                    <p className="text-white text-lg font-medium px-6 text-center transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                      {post.title}
+                    </p>
                   </div>
                 </Link>
               ))}
@@ -136,7 +148,7 @@ export function Photos() {
 
         {posts.length > 0 && (
           <div className="mt-16 text-center">
-            <Link href={menuUrlMap[pageId] || '#'}>
+            <Link href={menuUrlMap[pageId] || "#"}>
               <button className="px-12 py-5 border-2 rounded-2xl border-black dark:border-white text-black dark:text-white text-sm uppercase tracking-widest hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all">
                 View All Photos
               </button>

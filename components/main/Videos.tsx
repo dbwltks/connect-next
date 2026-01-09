@@ -56,11 +56,11 @@ export function Videos() {
       className="py-24 bg-gray-50 dark:bg-gray-950 text-black dark:text-white"
     >
       <div className="max-w-7xl mx-auto px-6">
-        <div className="mb-16">
-          <span className="text-sm uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">
+        <div className="mb-12">
+          <span className="lg:text-sm text-xs uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">
             Video
           </span>
-          <h2 className="text-[clamp(2.5rem,5vw,4.5rem)] font-medium leading-[1.1] mt-6 mb-4 tracking-tight text-black dark:text-white">
+          <h2 className="text-[clamp(2.5rem,5vw,3rem)] font-medium leading-[1.1] my-4 tracking-tight text-black dark:text-white">
             영상 속 커넥트
           </h2>
         </div>
@@ -130,7 +130,7 @@ export function Videos() {
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <h3 className="font-medium text-base sm:text-xl md:text-2xl text-black dark:text-white group-hover:text-gray-600 dark:group-hover:text-gray-400 transition-colors line-clamp-1">
+                        <h3 className="font-bold text-base text-black dark:text-white group-hover:text-gray-600 dark:group-hover:text-gray-400 transition-colors line-clamp-1">
                           {post.title}
                         </h3>
                         <div className="flex gap-4 text-xs sm:text-sm text-gray-400 dark:text-gray-500 uppercase tracking-widest">
@@ -175,10 +175,10 @@ export function Videos() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <h3 className="text-xl md:text-2xl text-black dark:text-white group-hover:text-gray-600 dark:group-hover:text-gray-400 transition-colors line-clamp-1">
+                    <h3 className="text-base lg:text-xl font-bold text-black dark:text-white group-hover:text-gray-600 dark:group-hover:text-gray-400 transition-colors line-clamp-1">
                       {post.title}
                     </h3>
-                    <div className="flex gap-4 text-sm text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+                    <div className="flex gap-4 lg:text-sm text-xs text-gray-400 dark:text-gray-500 uppercase tracking-widest">
                       <span>
                         {new Date(post.created_at).toLocaleDateString()}
                       </span>

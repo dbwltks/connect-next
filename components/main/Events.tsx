@@ -68,11 +68,11 @@ export function Events() {
         className="bg-gray-50 dark:bg-gray-950 flex flex-col"
       >
         <div className="max-w-7xl mx-auto px-4 md:px-6 w-full flex-1 flex flex-col py-16 md:py-32">
-          <div className="mb-12 md:mb-16">
+          <div className="mb-12">
             <span className="text-sm uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">
               Upcoming
             </span>
-            <h2 className="text-[clamp(2.5rem,5vw,4.5rem)] leading-[1.1] mt-6 mb-4 tracking-tight text-black dark:text-white">
+            <h2 className="text-[clamp(2.5rem,5vw,3rem)] leading-[1.1] mt-6 mb-4 tracking-tight text-black dark:text-white">
               다가오는 이벤트
             </h2>
           </div>
@@ -94,11 +94,11 @@ export function Events() {
   return (
     <section id="events" className="bg-gray-50 dark:bg-gray-950 flex flex-col">
       <div className="max-w-7xl mx-auto px-4 md:px-6 w-full flex flex-col py-16 md:py-24">
-        <div className="mb-12 md:mb-16">
-          <span className="text-sm uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">
+        <div className="mb-12">
+          <span className="lg:text-sm text-xs uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">
             Upcoming
           </span>
-          <h2 className="text-[clamp(2.5rem,5vw,4.5rem)] font-medium leading-[1.1] mt-6 mb-4 tracking-tight text-black dark:text-white">
+          <h2 className="text-[clamp(2.5rem,5vw,3rem)] font-medium leading-[1.1] my-4 tracking-tight text-black dark:text-white">
             교회 소식
           </h2>
         </div>
@@ -184,7 +184,7 @@ export function Events() {
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
                     <div className="absolute bottom-6 left-6 right-6 z-10">
-                      <h3 className="text-2xl text-white mb-2 line-clamp-2">
+                      <h3 className="xl:text-lg text-base font-bold text-white mb-2 line-clamp-2">
                         {post.title}
                       </h3>
                       <div className="flex gap-4 text-sm text-white/80">
