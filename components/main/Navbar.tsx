@@ -98,7 +98,7 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
     setOpenMobileMenus((prev) =>
       prev.includes(menuId)
         ? prev.filter((id) => id !== menuId)
-        : [...prev, menuId]
+        : [...prev, menuId],
     );
   };
 
@@ -118,17 +118,17 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
         <div className="flex justify-between items-center h-20">
           {/* 로고 */}
           <Link href="/" className="flex items-center">
-            <div className="relative h-12 w-24 overflow-hidden flex items-center">
+            <div className="relative h-16 w-32 overflow-hidden flex items-center">
               <Image
                 src="/connect_logo.png"
                 alt="커넥트 교회 로고"
-                width={96}
-                height={48}
+                width={128}
+                height={64}
                 className={`object-contain transition-all ${
                   isScrolled ? "" : "brightness-0 invert"
                 }`}
                 priority
-                style={{ width: "auto", height: "48px" }}
+                style={{ width: "auto", height: "64px" }}
               />
             </div>
           </Link>
