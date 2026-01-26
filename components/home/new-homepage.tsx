@@ -17,6 +17,7 @@ import { Location } from "@/components/main/Location";
 import { QuickLinks } from "@/components/main/QuickLinks";
 import { NewcomerGuide } from "@/components/main/NewcomerGuide";
 import { Worship } from "@/components/main/Worship";
+import { SermonWorship } from "@/components/main/SermonWorship";
 
 interface NewHomepageProps {
   banners?: any[];
@@ -49,8 +50,7 @@ export default function NewHomepage({
       {/* <ImageCarousel images={carouselImages} /> */}
       <LiveBanner />
       <QuickLinks />
-      <LatestSermons />
-      <Worship />
+      <SermonWorship />
       {/* <TodayWord /> */}
       <Events />
       <NewcomerGuide />
