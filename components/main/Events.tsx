@@ -39,7 +39,7 @@ export function Events() {
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
-    }
+    },
   );
 
   const posts = data?.posts || [];
@@ -67,7 +67,7 @@ export function Events() {
         id="events"
         className="bg-gray-50 dark:bg-gray-950 flex flex-col"
       >
-        <div className="max-w-7xl mx-auto px-4 md:px-6 w-full flex-1 flex flex-col py-16 md:py-32">
+        <div className="max-w-6xl mx-auto px-4 md:px-6 w-full flex-1 flex flex-col py-16 md:py-32">
           <div className="mb-12">
             <span className="text-sm uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">
               Upcoming
@@ -93,7 +93,7 @@ export function Events() {
 
   return (
     <section id="events" className="bg-gray-50 dark:bg-gray-950 flex flex-col">
-      <div className="max-w-7xl mx-auto px-4 md:px-6 w-full flex flex-col py-16 md:py-24">
+      <div className="max-w-6xl mx-auto px-4 md:px-6 w-full flex flex-col py-16 md:py-24">
         <div className="mb-12">
           <span className="lg:text-sm text-xs uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">
             Upcoming

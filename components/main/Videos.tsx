@@ -38,7 +38,7 @@ export function Videos() {
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
-    }
+    },
   );
 
   const posts = data?.posts || [];
@@ -55,7 +55,7 @@ export function Videos() {
       id="videos"
       className="py-24 bg-gray-50 dark:bg-gray-950 text-black dark:text-white"
     >
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="max-w-6xl mx-auto px-6">
         <div className="mb-12">
           <span className="lg:text-sm text-xs uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">
             Video

@@ -1,6 +1,15 @@
 "use client";
 
-import { BookOpen, Book, Church, DollarSign, Info, Heart, Copy, Check } from "lucide-react";
+import {
+  BookOpen,
+  Book,
+  Church,
+  DollarSign,
+  Info,
+  Heart,
+  Copy,
+  Check,
+} from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { TypeAnimation } from "react-type-animation";
@@ -24,7 +33,7 @@ export function QuickLinks() {
   // Smooth scroll 핸들러
   const handleLinkClick = (
     e: React.MouseEvent<HTMLAnchorElement>,
-    href: string
+    href: string,
   ) => {
     // # 으로 시작하는 anchor link인 경우 smooth scroll
     if (href.startsWith("#")) {

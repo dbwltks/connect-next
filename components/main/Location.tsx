@@ -18,7 +18,7 @@ export function Location({ data }: LocationProps) {
 
   return (
     <section id="location" className="bg-white dark:bg-gray-950 py-16">
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="max-w-6xl mx-auto px-6">
         <div className="mb-12">
           <span className="lg:text-sm text-xs uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500 ">
             Location

@@ -46,7 +46,7 @@ export function WelcomeForm() {
 
   return (
     <section id="welcome" className="bg-black text-white py-16 md:py-24">
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="max-w-6xl mx-auto px-6">
         <div className="grid md:grid-cols-2 gap-12 md:gap-16">
           <div>
             <h3 className="text-[clamp(2rem,4vw,3.5rem)] font-medium leading-[1.1] mb-8 tracking-tight">

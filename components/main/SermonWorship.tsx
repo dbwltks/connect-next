@@ -90,7 +90,7 @@ export function SermonWorship() {
 
   return (
     <section className="bg-gray-50 dark:bg-gray-950 flex flex-col">
-      <div className="max-w-7xl mx-auto px-4 md:px-6 w-full flex flex-col py-16 md:py-24">
+      <div className="max-w-6xl mx-auto px-4 md:px-6 w-full flex flex-col py-16 md:py-24">
         {/* 헤더 */}
         <div className="mb-0">
           <span className="lg:text-sm text-xs uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">
