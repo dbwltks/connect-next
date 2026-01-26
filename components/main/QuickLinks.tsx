@@ -92,7 +92,7 @@ export function QuickLinks() {
   return (
     <>
       <section id="quick-links" className="py-24 bg-white dark:bg-gray-900">
-        <div className="max-w-7xl mx-auto px-6">
+        <div className="max-w-6xl mx-auto sm:px-0 px-4">
           {/* 헤더 */}
           <div className="text-center mb-16">
             <span className="text-xs sm:text-sm uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">

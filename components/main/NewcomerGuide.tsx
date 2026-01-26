@@ -44,7 +44,7 @@ export function NewcomerGuide() {
 
   return (
     <section id="newcomer-guide" className="py-24 bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-6xl mx-auto sm:px-6 px-4">
+      <div className="max-w-6xl mx-auto sm:px-6 px-0">
         <div className="text-center mb-16">
           <span className="text-sm uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">
             Welcome
