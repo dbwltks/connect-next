@@ -16,6 +16,7 @@ import { Videos } from "@/components/main/Videos";
 import { Location } from "@/components/main/Location";
 import { QuickLinks } from "@/components/main/QuickLinks";
 import { NewcomerGuide } from "@/components/main/NewcomerGuide";
+import { Worship } from "@/components/main/Worship";
 
 interface NewHomepageProps {
   banners?: any[];
@@ -49,6 +50,7 @@ export default function NewHomepage({
       <LiveBanner />
       <QuickLinks />
       <LatestSermons />
+      <Worship />
       {/* <TodayWord /> */}
       <Events />
       <NewcomerGuide />
