@@ -106,10 +106,10 @@ export function SermonWorship() {
           <div className="flex justify-end mb-4">
             <Link
               href={sermonMenuUrlMap[sermonPageId] || "#"}
-              className="group text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors flex items-center gap-1"
+              className="group sm:text-sm text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors flex items-center gap-1"
             >
               자세히보기
-              <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              <ChevronRight className="sm:w-4 sm:h-4 w-3 h-3 group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
 
@@ -239,12 +239,6 @@ export function SermonWorship() {
                   modules={[Pagination]}
                   slidesPerView={2}
                   spaceBetween={12}
-                  pagination={{
-                    clickable: true,
-                    bulletActiveClass:
-                      "swiper-pagination-bullet-active !bg-black dark:!bg-white",
-                  }}
-                  style={{ paddingBottom: "38px" }}
                 >
                   {worships.map((post: IBoardPost) => (
                     <SwiperSlide key={post.id}>
@@ -324,10 +318,10 @@ export function SermonWorship() {
           <div className="flex justify-end mt-4">
             <Link
               href={worshipMenuUrlMap[worshipPageId] || "#"}
-              className="group text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors flex items-center gap-1"
+              className="group sm:text-sm text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors flex items-center gap-1"
             >
               자세히보기
-              <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              <ChevronRight className="sm:w-4 sm:h-4 w-3 h-3 group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
         </div>
