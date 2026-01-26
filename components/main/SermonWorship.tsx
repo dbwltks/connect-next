@@ -218,7 +218,7 @@ export function SermonWorship() {
         {/* 찬양 섹션 - 4개 */}
         <div>
           {worshipLoading ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="animate-pulse">
                   <div className="aspect-video bg-gray-200 dark:bg-gray-800 mb-6 rounded-xl"></div>
@@ -282,7 +282,7 @@ export function SermonWorship() {
               </div>
 
               {/* 데스크탑: Grid 4열 */}
-              <div className="hidden md:grid grid-cols-4 gap-8">
+              <div className="hidden md:grid grid-cols-4 gap-4">
                 {worships.map((post: IBoardPost) => (
                   <Link
                     key={post.id}
