@@ -25,10 +25,10 @@ export default function LoginSelectPage() {
       {/* 제목 */}
       <div className="text-center mb-12">
         <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-          로그인 방식 선택
+          로그인
         </h1>
         <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400">
-          원하시는 로그인 방식을 선택해주세요
+          이용하실 서비스를 선택해주세요
         </p>
       </div>
 
