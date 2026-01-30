@@ -535,7 +535,7 @@ function HeaderClient({
             />
           ) : (
             // 클라이언트에서 사용자 정보가 없으면 로그인 버튼 렌더링
-            <Link href="/login">
+            <Link href="/login-select">
               <Button variant="ghost" size="sm">
                 로그인
               </Button>
@@ -575,7 +575,7 @@ function HeaderClient({
           />
         ) : (
           // 클라이언트에서 사용자 정보가 없으면 로그인 버튼 렌더링
-          <Link href="/login">
+          <Link href="/login-select">
             <Button variant="ghost" size="sm">
               로그인
             </Button>
@@ -756,7 +756,7 @@ function HeaderClient({
                 </>
               ) : (
                 <Link
-                  href="/login"
+                  href="/login-select"
                   onClick={() => setIsMenuOpen(false)}
                   className="block text-base font-medium pb-6"
                 >
