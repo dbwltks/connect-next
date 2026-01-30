@@ -266,7 +266,7 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Link href="/login">
+              <Link href="/login-select">
                 <button
                   className={`px-8 py-3 rounded-full text-sm uppercase tracking-widest transition-all ${
                     isScrolled
@@ -405,7 +405,7 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
                   </button>
                 </>
               ) : (
-                <Link href="/login">
+                <Link href="/login-select">
                   <button
                     className="w-full bg-black text-white px-8 py-4 rounded-full text-sm uppercase tracking-widest hover:bg-gray-800"
                     onClick={() => setIsOpen(false)}
