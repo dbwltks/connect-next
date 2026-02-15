@@ -96,21 +96,21 @@ export default function LoginSelectPage() {
             </div>
 
             <p className="text-xs sm:text-base text-gray-600 dark:text-gray-400 mb-3 sm:mb-6">
-              커넥트 플랫폼 통합 계정으로 로그인합니다
+              교회 프로그램 신청 및 개인 신앙생활 관리
             </p>
 
             <div className="space-y-2 sm:space-y-3 pt-3 sm:pt-4 border-t border-gray-100 dark:border-gray-700">
               <div className="flex items-center text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                 <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-purple-500 mr-2 sm:mr-3"></div>
-                플랫폼 관리 기능
+                교회 프로그램 신청
               </div>
               <div className="hidden sm:flex items-center text-sm text-gray-600 dark:text-gray-400">
                 <div className="w-1.5 h-1.5 rounded-full bg-purple-500 mr-3"></div>
-                확장된 도구 및 서비스
+                나의 프로그램 관리
               </div>
               <div className="hidden sm:flex items-center text-sm text-gray-600 dark:text-gray-400">
                 <div className="w-1.5 h-1.5 rounded-full bg-purple-500 mr-3"></div>
-                통합 운영 시스템
+                기도제목 및 신앙생활
               </div>
             </div>
           </div>
