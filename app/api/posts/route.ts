@@ -51,24 +51,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 게시글 생성
+    // 게시글 생성 - org_posts 테이블 사용
+    const CONNECT_CHURCH_ORG_ID = '23913033-e35d-456c-818a-7824dd9de106';
+
     const { data: post, error } = await supabase
-      .from('board_posts')
+      .from('org_posts')
       .insert({
+        organization_id: CONNECT_CHURCH_ORG_ID,
         title,
         content: finalContent,
         description,
-        page_id,
         category_id,
-        user_id: user.id,
+        author_id: user.id,
         allow_comments,
-        is_notice,
-        is_pinned,
+        post_type: is_notice ? 'notice' : (is_pinned ? 'pinned' : 'normal'),
         status,
         published_at: published_at || new Date().toISOString(),
-        thumbnail_image: finalThumbnailImage,
-        files: JSON.stringify(finalFiles),
-        tags: JSON.stringify(tags),
+        thumbnail_url: finalThumbnailImage,
+        meta: { files: finalFiles, page_id },
+        tags: tags || [],
         views: 0
       })
       .select()
@@ -120,10 +121,10 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // 게시글 소유자 확인
+    // 게시글 소유자 확인 - org_posts 테이블 사용
     const { data: existingPost, error: fetchError } = await supabase
-      .from('board_posts')
-      .select('user_id')
+      .from('org_posts')
+      .select('author_id')
       .eq('id', id)
       .single();
 
@@ -142,7 +143,7 @@ export async function PUT(request: NextRequest) {
       .single();
 
     const isAdmin = userProfile?.role?.toLowerCase() === 'admin';
-    const isOwner = existingPost.user_id === user.id;
+    const isOwner = existingPost.author_id === user.id;
 
     if (!isOwner && !isAdmin) {
       return NextResponse.json(
@@ -170,25 +171,23 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    // 게시글 업데이트 (user_id는 기존 작성자 유지)
+    // 게시글 업데이트 - org_posts 테이블 사용 (author_id는 기존 작성자 유지)
     const { data: post, error } = await supabase
-      .from('board_posts')
+      .from('org_posts')
       .update({
         title,
         content: finalContent,
         description,
-        page_id,
         category_id,
         allow_comments,
-        is_notice,
-        is_pinned,
+        post_type: is_notice ? 'notice' : (is_pinned ? 'pinned' : 'normal'),
         status,
         published_at,
-        thumbnail_image: finalThumbnailImage,
-        files: JSON.stringify(finalFiles),
-        tags: JSON.stringify(tags),
+        thumbnail_url: finalThumbnailImage,
+        meta: { files: finalFiles, page_id },
+        tags: tags || [],
         updated_at: new Date().toISOString()
-        // user_id는 업데이트하지 않음 - 기존 작성자 유지
+        // author_id는 업데이트하지 않음 - 기존 작성자 유지
       })
       .eq('id', id)
       .select()

@@ -6,6 +6,9 @@ import dynamic from "next/dynamic";
 // 동적으로 섹션 컴포넌트 로드
 const BoardSection = dynamic(() => import("./board-section"));
 const ContentSection = dynamic(() => import("./content-section"));
+const OrganizationChartWidget = dynamic(() =>
+  import("@/components/widgets/organization-chart-widget").then(mod => mod.default)
+);
 
 // 추후 다른 섹션 타입 추가 시 여기에 추가
 // const EventSection = dynamic(() => import('./event-section'), {
@@ -61,6 +64,11 @@ export default function SectionRenderer({
   const s = section as any;
   const isActive = s.isActive ?? s.is_active;
   if (!isActive) return null;
+
+  // 위젯 타입 체크 (content displayType이지만 위젯인 경우)
+  if (s.type === "organization-chart") {
+    return <OrganizationChartWidget section={section} />;
+  }
 
   const displayType =
     s.category?.display_type ?? s.displayType ?? s.pageType ?? s.page_type;

@@ -44,8 +44,9 @@ async function fetchWorshipPosts(pageId: string, limit: number = 4) {
 }
 
 export function SermonWorship() {
-  const sermonPageId = "a379684a-b9a1-4c51-a126-918d1c0e9b30";
-  const worshipPageId = "dc8460ce-b35b-4b2a-8844-91c18028bdad";
+  // 카테고리 ID (org_post_categories)
+  const sermonPageId = "19e27963-a138-4a77-bde8-71060a8e6c5d"; // 예배와 말씀
+  const worshipPageId = "cd5a8012-8f59-4620-995a-0ea78f809a2b"; // 찬양과 간증
 
   // 설교 데이터
   const { data: sermonData, isLoading: sermonLoading } = useSWR(
@@ -82,10 +83,13 @@ export function SermonWorship() {
     });
   };
 
-  // 게시글별 메뉴 URL 매핑 함수
-  const getPostUrl = (post: IBoardPost, menuUrlMap: Record<string, string>) => {
-    const menuUrl = post.page_id ? menuUrlMap[post.page_id] : null;
-    return menuUrl ? `${menuUrl}?post=${post.id}` : `/?post=${post.id}`;
+  // 게시글별 메뉴 URL 매핑 함수 - 고정 URL 사용
+  const getSermonPostUrl = (post: IBoardPost) => {
+    return `/sermons/all-sermons?post=${post.id}`;
+  };
+
+  const getWorshipPostUrl = (post: IBoardPost) => {
+    return `/sermons/praise?post=${post.id}`;
   };
 
   return (
@@ -105,7 +109,7 @@ export function SermonWorship() {
         <div className="mb-4">
           <div className="flex justify-end mb-4">
             <Link
-              href={sermonMenuUrlMap[sermonPageId] || "#"}
+              href="/sermons/all-sermons"
               className="group sm:text-sm text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors flex items-center gap-1"
             >
               자세히보기
@@ -139,7 +143,7 @@ export function SermonWorship() {
                   {sermons.map((post: IBoardPost) => (
                     <SwiperSlide key={post.id}>
                       <Link
-                        href={getPostUrl(post, sermonMenuUrlMap)}
+                        href={getSermonPostUrl(post)}
                         className="group cursor-pointer block border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden"
                       >
                         <div className="relative aspect-video overflow-hidden bg-gray-200 dark:bg-gray-800">
@@ -179,7 +183,7 @@ export function SermonWorship() {
                 {sermons.map((post: IBoardPost) => (
                   <Link
                     key={post.id}
-                    href={getPostUrl(post, sermonMenuUrlMap)}
+                    href={getSermonPostUrl(post)}
                     className="group cursor-pointer block border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden hover:shadow-lg transition-shadow"
                   >
                     <div className="relative aspect-video overflow-hidden bg-gray-200 dark:bg-gray-800">
@@ -243,7 +247,7 @@ export function SermonWorship() {
                   {worships.map((post: IBoardPost) => (
                     <SwiperSlide key={post.id}>
                       <Link
-                        href={getPostUrl(post, worshipMenuUrlMap)}
+                        href={getWorshipPostUrl(post)}
                         className="group cursor-pointer block"
                       >
                         <div className="relative aspect-video overflow-hidden rounded-lg mb-3 bg-gray-200 dark:bg-gray-800">
@@ -280,7 +284,7 @@ export function SermonWorship() {
                 {worships.map((post: IBoardPost) => (
                   <Link
                     key={post.id}
-                    href={getPostUrl(post, worshipMenuUrlMap)}
+                    href={getWorshipPostUrl(post)}
                     className="group cursor-pointer block"
                   >
                     <div className="relative aspect-video overflow-hidden mb-6 rounded-xl bg-gray-200 dark:bg-gray-800">
@@ -317,7 +321,7 @@ export function SermonWorship() {
 
           <div className="flex justify-end mt-4">
             <Link
-              href={worshipMenuUrlMap[worshipPageId] || "#"}
+              href="/sermons/praise"
               className="group sm:text-sm text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors flex items-center gap-1"
             >
               자세히보기

@@ -61,24 +61,65 @@ interface FooterSettings {
   logo_height?: number;
 }
 
-// Footer 데이터 fetcher
+// 하드코딩된 Footer 설정
+const HARDCODED_FOOTER_SETTINGS = {
+  church_name: "Toronto Connect Church",
+  church_slogan: "Connect with God\nConnect with You and Me\nConnect with People and the World",
+  addresses: [
+    { id: "1", name: "교회 주소", value: "45 Davenport Road Toronto, ON M5R 1H2" },
+    { id: "2", name: "목사관 주소", value: "45 Kentland Crescent, North York, ON M2M 2X7" }
+  ],
+  phones: [
+    { id: "1", name: "교회 전화번호", value: "647-447-9776" }
+  ],
+  email: "tconnectchurch@gmail.com",
+  facebook_url: "https://facebook.com/connectchurch",
+  instagram_url: "https://instagram.com/connectchurch",
+  youtube_url: "https://youtube.com/@connectchurch",
+  service_times: [
+    { id: "1", name: "주일 예배", time: "오후 3시 - 오후 5시" },
+    { id: "2", name: "목요 기도회", time: "오후 7시 - 오후 9시" },
+    { id: "3", name: "화요 Bible Connect IN", time: "오후 7시 - 오후 8시 30분" },
+    { id: "4", name: "목요 Bible Connect IN", time: "오후 5시 - 오후 6시 30분" },
+    { id: "5", name: "셀 모임 (주일)", time: "오후 5시 - 오후 6시" }
+  ],
+  copyright_text: "© {year} Toronto Connect Church. All rights reserved.",
+  logo_or_name: "logo",
+  logo_url: "/connect_logo.png",
+  logo_height: 50,
+};
+
+const HARDCODED_MENUS = [
+  { id: "1", title: "교회소개", url: "/connect/about", order_num: 1, is_active: true, open_in_new_tab: false },
+  { id: "1-1", title: "교회소개", url: "/connect/about", order_num: 1, is_active: true, open_in_new_tab: false, parent_id: "1" },
+  { id: "1-2", title: "인사말", url: "/connect/greeting", order_num: 2, is_active: true, open_in_new_tab: false, parent_id: "1" },
+  { id: "1-3", title: "섬기는 사람들", url: "/connect/people", order_num: 3, is_active: true, open_in_new_tab: false, parent_id: "1" },
+  { id: "1-4", title: "예배 및 위치안내", url: "/connect/church-info", order_num: 4, is_active: true, open_in_new_tab: false, parent_id: "1" },
+
+  { id: "2", title: "예배와 말씀", url: "/sermons/all-sermons", order_num: 2, is_active: true, open_in_new_tab: false },
+  { id: "2-1", title: "예배와 말씀", url: "/sermons/all-sermons", order_num: 1, is_active: true, open_in_new_tab: false, parent_id: "2" },
+  { id: "2-2", title: "찬양과 간증", url: "/sermons/praise", order_num: 2, is_active: true, open_in_new_tab: false, parent_id: "2" },
+  { id: "2-3", title: "BCIN", url: "/sermons/bcin", order_num: 3, is_active: true, open_in_new_tab: false, parent_id: "2" },
+  { id: "2-4", title: "목회 컬럼과 말씀 묵상", url: "/sermons/pastoral-column", order_num: 4, is_active: true, open_in_new_tab: false, parent_id: "2" },
+
+  { id: "3", title: "커넥팅", url: "/connecting/info-board", order_num: 3, is_active: true, open_in_new_tab: false },
+  { id: "3-1", title: "교회 소식", url: "/connecting/info-board", order_num: 1, is_active: true, open_in_new_tab: false, parent_id: "3" },
+  { id: "3-2", title: "사진 속 커넥트", url: "/connecting/in-pictures", order_num: 2, is_active: true, open_in_new_tab: false, parent_id: "3" },
+  { id: "3-3", title: "미디어 속 커넥트", url: "/connecting/media", order_num: 3, is_active: true, open_in_new_tab: false, parent_id: "3" },
+  { id: "3-4", title: "온라인 주보", url: "/connecting/weekly-bulletin", order_num: 4, is_active: true, open_in_new_tab: false, parent_id: "3" },
+  { id: "3-5", title: "일정표", url: "/connecting/calendar", order_num: 5, is_active: true, open_in_new_tab: false, parent_id: "3" },
+
+  { id: "4", title: "선교", url: "/mission/domestic-mission", order_num: 4, is_active: true, open_in_new_tab: false },
+  { id: "4-1", title: "국내 선교", url: "/mission/domestic-mission", order_num: 1, is_active: true, open_in_new_tab: false, parent_id: "4" },
+  { id: "4-2", title: "국외 선교", url: "/mission/overseas-mission", order_num: 2, is_active: true, open_in_new_tab: false, parent_id: "4" },
+  { id: "4-3", title: "협력 단체", url: "/mission/cooperating-group", order_num: 3, is_active: true, open_in_new_tab: false, parent_id: "4" },
+];
+
+// Footer 데이터 fetcher - 하드코딩된 데이터 반환
 const fetchFooterData = async () => {
-  const supabase = createClient();
-  const [menuRes, settingsRes] = await Promise.all([
-    supabase
-      .from("cms_menus")
-      .select("*")
-      .eq("is_active", true)
-      .order("order_num", { ascending: true }),
-    supabase.from("cms_footer").select("*").limit(1).single()
-  ]);
-
-  if (menuRes.error) throw menuRes.error;
-  if (settingsRes.error) throw settingsRes.error;
-
   return {
-    menus: menuRes.data || [],
-    settings: settingsRes.data || null
+    menus: HARDCODED_MENUS,
+    settings: HARDCODED_FOOTER_SETTINGS
   };
 };
 
@@ -480,10 +521,10 @@ export default function Footer({
         {/* 하단 저작권 및 설정 */}
         <div className="border-t border-gray-200 dark:border-gray-800 pt-4 flex flex-col md:flex-row justify-between items-center">
           <p className="text-xs text-gray-500 dark:text-gray-500">
-            {settings.copyright_text.replace(
+            {settings?.copyright_text?.replace(
               "{year}",
               new Date().getFullYear().toString()
-            )}
+            ) || `© ${new Date().getFullYear()} All rights reserved.`}
           </p>
           <div className="mt-3 md:mt-0 flex items-center gap-3">
             <ThemeSwitcher />

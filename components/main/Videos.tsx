@@ -28,8 +28,8 @@ async function fetchVideoPosts(pageId: string, limit: number = 2) {
 }
 
 export function Videos() {
-  // 미디어 속 커넥트 페이지 ID (고정)
-  const pageId = "2bb2b2c6-a830-4a90-995e-1bb196013f22";
+  // 미디어 속 커넥트 카테고리 ID (org_post_categories)
+  const pageId = "1ab7ebf9-f69c-4482-8d43-b71ae8fc35d8";
 
   // SWR을 사용한 데이터 페칭
   const { data, error, isLoading } = useSWR(
@@ -44,10 +44,9 @@ export function Videos() {
   const posts = data?.posts || [];
   const menuUrlMap = data?.menuUrlMap || {};
 
-  // 게시글별 메뉴 URL 매핑 함수
+  // 게시글별 메뉴 URL 매핑 함수 - 고정 URL 사용
   const getPostUrl = (post: IBoardPost) => {
-    const menuUrl = post.page_id ? menuUrlMap[post.page_id] : null;
-    return menuUrl ? `${menuUrl}?post=${post.id}` : `/?post=${post.id}`;
+    return `/connecting/media?post=${post.id}`;
   };
 
   return (
@@ -192,7 +191,7 @@ export function Videos() {
 
         {posts.length > 0 && (
           <div className="sm:mt-16 mt-8 text-center">
-            <Link href={menuUrlMap[pageId] || "#"}>
+            <Link href="/connecting/media">
               <button className="px-12 py-5 border-2 rounded-2xl border-black dark:border-white text-black dark:text-white text-sm uppercase tracking-widest hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all">
                 View All Videos
               </button>

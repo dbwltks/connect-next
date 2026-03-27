@@ -20,7 +20,8 @@ import { Badge } from "@/components/ui/badge";
 import { IWidget } from "@/types";
 
 interface OrganizationChartWidgetProps {
-  widget: IWidget;
+  widget?: IWidget;
+  section?: any;
 }
 
 interface Person {
@@ -97,21 +98,26 @@ const getPositionStyle = (position: string) => {
 
 export function OrganizationChartWidget({
   widget,
+  section,
 }: OrganizationChartWidgetProps) {
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
 
-  const chartStyle = widget.settings?.chart_style || CHART_STYLES.TREE;
-  const showAvatars = widget.settings?.show_avatars ?? true;
-  const showContact = widget.settings?.show_contact ?? false;
-  const showDepartments = widget.settings?.show_departments ?? true;
-  const showPositionIcons = widget.settings?.show_position_icons ?? true;
-  const enableExpandCollapse = widget.settings?.enable_expand_collapse ?? true;
-  const cardSize = widget.settings?.card_size || "medium";
-  const themeColor = widget.settings?.theme_color || "blue";
-  const backgroundStyle = widget.settings?.background_style || "gradient";
-  const cardSpacing = widget.settings?.card_spacing || "normal";
-  const enableAnimations = widget.settings?.enable_animations ?? true;
-  const enableShadows = widget.settings?.enable_shadows ?? true;
+  // widget 또는 section에서 settings 가져오기
+  const widgetData = widget || section;
+  const settings = widgetData?.settings || {};
+
+  const chartStyle = settings?.chart_style || CHART_STYLES.TREE;
+  const showAvatars = settings?.show_avatars ?? true;
+  const showContact = settings?.show_contact ?? false;
+  const showDepartments = settings?.show_departments ?? true;
+  const showPositionIcons = settings?.show_position_icons ?? true;
+  const enableExpandCollapse = settings?.enable_expand_collapse ?? true;
+  const cardSize = settings?.card_size || "medium";
+  const themeColor = settings?.theme_color || "blue";
+  const backgroundStyle = settings?.background_style || "gradient";
+  const cardSpacing = settings?.card_spacing || "normal";
+  const enableAnimations = settings?.enable_animations ?? true;
+  const enableShadows = settings?.enable_shadows ?? true;
 
   // 테마 색상에 따른 스타일 매핑
   const getThemeColors = (theme: string) => {
@@ -293,15 +299,16 @@ export function OrganizationChartWidget({
   // SWR을 사용하여 조직원 데이터 관리
   const fetcher = (key: string) => {
     // 위젯 설정에서 조직원 데이터를 가져오거나 기본 샘플 데이터 사용
-    return Promise.resolve(widget.settings?.custom_data || sampleData);
+    return Promise.resolve(settings?.custom_data || sampleData);
   };
 
+  const widgetId = widgetData?.id || 'default';
   const {
     data: organizationData = [],
     error,
     isLoading,
   } = useSWR(
-    `organization-chart-${widget.id}-${JSON.stringify(widget.settings?.custom_data)}`,
+    `organization-chart-${widgetId}-${JSON.stringify(settings?.custom_data)}`,
     fetcher,
     {
       dedupingInterval: 60000, // 1분간 중복 요청 방지
@@ -567,7 +574,7 @@ export function OrganizationChartWidget({
     };
 
     const getLevelTitle = (level: number) => {
-      const customName = widget.settings?.level_names?.[level];
+      const customName = settings?.level_names?.[level];
       if (customName) {
         return customName;
       }
@@ -615,18 +622,18 @@ export function OrganizationChartWidget({
     });
 
     return (
-      <div className="space-y-16">
+      <div className="space-y-8">
         {Object.entries(groupedByLevel).map(([level, people]: any) => (
-          <div key={level} className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          <div key={level} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {people.map((person: Person, index: number) => (
               <div
                 key={person.id}
-                className="flex flex-col lg:flex-row gap-6 items-center w-full"
+                className="flex flex-col items-center text-center p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
               >
                 {/* 프로필 이미지 */}
-                <div className="flex-shrink-0 w-full lg:w-2/5">
+                <div className="flex-shrink-0 mb-4">
                   <div className="relative">
-                    <div className="w-full max-w-xs mx-auto aspect-square bg-gray-200 rounded-lg overflow-hidden">
+                    <div className="w-32 h-32 bg-gray-200 rounded-full overflow-hidden">
                       {person.avatar ? (
                         <img
                           src={person.avatar}
@@ -636,7 +643,7 @@ export function OrganizationChartWidget({
                         />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">
-                          <User className="w-24 h-24 text-gray-500" />
+                          <User className="w-16 h-16 text-gray-500" />
                         </div>
                       )}
                     </div>
@@ -644,16 +651,16 @@ export function OrganizationChartWidget({
                 </div>
 
                 {/* 상세 정보 */}
-                <div className="flex-1 lg:w-3/5 space-y-4">
+                <div className="w-full">
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
-                      {person.position}
-                    </h3>
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+                    <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">
                       {person.name}
-                    </h2>
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                      {person.position}
+                    </p>
                     {person.department && (
-                      <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
+                      <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
                         {person.department}
                       </span>
                     )}
@@ -799,24 +806,10 @@ export function OrganizationChartWidget({
   // 로딩 상태 처리
   if (isLoading) {
     return (
-      <div className={`w-full ${backgroundClass} rounded-xl overflow-hidden`}>
-        {widget.title && (
-          <div className="p-6 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
-            <div className="text-center">
-              <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-2 flex items-center justify-center gap-3">
-                <div
-                  className={`w-10 h-10 bg-gradient-to-br ${themeColors.primary} rounded-full flex items-center justify-center`}
-                >
-                  <Users className="h-5 w-5 text-white" />
-                </div>
-                {widget.title}
-              </h3>
-            </div>
-          </div>
-        )}
-        <div className="p-8 text-center">
+      <div className="w-full">
+        <div className="container mx-auto px-4 max-w-6xl py-12 text-center">
           <div className="animate-spin w-8 h-8 border-4 border-blue-200 border-t-blue-500 rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-500 dark:text-gray-400">조직도를 로딩 중입니다...</p>
+          <p className="text-gray-500 dark:text-gray-400">로딩 중...</p>
         </div>
       </div>
     );
@@ -825,27 +818,13 @@ export function OrganizationChartWidget({
   // 에러 상태 처리
   if (error) {
     return (
-      <div className={`w-full ${backgroundClass} rounded-xl overflow-hidden`}>
-        {widget.title && (
-          <div className="p-6 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
-            <div className="text-center">
-              <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-2 flex items-center justify-center gap-3">
-                <div
-                  className={`w-10 h-10 bg-gradient-to-br ${themeColors.primary} rounded-full flex items-center justify-center`}
-                >
-                  <Users className="h-5 w-5 text-white" />
-                </div>
-                {widget.title}
-              </h3>
-            </div>
-          </div>
-        )}
-        <div className="p-8 text-center">
+      <div className="w-full">
+        <div className="container mx-auto px-4 max-w-6xl py-12 text-center">
           <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Users className="h-6 w-6 text-red-500" />
           </div>
           <p className="text-red-600 dark:text-red-400 mb-2">
-            조직도를 불러오는 중 오류가 발생했습니다
+            오류가 발생했습니다
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-400">{error.message}</p>
         </div>
@@ -854,31 +833,22 @@ export function OrganizationChartWidget({
   }
 
   return (
-    <div className={`w-full ${backgroundClass} rounded-xl overflow-hidden`}>
-      {widget.title && (
-        <div className="p-6 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
-          <div className="text-center">
-            <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-2 flex items-center justify-center gap-3">
-              {/* <div
-                className={`w-10 h-10 bg-gradient-to-br ${themeColors.primary} rounded-full flex items-center justify-center`}
-              >
-                <Users className="h-5 w-5 text-white" />
-              </div> */}
-              {widget.title}
+    <div className="w-full">
+      <div className="container mx-auto px-4 max-w-6xl">
+        {widgetData.title && (
+          <div className="py-8 text-center">
+            <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-3">
+              {widgetData.title}
             </h3>
-            <div
-              className={`w-32 h-1 bg-gradient-to-r ${themeColors.secondary} mx-auto rounded-full`}
-            ></div>
-            {widget.settings?.description && (
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-3 max-w-md mx-auto">
-                {widget.settings.description}
+            {settings?.description && (
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 max-w-md mx-auto">
+                {settings.description}
               </p>
             )}
           </div>
-        </div>
-      )}
+        )}
 
-      <div className="p-8">
+      <div className="py-4">
         {chartStyle === CHART_STYLES.TREE && (
           <div className="overflow-x-auto">
             <div className="min-w-max">
@@ -907,6 +877,9 @@ export function OrganizationChartWidget({
 
         {chartStyle === CHART_STYLES.DETAILED && renderDetailedLayout()}
       </div>
+      </div>
     </div>
   );
 }
+
+export default OrganizationChartWidget;

@@ -29,8 +29,8 @@ async function fetchEventPosts(pageId: string, limit: number = 4) {
 }
 
 export function Events() {
-  // 교회 소식 페이지 ID (고정)
-  const pageId = "4c38782d-ea47-4f5c-ade6-9c46a933702d";
+  // 교회 소식 카테고리 ID (org_post_categories)
+  const pageId = "edc61678-6d46-419c-8fe6-cb2571385979";
 
   // SWR을 사용한 데이터 페칭
   const { data, error, isLoading } = useSWR(
@@ -54,10 +54,9 @@ export function Events() {
     });
   };
 
-  // 게시글별 메뉴 URL 매핑 함수
+  // 게시글별 메뉴 URL 매핑 함수 - 고정 URL 사용
   const getPostUrl = (post: IBoardPost) => {
-    const menuUrl = post.page_id ? menuUrlMap[post.page_id] : null;
-    return menuUrl ? `${menuUrl}?post=${post.id}` : `/?post=${post.id}`;
+    return `/connecting/info-board?post=${post.id}`;
   };
 
   // 로딩 상태
@@ -199,7 +198,7 @@ export function Events() {
         )}
         {events.length > 0 && (
           <div className="sm:mt-16 mt-8 text-center">
-            <Link href={menuUrlMap[pageId] || "#"}>
+            <Link href="/connecting/info-board">
               <button className="px-12 py-5 border-2 rounded-2xl border-black dark:border-white text-black dark:text-white text-sm uppercase tracking-widest hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all">
                 View All News
               </button>

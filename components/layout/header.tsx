@@ -147,6 +147,54 @@ function useBodyScrollLock(isLocked: boolean) {
   }, [isLocked]);
 }
 
+// 하드코딩된 메뉴 아이템
+const HARDCODED_MENU_ITEMS = [
+  {
+    id: "1",
+    title: "교회소개",
+    url: "/connect/about",
+    submenu: [
+      { id: "1-1", title: "교회소개", url: "/connect/about" },
+      { id: "1-2", title: "인사말", url: "/connect/greeting" },
+      { id: "1-3", title: "섬기는 사람들", url: "/connect/people" },
+      { id: "1-4", title: "예배 및 위치안내", url: "/connect/church-info" },
+    ],
+  },
+  {
+    id: "2",
+    title: "하나님과 커넥트",
+    url: "/sermons/all-sermons",
+    submenu: [
+      { id: "2-1", title: "예배와 말씀", url: "/sermons/all-sermons" },
+      { id: "2-2", title: "목회 컬럼 / 말씀 묵상", url: "/sermons/pastoral-column" },
+      { id: "2-3", title: "BIBLE CONNECT IN", url: "/sermons/bcin" },
+      { id: "2-4", title: "찬양과 간증", url: "/sermons/praise" },
+    ],
+  },
+  {
+    id: "3",
+    title: "성도와 커넥트",
+    url: "/connecting/info-board",
+    submenu: [
+      { id: "3-1", title: "교회소식", url: "/connecting/info-board" },
+      { id: "3-2", title: "온라인 주보", url: "/connecting/weekly-bulletin" },
+      { id: "3-3", title: "사진과 커넥트", url: "/connecting/in-pictures" },
+      { id: "3-4", title: "미디어와 커넥트", url: "/connecting/media" },
+      { id: "3-5", title: "일정표", url: "/connecting/calendar" },
+    ],
+  },
+  {
+    id: "4",
+    title: "세상과 커넥트",
+    url: "/mission/domestic-mission",
+    submenu: [
+      { id: "4-1", title: "국내 선교", url: "/mission/domestic-mission" },
+      { id: "4-2", title: "국외 선교", url: "/mission/overseas-mission" },
+      { id: "4-3", title: "협력 단체", url: "/mission/cooperating-group" },
+    ],
+  },
+];
+
 export default function Header({
   initialMenus = [],
 }: {
@@ -156,15 +204,10 @@ export default function Header({
   const { user, loading } = useAuth();
   const { profile, loading: profileLoading } = useUserProfile(user);
 
-  // SWR을 사용한 헤더 메뉴 데이터 페칭 (fallback 데이터 설정)
-  const {
-    data: menuItems,
-    error: menuError,
-    isLoading: menuLoading,
-  } = useSWR("headerMenus", () => api.menus.getHeaderMenus(), {
-    ...headerMenuSWRConfig,
-    fallbackData: initialMenus, // 서버에서 받은 초기 데이터를 fallback으로 사용
-  });
+  // 하드코딩된 메뉴 사용
+  const menuItems = HARDCODED_MENU_ITEMS;
+  const menuError = null;
+  const menuLoading = false;
 
   // 로딩 중 체크 (메뉴는 즉시 표시, 사용자 UI만 로딩 상태 반영)
   const isAuthLoading = loading;
@@ -179,7 +222,7 @@ export default function Header({
         menuLoading: menuLoading,
         hasInitialMenus: initialMenus.length > 0,
         hasMenuItems: menuItems?.length > 0,
-        menuError: menuError?.message,
+        menuError: menuError,
       });
     }
   }, [
@@ -535,7 +578,7 @@ function HeaderClient({
             />
           ) : (
             // 클라이언트에서 사용자 정보가 없으면 로그인 버튼 렌더링
-            <Link href="/login-select">
+            <Link href="https://www.light-code.dev/connect-church/login">
               <Button variant="ghost" size="sm">
                 로그인
               </Button>
@@ -575,7 +618,7 @@ function HeaderClient({
           />
         ) : (
           // 클라이언트에서 사용자 정보가 없으면 로그인 버튼 렌더링
-          <Link href="/login-select">
+          <Link href="https://www.light-code.dev/connect-church/login">
             <Button variant="ghost" size="sm">
               로그인
             </Button>
@@ -756,7 +799,7 @@ function HeaderClient({
                 </>
               ) : (
                 <Link
-                  href="/login-select"
+                  href="https://www.light-code.dev/connect-church/login"
                   onClick={() => setIsMenuOpen(false)}
                   className="block text-base font-medium pb-6"
                 >

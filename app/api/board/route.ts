@@ -14,19 +14,20 @@ export async function GET(request: NextRequest) {
     
     
     const supabase = await createClient();
-    
-    // 1. 전체 게시글 수 조회
+    const CONNECT_CHURCH_ORG_ID = '23913033-e35d-456c-818a-7824dd9de106';
+
+    // 1. 전체 게시글 수 조회 - org_posts 테이블 사용
     let countQuery = supabase
-      .from('board_posts')
+      .from('org_posts')
       .select('*', { count: 'exact', head: true })
+      .eq('organization_id', CONNECT_CHURCH_ORG_ID)
       .eq('status', 'published');
-      
-    if (pageId) countQuery = countQuery.eq('page_id', pageId);
+
     if (categoryId) countQuery = countQuery.eq('category_id', categoryId);
     if (searchTerm) {
       if (searchType === 'title') countQuery = countQuery.ilike('title', `%${searchTerm}%`);
       else if (searchType === 'content') countQuery = countQuery.ilike('content', `%${searchTerm}%`);
-      else if (searchType === 'author') countQuery = countQuery.ilike('user_id', `%${searchTerm}%`);
+      else if (searchType === 'author') countQuery = countQuery.ilike('author_id', `%${searchTerm}%`);
     }
     
     const { count, error: countError } = await countQuery;
@@ -35,29 +36,28 @@ export async function GET(request: NextRequest) {
     const totalCount = count || 0;
     const totalPages = Math.max(1, Math.ceil(totalCount / itemCount));
     
-    // 2. 실제 게시글 목록 조회
+    // 2. 실제 게시글 목록 조회 - org_posts 테이블 사용
     let query = supabase
-      .from('board_posts')
+      .from('org_posts')
       .select(`
-        id, title, content, user_id, created_at, views, category_id, page_id, 
-        is_notice, is_pinned, comment_count:board_comments(count), 
-        thumbnail_image, status, published_at, tags
+        id, title, content, author_id, created_at, views, category_id, meta,
+        post_type, pinned_scope, thumbnail_url, status, published_at, tags
       `)
+      .eq('organization_id', CONNECT_CHURCH_ORG_ID)
       .eq('status', 'published');
-      
+
     // 필터 조건 먼저 적용
-    if (pageId) query = query.eq('page_id', pageId);
     if (categoryId) query = query.eq('category_id', categoryId);
     if (searchTerm) {
       if (searchType === 'title') query = query.ilike('title', `%${searchTerm}%`);
       else if (searchType === 'content') query = query.ilike('content', `%${searchTerm}%`);
-      else if (searchType === 'author') query = query.ilike('user_id', `%${searchTerm}%`);
+      else if (searchType === 'author') query = query.ilike('author_id', `%${searchTerm}%`);
     }
-    
-    // 정렬 적용 (고정글과 공지글 우선)
+
+    // 정렬 적용 (pinned_scope와 post_type으로 우선순위 결정)
     query = query
-      .order('is_pinned', { ascending: false })
-      .order('is_notice', { ascending: false });
+      .order('pinned_scope', { ascending: false, nullsFirst: false })
+      .order('post_type', { ascending: false });
       
     // 정렬 옵션에 따른 데이터베이스 레벨 정렬 (성능 향상)
     switch (sortOption) {
@@ -82,15 +82,31 @@ export async function GET(request: NextRequest) {
     
     const { data: posts, error: postsError } = await query;
     if (postsError) throw postsError;
-    
+
     console.log('API Debug - Raw posts from DB:', posts?.length || 0, 'posts found');
     console.log('API Debug - First post:', posts?.[0]);
-    
-    let postsWithComments = (posts || []).map((post: any) => ({
-      ...post,
-      comment_count: post.comment_count?.[0]?.count || 0,
-      view_count: post.views || 0,
-    }));
+
+    // 댓글 수를 별도로 조회
+    const postsWithCommentsPromises = (posts || []).map(async (post: any) => {
+      const { count } = await supabase
+        .from('board_comments')
+        .select('*', { count: 'exact', head: true })
+        .eq('post_id', post.id);
+
+      return {
+        ...post,
+        comment_count: count || 0,
+        view_count: post.views || 0,
+        // 하위 호환성을 위한 필드 매핑
+        user_id: post.author_id,
+        page_id: post.meta?.page_id,
+        thumbnail_image: post.thumbnail_url,
+        is_notice: post.post_type === 'notice',
+        is_pinned: post.pinned_scope !== null,
+      };
+    });
+
+    let postsWithComments = await Promise.all(postsWithCommentsPromises);
     
     // JavaScript 정렬은 likes와 comments만 필요 (popular은 이미 DB에서 정렬됨)
     
@@ -145,19 +161,19 @@ export async function GET(request: NextRequest) {
     
     console.log('API Debug - Posts with comments:', postsWithComments.length);
     
-    // 3. 작성자 정보 조회
+    // 3. 작성자 정보 조회 - author_id 사용
     const userIds = postsWithComments
-      .map(post => post.user_id)
+      .map(post => post.author_id)
       .filter((id): id is string => Boolean(id))
       .filter((id, index, self) => self.indexOf(id) === index);
-      
+
     let authorInfoMap: Record<string, any> = {};
     if (userIds.length > 0) {
       const { data: users } = await supabase
         .from('users')
         .select('id, username, nickname, avatar_url')
         .in('id', userIds);
-        
+
       (users || []).forEach((user: any) => {
         authorInfoMap[user.id] = {
           username: user.nickname || user.username || '익명',

@@ -61,7 +61,57 @@ function generateMenuDescription(title: string): string {
   return descriptions[title] || "";
 }
 
+// 고정 메뉴 데이터
+const FIXED_MENU_ITEMS: MenuItem[] = [
+  {
+    id: "1",
+    title: "교회소개",
+    url: "/connect/about",
+    submenu: [
+      { id: "1-1", title: "교회소개", url: "/connect/about" },
+      { id: "1-2", title: "인사말", url: "/connect/greeting" },
+      { id: "1-3", title: "섬기는 사람들", url: "/connect/people" },
+      { id: "1-4", title: "예배 및 위치안내", url: "/connect/church-info" },
+    ],
+  },
+  {
+    id: "2",
+    title: "하나님과 커넥트",
+    url: "/sermons/all-sermons",
+    submenu: [
+      { id: "2-1", title: "예배와 말씀", url: "/sermons/all-sermons" },
+      { id: "2-2", title: "목회 컬럼 / 말씀 묵상", url: "/sermons/pastoral-column" },
+      { id: "2-3", title: "BIBLE CONNECT IN", url: "/sermons/bcin" },
+      { id: "2-4", title: "찬양과 간증", url: "/sermons/praise" },
+    ],
+  },
+  {
+    id: "3",
+    title: "성도와 커넥트",
+    url: "/connecting/info-board",
+    submenu: [
+      { id: "3-1", title: "교회소식", url: "/connecting/info-board" },
+      { id: "3-2", title: "온라인 주보", url: "/connecting/weekly-bulletin" },
+      { id: "3-3", title: "사진과 커넥트", url: "/connecting/in-pictures" },
+      { id: "3-4", title: "미디어와 커넥트", url: "/connecting/media" },
+      { id: "3-5", title: "일정표", url: "/connecting/calendar" },
+    ],
+  },
+  {
+    id: "4",
+    title: "세상과 커넥트",
+    url: "/mission/domestic-mission",
+    submenu: [
+      { id: "4-1", title: "국내 선교", url: "/mission/domestic-mission" },
+      { id: "4-2", title: "국외 선교", url: "/mission/overseas-mission" },
+      { id: "4-3", title: "협력 단체", url: "/mission/cooperating-group" },
+    ],
+  },
+];
+
 export function Navbar({ menuItems = [] }: NavbarProps) {
+  // CMS 메뉴 대신 고정 메뉴 사용
+  const displayMenuItems = FIXED_MENU_ITEMS;
   const { user, signOut } = useAuth();
   const { profile } = useUserProfile(user);
   const [isOpen, setIsOpen] = useState(false);
@@ -137,7 +187,7 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
           <div className="hidden lg:flex items-center gap-4">
             <NavigationMenu viewport={false}>
               <NavigationMenuList>
-                {menuItems.map((item) => (
+                {displayMenuItems.map((item) => (
                   <NavigationMenuItem key={item.id} value={`menu-${item.id}`}>
                     {item.submenu && item.submenu.length > 0 ? (
                       <>
@@ -266,7 +316,7 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Link href="/login-select">
+              <Link href="https://www.light-code.dev/connect-church/login">
                 <button
                   className={`px-8 py-3 rounded-full text-sm uppercase tracking-widest transition-all ${
                     isScrolled
@@ -299,7 +349,7 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
       {isOpen && (
         <div className="lg:hidden mt-4 bg-white/95 backdrop-blur-xl rounded-t-[3rem] rounded-b-[3rem] shadow-2xl overflow-hidden">
           <div className="px-8 py-8 space-y-8">
-            {menuItems.map((item) => (
+            {displayMenuItems.map((item) => (
               <div key={item.id}>
                 {item.submenu && item.submenu.length > 0 ? (
                   <div>
@@ -405,7 +455,7 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
                   </button>
                 </>
               ) : (
-                <Link href="/login-select">
+                <Link href="https://www.light-code.dev/connect-church/login">
                   <button
                     className="w-full bg-black text-white px-8 py-4 rounded-full text-sm uppercase tracking-widest hover:bg-gray-800"
                     onClick={() => setIsOpen(false)}

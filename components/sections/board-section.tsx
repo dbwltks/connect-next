@@ -552,7 +552,7 @@ export default function BoardSection({
 
   // SWR을 사용한 데이터 관리
   const { data, error, isLoading, mutate } = useSWR(
-    pageId && !selectedPostId
+    (pageId || categoryId) && !selectedPostId
       ? [
           "boardData",
           pageId,
@@ -566,7 +566,7 @@ export default function BoardSection({
       : null,
     () =>
       fetchBoardData({
-        pageId: pageId!,
+        pageId,
         categoryId,
         itemCount,
         page,

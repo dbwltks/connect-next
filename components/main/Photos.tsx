@@ -22,8 +22,8 @@ async function fetchPhotoPosts(pageId: string, limit: number = 6) {
 }
 
 export function Photos() {
-  // 사진속 커넥트 페이지 ID (고정)
-  const pageId = "037cba64-c934-4ef6-a01c-1e01d3931919";
+  // 사진속 커넥트 카테고리 ID (org_post_categories)
+  const pageId = "1288e7ee-50f7-44dd-9b7d-2101baa6b15d";
 
   // SWR을 사용한 데이터 페칭
   const { data, error, isLoading } = useSWR(
@@ -38,10 +38,9 @@ export function Photos() {
   const posts = data?.posts || [];
   const menuUrlMap = data?.menuUrlMap || {};
 
-  // 게시글별 메뉴 URL 매핑 함수
+  // 게시글별 메뉴 URL 매핑 함수 - 고정 URL 사용
   const getPostUrl = (post: IBoardPost) => {
-    const menuUrl = post.page_id ? menuUrlMap[post.page_id] : null;
-    return menuUrl ? `${menuUrl}?post=${post.id}` : `/?post=${post.id}`;
+    return `/connecting/in-pictures?post=${post.id}`;
   };
 
   return (
@@ -148,7 +147,7 @@ export function Photos() {
 
         {posts.length > 0 && (
           <div className="mt-16 text-center">
-            <Link href={menuUrlMap[pageId] || "#"}>
+            <Link href="/connecting/in-pictures">
               <button className="px-12 py-5 border-2 rounded-2xl border-black dark:border-white text-black dark:text-white text-sm uppercase tracking-widest hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all">
                 View All Photos
               </button>

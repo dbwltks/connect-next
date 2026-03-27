@@ -1,78 +1,71 @@
-import { createClient } from "@/utils/supabase/server";
 import NewHomepage from "@/components/home/new-homepage";
 
-// 메뉴 트리 구조 생성 함수
-function buildMenuTree(items: any[]) {
-  const rootItems = items.filter((item) => item.parent_id === null);
-  return rootItems.map((item: any) => ({
-    ...item,
-    submenu: findChildren(item.id, items),
-  }));
-}
+// 고정 메뉴 데이터
+const FIXED_MENU_ITEMS = [
+  {
+    id: "1",
+    title: "교회소개",
+    url: "/connect/about",
+    submenu: [
+      { id: "1-1", title: "교회소개", url: "/connect/about" },
+      { id: "1-2", title: "인사말", url: "/connect/greeting" },
+      { id: "1-3", title: "섬기는 사람들", url: "/connect/people" },
+      { id: "1-4", title: "예배 및 위치안내", url: "/connect/church-info" },
+    ],
+  },
+  {
+    id: "2",
+    title: "하나님과 커넥트",
+    url: "/sermons/all-sermons",
+    submenu: [
+      { id: "2-1", title: "예배와 말씀", url: "/sermons/all-sermons" },
+      { id: "2-2", title: "목회 컬럼 / 말씀 묵상", url: "/sermons/pastoral-column" },
+      { id: "2-3", title: "BIBLE CONNECT IN", url: "/sermons/bcin" },
+      { id: "2-4", title: "찬양과 간증", url: "/sermons/praise" },
+    ],
+  },
+  {
+    id: "3",
+    title: "성도와 커넥트",
+    url: "/connecting/info-board",
+    submenu: [
+      { id: "3-1", title: "교회소식", url: "/connecting/info-board" },
+      { id: "3-2", title: "온라인 주보", url: "/connecting/weekly-bulletin" },
+      { id: "3-3", title: "사진과 커넥트", url: "/connecting/in-pictures" },
+      { id: "3-4", title: "미디어와 커넥트", url: "/connecting/media" },
+      { id: "3-5", title: "일정표", url: "/connecting/calendar" },
+    ],
+  },
+  {
+    id: "4",
+    title: "세상과 커넥트",
+    url: "/mission/domestic-mission",
+    submenu: [
+      { id: "4-1", title: "국내 선교", url: "/mission/domestic-mission" },
+      { id: "4-2", title: "국외 선교", url: "/mission/overseas-mission" },
+      { id: "4-3", title: "협력 단체", url: "/mission/cooperating-group" },
+    ],
+  },
+];
 
-function findChildren(parentId: string, items: any[]): any[] {
-  const children = items.filter((item) => item.parent_id === parentId);
-  return children.map((child: any) => ({
-    ...child,
-    submenu: findChildren(child.id, items),
-  }));
-}
+// 고정 배너 데이터
+const FIXED_BANNERS = [
+  {
+    id: "1",
+    title: "",
+    subtitle: "",
+    imageUrl: "https://www.youtube.com/watch?v=Xm48MdWq5sQ",
+    image_height: "fullscreen",
+    overlay_opacity: 0.3,
+    hasButton: false,
+    buttonText: "",
+    buttonUrl: "",
+  },
+];
+
+// 고정 위젯 데이터 (빈 배열 - 필요시 추가)
+const FIXED_WIDGETS: any[] = [];
 
 export default async function HomePage() {
-  const supabase = await createClient();
-
-  // 홈페이지에 해당하는 메뉴 찾기
-  const { data: homeMenu } = await supabase
-    .from("cms_menus")
-    .select("id")
-    .eq("url", "/")
-    .eq("is_active", true)
-    .single();
-
-  // 메뉴 데이터 가져오기
-  const { data: menuItemsRaw } = await supabase
-    .from("cms_menus")
-    .select("*")
-    .eq("is_active", true)
-    .order("order_num", { ascending: true });
-
-  const menuItems = buildMenuTree(menuItemsRaw || []);
-
-  // 배너 데이터 가져오기
-  let bannerQuery = supabase
-    .from("cms_banners")
-    .select("*")
-    .eq("is_active", true);
-
-  if (homeMenu?.id) {
-    bannerQuery = bannerQuery.eq("menu_id", homeMenu.id);
-  } else {
-    bannerQuery = bannerQuery.is("menu_id", null);
-  }
-
-  const { data: bannersData } = await bannerQuery.order("order_num", {
-    ascending: true,
-  });
-
-  const banners = bannersData?.map((b: any) => ({
-    id: b.id,
-    title: b.title,
-    subtitle: b.subtitle || "",
-    imageUrl: b.image_url,
-    hasButton: b.has_button || false,
-    buttonText: b.button_text || "",
-    buttonUrl: b.button_url || "",
-  })) || [];
-
-  // 위젯 데이터 가져오기
-  let { data: widgets } = await supabase
-    .from("cms_layout")
-    .select("*")
-    .is("page_id", null)
-    .eq("is_active", true)
-    .order("order", { ascending: true });
-
-  if (!widgets) widgets = [];
-
-  return <NewHomepage banners={banners} widgets={widgets} menuItems={menuItems} />;
+  return <NewHomepage banners={FIXED_BANNERS} widgets={FIXED_WIDGETS} menuItems={FIXED_MENU_ITEMS} />;
 }
