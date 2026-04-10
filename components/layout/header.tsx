@@ -206,7 +206,7 @@ export default function Header({
 
   // 하드코딩된 메뉴 사용
   const menuItems = HARDCODED_MENU_ITEMS;
-  const menuError = null;
+  const menuError: any = null;
   const menuLoading = false;
 
   // 로딩 중 체크 (메뉴는 즉시 표시, 사용자 UI만 로딩 상태 반영)

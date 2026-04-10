@@ -6,11 +6,10 @@ import { X } from "lucide-react";
 
 export function MainPopup() {
   const [isOpen, setIsOpen] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
 
   useEffect(() => {
-    // 캐나다(토론토) 시간으로 2026년 1월 8일 오후 11시
-    const endDate = new Date('2026-01-08T23:00:00-05:00'); // EST 시간대
+    // 캐나다(토론토) 시간으로 2026년 4월 17일 자정
+    const endDate = new Date('2026-04-18T00:00:00-04:00'); // EDT 시간대
     const now = new Date();
 
     // 만료 날짜가 지났으면 팝업을 표시하지 않음
@@ -49,7 +48,7 @@ export function MainPopup() {
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
       <div className="relative w-full max-w-md mx-auto flex flex-col items-center gap-3 sm:gap-4">
         {/* 팝업 컨텐츠 */}
-        <div className="relative bg-white dark:bg-gray-900 shadow-2xl animate-in fade-in zoom-in duration-300 rounded-3xl overflow-hidden w-full p-8 sm:p-12">
+        <div className="relative bg-white dark:bg-gray-900 shadow-2xl animate-in fade-in zoom-in duration-300 rounded-3xl overflow-hidden w-full">
           {/* 닫기 버튼 */}
           <button
             onClick={() => closePopup(false)}
@@ -58,26 +57,15 @@ export function MainPopup() {
             <X size={20} />
           </button>
 
-          <div className="text-center space-y-6">
-            {/* 제목 */}
-            <h2 className="text-2xl sm:text-3xl font-bold text-black dark:text-white">
-              이번 주는 쉬어가요!
-            </h2>
-
-            {/* 내용 */}
-            <div className="space-y-3 text-gray-700 dark:text-gray-300">
-              <p className="text-base sm:text-lg">
-                <span className="font-semibold text-black dark:text-white">BCIN</span>과{" "}
-                <span className="font-semibold text-black dark:text-white">목요예배</span>가
-                <br />
-                이번 주는 쉬어갑니다.
-              </p>
-              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
-                충분한 휴식을 취하시고
-                <br />
-                다음 주에 더 힘차게 만나요! 🙌
-              </p>
-            </div>
+          {/* 강찬 포스터 이미지 */}
+          <div className="relative w-full aspect-[3/4]">
+            <Image
+              src="/Images/강찬포스터1.png"
+              alt="강찬 포스터"
+              fill
+              className="object-cover"
+              priority
+            />
           </div>
         </div>
 
