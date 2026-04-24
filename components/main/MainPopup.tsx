@@ -8,8 +8,8 @@ export function MainPopup() {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    // 캐나다(토론토) 시간으로 2026년 4월 17일 자정
-    const endDate = new Date('2026-04-18T00:00:00-04:00'); // EDT 시간대
+    // 캐나다(토론토) 시간으로 2026년 4월 26일 12시
+    const endDate = new Date('2026-04-26T12:00:00-04:00'); // EDT 시간대
     const now = new Date();
 
     // 만료 날짜가 지났으면 팝업을 표시하지 않음
@@ -57,11 +57,11 @@ export function MainPopup() {
             <X size={20} />
           </button>
 
-          {/* 강찬 포스터 이미지 */}
+          {/* 2026 힐캠4 이미지 */}
           <div className="relative w-full aspect-[3/4]">
             <Image
-              src="/Images/강찬포스터1.png"
-              alt="강찬 포스터"
+              src="/Images/2026 힐캠4.png"
+              alt="2026 힐캠4"
               fill
               className="object-cover"
               priority
