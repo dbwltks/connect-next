@@ -1,0 +1,12 @@
+[mcp_servers.shadcn]
+args = [
+    "shadcn@latest",
+    "mcp",
+]
+command = "npx"
+
+[mcp_servers.supabase]
+url = "https://mcp.supabase.com/mcp?project_ref=lpryfxyheazvjozvudgw"
+
+[mcp_servers.supabase-reactver]
+url = "https://mcp.supabase.com/mcp?project_ref=tgmxfgxkqmzjvydhrglg"
