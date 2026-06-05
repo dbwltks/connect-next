@@ -11,8 +11,8 @@ interface LocationProps {
 
 export function Location({ data }: LocationProps) {
   const address = data?.address || "45 Davenport Rd, Toronto, ON M5R 1H2";
-  const phone = data?.phone || "416-921-1718";
-  const email = data?.email || "connectchurchtoronto@gmail.com";
+  const phone = data?.phone || "647-447-9776";
+  const email = data?.email || "tconnectchurch@gmail.com";
   const embedUrl =
     "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2885.601550917232!2d-79.3916297232777!3d43.6730595515324!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x882b34a6feddf98d%3A0x7d6c6e75a3de3e0!2s45%20Davenport%20Rd%2C%20Toronto%2C%20ON%20M5R%201H2!5e0!3m2!1sko!2sca!4v1703350000000!5m2!1sko!2sca";
 
