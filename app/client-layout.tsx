@@ -5,7 +5,7 @@ import { SWRConfig } from "swr";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import Header from "@/components/layout/header";
-import Footer from "@/components/layout/footer";
+import { Footer } from "@/components/main/Footer";
 import { Toaster } from "@/components/ui/toaster";
 import { toast } from "@/components/ui/toaster";
 import ScrollToTop from "@/components/scroll-to-top";
@@ -18,15 +18,11 @@ export default function ClientLayout({
   children,
   user,
   headerMenus,
-  footerMenus,
-  footerSettings,
   widgets,
 }: {
   children: React.ReactNode;
   user: any;
   headerMenus: any[];
-  footerMenus: any[];
-  footerSettings: any;
   widgets: any[];
 }) {
   const pathname = usePathname();
@@ -64,7 +60,7 @@ export default function ClientLayout({
             {!isAdminPage && !isHomePage && !isAuthPage && <Header initialMenus={headerMenus} />}
             <main className="flex-1">{children}</main>
             {/* 관리자 페이지와 로그인/회원가입 페이지가 아닐 때만 푸터 표시 */}
-            {!isAdminPage && !isAuthPage && <Footer menus={footerMenus} settings={footerSettings} />}
+            {!isAdminPage && !isAuthPage && <Footer />}
             <Toaster />
             <ScrollToTop />
             {/* <ServiceWorkerRegister /> */}

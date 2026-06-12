@@ -73,9 +73,9 @@ const HARDCODED_FOOTER_SETTINGS = {
     { id: "1", name: "교회 전화번호", value: "647-447-9776" }
   ],
   email: "tconnectchurch@gmail.com",
-  facebook_url: "https://facebook.com/connectchurch",
-  instagram_url: "https://instagram.com/connectchurch",
-  youtube_url: "https://youtube.com/@connectchurch",
+  facebook_url: "https://facebook.com/groups/tconnectchurch",
+  instagram_url: "https://instagram.com/torontoconnectchurch",
+  youtube_url: "https://www.youtube.com/@TorontoConnectChurch",
   service_times: [
     { id: "1", name: "주일 예배", time: "오후 3시 - 오후 5시" },
     { id: "2", name: "목요 기도회", time: "오후 7시 - 오후 9시" },
