@@ -5,19 +5,23 @@ import nodemailer from "nodemailer";
 const CONNECT_CHURCH_ORG_ID = "23913033-e35d-456c-818a-7824dd9de106";
 
 // 서비스 역할 클라이언트 (RLS 무시) - 비로그인 방문자도 제출 가능해야 함
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
+// 빌드 타임에 env가 없어도 실패하지 않도록 요청 시점에 생성
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
     },
-  },
-);
+  );
+}
 
 export async function POST(req: NextRequest) {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
     const { name, content } = await req.json();
 
     if (!name?.trim() || !content?.trim()) {
