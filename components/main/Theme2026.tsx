@@ -21,7 +21,7 @@ export function Theme2026() {
   return (
     <section
       id="theme-2026"
-      className="relative overflow-hidden py-24 md:py-32 bg-slate-900"
+      className="relative overflow-hidden py-32 md:py-40 bg-slate-900"
     >
       {/* 배경 사진 - 크로스페이드 + 천천히 확대되는 애니메이션 */}
       {backgroundImages.map((src, index) => (
