@@ -63,9 +63,9 @@ export async function POST(req: NextRequest) {
           to: `${process.env.GOOGLE_EMAIL_USER}, dbwltks@gmail.com`,
           subject: `[중보기도 요청] 새로운 기도 요청이 접수되었습니다`,
           html: `
-            <div style="font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; border: 1px solid #eee; border-radius: 20px;">
+            <div style="font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; max-width: 600px; margin: 0 auto; padding: 32px; border: 1px solid #eee; border-radius: 20px;">
               <h2 style="font-size: 22px; font-weight: 700; color: #111; margin-bottom: 24px; text-align: center;">중보기도 요청 접수</h2>
-              <div style="background-color: #f9f9f9; padding: 30px; border-radius: 12px; text-align: center;">
+              <div style="background-color: #f9f9f9; padding: 24px; border-radius: 12px; text-align: center;">
                 <p style="font-size: 16px; color: #111; margin: 0;">새로운 중보기도 요청이 등록되었습니다.</p>
                 <p style="font-size: 14px; color: #888; margin-top: 8px;">내용은 개인정보 보호를 위해 메일에 표시되지 않습니다. 관리자 페이지에서 확인해주세요.</p>
               </div>
