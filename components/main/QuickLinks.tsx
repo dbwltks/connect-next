@@ -18,6 +18,40 @@ export function QuickLinks() {
   const [showDonationPopup, setShowDonationPopup] = useState(false);
   const [showPrayerPopup, setShowPrayerPopup] = useState(false);
   const [copiedText, setCopiedText] = useState<string | null>(null);
+  const [prayerForm, setPrayerForm] = useState({ name: "", content: "" });
+  const [isSubmittingPrayer, setIsSubmittingPrayer] = useState(false);
+  const [isPrayerSubmitted, setIsPrayerSubmitted] = useState(false);
+
+  const handlePrayerSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmittingPrayer(true);
+
+    try {
+      const response = await fetch("/api/prayer-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(prayerForm),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to submit prayer request");
+      }
+
+      setIsPrayerSubmitted(true);
+      setPrayerForm({ name: "", content: "" });
+
+      setTimeout(() => {
+        setIsPrayerSubmitted(false);
+        setShowPrayerPopup(false);
+      }, 2500);
+    } catch (err) {
+      console.error("Prayer request submission error:", err);
+      alert("전송 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+    } finally {
+      setIsSubmittingPrayer(false);
+    }
+  };
 
   const handleCopyText = async (text: string) => {
     try {
@@ -318,36 +352,68 @@ export function QuickLinks() {
               중보기도 요청
             </h3>
 
-            <form className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2 text-black dark:text-white">
-                  이름
-                </label>
-                <input
-                  type="text"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-black dark:text-white"
-                  placeholder="이름을 입력하세요"
-                />
+            {isPrayerSubmitted ? (
+              <div className="flex flex-col items-center justify-center py-10 text-center animate-in fade-in zoom-in duration-500">
+                <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-5">
+                  <Check className="w-8 h-8 text-black dark:text-white" />
+                </div>
+                <p className="text-black dark:text-white font-medium mb-2">
+                  기도 요청이 접수되었습니다.
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  함께 마음 모아 기도하겠습니다.
+                </p>
               </div>
+            ) : (
+              <form onSubmit={handlePrayerSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-black dark:text-white">
+                    이름
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={prayerForm.name}
+                    onChange={(e) =>
+                      setPrayerForm({ ...prayerForm, name: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-black dark:text-white"
+                    placeholder="이름을 입력하세요"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-2 text-black dark:text-white">
-                  기도 제목
-                </label>
-                <textarea
-                  rows={4}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-black dark:text-white"
-                  placeholder="기도 제목을 입력하세요"
-                />
-              </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-black dark:text-white">
+                    기도 제목
+                  </label>
+                  <textarea
+                    required
+                    rows={4}
+                    value={prayerForm.content}
+                    onChange={(e) =>
+                      setPrayerForm({ ...prayerForm, content: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-black dark:text-white"
+                    placeholder="기도 제목을 입력하세요"
+                  />
+                </div>
 
-              <button
-                type="submit"
-                className="w-full py-3 bg-black dark:bg-white text-white dark:text-black rounded-lg hover:opacity-90 transition-opacity"
-              >
-                기도 요청 보내기
-              </button>
-            </form>
+                <button
+                  type="submit"
+                  disabled={isSubmittingPrayer}
+                  className="w-full py-3 bg-black dark:bg-white text-white dark:text-black rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isSubmittingPrayer ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 dark:border-black/30 border-t-white dark:border-t-black rounded-full animate-spin" />
+                      전송 중...
+                    </>
+                  ) : (
+                    "기도 요청 보내기"
+                  )}
+                </button>
+              </form>
+            )}
           </div>
         </div>
       )}
