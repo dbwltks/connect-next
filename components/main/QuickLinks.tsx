@@ -17,16 +17,15 @@ import { TypeAnimation } from "react-type-animation";
 export function QuickLinks() {
   const [showDonationPopup, setShowDonationPopup] = useState(false);
   const [showPrayerPopup, setShowPrayerPopup] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copiedText, setCopiedText] = useState<string | null>(null);
 
-  // 이메일 복사 핸들러
-  const handleCopyEmail = async () => {
+  const handleCopyText = async (text: string) => {
     try {
-      await navigator.clipboard.writeText("tconnectchurch@gmail.com");
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      await navigator.clipboard.writeText(text);
+      setCopiedText(text);
+      setTimeout(() => setCopiedText(null), 2000);
     } catch (err) {
-      console.error("Failed to copy email:", err);
+      console.error("Failed to copy text:", err);
     }
   };
 
@@ -87,6 +86,13 @@ export function QuickLinks() {
       type: "popup" as const,
       action: () => setShowPrayerPopup(true),
     },
+  ];
+
+  const offeringTypes = [
+    { korean: "주일헌금", english: "Sunday Offering" },
+    { korean: "감사헌금", english: "Thanksgiving Offering" },
+    { korean: "십일조", english: "Tithe" },
+    { korean: "지정헌금", english: "Designated Offering" },
   ];
 
   return (
@@ -204,10 +210,10 @@ export function QuickLinks() {
                       이메일
                     </p>
                     <button
-                      onClick={handleCopyEmail}
+                      onClick={() => handleCopyText("tconnectchurch@gmail.com")}
                       className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded transition-colors"
                     >
-                      {copied ? (
+                      {copiedText === "tconnectchurch@gmail.com" ? (
                         <>
                           <Check className="w-3 h-3" />
                           복사완료
@@ -241,43 +247,37 @@ export function QuickLinks() {
                 헌금 종류
               </h4>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                E-Transfer 메시지란에 아래 중 해당하는 헌금 종류를 영어로
-                적어주세요:
+                아래 중 해당하는 헌금 종류를 영어로 적어주세요
               </p>
 
               <div className="space-y-2">
-                <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded">
-                  <span className="text-sm text-black dark:text-white">
-                    주일헌금
-                  </span>
-                  <span className="text-sm font-mono text-gray-600 dark:text-gray-300">
-                    Sunday Offering
-                  </span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded">
-                  <span className="text-sm text-black dark:text-white">
-                    감사헌금
-                  </span>
-                  <span className="text-sm font-mono text-gray-600 dark:text-gray-300">
-                    Thanksgiving Offering
-                  </span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded">
-                  <span className="text-sm text-black dark:text-white">
-                    십일조
-                  </span>
-                  <span className="text-sm font-mono text-gray-600 dark:text-gray-300">
-                    Tithe
-                  </span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded">
-                  <span className="text-sm text-black dark:text-white">
-                    지정헌금
-                  </span>
-                  <span className="text-sm font-mono text-gray-600 dark:text-gray-300">
-                    Designated Offering
-                  </span>
-                </div>
+                {offeringTypes.map((offering) => (
+                  <div
+                    key={offering.english}
+                    className="flex flex-col gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <span className="text-sm text-black dark:text-white">
+                      {offering.korean}
+                    </span>
+                    <div className="flex items-center justify-between gap-2 sm:justify-end">
+                      <span className="text-sm font-mono text-gray-600 dark:text-gray-300">
+                        {offering.english}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyText(offering.english)}
+                        className="flex shrink-0 items-center gap-1 px-2 py-1 text-xs bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded border border-gray-200 dark:border-gray-600 transition-colors"
+                        aria-label={`${offering.english} 복사`}
+                      >
+                        {copiedText === offering.english ? (
+                          <Check className="w-3 h-3" />
+                        ) : (
+                          <Copy className="w-3 h-3" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 

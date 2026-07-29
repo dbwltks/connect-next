@@ -4,6 +4,7 @@ import { Navbar } from "@/components/main/Navbar";
 import { Hero } from "@/components/main/Hero";
 import { LiveBanner } from "@/components/main/LiveBanner";
 import { ImageCarousel } from "@/components/main/ImageCarousel";
+import { Theme2026 } from "@/components/main/Theme2026";
 import { ServiceTimes } from "@/components/main/ServiceTimes";
 import { LatestSermons } from "@/components/main/LatestSermons";
 import { Community } from "@/components/main/Community";
@@ -49,6 +50,7 @@ export default function NewHomepage({
       <Hero banners={banners} />
       {/* <ImageCarousel images={carouselImages} /> */}
       <LiveBanner />
+      <Theme2026 />
       <QuickLinks />
       <SermonWorship />
       {/* <TodayWord /> */}
