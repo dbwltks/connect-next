@@ -50,8 +50,8 @@ export default function NewHomepage({
       <Hero banners={banners} />
       {/* <ImageCarousel images={carouselImages} /> */}
       <LiveBanner />
-      <Theme2026 />
       <QuickLinks />
+      <Theme2026 />
       <SermonWorship />
       {/* <TodayWord /> */}
       <Events />
