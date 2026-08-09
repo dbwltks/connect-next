@@ -92,7 +92,7 @@ export function MainPopup() {
                   8.23 (주일) 야외예배 &amp; 세례식
                 </p>
                 <p className="text-sm sm:text-base text-white/80 leading-relaxed">
-                  자연 속에서 함께 드리는 예배와
+                  공원에서 함께 드리는 예배와
                   <br />
                   세례식으로 여러분을 초대합니다
                 </p>
