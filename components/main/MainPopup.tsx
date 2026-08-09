@@ -81,7 +81,7 @@ export function MainPopup() {
                 <p className="text-sm sm:text-base text-white/80 leading-relaxed">
                   선교팀이 선교지에서 드리는 예배축제를
                   <br />
-                  실시간 방송으로 함께합니다
+                  실시간으로 송출합니다
                 </p>
               </div>
 
