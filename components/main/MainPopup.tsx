@@ -8,8 +8,8 @@ export function MainPopup() {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    // 캐나다(토론토) 시간으로 2026년 4월 26일 12시
-    const endDate = new Date('2026-04-26T12:00:00-04:00'); // EDT 시간대
+    // 캐나다(토론토) 시간으로 2026년 8월 24일 0시부터 팝업 노출 종료
+    const endDate = new Date('2026-08-24T00:00:00-04:00'); // EDT 시간대
     const now = new Date();
 
     // 만료 날짜가 지났으면 팝업을 표시하지 않음
@@ -18,8 +18,8 @@ export function MainPopup() {
     }
 
     // 팝업이 이미 닫혔는지 확인 (localStorage 사용)
-    const isClosed = localStorage.getItem("main-popup-closed");
-    const expiry = localStorage.getItem("main-popup-expiry");
+    const isClosed = localStorage.getItem("main-popup-closed-0813");
+    const expiry = localStorage.getItem("main-popup-expiry-0813");
 
     const nowTime = now.getTime();
 
@@ -37,8 +37,8 @@ export function MainPopup() {
     if (dontShowAgain) {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
-      localStorage.setItem("main-popup-closed", "true");
-      localStorage.setItem("main-popup-expiry", tomorrow.getTime().toString());
+      localStorage.setItem("main-popup-closed-0813", "true");
+      localStorage.setItem("main-popup-expiry-0813", tomorrow.getTime().toString());
     }
   };
 
@@ -52,20 +52,52 @@ export function MainPopup() {
           {/* 닫기 버튼 */}
           <button
             onClick={() => closePopup(false)}
-            className="absolute top-4 right-4 text-gray-400 hover:text-black dark:hover:text-white transition-colors z-10 bg-white/80 dark:bg-gray-800/80 rounded-full p-1 shadow-sm"
+            className="absolute top-4 right-4 text-white/90 hover:text-white transition-colors z-10 bg-black/30 backdrop-blur-sm rounded-full p-1 shadow-sm"
           >
             <X size={20} />
           </button>
 
-          {/* 2026 힐캠4 이미지 */}
-          <div className="relative w-full aspect-[3/4]">
+          {/* 배경 이미지 + 8월 소식 */}
+          <div className="relative w-full aspect-[4/5]">
             <Image
-              src="/Images/2026 힐캠4.png"
-              alt="2026 힐캠4"
+              src="https://images.unsplash.com/photo-1478147427282-58a87a120781?q=80&w=1200"
+              alt="8월 소식"
               fill
               className="object-cover"
               priority
             />
+            {/* 가독성을 위한 그라데이션 스크림 (하단만 살짝) */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
+
+            <div className="absolute inset-0 flex flex-col justify-end gap-4 p-6 sm:p-7 text-white">
+              <span className="text-xs sm:text-sm font-semibold tracking-[0.2em] text-amber-200/90">
+                8월 소식
+              </span>
+
+              <div className="space-y-1.5">
+                <p className="text-lg sm:text-xl font-bold leading-snug">
+                  8.13 (목) 목요집회 없음
+                </p>
+                <p className="text-sm sm:text-base text-white/80 leading-relaxed">
+                  선교팀이 선교지에서 드리는 예배축제를
+                  <br />
+                  실시간 방송으로 함께합니다
+                </p>
+              </div>
+
+              <div className="h-px bg-white/20" />
+
+              <div className="space-y-1.5">
+                <p className="text-lg sm:text-xl font-bold leading-snug">
+                  8.23 (주일) 야외예배 &amp; 세례식
+                </p>
+                <p className="text-sm sm:text-base text-white/80 leading-relaxed">
+                  자연 속에서 함께 드리는 예배와
+                  <br />
+                  세례식으로 여러분을 초대합니다
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
