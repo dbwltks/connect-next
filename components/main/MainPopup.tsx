@@ -8,8 +8,8 @@ export function MainPopup() {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    // 캐나다(토론토) 시간으로 2026년 8월 24일 0시부터 팝업 노출 종료
-    const endDate = new Date('2026-08-24T00:00:00-04:00'); // EDT 시간대
+    // 캐나다(토론토) 시간으로 2026년 8월 31일 0시부터 팝업 노출 종료
+    const endDate = new Date('2026-08-31T00:00:00-04:00'); // EDT 시간대
     const now = new Date();
 
     // 만료 날짜가 지났으면 팝업을 표시하지 않음
@@ -89,7 +89,7 @@ export function MainPopup() {
 
               <div className="space-y-1.5">
                 <p className="text-lg sm:text-xl font-bold leading-snug">
-                  8.23 (주일) 야외예배 &amp; 세례식
+                  8.30 (주일) 야외예배 &amp; 세례식
                 </p>
                 <p className="text-sm sm:text-base text-white/80 leading-relaxed">
                   야외에서 함께 드리는 예배와
