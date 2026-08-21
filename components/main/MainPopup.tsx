@@ -57,13 +57,20 @@ export function MainPopup() {
             <X size={20} />
           </button>
 
-          {/* 8.30 야외예배 & 세례식 포스터 */}
-          <div className="relative w-full aspect-[16/9]">
+          {/* 8.30 야외예배 & 세례식 포스터 (모바일/웹 다른 이미지) */}
+          <div className="relative w-full aspect-[4/5] sm:aspect-[16/9]">
+            <Image
+              src="/Images/2026-8월30일야외예배-모바일.webp"
+              alt="야외 예배: 2026 Baptism Sunday Worship"
+              fill
+              className="object-cover sm:hidden"
+              priority
+            />
             <Image
               src="/Images/2026-8월30일야외예배.webp"
               alt="야외 예배: 2026 Baptism Sunday Worship"
               fill
-              className="object-cover"
+              className="object-cover hidden sm:block"
               priority
             />
           </div>
