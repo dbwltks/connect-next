@@ -46,7 +46,7 @@ export function MainPopup() {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="relative w-full max-w-lg mx-auto flex flex-col items-center gap-3 sm:gap-4">
+      <div className="relative w-full max-w-lg sm:max-w-xl md:max-w-2xl lg:max-w-3xl mx-auto flex flex-col items-center gap-3 sm:gap-4">
         {/* 팝업 컨텐츠 */}
         <div className="relative bg-white dark:bg-gray-900 shadow-2xl animate-in fade-in zoom-in duration-300 rounded-3xl overflow-hidden w-full">
           {/* 닫기 버튼 */}
