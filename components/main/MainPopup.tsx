@@ -18,8 +18,8 @@ export function MainPopup() {
     }
 
     // 팝업이 이미 닫혔는지 확인 (localStorage 사용)
-    const isClosed = localStorage.getItem("main-popup-closed-0813");
-    const expiry = localStorage.getItem("main-popup-expiry-0813");
+    const isClosed = localStorage.getItem("main-popup-closed-0830");
+    const expiry = localStorage.getItem("main-popup-expiry-0830");
 
     const nowTime = now.getTime();
 
@@ -37,8 +37,8 @@ export function MainPopup() {
     if (dontShowAgain) {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
-      localStorage.setItem("main-popup-closed-0813", "true");
-      localStorage.setItem("main-popup-expiry-0813", tomorrow.getTime().toString());
+      localStorage.setItem("main-popup-closed-0830", "true");
+      localStorage.setItem("main-popup-expiry-0830", tomorrow.getTime().toString());
     }
   };
 
@@ -46,7 +46,7 @@ export function MainPopup() {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="relative w-full max-w-md mx-auto flex flex-col items-center gap-3 sm:gap-4">
+      <div className="relative w-full max-w-lg mx-auto flex flex-col items-center gap-3 sm:gap-4">
         {/* 팝업 컨텐츠 */}
         <div className="relative bg-white dark:bg-gray-900 shadow-2xl animate-in fade-in zoom-in duration-300 rounded-3xl overflow-hidden w-full">
           {/* 닫기 버튼 */}
@@ -57,47 +57,15 @@ export function MainPopup() {
             <X size={20} />
           </button>
 
-          {/* 배경 이미지 + 8월 소식 */}
-          <div className="relative w-full aspect-[4/5]">
+          {/* 8.30 야외예배 & 세례식 포스터 */}
+          <div className="relative w-full aspect-[16/9]">
             <Image
-              src="https://images.unsplash.com/photo-1478147427282-58a87a120781?q=80&w=1200"
-              alt="8월 소식"
+              src="/Images/2026-8월30일야외예배.webp"
+              alt="야외 예배: 2026 Baptism Sunday Worship"
               fill
               className="object-cover"
               priority
             />
-            {/* 가독성을 위한 그라데이션 스크림 (하단만 살짝) */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
-
-            <div className="absolute inset-0 flex flex-col justify-end gap-4 p-6 sm:p-7 text-white">
-              <span className="text-xs sm:text-sm font-semibold tracking-[0.2em] text-amber-200/90">
-                8월 소식
-              </span>
-
-              <div className="space-y-1.5">
-                <p className="text-lg sm:text-xl font-bold leading-snug">
-                  8.13 (목) 목요집회 없음
-                </p>
-                <p className="text-sm sm:text-base text-white/80 leading-relaxed">
-                  선교팀이 선교지에서 드리는 예배축제를
-                  <br />
-                  실시간으로 송출합니다
-                </p>
-              </div>
-
-              <div className="h-px bg-white/20" />
-
-              <div className="space-y-1.5">
-                <p className="text-lg sm:text-xl font-bold leading-snug">
-                  8.30 (주일) 야외예배 &amp; 세례식
-                </p>
-                <p className="text-sm sm:text-base text-white/80 leading-relaxed">
-                  야외에서 함께 드리는 예배와
-                  <br />
-                  세례식으로 여러분을 초대합니다
-                </p>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -118,3 +86,107 @@ export function MainPopup() {
     </div>
   );
 }
+
+/*
+ * 아래는 8월 소식(목요집회 안내 + 야외예배 안내) 텍스트형 팝업입니다.
+ * 나중에 재사용할 수 있도록 보관만 해두고 현재는 렌더링하지 않습니다.
+ *
+ * function TextNoticePopup() {
+ *   const [isOpen, setIsOpen] = useState(false);
+ *
+ *   useEffect(() => {
+ *     const endDate = new Date('2026-08-31T00:00:00-04:00');
+ *     const now = new Date();
+ *     if (now > endDate) return;
+ *
+ *     const isClosed = localStorage.getItem("main-popup-closed-0813");
+ *     const expiry = localStorage.getItem("main-popup-expiry-0813");
+ *     const nowTime = now.getTime();
+ *
+ *     if (!isClosed || (expiry && nowTime > parseInt(expiry))) {
+ *       const timer = setTimeout(() => setIsOpen(true), 1000);
+ *       return () => clearTimeout(timer);
+ *     }
+ *   }, []);
+ *
+ *   const closePopup = (dontShowAgain = false) => {
+ *     setIsOpen(false);
+ *     if (dontShowAgain) {
+ *       const tomorrow = new Date();
+ *       tomorrow.setDate(tomorrow.getDate() + 1);
+ *       localStorage.setItem("main-popup-closed-0813", "true");
+ *       localStorage.setItem("main-popup-expiry-0813", tomorrow.getTime().toString());
+ *     }
+ *   };
+ *
+ *   if (!isOpen) return null;
+ *
+ *   return (
+ *     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+ *       <div className="relative w-full max-w-md mx-auto flex flex-col items-center gap-3 sm:gap-4">
+ *         <div className="relative bg-white dark:bg-gray-900 shadow-2xl animate-in fade-in zoom-in duration-300 rounded-3xl overflow-hidden w-full">
+ *           <button
+ *             onClick={() => closePopup(false)}
+ *             className="absolute top-4 right-4 text-white/90 hover:text-white transition-colors z-10 bg-black/30 backdrop-blur-sm rounded-full p-1 shadow-sm"
+ *           >
+ *             <X size={20} />
+ *           </button>
+ *
+ *           <div className="relative w-full aspect-[4/5]">
+ *             <Image
+ *               src="https://images.unsplash.com/photo-1478147427282-58a87a120781?q=80&w=1200"
+ *               alt="8월 소식"
+ *               fill
+ *               className="object-cover"
+ *               priority
+ *             />
+ *             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
+ *
+ *             <div className="absolute inset-0 flex flex-col justify-end gap-4 p-6 sm:p-7 text-white">
+ *               <span className="text-xs sm:text-sm font-semibold tracking-[0.2em] text-amber-200/90">
+ *                 8월 소식
+ *               </span>
+ *
+ *               <div className="space-y-1.5">
+ *                 <p className="text-lg sm:text-xl font-bold leading-snug">
+ *                   8.13 (목) 목요집회 없음
+ *                 </p>
+ *                 <p className="text-sm sm:text-base text-white/80 leading-relaxed">
+ *                   선교팀이 선교지에서 드리는 예배축제를
+ *                   <br />
+ *                   실시간으로 송출합니다
+ *                 </p>
+ *               </div>
+ *
+ *               <div className="h-px bg-white/20" />
+ *
+ *               <div className="space-y-1.5">
+ *                 <p className="text-lg sm:text-xl font-bold leading-snug">
+ *                   8.30 (주일) 야외예배 &amp; 세례식
+ *                 </p>
+ *                 <p className="text-sm sm:text-base text-white/80 leading-relaxed">
+ *                   야외에서 함께 드리는 예배와
+ *                   <br />
+ *                   세례식으로 여러분을 초대합니다
+ *                 </p>
+ *               </div>
+ *             </div>
+ *           </div>
+ *         </div>
+ *
+ *         <button
+ *           onClick={() => closePopup(true)}
+ *           className="px-4 py-2 sm:px-6 sm:py-3 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md text-gray-700 dark:text-gray-300 text-xs sm:text-sm font-medium hover:bg-white dark:hover:bg-gray-800 transition-colors rounded-full shadow-lg border border-gray-200 dark:border-gray-700"
+ *         >
+ *           오늘 하루 보지 않기
+ *         </button>
+ *       </div>
+ *
+ *       <div
+ *         className="absolute inset-0 -z-10"
+ *         onClick={() => closePopup(false)}
+ *       ></div>
+ *     </div>
+ *   );
+ * }
+ */
