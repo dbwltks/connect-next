@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
         const user = userMap.get(post.author_id);
 
         // 썸네일이 없으면 첨부파일 또는 content에서 첫 번째 이미지 추출
-        let thumbnailImage = post.thumbnail_url;
+        let thumbnailImage = post.thumbnail_url || post.meta?.thumbnail_url;
 
         if (!thumbnailImage) {
           // 1. meta.files에서 첫 번째 이미지 파일 찾기

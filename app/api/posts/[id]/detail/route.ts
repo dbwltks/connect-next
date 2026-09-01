@@ -137,7 +137,7 @@ export async function GET(
         ...post,
         user_id: post.author_id, // 하위 호환성
         page_id: post.meta?.page_id, // 하위 호환성
-        thumbnail_image: post.thumbnail_url, // 하위 호환성
+        thumbnail_image: post.thumbnail_url || post.meta?.thumbnail_url || null, // 하위 호환성
         files: post.meta?.files ? JSON.stringify(post.meta.files) : '[]', // 하위 호환성
         author: {
           username: authorInfo?.nickname || authorInfo?.username || '익명',

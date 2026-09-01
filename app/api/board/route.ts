@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
         // 하위 호환성을 위한 필드 매핑
         user_id: post.author_id,
         page_id: post.meta?.page_id,
-        thumbnail_image: post.thumbnail_url,
+        thumbnail_image: post.thumbnail_url || post.meta?.thumbnail_url || null,
         is_notice: post.post_type === 'notice',
         is_pinned: post.pinned_scope !== null,
       };
