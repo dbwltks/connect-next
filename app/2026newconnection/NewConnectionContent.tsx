@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Music2 } from "lucide-react";
 
 const ADDRESS = "45 Davenport Rd, Toronto, ON (M5R 1H2)";
 const EMBED_MAP_URL =
@@ -42,6 +42,10 @@ const content = {
         혼자여도 괜찮아요. 편안한 마음으로 오세요.
       </>
     ),
+    programLabel: "Program",
+    programTitle: "공연 순서",
+    programBody: "공연 프로그램은 추후 공개됩니다.",
+    programTeaser: ["축하공연", "메시지", "친교"],
     directionsLabel: "Directions",
     directionsTitle: "찾아오는 길",
     venueLine: "토론토 커넥트 교회 @ GYM",
@@ -89,6 +93,10 @@ const content = {
         It&apos;s okay to come alone. Just come as you are.
       </>
     ),
+    programLabel: "Program",
+    programTitle: "Program",
+    programBody: "The program will be announced soon.",
+    programTeaser: ["Performance", "Message", "Fellowship"],
     directionsLabel: "Directions",
     directionsTitle: "How to Get Here",
     venueLine: "Toronto Connect Church @ GYM",
@@ -142,9 +150,9 @@ export function NewConnectionContent() {
 
       <main className="relative z-10">
         {/* 1. 메인 */}
-        <section className="relative h-screen snap-start flex flex-col items-center justify-between text-center px-4 pt-24 sm:pt-28 pb-10 text-white overflow-y-auto">
+        <section className="relative h-screen snap-start flex flex-col items-center justify-between text-center px-4 pt-28 sm:pt-28 pb-10 text-white overflow-y-auto">
           <div className="max-w-md mx-auto space-y-6">
-            <div className="space-y-2">
+            <div className="space-y-3">
               <p className="text-xs sm:text-sm text-white/85 leading-relaxed">
                 {t.intro}
               </p>
@@ -186,8 +194,8 @@ export function NewConnectionContent() {
         </section>
 
         {/* 2. 뉴커넥션 소개 */}
-        <section className="h-screen snap-start flex flex-col items-center justify-center text-center px-4 py-16 text-white overflow-y-auto">
-          <div className="max-w-lg sm:max-w-xl md:max-w-2xl w-full mx-auto space-y-6 bg-black/30 backdrop-blur-md rounded-3xl p-5 sm:px-10 sm:py-16">
+        <section className="h-screen snap-start flex flex-col items-center justify-center text-center px-4 py-24 text-white overflow-y-auto">
+          <div className="max-w-lg sm:max-w-xl md:max-w-2xl mx-auto space-y-6">
             <span className="text-xs sm:text-sm font-semibold tracking-[0.3em] text-white/60 uppercase">
               {t.aboutLabel}
             </span>
@@ -200,13 +208,41 @@ export function NewConnectionContent() {
             >
               {t.aboutTitle}
             </h2>
-            <p className="text-sm sm:text-base text-white/85 leading-relaxed">
+            <p className="text-sm sm:text-base text-white/85 leading-relaxed bg-black/30 backdrop-blur-md rounded-2xl p-4 sm:p-6">
               {t.aboutBody}
             </p>
           </div>
         </section>
 
-        {/* 3. 찾아오는 길 */}
+        {/* 3. 공연 순서 (프로그램) */}
+        <section className="h-screen snap-start flex flex-col items-center justify-center text-center px-4 py-24 text-white overflow-y-auto">
+          <div className="max-w-lg sm:max-w-xl md:max-w-2xl mx-auto space-y-6">
+            <span className="text-xs sm:text-sm font-semibold tracking-[0.3em] text-white/60 uppercase">
+              {t.programLabel}
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-bold leading-snug">
+              {t.programTitle}
+            </h2>
+            <div className="bg-black/30 backdrop-blur-md rounded-2xl p-5 sm:p-8 space-y-5">
+              <p className="text-sm sm:text-base text-white/70">
+                {t.programBody}
+              </p>
+              <Music2 className="w-7 h-7 mx-auto text-white/70" />
+              <div className="flex flex-wrap justify-center gap-3">
+                {t.programTeaser.map((item) => (
+                  <span
+                    key={item}
+                    className="rounded-full border border-white/25 px-5 py-2 text-xs sm:text-sm text-white/80"
+                  >
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 4. 찾아오는 길 */}
         <section className="h-screen snap-start flex flex-col items-center justify-center px-6 py-24 text-white overflow-y-auto">
           <div className="max-w-md mx-auto w-full space-y-6">
             <div className="text-center space-y-2">
@@ -229,7 +265,7 @@ export function NewConnectionContent() {
               />
             </div>
 
-            <div className="bg-black/30 backdrop-blur-md rounded-2xl p-5 space-y-4 text-sm sm:text-base">
+            <div className="bg-black/30 backdrop-blur-md rounded-2xl p-4 sm:p-5 space-y-4 text-sm sm:text-base">
               <div>
                 <p className="font-semibold">{t.venueLine}</p>
                 <p className="text-white/75">{ADDRESS}</p>
