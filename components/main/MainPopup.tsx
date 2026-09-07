@@ -2,14 +2,15 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { X } from "lucide-react";
 
 export function MainPopup() {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    // 캐나다(토론토) 시간으로 2026년 8월 31일 0시부터 팝업 노출 종료
-    const endDate = new Date('2026-08-31T00:00:00-04:00'); // EDT 시간대
+    // 캐나다(토론토) 시간으로 2026년 9월 25일 0시부터 팝업 노출 종료
+    const endDate = new Date('2026-09-25T00:00:00-04:00'); // EDT 시간대
     const now = new Date();
 
     // 만료 날짜가 지났으면 팝업을 표시하지 않음
@@ -18,8 +19,8 @@ export function MainPopup() {
     }
 
     // 팝업이 이미 닫혔는지 확인 (localStorage 사용)
-    const isClosed = localStorage.getItem("main-popup-closed-0830");
-    const expiry = localStorage.getItem("main-popup-expiry-0830");
+    const isClosed = localStorage.getItem("main-popup-closed-newconnection");
+    const expiry = localStorage.getItem("main-popup-expiry-newconnection");
 
     const nowTime = now.getTime();
 
@@ -37,8 +38,8 @@ export function MainPopup() {
     if (dontShowAgain) {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
-      localStorage.setItem("main-popup-closed-0830", "true");
-      localStorage.setItem("main-popup-expiry-0830", tomorrow.getTime().toString());
+      localStorage.setItem("main-popup-closed-newconnection", "true");
+      localStorage.setItem("main-popup-expiry-newconnection", tomorrow.getTime().toString());
     }
   };
 
@@ -57,23 +58,20 @@ export function MainPopup() {
             <X size={20} />
           </button>
 
-          {/* 8.30 야외예배 & 세례식 포스터 (모바일/웹 다른 이미지) */}
-          <div className="relative w-full aspect-[4/5] sm:aspect-[16/9]">
+          {/* 뉴커넥션 콘서트 포스터 (클릭 시 상세 페이지로 이동) */}
+          <Link
+            href="/2026newconnection"
+            className="relative w-full aspect-[1294/2000] block"
+            onClick={() => closePopup(false)}
+          >
             <Image
-              src="/Images/2026-8월30일야외예배-모바일.webp"
-              alt="야외 예배: 2026 Baptism Sunday Worship"
+              src="/Images/2026newconnection_poster.webp"
+              alt="2026 뉴커넥션 콘서트"
               fill
-              className="object-cover sm:hidden"
+              className="object-cover"
               priority
             />
-            <Image
-              src="/Images/2026-8월30일야외예배.webp"
-              alt="야외 예배: 2026 Baptism Sunday Worship"
-              fill
-              className="object-cover hidden sm:block"
-              priority
-            />
-          </div>
+          </Link>
         </div>
 
         {/* 오늘 하루 보지 않기 버튼 */}

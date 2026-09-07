@@ -30,6 +30,7 @@ export default function ClientLayout({
   const isAdminPage = pathname?.startsWith('/admin');
   const isHomePage = pathname === '/';
   const isAuthPage = pathname?.startsWith('/login') || pathname?.startsWith('/register') || pathname?.startsWith('/forgot-password');
+  const isImmersiveEventPage = pathname?.startsWith('/2026newconnection');
 
   // OAuth 성공 토스트 처리
   useEffect(() => {
@@ -56,11 +57,11 @@ export default function ClientLayout({
           disableTransitionOnChange
         >
           <div className="min-h-screen flex flex-col">
-            {/* 홈페이지, 관리자 페이지, 로그인/회원가입 페이지가 아닐 때만 헤더 표시 */}
-            {!isAdminPage && !isHomePage && !isAuthPage && <Header initialMenus={headerMenus} />}
+            {/* 홈페이지, 관리자 페이지, 로그인/회원가입 페이지, 몰입형 이벤트 페이지가 아닐 때만 헤더 표시 */}
+            {!isAdminPage && !isHomePage && !isAuthPage && !isImmersiveEventPage && <Header initialMenus={headerMenus} />}
             <main className="flex-1">{children}</main>
-            {/* 관리자 페이지와 로그인/회원가입 페이지가 아닐 때만 푸터 표시 */}
-            {!isAdminPage && !isAuthPage && <Footer />}
+            {/* 관리자 페이지, 로그인/회원가입 페이지, 몰입형 이벤트 페이지가 아닐 때만 푸터 표시 */}
+            {!isAdminPage && !isAuthPage && !isImmersiveEventPage && <Footer />}
             <Toaster />
             <ScrollToTop />
             {/* <ServiceWorkerRegister /> */}
