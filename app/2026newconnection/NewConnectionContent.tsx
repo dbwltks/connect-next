@@ -154,7 +154,7 @@ export function NewConnectionContent() {
                 className={
                   lang === "ko"
                     ? "plex-kr-thin text-[clamp(3.25rem,13vw,5.5rem)] leading-[1.25] tracking-[0.05em]"
-                    : "plex-kr-thin text-[clamp(2.25rem,9.5vw,3.75rem)] leading-[1.25] tracking-[0.05em]"
+                    : "plex-kr-thin text-[clamp(2.5rem,11vw,4.25rem)] leading-[1.25] tracking-[0.05em]"
                 }
                 style={{
                   textShadow:
@@ -187,12 +187,18 @@ export function NewConnectionContent() {
         </section>
 
         {/* 2. 뉴커넥션 소개 */}
-        <section className="h-screen snap-start flex flex-col items-center justify-center text-center px-6 py-24 text-white overflow-y-auto">
-          <div className="max-w-md mx-auto space-y-6">
+        <section className="h-screen snap-start flex flex-col items-center justify-center text-center px-4 py-16 text-white overflow-y-auto">
+          <div className="max-w-lg sm:max-w-xl md:max-w-2xl w-full mx-auto space-y-6 bg-black/30 backdrop-blur-md rounded-3xl p-5 sm:px-10 sm:py-16">
             <span className="text-xs sm:text-sm font-semibold tracking-[0.3em] text-white/60 uppercase">
               {t.aboutLabel}
             </span>
-            <h2 className="text-3xl sm:text-4xl font-bold leading-snug">
+            <h2
+              className={
+                lang === "ko"
+                  ? "text-3xl sm:text-4xl font-bold leading-snug"
+                  : "text-2xl sm:text-4xl font-bold leading-snug"
+              }
+            >
               {t.aboutTitle}
             </h2>
             <p className="text-sm sm:text-base text-white/85 leading-relaxed">
@@ -224,7 +230,7 @@ export function NewConnectionContent() {
               />
             </div>
 
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-5 space-y-4 text-sm sm:text-base">
+            <div className="bg-black/30 backdrop-blur-md rounded-2xl p-5 space-y-4 text-sm sm:text-base">
               <div>
                 <p className="font-semibold">{t.venueLine}</p>
                 <p className="text-white/75">{ADDRESS}</p>
@@ -256,8 +262,8 @@ export function NewConnectionContent() {
         </section>
 
         {/* 4. 이전 뉴커넥션 영상 */}
-        <section className="h-screen snap-start flex flex-col items-center justify-center text-center px-6 py-24 text-white overflow-y-auto">
-          <div className="max-w-md mx-auto w-full space-y-6">
+        <section className="h-screen snap-start flex flex-col items-center justify-center text-center px-4 py-16 text-white overflow-y-auto">
+          <div className="max-w-lg sm:max-w-xl md:max-w-2xl w-full mx-auto space-y-6 bg-black/30 backdrop-blur-md rounded-3xl p-5 sm:px-10 sm:py-16">
             <span className="text-xs sm:text-sm font-semibold tracking-[0.3em] text-white/60 uppercase">
               {t.lastYearLabel}
             </span>
