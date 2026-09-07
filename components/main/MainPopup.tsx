@@ -47,9 +47,9 @@ export function MainPopup() {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="relative w-full max-w-lg sm:max-w-xl md:max-w-2xl lg:max-w-3xl mx-auto flex flex-col items-center gap-3 sm:gap-4">
+      <div className="relative mx-auto flex flex-col items-center gap-3 sm:gap-4">
         {/* 팝업 컨텐츠 */}
-        <div className="relative bg-white dark:bg-gray-900 shadow-2xl animate-in fade-in zoom-in duration-300 rounded-3xl overflow-hidden w-full">
+        <div className="relative bg-white dark:bg-gray-900 shadow-2xl animate-in fade-in zoom-in duration-300 rounded-3xl overflow-hidden h-[70vh] max-h-[640px] aspect-[1294/2000]">
           {/* 닫기 버튼 */}
           <button
             onClick={() => closePopup(false)}
@@ -61,7 +61,7 @@ export function MainPopup() {
           {/* 뉴커넥션 콘서트 포스터 (클릭 시 상세 페이지로 이동) */}
           <Link
             href="/2026newconnection"
-            className="relative w-full aspect-[1294/2000] block"
+            className="relative w-full h-full block"
             onClick={() => closePopup(false)}
           >
             <Image

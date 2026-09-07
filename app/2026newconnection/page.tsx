@@ -14,9 +14,9 @@ const EMBED_MAP_URL =
 
 export default function NewConnection2026Page() {
   return (
-    <div className="relative bg-[#1c2438]">
+    <div className="relative h-screen overflow-y-scroll snap-y snap-mandatory">
       {/* 고정 배경: 스크롤해도 그대로 유지됨 (모바일/데스크톱 이미지 분리) */}
-      <div className="fixed inset-0 -z-10 bg-[#1c2438]">
+      <div className="fixed inset-0 -z-10">
         <Image
           src="/Images/2026newconnection_back.webp"
           alt=""
@@ -35,7 +35,7 @@ export default function NewConnection2026Page() {
 
       <main className="relative z-10">
         {/* 1. 메인 */}
-        <section className="min-h-screen flex flex-col items-center justify-center text-center px-6 py-24 text-white">
+        <section className="h-screen snap-start flex flex-col items-center justify-between text-center px-6 pt-28 sm:pt-32 pb-10 text-white overflow-y-auto">
           <div className="max-w-md mx-auto space-y-6">
             <p className="text-sm sm:text-base text-white/85 leading-relaxed">
               빛을 잃어버린지도 몰랐던 당신의 삶을
@@ -43,21 +43,22 @@ export default function NewConnection2026Page() {
               환히 밝혀 줄 가장 눈부신 선물이 찾아옵니다!
             </p>
 
-            <h1
-              className="text-[clamp(2.75rem,11vw,4.5rem)] font-extrabold leading-[1.15] tracking-tight"
-              style={{
-                textShadow:
-                  "0 0 8px rgba(255,255,255,0.85), 0 0 24px rgba(255,255,255,0.5), 0 0 48px rgba(147,197,253,0.4)",
-              }}
-            >
-              뉴커넥션
-              <br />
-              콘서트
-            </h1>
+            <div className="space-y-2">
+              <h1
+                className="gothic-a1-thin text-[clamp(3rem,12vw,5rem)] leading-[1.2] tracking-wide"
+                style={{
+                  textShadow: "0 0 12px rgba(255,255,255,0.6)",
+                }}
+              >
+                뉴커넥션
+                <br />
+                콘서트
+              </h1>
 
-            <p className="text-xl sm:text-2xl font-bold">
-              2026. Sep. 24 (Thu) 7:30 pm
-            </p>
+              <p className="text-xl sm:text-2xl font-bold">
+                2026. Sep. 24 (Thu) 7:30 pm
+              </p>
+            </div>
 
             <div className="space-y-1">
               <p className="text-base sm:text-lg font-semibold">
@@ -67,16 +68,10 @@ export default function NewConnection2026Page() {
                 {ADDRESS}
               </p>
             </div>
-
-            <div className="pt-2">
-              <p className="text-2xl sm:text-3xl font-extrabold">$0 FREE</p>
-              <p className="text-xs sm:text-sm text-white/75 mt-1">
-                (+ Snack / Fellowship after the concert!)
-              </p>
-            </div>
           </div>
 
-          <div className="mt-16 max-w-sm mx-auto text-xs sm:text-sm text-white/70 leading-relaxed space-y-1">
+          {/* 말씀 구절 */}
+          <div className="max-w-sm mx-auto text-xs sm:text-sm text-white/70 leading-relaxed space-y-1">
             <p>
               너희가 전에는 어둠이더니 이제는 주 안에서 빛이라 빛의 자녀들처럼
               행하라 (엡 5:8)
@@ -87,7 +82,7 @@ export default function NewConnection2026Page() {
         </section>
 
         {/* 2. 뉴커넥션 소개 */}
-        <section className="min-h-screen flex flex-col items-center justify-center text-center px-6 py-24 text-white">
+        <section className="h-screen snap-start flex flex-col items-center justify-center text-center px-6 py-24 text-white overflow-y-auto">
           <div className="max-w-md mx-auto space-y-6">
             <span className="text-xs sm:text-sm font-semibold tracking-[0.3em] text-white/60 uppercase">
               About New Connection
@@ -110,7 +105,7 @@ export default function NewConnection2026Page() {
         </section>
 
         {/* 3. 찾아오는 길 */}
-        <section className="min-h-screen flex flex-col items-center justify-center px-6 py-24 text-white">
+        <section className="h-screen snap-start flex flex-col items-center justify-center px-6 py-24 text-white overflow-y-auto">
           <div className="max-w-md mx-auto w-full space-y-6">
             <div className="text-center space-y-2">
               <span className="text-xs sm:text-sm font-semibold tracking-[0.3em] text-white/60 uppercase">
@@ -169,7 +164,7 @@ export default function NewConnection2026Page() {
         </section>
 
         {/* 4. 이전 뉴커넥션 영상 */}
-        <section className="min-h-screen flex flex-col items-center justify-center text-center px-6 py-24 text-white">
+        <section className="h-screen snap-start flex flex-col items-center justify-center text-center px-6 py-24 text-white overflow-y-auto">
           <div className="max-w-md mx-auto w-full space-y-6">
             <span className="text-xs sm:text-sm font-semibold tracking-[0.3em] text-white/60 uppercase">
               Last Year
