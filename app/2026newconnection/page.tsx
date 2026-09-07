@@ -35,7 +35,7 @@ export default function NewConnection2026Page() {
 
       <main className="relative z-10">
         {/* 1. 메인 */}
-        <section className="h-screen snap-start flex flex-col items-center justify-between text-center px-6 pt-28 sm:pt-32 pb-10 text-white overflow-y-auto">
+        <section className="h-screen snap-start flex flex-col items-center justify-between text-center px-6 pt-48 sm:pt-52 pb-10 text-white overflow-y-auto">
           <div className="max-w-md mx-auto space-y-6">
             <p className="text-sm sm:text-base text-white/85 leading-relaxed">
               빛을 잃어버린지도 몰랐던 당신의 삶을
@@ -45,7 +45,7 @@ export default function NewConnection2026Page() {
 
             <div className="space-y-2">
               <h1
-                className="gothic-a1-thin text-[clamp(3rem,12vw,5rem)] leading-[1.2] tracking-wide"
+                className="plex-kr-thin text-[clamp(2.75rem,11vw,4.5rem)] leading-[1.25] tracking-[0.05em]"
                 style={{
                   textShadow: "0 0 12px rgba(255,255,255,0.6)",
                 }}

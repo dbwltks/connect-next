@@ -234,6 +234,12 @@ h6,
   font-style: normal;
 }
 
+.plex-kr-thin {
+  font-family: "IBM Plex Sans KR", sans-serif;
+  font-weight: 100;
+  font-style: normal;
+}
+
 .markazi-text-regular {
   font-family: "Markazi Text", serif;
   font-optical-sizing: auto;
