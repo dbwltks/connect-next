@@ -35,17 +35,17 @@ export default function NewConnection2026Page() {
 
       <main className="relative z-10">
         {/* 1. 메인 */}
-        <section className="h-screen snap-start flex flex-col items-center justify-between text-center px-6 pt-48 sm:pt-52 pb-10 text-white overflow-y-auto">
+        <section className="h-screen snap-start flex flex-col items-center justify-between text-center px-4 pt-24 sm:pt-28 pb-10 text-white overflow-y-auto">
           <div className="max-w-md mx-auto space-y-6">
-            <p className="text-sm sm:text-base text-white/85 leading-relaxed">
-              빛을 잃어버린지도 몰랐던 당신의 삶을
-              <br />
-              환히 밝혀 줄 가장 눈부신 선물이 찾아옵니다!
-            </p>
-
             <div className="space-y-2">
+              <p className="text-xs sm:text-sm text-white/85 leading-relaxed">
+                빛을 잃어버린지도 몰랐던 당신의 삶을
+                <br />
+                환히 밝혀 줄 가장 눈부신 선물이 찾아옵니다!
+              </p>
+
               <h1
-                className="plex-kr-thin text-[clamp(2.75rem,11vw,4.5rem)] leading-[1.25] tracking-[0.05em]"
+                className="plex-kr-thin text-[clamp(3.25rem,13vw,5.5rem)] leading-[1.25] tracking-[0.05em]"
                 style={{
                   textShadow:
                     "0 0 6px rgba(255,255,255,0.9), 0 0 18px rgba(255,255,255,0.7), 0 0 36px rgba(255,255,255,0.4)",
@@ -72,7 +72,7 @@ export default function NewConnection2026Page() {
           </div>
 
           {/* 말씀 구절 */}
-          <div className="max-w-sm mx-auto text-xs sm:text-sm text-white/70 leading-relaxed space-y-1">
+          <div className="max-w-md mx-auto text-xs sm:text-sm text-white/70 leading-relaxed space-y-1">
             <p>
               너희가 전에는 어둠이더니 이제는 주 안에서 빛이라 빛의 자녀들처럼
               행하라 (엡 5:8)
