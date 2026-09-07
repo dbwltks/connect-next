@@ -107,6 +107,9 @@ const content = {
 
 export function NewConnectionContent() {
   const [lang, setLang] = useState<"ko" | "en">("ko");
+  const [infoTab, setInfoTab] = useState<"directions" | "parking">(
+    "directions"
+  );
   const t = content[lang];
 
   return (
@@ -231,13 +234,62 @@ export function NewConnectionContent() {
                 <p className="font-semibold">{t.venueLine}</p>
                 <p className="text-white/75">{ADDRESS}</p>
               </div>
-              <div className="pt-3 border-t border-white/15">
+
+              {/* 모바일 전용 탭 (Directions / Parking 중 하나씩) */}
+              <div className="flex gap-2 sm:hidden">
+                <button
+                  onClick={() => setInfoTab("directions")}
+                  className={`flex-1 rounded-full py-1.5 text-xs font-semibold transition-colors ${
+                    infoTab === "directions"
+                      ? "bg-white text-[#1c2438]"
+                      : "bg-white/10 text-white/70"
+                  }`}
+                >
+                  {t.directionsLabel}
+                </button>
+                <button
+                  onClick={() => setInfoTab("parking")}
+                  className={`flex-1 rounded-full py-1.5 text-xs font-semibold transition-colors ${
+                    infoTab === "parking"
+                      ? "bg-white text-[#1c2438]"
+                      : "bg-white/10 text-white/70"
+                  }`}
+                >
+                  {t.parkingTitle}
+                </button>
+              </div>
+
+              {/* 모바일: 아코디언처럼 아래로 펼쳐짐 (위쪽 요소는 안 움직임) */}
+              <div className="sm:hidden border-t border-white/15">
+                <div
+                  className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+                    infoTab === "directions" ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                  }`}
+                >
+                  <div className="overflow-hidden">
+                    <p className="text-white/80 pt-3">{t.directionsText}</p>
+                  </div>
+                </div>
+                <div
+                  className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+                    infoTab === "parking" ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                  }`}
+                >
+                  <div className="overflow-hidden">
+                    <p className="text-white/80 pt-3">{t.parkingAddress}</p>
+                    <p className="text-white/80 mt-1">{t.parkingText}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 데스크톱: 항상 둘 다 표시 */}
+              <div className="hidden sm:block pt-3 border-t border-white/15">
                 <p className="text-white/60 text-xs uppercase tracking-[0.2em] mb-1">
                   {t.directionsLabel}
                 </p>
                 <p className="text-white/80">{t.directionsText}</p>
               </div>
-              <div className="pt-3 border-t border-white/15">
+              <div className="hidden sm:block pt-3 border-t border-white/15">
                 <p className="text-white/60 text-xs uppercase tracking-[0.2em] mb-1">
                   {t.parkingTitle}
                 </p>
@@ -249,8 +301,8 @@ export function NewConnectionContent() {
         </section>
 
         {/* 4. 이전 뉴커넥션 영상 */}
-        <section className="h-screen snap-start flex flex-col items-center justify-center text-center px-4 py-16 text-white overflow-y-auto">
-          <div className="max-w-lg sm:max-w-xl md:max-w-2xl w-full mx-auto space-y-6 bg-black/30 backdrop-blur-md rounded-3xl p-5 sm:px-10 sm:py-16">
+        <section className="h-screen snap-start flex flex-col items-center justify-center text-center px-6 py-24 text-white overflow-y-auto">
+          <div className="max-w-lg sm:max-w-xl md:max-w-2xl w-full mx-auto space-y-6">
             <span className="text-xs sm:text-sm font-semibold tracking-[0.3em] text-white/60 uppercase">
               {t.lastYearLabel}
             </span>
@@ -261,9 +313,16 @@ export function NewConnectionContent() {
               {t.lastYearBody}
             </p>
 
-            {/* TODO: 실제 유튜브 영상 ID로 교체 필요 */}
-            <div className="aspect-video w-full rounded-2xl overflow-hidden bg-white/10 flex items-center justify-center text-white/50 text-sm">
-              {t.videoPlaceholder}
+            <div className="aspect-video w-full rounded-2xl overflow-hidden bg-white/10">
+              <iframe
+                src="https://www.youtube.com/embed/1bTac_K3464"
+                title={t.lastYearTitle}
+                className="w-full h-full"
+                style={{ border: 0 }}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                loading="lazy"
+              />
             </div>
           </div>
         </section>
