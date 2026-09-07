@@ -194,7 +194,7 @@ export function NewConnectionContent() {
         </section>
 
         {/* 2. 뉴커넥션 소개 */}
-        <section className="h-screen snap-start flex flex-col items-center justify-center text-center px-4 py-24 text-white overflow-y-auto">
+        <section className="h-screen snap-start flex flex-col items-center justify-center text-center px-3 sm:px-6 py-24 text-white overflow-y-auto">
           <div className="max-w-lg sm:max-w-xl md:max-w-2xl mx-auto space-y-6">
             <span className="text-xs sm:text-sm font-semibold tracking-[0.3em] text-white/60 uppercase">
               {t.aboutLabel}
@@ -215,7 +215,7 @@ export function NewConnectionContent() {
         </section>
 
         {/* 3. 공연 순서 (프로그램) */}
-        <section className="h-screen snap-start flex flex-col items-center justify-center text-center px-4 py-24 text-white overflow-y-auto">
+        <section className="h-screen snap-start flex flex-col items-center justify-center text-center px-3 sm:px-6 py-24 text-white overflow-y-auto">
           <div className="max-w-lg sm:max-w-xl md:max-w-2xl mx-auto space-y-6">
             <span className="text-xs sm:text-sm font-semibold tracking-[0.3em] text-white/60 uppercase">
               {t.programLabel}
