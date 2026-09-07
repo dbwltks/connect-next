@@ -47,7 +47,8 @@ export default function NewConnection2026Page() {
               <h1
                 className="plex-kr-thin text-[clamp(2.75rem,11vw,4.5rem)] leading-[1.25] tracking-[0.05em]"
                 style={{
-                  textShadow: "0 0 12px rgba(255,255,255,0.6)",
+                  textShadow:
+                    "0 0 6px rgba(255,255,255,0.9), 0 0 18px rgba(255,255,255,0.7), 0 0 36px rgba(255,255,255,0.4)",
                 }}
               >
                 뉴커넥션
