@@ -18,14 +18,14 @@ export default function NewConnection2026Page() {
       {/* 고정 배경: 스크롤해도 그대로 유지됨 (모바일/데스크톱 이미지 분리) */}
       <div className="fixed inset-0 -z-10">
         <Image
-          src="/Images/2026newconnection_back.webp"
+          src="/Images/2026newconnection_back.png"
           alt=""
           fill
           priority
           className="object-contain sm:hidden"
         />
         <Image
-          src="/Images/2026newconnection_deskback.webp"
+          src="/Images/2026newconnection_deskback.png"
           alt=""
           fill
           priority
