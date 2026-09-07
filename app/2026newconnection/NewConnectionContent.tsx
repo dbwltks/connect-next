@@ -150,7 +150,7 @@ export function NewConnectionContent() {
 
       <main className="relative z-10">
         {/* 1. 메인 */}
-        <section className="relative h-screen snap-start flex flex-col items-center justify-between text-center px-4 pt-28 sm:pt-28 pb-10 text-white overflow-y-auto">
+        <section className="relative h-screen snap-start flex flex-col items-center justify-between text-center px-4 pt-[6.5rem] sm:pt-[6.5rem] pb-10 text-white overflow-y-auto">
           <div className="max-w-md mx-auto space-y-6">
             <div className="space-y-3">
               <p className="text-xs sm:text-sm text-white/85 leading-relaxed">
