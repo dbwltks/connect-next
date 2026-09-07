@@ -151,13 +151,17 @@ export function NewConnectionContent() {
               </p>
 
               <h1
-                className="plex-kr-thin text-[clamp(3.25rem,13vw,5.5rem)] leading-[1.25] tracking-[0.05em]"
+                className={
+                  lang === "ko"
+                    ? "plex-kr-thin text-[clamp(3.25rem,13vw,5.5rem)] leading-[1.25] tracking-[0.05em]"
+                    : "plex-kr-thin text-[clamp(2.25rem,9.5vw,3.75rem)] leading-[1.25] tracking-[0.05em]"
+                }
                 style={{
                   textShadow:
                     "0 0 6px rgba(255,255,255,0.9), 0 0 18px rgba(255,255,255,0.7), 0 0 36px rgba(255,255,255,0.4)",
                 }}
               >
-                {t.titleLine1}
+                <span className="whitespace-nowrap">{t.titleLine1}</span>
                 <br />
                 {t.titleLine2}
               </h1>
@@ -173,11 +177,12 @@ export function NewConnectionContent() {
             </div>
           </div>
 
-          <ChevronDown className="absolute bottom-24 left-1/2 -translate-x-1/2 w-7 h-7 text-white/80 animate-bounce drop-shadow-[0_0_6px_rgba(0,0,0,0.6)]" />
-
-          {/* 말씀 구절 */}
-          <div className="max-w-md mx-auto text-xs sm:text-sm text-white/70 leading-relaxed space-y-1">
-            {t.verse}
+          {/* 말씀 구절 + 스크롤 인디케이터 */}
+          <div className="max-w-md mx-auto w-full flex flex-col items-center">
+            <div className="text-xs sm:text-sm text-white/70 leading-relaxed space-y-1">
+              {t.verse}
+            </div>
+            <ChevronDown className="mt-4 w-7 h-7 text-white/80 animate-bounce drop-shadow-[0_0_6px_rgba(0,0,0,0.6)]" />
           </div>
         </section>
 
