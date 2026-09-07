@@ -5,8 +5,6 @@ import Image from "next/image";
 import { ChevronDown } from "lucide-react";
 
 const ADDRESS = "45 Davenport Rd, Toronto, ON (M5R 1H2)";
-const MAPS_URL =
-  "https://www.google.com/maps/search/?api=1&query=45+Davenport+Rd+Toronto+ON+M5R+1H2";
 const EMBED_MAP_URL =
   "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2885.601550917232!2d-79.3916297232777!3d43.6730595515324!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x882b34a6feddf98d%3A0x7d6c6e75a3de3e0!2s45%20Davenport%20Rd%2C%20Toronto%2C%20ON%20M5R%201H2!5e0!3m2!1sko!2sca!4v1703350000000!5m2!1sko!2sca";
 
@@ -114,7 +112,7 @@ export function NewConnectionContent() {
   const t = content[lang];
 
   return (
-    <div className="relative h-screen overflow-y-scroll snap-y snap-mandatory">
+    <div className="relative h-screen overflow-y-scroll snap-y snap-mandatory scroll-smooth">
       {/* 언어 전환 */}
       <button
         onClick={() => setLang(lang === "ko" ? "en" : "ko")}
@@ -249,15 +247,6 @@ export function NewConnectionContent() {
                 <p className="text-white/80 mt-1">{t.parkingText}</p>
               </div>
             </div>
-
-            <a
-              href={MAPS_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block text-center rounded-full bg-white text-[#1c2438] font-semibold py-3 hover:bg-white/90 transition-colors"
-            >
-              {t.mapsButton}
-            </a>
           </div>
         </section>
 
