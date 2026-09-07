@@ -51,7 +51,6 @@ const content = {
     parkingAddress: "40 Scollard St, Toronto, ON M5R 3S1",
     parkingText:
       "아파트 지하 주차장 입구 판넬의 녹색 버튼을 누르시면 됩니다. 주차장 입구는 건물 뒤 Scollard Street에 있습니다.",
-    mapsButton: "지도에서 길찾기",
     lastYearLabel: "Last Year",
     lastYearTitle: "지난 뉴커넥션",
     lastYearBody: "작년 뉴커넥션의 순간들을 영상으로 만나보세요.",
@@ -99,7 +98,6 @@ const content = {
     parkingAddress: "40 Scollard St, Toronto, ON M5R 3S1",
     parkingText:
       "Press the green button at the underground parking entrance panel. The entrance is on Scollard Street, behind the building.",
-    mapsButton: "Get Directions",
     lastYearLabel: "Last Year",
     lastYearTitle: "Last Year's New Connection",
     lastYearBody: "Relive the moments from last year's New Connection.",
