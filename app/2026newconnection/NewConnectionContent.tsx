@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { ChevronDown, Music2 } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 const ADDRESS = "45 Davenport Rd, Toronto, ON (M5R 1H2)";
 const EMBED_MAP_URL =
@@ -31,21 +31,65 @@ const content = {
     aboutTitle: "뉴커넥션이란?",
     aboutBody: (
       <>
-        뉴커넥션은 아직 교회가 낯선 분들, 새로운 만남을 기다리는 분들을
-        위해 커넥트 교회가 준비한 초청 콘서트입니다.
+        매년 9월 개강시즌에 열리는 NEW CONNECTION은 하나의 주제로 다양한
+        공연과 이야기를 통해 복음을 전하는 커넥트교회의 개강콘서트입니다.
         <br />
         <br />
-        음악과 이야기를 통해 잠시 삶을 멈추고, 우리를 향한 빛 되신 분을
-        만나는 시간이 되기를 바랍니다.
+        올해 함께 나눌 말씀은,
+        <br />
+        &ldquo;너희가 전에는 어두움이더니 이제는 주 안에서 빛이라 빛의
+        자녀들처럼 행하라&rdquo; (엡 5:8)
         <br />
         <br />
-        혼자여도 괜찮아요. 편안한 마음으로 오세요.
+        밴드, 댄스, 듀엣, 스킷, 찬양과 메시지로 어둠 가운데 우리를 찾아오신
+        빛, 예수 그리스도의 이야기를 나눕니다.
+        <br />
+        <br />
+        교회가 낯선 분도 편안하게 오세요.
+        <br />
+        2026 NEW CONNECTION에서 만나요!
+      </>
+    ),
+    aboutOutro: (
+      <>
+        지치고 힘든 세상을 홀로 버텨내며 마음 한구석이 뻥 뚫려버린 당신에게.
+        <br />
+        세상이 줄 수 없는 따뜻한 위로와 용기가 필요한가요?
+        <br />
+        상처 입고 길을 잃은 그대여, 잃어버렸던 빛을 되찾고 다시 뜨겁게
+        살아갈 용기를 얻게 될 뉴커넥션 콘서트에 당신을 초대합니다.
       </>
     ),
     programLabel: "Program",
     programTitle: "공연 순서",
-    programBody: "공연 프로그램은 추후 공개됩니다.",
-    programTeaser: ["축하공연", "메시지", "친교"],
+    programGroups: [
+      [
+        "BAND - '촛불하나 + 빛으로 비추시네'",
+        "DANCE - 'UP UP UP'",
+        "DUET SONG - '너 하나만'",
+      ],
+      [
+        "SKIT DRAMA - '마음의 버스'",
+        "MESSAGE - 김지연 목사님 (커넥트 교회 담임)",
+        "A PHONE CALL FROM GOD",
+      ],
+      [
+        "DANCE - 'NO LONGER SLAVES'",
+        "CHOIR - '나를 세상의 빛으로 + LIVING HOPE'",
+        "DANCE - 'CHURCH MUSIC'",
+      ],
+    ],
+    programOutro: (
+      <>
+        어둠 속에 갇혀 혼자 숨죽여 울던 그대에게.
+        <br />
+        더 이상 참지 않아도, 억지로 버티지 않아도 됩니다.
+        <br />
+        당신의 지친 마음을 가장 따뜻한 빛으로 가득 채워줄 시간.
+        <br />
+        뉴커넥션 콘서트로 당신을 초대합니다!
+      </>
+    ),
     directionsLabel: "Directions",
     directionsTitle: "찾아오는 길",
     venueLine: "토론토 커넥트 교회 @ GYM",
@@ -82,21 +126,68 @@ const content = {
     aboutTitle: "What is New Connection?",
     aboutBody: (
       <>
-        New Connection is an invitation concert prepared by Connect Church
-        for anyone new to church, or waiting for a new kind of connection.
+        Held every September at the start of the new semester, NEW
+        CONNECTION is Connect Church&apos;s welcome-season concert, sharing
+        the gospel each year through a different theme.
         <br />
         <br />
-        Through music and stories, we hope it&apos;ll be a moment to pause
-        and meet the One who is Light for us.
+        This year&apos;s verse:
+        <br />
+        &ldquo;For you were once darkness, but now you are light in the
+        Lord. Live as children of light.&rdquo; (Eph 5:8)
         <br />
         <br />
-        It&apos;s okay to come alone. Just come as you are.
+        Through band, dance, duet, skit, worship, and message, we share
+        the story of the Light who came to find us in the darkness — Jesus
+        Christ.
+        <br />
+        <br />
+        Church feels unfamiliar? Come anyway. See you at 2026 NEW
+        CONNECTION!
+      </>
+    ),
+    aboutOutro: (
+      <>
+        To you, who&apos;s been carrying a tired, heavy world alone, with a
+        hollow ache in your heart.
+        <br />
+        Do you need a warmth and courage the world can&apos;t give?
+        <br />
+        To you who&apos;s been hurt and lost your way — we invite you to
+        New Connection, where you&apos;ll find the light you lost, and the
+        courage to live fully again.
       </>
     ),
     programLabel: "Program",
     programTitle: "Program",
-    programBody: "The program will be announced soon.",
-    programTeaser: ["Performance", "Message", "Fellowship"],
+    programGroups: [
+      [
+        "BAND - 'Chotbul Hana + Bicheuro Bichusine'",
+        "DANCE - 'UP UP UP'",
+        "DUET SONG - 'Neo Hanaman'",
+      ],
+      [
+        "SKIT DRAMA - 'Maeumui Beoseu'",
+        "MESSAGE - Pastor Jiyeon Kim (Senior Pastor, Connect Church)",
+        "A PHONE CALL FROM GOD",
+      ],
+      [
+        "DANCE - 'NO LONGER SLAVES'",
+        "CHOIR - 'Nareul Sesangui Bicheuro + LIVING HOPE'",
+        "DANCE - 'CHURCH MUSIC'",
+      ],
+    ],
+    programOutro: (
+      <>
+        To the one who wept quietly, alone in the dark.
+        <br />
+        You don&apos;t have to hold it in, or keep pushing through anymore.
+        <br />
+        It&apos;s time to fill your weary heart with the warmest light.
+        <br />
+        We invite you to the New Connection Concert!
+      </>
+    ),
     directionsLabel: "Directions",
     directionsTitle: "How to Get Here",
     venueLine: "Toronto Connect Church @ GYM",
@@ -150,7 +241,7 @@ export function NewConnectionContent() {
 
       <main className="relative z-10">
         {/* 1. 메인 */}
-        <section className="relative h-screen snap-start flex flex-col items-center justify-between text-center px-4 pt-[6.5rem] sm:pt-56 pb-10 text-white overflow-y-auto">
+        <section className="relative h-screen snap-start flex flex-col items-center justify-between text-center px-4 pt-[6.5rem] sm:pt-24 pb-10 text-white overflow-y-auto">
           <div className="max-w-md mx-auto space-y-6">
             <div className="space-y-3">
               <p className="text-xs sm:text-sm text-white/85 leading-relaxed">
@@ -194,7 +285,7 @@ export function NewConnectionContent() {
         </section>
 
         {/* 2. 뉴커넥션 소개 */}
-        <section className="h-screen snap-start flex flex-col items-center justify-center text-center px-3 sm:px-6 py-24 text-white overflow-y-auto">
+        <section className="h-screen snap-start flex flex-col items-center justify-between text-center px-3 sm:px-6 pt-20 sm:pt-24 pb-8 text-white overflow-y-auto">
           <div className="max-w-lg sm:max-w-xl md:max-w-2xl mx-auto space-y-6">
             <span className="text-xs sm:text-sm font-semibold tracking-[0.3em] text-white/60 uppercase">
               {t.aboutLabel}
@@ -212,33 +303,54 @@ export function NewConnectionContent() {
               {t.aboutBody}
             </p>
           </div>
+
+          {/* TO. 문구 */}
+          <div className="max-w-md mx-auto text-xs sm:text-sm text-white/70 leading-relaxed space-y-1 pt-6">
+            <p className="text-white/50 tracking-[0.2em] uppercase mb-1">To.</p>
+            <p>{t.aboutOutro}</p>
+          </div>
         </section>
 
         {/* 3. 공연 순서 (프로그램) */}
-        <section className="h-screen snap-start flex flex-col items-center justify-center text-center px-3 sm:px-6 py-24 text-white overflow-y-auto">
-          <div className="max-w-lg sm:max-w-xl md:max-w-2xl mx-auto space-y-6">
+        <section className="h-screen snap-start flex flex-col items-center justify-between text-center px-3 sm:px-6 pt-20 sm:pt-24 pb-8 text-white overflow-y-auto">
+          <div className="max-w-lg sm:max-w-xl md:max-w-2xl mx-auto w-full space-y-6">
             <span className="text-xs sm:text-sm font-semibold tracking-[0.3em] text-white/60 uppercase">
               {t.programLabel}
             </span>
             <h2 className="text-3xl sm:text-4xl font-bold leading-snug">
               {t.programTitle}
             </h2>
-            <div className="bg-black/30 backdrop-blur-md rounded-2xl p-5 sm:p-8 space-y-5">
-              <p className="text-sm sm:text-base text-white/70">
-                {t.programBody}
-              </p>
-              <Music2 className="w-7 h-7 mx-auto text-white/70" />
-              <div className="flex flex-wrap justify-center gap-3">
-                {t.programTeaser.map((item) => (
-                  <span
-                    key={item}
-                    className="rounded-full border border-white/25 px-5 py-2 text-xs sm:text-sm text-white/80"
-                  >
-                    {item}
-                  </span>
-                ))}
-              </div>
+            <div className="bg-black/30 backdrop-blur-md rounded-2xl p-5 sm:p-8 space-y-4 text-left">
+              {t.programGroups.map((group, groupIndex) => (
+                <div key={groupIndex}>
+                  {groupIndex > 0 && (
+                    <div className="border-t border-white/15 my-4" />
+                  )}
+                  <ol className="space-y-2">
+                    {group.map((item, itemIndex) => {
+                      const num = groupIndex * 3 + itemIndex + 1;
+                      return (
+                        <li
+                          key={item}
+                          className="flex gap-3 text-sm sm:text-base text-white/85"
+                        >
+                          <span className="text-white/50 tabular-nums">
+                            {String(num).padStart(2, "0")}
+                          </span>
+                          <span>{item}</span>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </div>
+              ))}
             </div>
+          </div>
+
+          {/* TO. 문구 */}
+          <div className="max-w-md mx-auto text-xs sm:text-sm text-white/70 leading-relaxed space-y-1 pt-6">
+            <p className="text-white/50 tracking-[0.2em] uppercase mb-1">To.</p>
+            <p>{t.programOutro}</p>
           </div>
         </section>
 
