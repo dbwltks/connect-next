@@ -285,73 +285,77 @@ export function NewConnectionContent() {
         </section>
 
         {/* 2. 뉴커넥션 소개 */}
-        <section className="h-screen snap-start flex flex-col items-center justify-between text-center px-3 sm:px-6 pt-20 sm:pt-24 pb-8 text-white overflow-y-auto">
-          <div className="max-w-lg sm:max-w-xl md:max-w-2xl mx-auto space-y-6">
-            <span className="text-xs sm:text-sm font-semibold tracking-[0.3em] text-white/60 uppercase">
-              {t.aboutLabel}
-            </span>
-            <h2
-              className={
-                lang === "ko"
-                  ? "text-3xl sm:text-4xl font-bold leading-snug"
-                  : "text-2xl sm:text-4xl font-bold leading-snug"
-              }
-            >
-              {t.aboutTitle}
-            </h2>
-            <p className="text-sm sm:text-base text-white/85 leading-relaxed bg-black/30 backdrop-blur-md rounded-2xl p-4 sm:p-6">
-              {t.aboutBody}
-            </p>
-          </div>
-
-          {/* TO. 문구 */}
-          <div className="max-w-md mx-auto text-xs sm:text-sm text-white/70 leading-relaxed space-y-1 pt-6">
-            <p className="text-white/50 tracking-[0.2em] uppercase mb-1">To.</p>
-            <p>{t.aboutOutro}</p>
-          </div>
-        </section>
-
-        {/* 3. 공연 순서 (프로그램) */}
-        <section className="h-screen snap-start flex flex-col items-center justify-between text-center px-3 sm:px-6 pt-20 sm:pt-24 pb-8 text-white overflow-y-auto">
-          <div className="max-w-lg sm:max-w-xl md:max-w-2xl mx-auto w-full space-y-6">
-            <span className="text-xs sm:text-sm font-semibold tracking-[0.3em] text-white/60 uppercase">
-              {t.programLabel}
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-bold leading-snug">
-              {t.programTitle}
-            </h2>
-            <div className="bg-black/30 backdrop-blur-md rounded-2xl p-5 sm:p-8 space-y-4 text-left">
-              {t.programGroups.map((group, groupIndex) => (
-                <div key={groupIndex}>
-                  {groupIndex > 0 && (
-                    <div className="border-t border-white/15 my-4" />
-                  )}
-                  <ol className="space-y-2">
-                    {group.map((item, itemIndex) => {
-                      const num = groupIndex * 3 + itemIndex + 1;
-                      return (
-                        <li
-                          key={item}
-                          className="flex gap-3 text-sm sm:text-base text-white/85"
-                        >
-                          <span className="text-white/50 tabular-nums">
-                            {String(num).padStart(2, "0")}
-                          </span>
-                          <span>{item}</span>
-                        </li>
-                      );
-                    })}
-                  </ol>
-                </div>
-              ))}
+        <section className="h-screen snap-start grid grid-rows-[1fr_auto] text-center px-3 sm:px-6 pt-20 sm:pt-24 text-white overflow-hidden">
+          <div className="min-h-0 overflow-y-auto flex flex-col items-center">
+            <div className="max-w-lg sm:max-w-xl md:max-w-2xl mx-auto space-y-6">
+              <span className="text-xs sm:text-sm font-semibold tracking-[0.3em] text-white/60 uppercase">
+                {t.aboutLabel}
+              </span>
+              <h2
+                className={
+                  lang === "ko"
+                    ? "text-3xl sm:text-4xl font-bold leading-snug"
+                    : "text-2xl sm:text-4xl font-bold leading-snug"
+                }
+              >
+                {t.aboutTitle}
+              </h2>
+              <p className="text-sm sm:text-base text-white/85 leading-relaxed bg-black/30 backdrop-blur-md rounded-2xl p-4 sm:p-6">
+                {t.aboutBody}
+              </p>
             </div>
           </div>
 
-          {/* TO. 문구 */}
-          <div className="max-w-md mx-auto text-xs sm:text-sm text-white/70 leading-relaxed space-y-1 pt-6">
+          {/* TO. 문구 — 섹션 하단 푸터 */}
+          <footer className="max-w-md mx-auto w-full text-xs sm:text-sm text-white/70 leading-relaxed space-y-1 pt-4 sm:pt-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-8 shrink-0">
+            <p className="text-white/50 tracking-[0.2em] uppercase mb-1">To.</p>
+            <p>{t.aboutOutro}</p>
+          </footer>
+        </section>
+
+        {/* 3. 공연 순서 (프로그램) */}
+        <section className="h-screen snap-start grid grid-rows-[1fr_auto] text-center px-3 sm:px-6 pt-20 sm:pt-24 text-white overflow-hidden">
+          <div className="min-h-0 overflow-y-auto flex flex-col items-center">
+            <div className="max-w-lg sm:max-w-xl md:max-w-2xl mx-auto w-full space-y-6">
+              <span className="text-xs sm:text-sm font-semibold tracking-[0.3em] text-white/60 uppercase">
+                {t.programLabel}
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-bold leading-snug">
+                {t.programTitle}
+              </h2>
+              <div className="bg-black/30 backdrop-blur-md rounded-2xl p-5 sm:p-8 space-y-4 text-left">
+                {t.programGroups.map((group, groupIndex) => (
+                  <div key={groupIndex}>
+                    {groupIndex > 0 && (
+                      <div className="border-t border-white/15 my-4" />
+                    )}
+                    <ol className="space-y-2">
+                      {group.map((item, itemIndex) => {
+                        const num = groupIndex * 3 + itemIndex + 1;
+                        return (
+                          <li
+                            key={item}
+                            className="flex gap-3 text-sm sm:text-base text-white/85"
+                          >
+                            <span className="text-white/50 tabular-nums">
+                              {String(num).padStart(2, "0")}
+                            </span>
+                            <span>{item}</span>
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* TO. 문구 — 섹션 하단 푸터 */}
+          <footer className="max-w-md mx-auto w-full text-xs sm:text-sm text-white/70 leading-relaxed space-y-1 pt-4 sm:pt-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-8 shrink-0">
             <p className="text-white/50 tracking-[0.2em] uppercase mb-1">To.</p>
             <p>{t.programOutro}</p>
-          </div>
+          </footer>
         </section>
 
         {/* 4. 찾아오는 길 */}
