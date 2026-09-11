@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 
 const ADDRESS = "45 Davenport Rd, Toronto, ON (M5R 1H2)";
@@ -213,13 +214,29 @@ export function NewConnectionContent() {
 
   return (
     <div className="relative h-[100dvh] overflow-y-scroll snap-y snap-mandatory scroll-smooth">
-      {/* 언어 전환 */}
-      <button
-        onClick={() => setLang(lang === "ko" ? "en" : "ko")}
-        className="fixed top-6 right-6 z-20 rounded-full bg-black/40 backdrop-blur-sm text-white text-xs font-semibold px-4 py-2 tracking-wide hover:bg-black/55 transition-colors"
-      >
-        {lang === "ko" ? "ENG" : "KOR"}
-      </button>
+      {/* 헤더 네비게이션 */}
+      <nav className="fixed top-0 left-0 right-0 z-20 flex items-center justify-between px-4 py-4 sm:px-6 sm:py-6 pointer-events-none">
+        <Link
+          href="/"
+          className="pointer-events-auto inline-flex items-center transition-opacity hover:opacity-75"
+        >
+          <Image
+            src="/connect_logo.png"
+            alt="Toronto Connect Church"
+            width={112}
+            height={48}
+            className="h-8 w-auto object-contain brightness-0 invert"
+            priority
+          />
+        </Link>
+
+        <button
+          onClick={() => setLang(lang === "ko" ? "en" : "ko")}
+          className="pointer-events-auto rounded-full bg-black/40 backdrop-blur-sm text-white text-xs font-semibold px-4 py-2 tracking-wide hover:bg-black/55 transition-colors"
+        >
+          {lang === "ko" ? "ENG" : "KOR"}
+        </button>
+      </nav>
 
       {/* 고정 배경: 스크롤해도 그대로 유지됨 (모바일/데스크톱 이미지 분리) */}
       <div className="fixed inset-0 -z-10">

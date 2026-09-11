@@ -2,6 +2,7 @@
 
 import { Menu, X, ChevronDown, LogOut, User, Settings } from "lucide-react";
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -24,7 +25,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
+import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { useUserProfile } from "@/hooks/use-user-profile";
+import { cn } from "@/lib/utils";
 
 interface MenuItem {
   id: string;
@@ -60,6 +63,32 @@ function generateMenuDescription(title: string): string {
   };
 
   return descriptions[title] || "";
+}
+
+const NEW_CONNECTION_URL = "/2026newconnection";
+
+function isNewConnectionItem(item: MenuItem) {
+  return item.url === NEW_CONNECTION_URL;
+}
+
+function NewConnectionLabel({
+  isSolidHeader,
+  className,
+}: {
+  isSolidHeader: boolean;
+  className?: string;
+}) {
+  return (
+    <span
+      className={cn(
+        "nav-nc-label",
+        isSolidHeader ? "nav-nc-label-on-light" : "nav-nc-label-on-dark",
+        className,
+      )}
+    >
+      뉴커넥션
+    </span>
+  );
 }
 
 // 고정 메뉴 데이터
@@ -121,6 +150,7 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
   const { user, signOut } = useAuth();
   const { profile } = useUserProfile(user);
   const [isOpen, setIsOpen] = useState(false);
+  const [isMenuExpanded, setIsMenuExpanded] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [openMobileMenus, setOpenMobileMenus] = useState<string[]>([]);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -132,8 +162,56 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
     setIsClient(true);
   }, []);
 
+  const openMobileMenu = () => {
+    setIsOpen(true);
+  };
+
+  const closeMobileMenu = () => {
+    if (!isOpen) return;
+    if (!isMenuExpanded) {
+      setIsOpen(false);
+      return;
+    }
+    setIsMenuExpanded(false);
+    window.setTimeout(() => {
+      setIsOpen(false);
+      setOpenMobileMenus([]);
+    }, 320);
+  };
+
+  useEffect(() => {
+    if (!isOpen) {
+      setIsMenuExpanded(false);
+      return;
+    }
+
+    let innerFrame = 0;
+    const frame = requestAnimationFrame(() => {
+      innerFrame = requestAnimationFrame(() => setIsMenuExpanded(true));
+    });
+
+    return () => {
+      cancelAnimationFrame(frame);
+      cancelAnimationFrame(innerFrame);
+    };
+  }, [isOpen]);
+
+  useBodyScrollLock(isOpen);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeMobileMenu();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, isMenuExpanded]);
+
   useEffect(() => {
     const handleScroll = () => {
+      if (isOpen) return;
       const currentScrollPos = window.scrollY;
 
       // Update scroll background effect
@@ -148,7 +226,7 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
 
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [prevScrollPos]);
+  }, [prevScrollPos, isOpen]);
 
   const toggleMobileMenu = (menuId: string) => {
     setOpenMobileMenus((prev) =>
@@ -158,20 +236,48 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
     );
   };
 
+  const isSolidHeader = isScrolled || isOpen;
+
   return (
-    <nav
-      className={`fixed top-0 w-full z-50 transition-all duration-500 sm:p-6 p-4 ${
-        visible ? "translate-y-0" : "-translate-y-full"
-      }`}
-    >
-      <div
-        className={`max-w-7xl mx-auto transition-all duration-500 ${
-          isScrolled
-            ? "bg-white/95 backdrop-blur-xl shadow-xl rounded-full px-8"
-            : "bg-transparent px-4"
-        }`}
+    <>
+      {isOpen &&
+        isClient &&
+        createPortal(
+          <button
+            type="button"
+            aria-label="메뉴 닫기"
+            className={cn(
+              "lg:hidden fixed inset-0 z-[60] bg-black/70 backdrop-blur-md touch-none transition-opacity duration-300 ease-out",
+              isMenuExpanded ? "opacity-100" : "opacity-0",
+            )}
+            onClick={closeMobileMenu}
+          />,
+          document.body,
+        )}
+
+      <nav
+        className={cn(
+          "fixed top-0 w-full z-[70] sm:p-6 transition-transform duration-500",
+          isOpen ? "p-4 lg:p-6 pointer-events-none lg:pointer-events-auto" : "p-4",
+          visible || isOpen ? "translate-y-0" : "-translate-y-full",
+        )}
       >
-        <div className="flex justify-between items-center h-20">
+        <div
+          className={cn(
+            "mx-auto transition-[background-color,box-shadow,border-radius] duration-300 ease-out",
+            isOpen
+              ? "pointer-events-auto w-full overflow-hidden rounded-[3rem] bg-white/95 backdrop-blur-xl shadow-2xl lg:max-w-7xl lg:rounded-full lg:px-8"
+              : isScrolled
+                ? "max-w-7xl rounded-full bg-white/95 px-8 shadow-xl backdrop-blur-xl"
+                : "max-w-7xl bg-transparent px-4",
+          )}
+        >
+          <div
+            className={cn(
+              "flex justify-between items-center h-20",
+              isOpen && "px-8 lg:px-0",
+            )}
+          >
           {/* 로고 */}
           <Link href="/" className="flex items-center">
             <div className="relative h-16 w-32 overflow-hidden flex items-center">
@@ -180,9 +286,10 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
                 alt="커넥트 교회 로고"
                 width={128}
                 height={64}
-                className={`object-contain transition-all ${
-                  isScrolled ? "" : "brightness-0 invert"
-                }`}
+                className={cn(
+                  "object-contain transition-[filter] duration-300",
+                  !isSolidHeader && "brightness-0 invert",
+                )}
                 priority
                 style={{ width: "auto", height: "64px" }}
               />
@@ -198,9 +305,10 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
                     {item.submenu && item.submenu.length > 0 ? (
                       <>
                         <NavigationMenuTrigger
-                          className={`text-sm font-medium !bg-transparent ${
-                            isScrolled ? "text-black" : "text-gray-300"
-                          }`}
+                          className={cn(
+                            "text-sm font-medium !bg-transparent",
+                            isSolidHeader ? "text-black" : "text-gray-300",
+                          )}
                         >
                           {item.title}
                         </NavigationMenuTrigger>
@@ -229,11 +337,34 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
                       <NavigationMenuLink asChild>
                         <Link
                           href={item.url || "#"}
-                          className={`${navigationMenuTriggerStyle()} !bg-transparent text-sm font-medium ${
-                            isScrolled ? "text-black" : "text-gray-300"
-                          }`}
+                          className={cn(
+                            navigationMenuTriggerStyle(),
+                            "!bg-transparent text-sm",
+                            isNewConnectionItem(item)
+                              ? "font-semibold"
+                              : "font-medium",
+                            isSolidHeader ? "text-black" : "text-gray-300",
+                          )}
                         >
-                          {item.title}
+                          {isNewConnectionItem(item) ? (
+                            <>
+                              <NewConnectionLabel
+                                isSolidHeader={isSolidHeader}
+                              />
+                              <span
+                                className={cn(
+                                  "ml-1.5 text-xs font-normal",
+                                  isSolidHeader
+                                    ? "text-muted-foreground"
+                                    : "text-gray-400",
+                                )}
+                              >
+                                9/24
+                              </span>
+                            </>
+                          ) : (
+                            item.title
+                          )}
                         </Link>
                       </NavigationMenuLink>
                     )}
@@ -261,11 +392,11 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
                         alt={profile?.username || "User"}
                       />
                       <AvatarFallback
-                        className={`${
-                          isScrolled
+                        className={cn(
+                          isSolidHeader
                             ? "bg-black text-white"
-                            : "bg-white text-black"
-                        }`}
+                            : "bg-white text-black",
+                        )}
                       >
                         {profile?.username?.charAt(0).toUpperCase() || "U"}
                       </AvatarFallback>
@@ -324,11 +455,12 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
             ) : (
               <Link href="https://www.light-code.dev/connect-church/login">
                 <button
-                  className={`px-8 py-3 rounded-full text-sm uppercase tracking-widest transition-all ${
-                    isScrolled
+                  className={cn(
+                    "px-8 py-3 rounded-full text-sm uppercase tracking-widest transition-all",
+                    isSolidHeader
                       ? "bg-black text-white hover:bg-gray-800"
-                      : "bg-white text-black hover:bg-gray-200"
-                  }`}
+                      : "bg-white text-black hover:bg-gray-200",
+                  )}
                 >
                   Login
                 </button>
@@ -337,100 +469,131 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
           </div>
 
           {/* Mobile Menu Button */}
-          <button className="lg:hidden p-2" onClick={() => setIsOpen(!isOpen)}>
+          <button
+            className="lg:hidden p-2"
+            onClick={() => (isOpen ? closeMobileMenu() : openMobileMenu())}
+          >
             {isOpen ? (
               <X
-                className={`w-6 h-6 ${isScrolled ? "text-black" : "text-gray-300"}`}
+                className={cn(
+                  "w-6 h-6",
+                  isSolidHeader ? "text-black" : "text-gray-300",
+                )}
               />
             ) : (
               <Menu
-                className={`w-6 h-6 ${isScrolled ? "text-black" : "text-gray-300"}`}
+                className={cn(
+                  "w-6 h-6",
+                  isSolidHeader ? "text-black" : "text-gray-300",
+                )}
               />
             )}
           </button>
-        </div>
-      </div>
+          </div>
 
-      {/* Mobile Menu */}
-      {isOpen && (
-        <div className="lg:hidden mt-4 bg-white/95 backdrop-blur-xl rounded-t-[3rem] rounded-b-[3rem] shadow-2xl overflow-hidden">
-          <div className="px-8 py-8 space-y-8">
-            {displayMenuItems.map((item) => (
-              <div key={item.id}>
-                {item.submenu && item.submenu.length > 0 ? (
-                  <div>
-                    <button
-                      onClick={() => toggleMobileMenu(item.id)}
-                      className="w-full flex items-center justify-between text-black text-lg font-medium hover:opacity-60 transition-opacity"
-                    >
-                      <span>{item.title}</span>
-                      <ChevronDown
-                        className={`w-5 h-5 transition-transform duration-200 ${
-                          openMobileMenus.includes(item.id) ? "rotate-180" : ""
-                        }`}
-                      />
-                    </button>
-                    {openMobileMenus.includes(item.id) && (
-                      <div className="pl-4 mt-2 space-y-2">
-                        {item.submenu.map((subItem) => (
-                          <Link
-                            key={subItem.id}
-                            href={subItem.url}
-                            className="block text-gray-600 text-base hover:text-black transition-colors py-1"
-                            onClick={() => setIsOpen(false)}
-                          >
-                            {subItem.title}
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <Link
-                    href={item.url}
-                    className="block text-black text-lg font-medium hover:opacity-60"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    {item.title}
-                  </Link>
-                )}
-              </div>
-            ))}
-
-            {/* User Menu in Mobile */}
-            <div className="mt-8 pt-4 border-t border-gray-200">
-              {profile ? (
-                <>
-                  <div className="flex items-center gap-3 mb-4">
-                    <Avatar>
-                      <AvatarImage
-                        src={profile?.avatar_url}
-                        alt={profile?.username || "User"}
-                      />
-                      <AvatarFallback className="bg-black text-white">
-                        {profile?.username?.charAt(0).toUpperCase() || "U"}
-                      </AvatarFallback>
-                    </Avatar>
+          {/* Mobile Menu */}
+          {isOpen && (
+            <div
+              className={cn(
+                "lg:hidden grid transition-[grid-template-rows,opacity] duration-300 ease-out",
+                isMenuExpanded
+                  ? "grid-rows-[1fr] opacity-100"
+                  : "pointer-events-none grid-rows-[0fr] opacity-0",
+              )}
+            >
+              <div className="min-h-0 overflow-hidden">
+                <div className="max-h-[calc(100dvh-7rem)] overflow-y-auto overscroll-contain px-8 pb-8 space-y-8 text-center">
+              {displayMenuItems.map((item) => (
+                <div key={item.id}>
+                  {item.submenu && item.submenu.length > 0 ? (
                     <div>
-                      <p className="text-sm font-medium text-black">
-                        {profile.username}
-                      </p>
-                      <p className="text-xs text-gray-600">
-                        {profile?.role === "admin" ? "관리자" : "일반 회원"}
-                      </p>
+                      <button
+                        onClick={() => toggleMobileMenu(item.id)}
+                        className="relative w-full flex items-center justify-center text-black text-lg font-medium hover:opacity-60 transition-opacity py-1"
+                      >
+                        <span>{item.title}</span>
+                        <ChevronDown
+                          className={cn(
+                            "absolute right-0 w-5 h-5 transition-transform duration-200",
+                            openMobileMenus.includes(item.id) && "rotate-180",
+                          )}
+                        />
+                      </button>
+                      {openMobileMenus.includes(item.id) && (
+                        <div className="mt-2 space-y-2">
+                          {item.submenu.map((subItem) => (
+                            <Link
+                              key={subItem.id}
+                              href={subItem.url}
+                              className="block text-gray-600 text-base hover:text-black transition-colors py-1"
+                              onClick={closeMobileMenu}
+                            >
+                              {subItem.title}
+                            </Link>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  <Link
-                    href="/mypage"
-                    className="block text-black text-base py-2 hover:opacity-60"
-                    onClick={() => setIsOpen(false)}
+                  ) : (
+                    <Link
+                      href={item.url}
+                      className={cn(
+                        "block text-black text-lg hover:opacity-60 py-1",
+                        isNewConnectionItem(item)
+                          ? "font-semibold"
+                          : "font-medium",
+                      )}
+                      onClick={closeMobileMenu}
+                    >
+                      {isNewConnectionItem(item) ? (
+                        <>
+                          <NewConnectionLabel isSolidHeader />
+                          <span className="ml-2 text-base font-normal text-gray-500">
+                            9/24
+                          </span>
+                        </>
+                      ) : (
+                        item.title
+                      )}
+                    </Link>
+                  )}
+                </div>
+              ))}
+
+              {/* User Menu in Mobile */}
+              <div className="mt-8 pt-4 border-t border-gray-200">
+                {profile ? (
+                  <>
+                    <div className="flex flex-col items-center gap-2 mb-4">
+                      <Avatar>
+                        <AvatarImage
+                          src={profile?.avatar_url}
+                          alt={profile?.username || "User"}
+                        />
+                        <AvatarFallback className="bg-black text-white">
+                          {profile?.username?.charAt(0).toUpperCase() || "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-sm font-medium text-black">
+                          {profile.username}
+                        </p>
+                        <p className="text-xs text-gray-600">
+                          {profile?.role === "admin" ? "관리자" : "일반 회원"}
+                        </p>
+                      </div>
+                    </div>
+                    <Link
+                      href="/mypage"
+                      className="block text-black text-base py-2 hover:opacity-60"
+                    onClick={closeMobileMenu}
                   >
                     마이페이지
                   </Link>
                   <Link
                     href="/settings"
                     className="block text-black text-base py-2 hover:opacity-60"
-                    onClick={() => setIsOpen(false)}
+                    onClick={closeMobileMenu}
                   >
                     설정
                   </Link>
@@ -438,7 +601,7 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
                     <Link
                       href="/admin"
                       className="block text-black text-base py-2 hover:opacity-60"
-                      onClick={() => setIsOpen(false)}
+                      onClick={closeMobileMenu}
                     >
                       관리자 페이지
                     </Link>
@@ -446,34 +609,37 @@ export function Navbar({ menuItems = [] }: NavbarProps) {
                   <button
                     onClick={async () => {
                       setIsLoggingOut(true);
-                      setIsOpen(false);
-                      try {
-                        await signOut();
-                        window.location.href = "/";
-                      } finally {
-                        setIsLoggingOut(false);
-                      }
-                    }}
-                    disabled={isLoggingOut}
-                    className="w-full text-left text-red-500 text-base py-2 hover:opacity-60 disabled:opacity-50"
-                  >
-                    {isLoggingOut ? "로그아웃 중..." : "로그아웃"}
-                  </button>
-                </>
-              ) : (
-                <Link href="https://www.light-code.dev/connect-church/login">
-                  <button
-                    className="w-full bg-black text-white px-8 py-4 rounded-full text-sm uppercase tracking-widest hover:bg-gray-800"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    Login
-                  </button>
-                </Link>
-              )}
+                      closeMobileMenu();
+                        try {
+                          await signOut();
+                          window.location.href = "/";
+                        } finally {
+                          setIsLoggingOut(false);
+                        }
+                      }}
+                      disabled={isLoggingOut}
+                      className="w-full text-red-500 text-base py-2 hover:opacity-60 disabled:opacity-50"
+                    >
+                      {isLoggingOut ? "로그아웃 중..." : "로그아웃"}
+                    </button>
+                  </>
+                ) : (
+                  <Link href="https://www.light-code.dev/connect-church/login">
+                    <button
+                      className="mx-auto block bg-black text-white px-8 py-4 rounded-full text-sm uppercase tracking-widest hover:bg-gray-800"
+                      onClick={closeMobileMenu}
+                    >
+                      Login
+                    </button>
+                  </Link>
+                )}
+              </div>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
-      )}
-    </nav>
+      </nav>
+    </>
   );
 }
