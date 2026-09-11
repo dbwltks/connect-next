@@ -56,6 +56,7 @@ function generateMenuDescription(title: string): string {
     "국내 선교": "국내 선교 사역과 활동",
     "국외 선교": "해외 선교 사역과 선교사",
     "협력 단체": "함께하는 협력 단체들",
+    뉴커넥션: "2026 뉴커넥션 콘서트",
   };
 
   return descriptions[title] || "";
@@ -106,6 +107,11 @@ const FIXED_MENU_ITEMS: MenuItem[] = [
       { id: "4-2", title: "국외 선교", url: "/mission/overseas-mission" },
       { id: "4-3", title: "협력 단체", url: "/mission/cooperating-group" },
     ],
+  },
+  {
+    id: "5",
+    title: "뉴커넥션",
+    url: "/2026newconnection",
   },
 ];
 

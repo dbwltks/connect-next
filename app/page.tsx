@@ -46,6 +46,11 @@ const FIXED_MENU_ITEMS = [
       { id: "4-3", title: "협력 단체", url: "/mission/cooperating-group" },
     ],
   },
+  {
+    id: "5",
+    title: "뉴커넥션",
+    url: "/2026newconnection",
+  },
 ];
 
 // 고정 배너 데이터
