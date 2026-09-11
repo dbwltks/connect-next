@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, X } from "lucide-react";
 
 const ADDRESS = "45 Davenport Rd, Toronto, ON (M5R 1H2)";
 const EMBED_MAP_URL =
@@ -100,6 +100,8 @@ const content = {
     parkingAddress: "40 Scollard St, Toronto, ON M5R 3S1",
     parkingText:
       "아파트 지하 주차장 입구 판넬의 녹색 버튼을 누르시면 됩니다. 주차장 입구는 건물 뒤 Scollard Street에 있습니다.",
+    parkingNote:
+      "주차장에 들어오시면 파란색 번호가 표시된 자리에만 주차 가능하고, 최대 10대 정도만 가능해요. 자리가 한정적이니 가능한 일찍 와주시고, 가능하면 도보를 이용해 주세요. 자리가 다 차면 주변에 알아서 주차 부탁드립니다.",
     lastYearLabel: "Last Year",
     lastYearTitle: "지난 뉴커넥션",
     lastYearBody: "작년 뉴커넥션의 순간들을 영상으로 만나보세요.",
@@ -198,6 +200,8 @@ const content = {
     parkingAddress: "40 Scollard St, Toronto, ON M5R 3S1",
     parkingText:
       "Press the green button at the underground parking entrance panel. The entrance is on Scollard Street, behind the building.",
+    parkingNote:
+      "Once inside, you may only park in spots marked with a blue number — space is limited to about 10 cars. Please arrive early, and walking is recommended if possible. If the lot is full, please find parking nearby on your own.",
     lastYearLabel: "Last Year",
     lastYearTitle: "Last Year's New Connection",
     lastYearBody: "Relive the moments from last year's New Connection.",
@@ -210,6 +214,7 @@ export function NewConnectionContent() {
   const [infoTab, setInfoTab] = useState<"directions" | "parking">(
     "directions"
   );
+  const [showParkingPhoto, setShowParkingPhoto] = useState(false);
   const t = content[lang];
 
   return (
@@ -387,15 +392,46 @@ export function NewConnectionContent() {
               </h2>
             </div>
 
-            <div className="rounded-2xl overflow-hidden h-[220px] bg-white/10">
-              <iframe
-                src={EMBED_MAP_URL}
-                width="100%"
-                height="100%"
-                style={{ border: 0 }}
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              />
+            <div className="relative rounded-2xl overflow-hidden h-[220px] bg-white/10">
+              {/* 데스크톱: 항상 지도 */}
+              <div className="hidden sm:block w-full h-full">
+                <iframe
+                  src={EMBED_MAP_URL}
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+              </div>
+              {/* 모바일: 탭에 따라 지도 / 주차 사진 전환 */}
+              <div className="sm:hidden w-full h-full">
+                {infoTab === "directions" ? (
+                  <iframe
+                    src={EMBED_MAP_URL}
+                    width="100%"
+                    height="100%"
+                    style={{ border: 0 }}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                ) : (
+                  <button
+                    onClick={() => setShowParkingPhoto(true)}
+                    className="relative w-full h-full bg-black/40"
+                  >
+                    <Image
+                      src="/Images/parking_c.webp"
+                      alt="파란색 번호가 표시된 주차 자리"
+                      fill
+                      className="object-contain"
+                    />
+                    <span className="absolute bottom-1.5 right-2 text-[10px] text-white/70 bg-black/40 rounded-full px-2 py-0.5">
+                      확대해서 보기
+                    </span>
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="bg-black/30 backdrop-blur-md rounded-2xl p-4 sm:p-5 space-y-4 text-sm sm:text-base">
@@ -447,6 +483,7 @@ export function NewConnectionContent() {
                   <div className="overflow-hidden">
                     <p className="text-white/80 pt-3">{t.parkingAddress}</p>
                     <p className="text-white/80 mt-1">{t.parkingText}</p>
+                    <p className="text-white/80 mt-2">{t.parkingNote}</p>
                   </div>
                 </div>
               </div>
@@ -464,6 +501,7 @@ export function NewConnectionContent() {
                 </p>
                 <p className="text-white/80">{t.parkingAddress}</p>
                 <p className="text-white/80 mt-1">{t.parkingText}</p>
+                <p className="text-white/80 mt-2">{t.parkingNote}</p>
               </div>
             </div>
           </div>
@@ -496,6 +534,29 @@ export function NewConnectionContent() {
           </div>
         </section>
       </main>
+
+      {/* 주차 사진 확대 보기 */}
+      {showParkingPhoto && (
+        <div
+          className="fixed inset-0 z-30 bg-black/85 flex items-center justify-center p-6"
+          onClick={() => setShowParkingPhoto(false)}
+        >
+          <button
+            onClick={() => setShowParkingPhoto(false)}
+            className="absolute top-6 right-6 text-white/90 hover:text-white bg-black/40 rounded-full p-2"
+          >
+            <X size={20} />
+          </button>
+          <div className="relative w-full max-w-md aspect-[3/4]">
+            <Image
+              src="/Images/parking_c.webp"
+              alt="파란색 번호가 표시된 주차 자리"
+              fill
+              className="object-contain"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
