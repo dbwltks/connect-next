@@ -215,7 +215,7 @@ export function NewConnectionContent() {
   return (
     <div className="relative h-[100dvh] overflow-y-scroll snap-y snap-mandatory scroll-smooth">
       {/* 헤더 네비게이션 */}
-      <nav className="fixed top-0 left-0 right-0 z-20 flex items-center justify-between px-4 py-4 sm:px-6 sm:py-6 pointer-events-none">
+      <nav className="fixed top-0 left-0 right-0 z-20 flex items-center justify-between px-4 pb-4 pt-[max(1.75rem,env(safe-area-inset-top,0px)+0.75rem)] sm:px-6 sm:pb-6 sm:pt-10 pointer-events-none">
         <Link
           href="/"
           className="pointer-events-auto inline-flex items-center transition-opacity hover:opacity-75"
